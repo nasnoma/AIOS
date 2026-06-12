@@ -1,0 +1,48 @@
+# === Core ===
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+
+# === Data & Indicators ===
+pandas>=2.0.0
+numpy>=1.24.0
+pandas-ta>=0.3.14b0
+requests>=2.31.0
+aiohttp>=3.9.0
+websockets>=12.0
+
+# === Exchange APIs ===
+ccxt>=4.3.0          # Unified crypto exchange API (Binance, Bybit, Coinbase, etc.)
+alpaca-py>=0.20.0    # Stocks paper/live trading
+
+# === LLM ===
+openai>=1.30.0
+anthropic>=0.28.0
+
+# === Scheduling ===
+apscheduler>=3.10.0
+
+# === Web / API ===
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+jinja2>=3.1.0
+python-multipart>=0.0.9
+
+# === Database ===
+sqlalchemy>=2.0.0
+alembic>=1.13.0
+psycopg2-binary>=2.9.0
+
+# === Backtesting ===
+vectorbt>=0.26.0
+
+# === Alerts ===
+python-telegram-bot>=21.0
+
+# === Monitoring ===
+prometheus-client>=0.20.0
+
+# === Utilities ===
+rich>=13.0.0
+loguru>=0.7.0
+httpx>=0.27.0

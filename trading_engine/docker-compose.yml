@@ -1,0 +1,68 @@
+version: "3.9"
+
+services:
+  # ── Trading Engine Core ──────────────────────
+  engine:
+    build: .
+    container_name: trading_engine
+    restart: unless-stopped
+    command: python -m trading_engine.scheduler
+    env_file: .env
+    volumes:
+      - ./trading_engine/paper_state.json:/app/trading_engine/paper_state.json
+      - ./logs:/app/logs
+    depends_on:
+      - db
+    networks:
+      - trading_net
+
+  # ── Dashboard API ────────────────────────────
+  dashboard:
+    build: .
+    container_name: trading_dashboard
+    restart: unless-stopped
+    command: python -m trading_engine.api.server
+    env_file: .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    networks:
+      - trading_net
+
+  # ── PostgreSQL ───────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: trading_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: trader
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: trading_engine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - trading_net
+
+  # ── Grafana (optional monitoring) ───────────
+  grafana:
+    image: grafana/grafana:latest
+    container_name: trading_grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - trading_net
+    profiles: ["monitoring"]  # only start with --profile monitoring
+
+volumes:
+  postgres_data:
+  grafana_data:
+
+networks:
+  trading_net:
+    driver: bridge

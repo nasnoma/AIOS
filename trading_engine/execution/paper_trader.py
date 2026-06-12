@@ -1,0 +1,217 @@
+"""
+trading_engine/execution/paper_trader.py
+
+Paper trading simulator.
+Tracks virtual positions, P&L, and portfolio heat.
+Persists state to JSON file between runs.
+"""
+from __future__ import annotations
+import json
+import os
+from dataclasses import dataclass, field, asdict
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Optional
+from loguru import logger
+
+from trading_engine.config import settings
+
+STATE_FILE = Path(__file__).parent.parent / "paper_state.json"
+
+# ── Transaction Cost Model ───────────────────────────────────────────────
+# Entry fee (taker order): 0.04% (Binance market order)
+# Exit fee (taker order):  0.04% (Binance market order)
+# Slippage estimate:       0.02% (conservative, liquid pairs)
+# Total round-trip cost:   ~0.10% of position size
+ENTRY_FEE_RATE = 0.0006   # 0.06% entry (fee + slippage)
+EXIT_FEE_RATE  = 0.0006   # 0.06% exit  (fee + slippage)
+
+
+@dataclass
+class Position:
+    symbol: str
+    direction: str         # 'long' | 'short'
+    entry_price: float
+    size_usd: float
+    stop_loss: float
+    take_profit: float
+    opened_at: str
+    closed_at: Optional[str] = None
+    exit_price: Optional[float] = None
+    pnl_usd: Optional[float] = None
+    fee_usd: Optional[float] = None   # total fees paid on this trade (entry + exit)
+    status: str = "open"   # 'open' | 'closed' | 'stopped'
+
+
+@dataclass
+class PaperPortfolio:
+    account_size: float = field(default_factory=lambda: settings.account_size)
+    cash: float = field(default_factory=lambda: settings.account_size)
+    positions: list[Position] = field(default_factory=list)
+    closed_trades: list[Position] = field(default_factory=list)
+    total_pnl: float = 0.0
+    total_fees: float = 0.0   # cumulative fees paid across all trades
+    win_count: int = 0
+    loss_count: int = 0
+
+    @property
+    def open_positions(self) -> list[Position]:
+        return [p for p in self.positions if p.status == "open"]
+
+    @property
+    def portfolio_heat(self) -> float:
+        """Current total risk as % of account."""
+        total_risk = sum(
+            p.size_usd * abs(p.entry_price - p.stop_loss) / p.entry_price
+            for p in self.open_positions
+        )
+        return total_risk / self.account_size if self.account_size > 0 else 0
+
+    @property
+    def win_rate(self) -> float:
+        total = self.win_count + self.loss_count
+        return self.win_count / total if total > 0 else 0.5
+
+    def to_dict(self):
+        return {
+            "account_size": self.account_size,
+            "cash": self.cash,
+            "positions": [asdict(p) for p in self.positions],
+            "closed_trades": [asdict(p) for p in self.closed_trades],
+            "total_pnl": self.total_pnl,
+            "total_fees": self.total_fees,
+            "win_count": self.win_count,
+            "loss_count": self.loss_count,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "PaperPortfolio":
+        p = cls(account_size=d["account_size"], cash=d["cash"],
+                total_pnl=d["total_pnl"], win_count=d["win_count"],
+                loss_count=d["loss_count"],
+                total_fees=d.get("total_fees", 0.0))
+        p.positions = [Position(**pos) for pos in d.get("positions", [])]
+        p.closed_trades = [Position(**pos) for pos in d.get("closed_trades", [])]
+        return p
+
+
+def _load_state() -> PaperPortfolio:
+    if STATE_FILE.exists():
+        try:
+            with open(STATE_FILE) as f:
+                return PaperPortfolio.from_dict(json.load(f))
+        except Exception as e:
+            logger.warning(f"Could not load paper state: {e}")
+    return PaperPortfolio()
+
+
+def _save_state(portfolio: PaperPortfolio):
+    with open(STATE_FILE, "w") as f:
+        json.dump(portfolio.to_dict(), f, indent=2)
+
+
+def open_trade(symbol: str, direction: str, entry: float,
+               size_usd: float, stop_loss: float, take_profit: float) -> Position:
+    portfolio = _load_state()
+
+    # Deduct entry fee + slippage from cash immediately
+    entry_fee = size_usd * ENTRY_FEE_RATE
+    portfolio.cash -= entry_fee
+    portfolio.total_fees += entry_fee
+
+    pos = Position(
+        symbol=symbol,
+        direction=direction,
+        entry_price=entry,
+        size_usd=size_usd,
+        stop_loss=stop_loss,
+        take_profit=take_profit,
+        opened_at=datetime.now(timezone.utc).isoformat(),
+        fee_usd=entry_fee,   # will be updated on close
+    )
+    portfolio.positions.append(pos)
+    portfolio.cash -= size_usd
+    _save_state(portfolio)
+    logger.success(
+        f"📝 PAPER {direction.upper()} opened: {symbol} | "
+        f"Size=${size_usd:,.0f} | SL={stop_loss:.4f} | TP={take_profit:.4f} | "
+        f"Entry fee=${entry_fee:.2f} ({ENTRY_FEE_RATE:.2%})"
+    )
+    return pos
+
+
+def update_prices(current_prices: dict[str, float]):
+    """Check if any open positions hit SL or TP."""
+    portfolio = _load_state()
+    for pos in portfolio.open_positions:
+        price = current_prices.get(pos.symbol)
+        if not price:
+            continue
+
+        if pos.direction == "long":
+            if price <= pos.stop_loss:
+                _close_position(portfolio, pos, price, "stopped")
+            elif price >= pos.take_profit:
+                _close_position(portfolio, pos, price, "closed")
+        else:  # short
+            if price >= pos.stop_loss:
+                _close_position(portfolio, pos, price, "stopped")
+            elif price <= pos.take_profit:
+                _close_position(portfolio, pos, price, "closed")
+
+    _save_state(portfolio)
+
+
+def _close_position(portfolio: PaperPortfolio, pos: Position, exit_price: float, status: str):
+    if pos.direction == "long":
+        gross_pnl = (exit_price - pos.entry_price) / pos.entry_price * pos.size_usd
+    else:
+        gross_pnl = (pos.entry_price - exit_price) / pos.entry_price * pos.size_usd
+
+    # Deduct exit fee + slippage
+    exit_fee = pos.size_usd * EXIT_FEE_RATE
+    net_pnl = gross_pnl - exit_fee
+
+    portfolio.total_fees += exit_fee
+    if pos.fee_usd is not None:
+        pos.fee_usd = round(pos.fee_usd + exit_fee, 4)   # total round-trip fee on this trade
+    else:
+        pos.fee_usd = round(exit_fee, 4)
+
+    pos.exit_price = exit_price
+    pos.pnl_usd = round(net_pnl, 2)
+    pos.closed_at = datetime.now(timezone.utc).isoformat()
+    pos.status = status
+    portfolio.cash += pos.size_usd + net_pnl
+    portfolio.total_pnl += net_pnl
+    if net_pnl > 0:
+        portfolio.win_count += 1
+    else:
+        portfolio.loss_count += 1
+    portfolio.positions.remove(pos)
+    portfolio.closed_trades.append(pos)
+
+    emoji = "✅" if net_pnl > 0 else "❌"
+    logger.info(
+        f"{emoji} PAPER {status.upper()}: {pos.symbol} | "
+        f"Gross P&L=${gross_pnl:+,.2f} | Fees=${exit_fee:.2f} | "
+        f"Net P&L=${net_pnl:+,.2f} | Total P&L=${portfolio.total_pnl:+,.2f}"
+    )
+
+
+def get_status() -> dict:
+    portfolio = _load_state()
+    return {
+        "account_size": portfolio.account_size,
+        "cash": round(portfolio.cash, 2),
+        "total_pnl": round(portfolio.total_pnl, 2),
+        "total_pnl_pct": round(portfolio.total_pnl / portfolio.account_size * 100, 2),
+        "total_fees": round(portfolio.total_fees, 2),
+        "total_fees_pct": round(portfolio.total_fees / portfolio.account_size * 100, 3),
+        "open_positions": len(portfolio.open_positions),
+        "portfolio_heat": round(portfolio.portfolio_heat * 100, 2),
+        "win_rate": round(portfolio.win_rate * 100, 1),
+        "win_count": portfolio.win_count,
+        "loss_count": portfolio.loss_count,
+        "trades": [asdict(p) for p in portfolio.closed_trades[-20:]],
+    }

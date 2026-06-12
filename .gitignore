@@ -1,0 +1,25 @@
+# Gitignore for AIOS root workspace optimization
+.DS_Store
+AIS-OS/
+Scrapegraph-ai/
+autoresearch/
+graphify-out/
+markitdown/
+rtk/
+.agents/
+.playwright-mcp/
+
+# Python & virtualenv
+trading_engine/venv/
+trading_engine/**/__pycache__/
+trading_engine/**/*.pyc
+trading_engine/.pytest_cache/
+
+# Trading engine runtime/data outputs
+trading_engine/backtest_results/
+trading_engine/storage/
+trading_engine/live_state.json
+trading_engine/paper_state.json
+trading_engine/.env
+data/
+
