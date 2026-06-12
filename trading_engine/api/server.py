@@ -16,7 +16,7 @@ import uvicorn
 from loguru import logger
 
 from trading_engine.config import settings
-from trading_engine.execution import paper_trader
+from trading_engine.execution import paper_trader, live_trader
 
 app = FastAPI(title="Trading Decision Engine", version="1.0.0")
 
@@ -35,6 +35,8 @@ async def dashboard():
 
 @app.get("/api/status")
 async def get_status():
+    if settings.trading_mode == "live":
+        return live_trader.get_status()
     return paper_trader.get_status()
 
 
@@ -49,9 +51,10 @@ async def websocket_endpoint(websocket: WebSocket):
     connected_clients.append(websocket)
     try:
         # Send current status on connect
+        current_status = live_trader.get_status() if settings.trading_mode == "live" else paper_trader.get_status()
         await websocket.send_json({
             "type": "status",
-            "data": paper_trader.get_status()
+            "data": current_status
         })
         while True:
             await asyncio.sleep(30)
