@@ -15,6 +15,7 @@ from typing import Optional
 from loguru import logger
 
 from trading_engine.config import settings
+from trading_engine.alerts.telegram_bot import send_message
 
 STATE_FILE = Path(__file__).parent.parent / "paper_state.json"
 
@@ -137,6 +138,17 @@ def open_trade(symbol: str, direction: str, entry: float,
         f"Size=${size_usd:,.0f} | SL={stop_loss:.4f} | TP={take_profit:.4f} | "
         f"Entry fee=${entry_fee:.2f} ({ENTRY_FEE_RATE:.2%})"
     )
+    
+    # Send Telegram notification
+    send_message(
+        f"🟢 <b>PAPER {direction.upper()} Opened</b>\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"🪙 Symbol: {symbol}\n"
+        f"💵 Size: ${size_usd:,.2f}\n"
+        f"📈 Entry Price: <code>{entry:.4f}</code>\n"
+        f"🛑 Stop Loss: <code>{stop_loss:.4f}</code>\n"
+        f"🎯 Take Profit: <code>{take_profit:.4f}</code>"
+    )
     return pos
 
 
@@ -196,6 +208,19 @@ def _close_position(portfolio: PaperPortfolio, pos: Position, exit_price: float,
         f"{emoji} PAPER {status.upper()}: {pos.symbol} | "
         f"Gross P&L=${gross_pnl:+,.2f} | Fees=${exit_fee:.2f} | "
         f"Net P&L=${net_pnl:+,.2f} | Total P&L=${portfolio.total_pnl:+,.2f}"
+    )
+
+    # Send Telegram notification
+    send_message(
+        f"{emoji} <b>PAPER Position Closed ({status.upper()})</b>\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"🪙 Symbol: {pos.symbol}\n"
+        f"💵 Size: ${pos.size_usd:,.2f}\n"
+        f"📈 Entry Price: <code>{pos.entry_price:.4f}</code>\n"
+        f"📉 Exit Price: <code>{exit_price:.4f}</code>\n"
+        f"💰 Net P&L: <b>${net_pnl:+,.2f}</b>\n"
+        f"🏷️ Fees paid: ${pos.fee_usd:.2f}\n"
+        f"📊 Total Portfolio P&L: <b>${portfolio.total_pnl:+,.2f}</b>"
     )
 
 

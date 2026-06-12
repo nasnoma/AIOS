@@ -6,8 +6,10 @@ Allows running the trading engine without OpenAI or Anthropic API keys.
 from __future__ import annotations
 import json
 import re
+import time
 from loguru import logger
 from trading_engine.config import settings
+from trading_engine.storage import db
 
 def _clean_markdown_json(text: str) -> str:
     """Strips markdown block markers like ```json ... ``` from the text."""
@@ -48,6 +50,7 @@ def call_llm(prompt: str, system_prompt: str = "") -> str:
         use_real = True
         
     if use_real:
+        start_time = time.time()
         try:
             if provider == "openai":
                 from openai import OpenAI
@@ -64,7 +67,18 @@ def call_llm(prompt: str, system_prompt: str = "") -> str:
                     max_tokens=200,
                 )
                 raw_text = response.choices[0].message.content.strip()
-                return _clean_markdown_json(raw_text)
+                result = _clean_markdown_json(raw_text)
+                
+                duration_ms = (time.time() - start_time) * 1000.0
+                db.log_api_call(
+                    endpoint=f"llm:{provider}",
+                    method="POST",
+                    params={"prompt": prompt, "system_prompt": system_prompt, "model": settings.llm_model},
+                    status_code=200,
+                    response=raw_text,
+                    duration_ms=duration_ms
+                )
+                return result
             elif provider == "openrouter":
                 from openai import OpenAI
                 client = OpenAI(
@@ -87,7 +101,18 @@ def call_llm(prompt: str, system_prompt: str = "") -> str:
                     }
                 )
                 raw_text = response.choices[0].message.content.strip()
-                return _clean_markdown_json(raw_text)
+                result = _clean_markdown_json(raw_text)
+                
+                duration_ms = (time.time() - start_time) * 1000.0
+                db.log_api_call(
+                    endpoint=f"llm:{provider}",
+                    method="POST",
+                    params={"prompt": prompt, "system_prompt": system_prompt, "model": settings.llm_model},
+                    status_code=200,
+                    response=raw_text,
+                    duration_ms=duration_ms
+                )
+                return result
             elif provider == "anthropic":
                 import anthropic
                 client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
@@ -99,8 +124,28 @@ def call_llm(prompt: str, system_prompt: str = "") -> str:
                     **system_arg
                 )
                 raw_text = response.content[0].text.strip()
-                return _clean_markdown_json(raw_text)
+                result = _clean_markdown_json(raw_text)
+                
+                duration_ms = (time.time() - start_time) * 1000.0
+                db.log_api_call(
+                    endpoint=f"llm:{provider}",
+                    method="POST",
+                    params={"prompt": prompt, "system_prompt": system_prompt, "model": settings.llm_model},
+                    status_code=200,
+                    response=raw_text,
+                    duration_ms=duration_ms
+                )
+                return result
         except Exception as e:
+            duration_ms = (time.time() - start_time) * 1000.0
+            db.log_api_call(
+                endpoint=f"llm:{provider}",
+                method="POST",
+                params={"prompt": prompt, "system_prompt": system_prompt, "model": settings.llm_model},
+                status_code=500,
+                response=str(e),
+                duration_ms=duration_ms
+            )
             logger.warning(f"Real LLM call failed ({provider}): {e}. Falling back to local mock analyzer.")
             
     # Run the smart local mock analyzer

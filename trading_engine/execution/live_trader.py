@@ -9,6 +9,7 @@ Tracks active live positions, P&L, and saves state to live_state.json.
 from __future__ import annotations
 import json
 import os
+import time
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -21,6 +22,8 @@ from alpaca.trading.requests import MarketOrderRequest
 from alpaca.trading.enums import OrderSide, TimeInForce
 
 from trading_engine.config import settings
+from trading_engine.storage import db
+from trading_engine.alerts.telegram_bot import send_message
 
 STATE_FILE = Path(__file__).parent.parent / "live_state.json"
 
@@ -145,6 +148,104 @@ def get_alpaca_client() -> TradingClient:
 
 # ── Execution Logic ───────────────────────────────────────────────────────
 
+def retry_and_log_order(symbol: str, side: str, qty: float, price: float, order_type: str, exchange_func, *args, **kwargs):
+    """
+    Executes exchange_func with retries, exponential backoff, and logs the result to db.
+    Sends Telegram alert on permanent failure.
+    """
+    max_retries = 3
+    delay = 1.0
+    backoff_factor = 2.0
+    
+    last_error = None
+    payload = {"symbol": symbol, "side": side, "qty": qty, "price": price, "order_type": order_type, "args": args, "kwargs": kwargs}
+    
+    for attempt in range(1, max_retries + 1):
+        start_time = time.time()
+        try:
+            # Execute exchange order call
+            response = exchange_func(*args, **kwargs)
+            duration_ms = (time.time() - start_time) * 1000.0
+            
+            # Log successful order to DB
+            db.log_order(
+                symbol=symbol,
+                side=side,
+                qty=qty,
+                price=price,
+                order_type=order_type,
+                payload=payload,
+                response=response,
+                status="success"
+            )
+            # Log external API call for auditing
+            db.log_api_call(
+                endpoint=f"{symbol}:{side}:order",
+                method="POST",
+                params=payload,
+                status_code=200,
+                response=response,
+                duration_ms=duration_ms
+            )
+            return response
+        except Exception as e:
+            duration_ms = (time.time() - start_time) * 1000.0
+            last_error = e
+            err_msg = str(e)
+            
+            # Log failed API attempt to DB
+            db.log_api_call(
+                endpoint=f"{symbol}:{side}:order",
+                method="POST",
+                params=payload,
+                status_code=500,
+                response=err_msg,
+                duration_ms=duration_ms
+            )
+            
+            # Determine if error is retryable
+            is_retryable = False
+            # CCXT retryable errors
+            if isinstance(e, (ccxt.NetworkError, ccxt.RequestTimeout, ccxt.RateLimitExceeded)):
+                is_retryable = True
+            # General string check for rate limits or timeouts
+            elif any(k in err_msg.lower() for k in ["rate limit", "timeout", "network", "api keys", "conn"]):
+                is_retryable = True
+                
+            if attempt < max_retries and is_retryable:
+                logger.warning(
+                    f"Order execution failed for {symbol} on attempt {attempt}/{max_retries}: {e}. "
+                    f"Retrying in {delay:.1f}s..."
+                )
+                time.sleep(delay)
+                delay *= backoff_factor
+            else:
+                logger.error(f"Order execution permanently failed for {symbol} on attempt {attempt}/{max_retries}: {e}")
+                break
+                
+    # If we got here, it permanently failed
+    db.log_order(
+        symbol=symbol,
+        side=side,
+        qty=qty,
+        price=price,
+        order_type=order_type,
+        payload=payload,
+        response=None,
+        status="error",
+        error_message=str(last_error)
+    )
+    
+    # Send Telegram error notification
+    send_message(
+        f"⚠️ <b>LIVE ORDER FAILED: {symbol}</b>\n"
+        f"Side: {side.upper()}\n"
+        f"Qty: {qty:.4f} @ {price:.4f}\n"
+        f"Error: <code>{str(last_error)[:200]}</code>"
+    )
+    raise last_error
+
+
 def place_bybit_market_order(symbol: str, side: str, amount_usd: float, current_price: float) -> float:
     """
     Submits a market order on Bybit.
@@ -161,7 +262,18 @@ def place_bybit_market_order(symbol: str, side: str, amount_usd: float, current_
     qty_formatted = float(qty_str)
     
     logger.info(f"Placing Bybit Spot Market {side.upper()} order for {symbol}: qty={qty_formatted}")
-    order = exchange.create_order(symbol, 'market', side, qty_formatted)
+    
+    def _place():
+        return exchange.create_order(symbol, 'market', side, qty_formatted)
+        
+    order = retry_and_log_order(
+        symbol=symbol,
+        side=side,
+        qty=qty_formatted,
+        price=current_price,
+        order_type="market",
+        exchange_func=_place
+    )
     
     fill_price = order.get("average") or order.get("price")
     if fill_price is None:
@@ -175,8 +287,8 @@ def place_alpaca_market_order(symbol: str, side_str: str, qty: float, current_pr
     Returns the actual average fill price.
     """
     client = get_alpaca_client()
-    
     side = OrderSide.BUY if side_str.lower() == "buy" else OrderSide.SELL
+    
     order_data = MarketOrderRequest(
         symbol=symbol,
         qty=qty,
@@ -185,35 +297,44 @@ def place_alpaca_market_order(symbol: str, side_str: str, qty: float, current_pr
     )
     
     logger.info(f"Submitting Alpaca Spot Market {side_str.upper()} order for {symbol}: qty={qty}")
-    try:
-        order = client.submit_order(order_data=order_data)
-    except Exception as e:
-        if "not fractionable" in str(e).lower():
-            int_qty = int(round(qty))
-            if int_qty < 1:
-                int_qty = 1
-            logger.warning(f"Asset {symbol} is not fractionable. Retrying with integer quantity: {int_qty}")
-            order_data = MarketOrderRequest(
-                symbol=symbol,
-                qty=int_qty,
-                side=side,
-                time_in_force=TimeInForce.DAY
-            )
-            order = client.submit_order(order_data=order_data)
-        else:
+    
+    def _place():
+        try:
+            return client.submit_order(order_data=order_data)
+        except Exception as e:
+            if "not fractionable" in str(e).lower():
+                int_qty = int(round(qty))
+                if int_qty < 1:
+                    int_qty = 1
+                logger.warning(f"Asset {symbol} is not fractionable. Retrying with integer quantity: {int_qty}")
+                retry_order_data = MarketOrderRequest(
+                    symbol=symbol,
+                    qty=int_qty,
+                    side=side,
+                    time_in_force=TimeInForce.DAY
+                )
+                return client.submit_order(order_data=retry_order_data)
             raise e
+            
+    order = retry_and_log_order(
+        symbol=symbol,
+        side=side_str,
+        qty=qty,
+        price=current_price,
+        order_type="market",
+        exchange_func=_place
+    )
     
     fill_price = order.filled_avg_price
     if fill_price is not None:
         fill_price = float(fill_price)
     else:
         # Wait up to 3 seconds for the order to fill
-        import time
         for _ in range(3):
             time.sleep(1)
-            order = client.get_order_by_id(order.id)
-            if order.filled_avg_price is not None:
-                fill_price = float(order.filled_avg_price)
+            refreshed = client.get_order_by_id(order.id)
+            if refreshed.filled_avg_price is not None:
+                fill_price = float(refreshed.filled_avg_price)
                 break
         if fill_price is None:
             fill_price = current_price
@@ -244,6 +365,7 @@ def open_trade(symbol: str, direction: str, entry: float,
             
     except Exception as e:
         logger.error(f"Failed to execute live open trade for {symbol}: {e}")
+        send_message(f"⚠️ <b>LIVE execution error</b> for {symbol}: {e}")
         return None
 
     portfolio = _load_state()
@@ -271,6 +393,17 @@ def open_trade(symbol: str, direction: str, entry: float,
         f"📝 LIVE {direction.upper()} opened: {symbol} | "
         f"Size=${size_usd:,.0f} | SL={stop_loss:.4f} | TP={take_profit:.4f} | "
         f"Entry price={fill_price:.4f}"
+    )
+    
+    # Send Telegram notification
+    send_message(
+        f"🟢 <b>LIVE {direction.upper()} Opened</b>\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"🪙 Symbol: {symbol}\n"
+        f"💵 Size: ${size_usd:,.2f}\n"
+        f"📈 Entry Price: <code>{fill_price:.4f}</code>\n"
+        f"🛑 Stop Loss: <code>{stop_loss:.4f}</code>\n"
+        f"🎯 Take Profit: <code>{take_profit:.4f}</code>"
     )
     return pos
 
@@ -309,6 +442,7 @@ def _close_position(portfolio: LivePortfolio, pos: Position, exit_price: float, 
             fill_price = place_alpaca_market_order(pos.symbol, "sell", qty_rounded, exit_price)
     except Exception as e:
         logger.error(f"Failed to execute live close trade for {pos.symbol}: {e}")
+        send_message(f"⚠️ <b>LIVE close execution error</b> for {pos.symbol}: {e}")
         # Return and do not modify state, so we retry on next monitoring tick
         return
 
@@ -343,6 +477,19 @@ def _close_position(portfolio: LivePortfolio, pos: Position, exit_price: float, 
         f"{emoji} LIVE {status.upper()}: {pos.symbol} | "
         f"Gross P&L=${gross_pnl:+,.2f} | Fees=${exit_fee:.2f} | "
         f"Net P&L=${net_pnl:+,.2f} | Total P&L=${portfolio.total_pnl:+,.2f}"
+    )
+
+    # Send Telegram notification
+    send_message(
+        f"{emoji} <b>LIVE Position Closed ({status.upper()})</b>\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"🪙 Symbol: {pos.symbol}\n"
+        f"💵 Size: ${pos.size_usd:,.2f}\n"
+        f"📈 Entry Price: <code>{pos.entry_price:.4f}</code>\n"
+        f"📉 Exit Price: <code>{fill_price:.4f}</code>\n"
+        f"💰 Net P&L: <b>${net_pnl:+,.2f}</b>\n"
+        f"🏷️ Fees paid: ${pos.fee_usd:.2f}\n"
+        f"📊 Total Portfolio P&L: <b>${portfolio.total_pnl:+,.2f}</b>"
     )
 
 
