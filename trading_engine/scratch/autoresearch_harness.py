@@ -199,6 +199,11 @@ def main():
     settings.bybit_api_secret = ""
     settings.binance_api_key = ""
     settings.binance_api_secret = ""
+    # Force local mock LLM provider to avoid slow network API calls
+    settings.llm_provider = "mock"
+    settings.openrouter_api_key = ""
+    settings.openai_api_key = ""
+    settings.anthropic_api_key = ""
     
     all_asset_results = {}
     fitness_scores = []
