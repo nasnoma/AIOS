@@ -61,8 +61,8 @@ class Settings(BaseSettings):
     max_risk_per_trade: float = 0.02
     max_portfolio_heat: float = 0.06
     kelly_fraction: float = 0.25
-    min_agent_agreement: int = 6
-    min_avg_confidence: float = 75.0
+    min_agent_agreement: int = 4
+    min_avg_confidence: float = 45.0
 
     # ── API ─────────────────────────────────
     api_host: str = "0.0.0.0"
