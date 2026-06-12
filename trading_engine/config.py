@@ -63,6 +63,9 @@ class Settings(BaseSettings):
     kelly_fraction: float = 0.25
     min_agent_agreement: int = 3
     min_avg_confidence: float = 30.0
+    atr_multiplier: float = 2.2
+    rr_ratio: float = 2.5
+    stop_loss_pct_max: float = 0.10
 
     # ── API ─────────────────────────────────
     api_host: str = "0.0.0.0"

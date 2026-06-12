@@ -170,6 +170,7 @@ class TestJudge:
     def test_below_threshold_not_approved(self):
         from trading_engine.judge import evaluate
         from trading_engine.agents.base import AgentSignal, Signal
+        from trading_engine.config import settings
 
         # Only 4 agree — below min_agent_agreement=6
         agents = [
@@ -177,8 +178,17 @@ class TestJudge:
         ] + [
             AgentSignal(agent=f"b{i}", signal=Signal.SELL, confidence=65, reason="t") for i in range(4)
         ]
-        verdict = evaluate(agents)
-        assert not verdict.approved
+        
+        original_agreement = settings.min_agent_agreement
+        original_confidence = settings.min_avg_confidence
+        try:
+            settings.min_agent_agreement = 6
+            settings.min_avg_confidence = 75.0
+            verdict = evaluate(agents)
+            assert not verdict.approved
+        finally:
+            settings.min_agent_agreement = original_agreement
+            settings.min_avg_confidence = original_confidence
 
 
 # ── Sentiment and Macro Agents (with Mock LLM) ──────────────

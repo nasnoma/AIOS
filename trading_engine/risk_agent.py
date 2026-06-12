@@ -251,27 +251,27 @@ def evaluate(
 
     # ── ATR-Based Stop Loss ────────────────────────────
     # Stop = 1.5x ATR below entry (long), above entry (short)
-    atr_multiplier = 1.8
+    atr_multiplier = settings.atr_multiplier
     stop_distance = atr * atr_multiplier
 
     if verdict.decision == Signal.BUY:
         stop_loss = entry - stop_distance
         stop_loss_pct = stop_distance / entry
-        rr_ratio = 2.5  # target 2.5:1 risk/reward
+        rr_ratio = settings.rr_ratio  # target risk/reward
         take_profit = entry + (stop_distance * rr_ratio)
         take_profit_pct = (take_profit - entry) / entry
     else:  # SELL (short)
         stop_loss = entry + stop_distance
         stop_loss_pct = stop_distance / entry
-        rr_ratio = 2.5
+        rr_ratio = settings.rr_ratio
         take_profit = entry - (stop_distance * rr_ratio)
         take_profit_pct = (entry - take_profit) / entry
 
-    # Hard cap: if stop > 10% away, reject (too risky)
-    if stop_loss_pct > 0.10:
+    # Hard cap: if stop > max allowed pct away, reject (too risky)
+    if stop_loss_pct > settings.stop_loss_pct_max:
         return RiskDecision(
             approved=False,
-            reason=f"Stop loss too wide: {stop_loss_pct:.1%} > 10% max (ATR={atr:.2f})",
+            reason=f"Stop loss too wide: {stop_loss_pct:.1%} > {settings.stop_loss_pct_max:.1%} max (ATR={atr:.2f})",
             position_size_pct=0, position_size_usd=0,
             entry_price=entry, stop_loss=stop_loss, take_profit=take_profit,
             stop_loss_pct=stop_loss_pct, take_profit_pct=take_profit_pct,
