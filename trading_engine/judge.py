@@ -147,7 +147,8 @@ def evaluate(agents: list[AgentSignal], agent_weights: dict[str, float] = None) 
 
     logger.info(
         f"Judge: {decision.value} | conf={confidence:.1f}% | "
-        f"agree={agreement}/{len(agents)} | approved={approved}"
+        f"agree={agreement}/{len(agents)} | approved={approved} | "
+        f"avg_raw_conf={avg_raw_confidence:.1f}% (min_conf={min_confidence})"
     )
 
     # Optional LLM explanation
