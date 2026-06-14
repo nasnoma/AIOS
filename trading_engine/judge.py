@@ -4,13 +4,15 @@ trading_engine/judge.py
 Judge Agent — Weighted Ensemble Voter
 - Receives all 8 agent signals
 - Applies confidence-weighted voting (not simple majority)
-- Uses per-agent weights that can be updated from historical accuracy
+- Uses per-agent weights loaded from autoresearch/params/judge_weights.json
+  (falls back to hardcoded defaults if the file is absent)
 - Optionally calls LLM to produce a human-readable reasoning summary
 - Hard threshold: must meet MIN_AGENT_AGREEMENT + MIN_AVG_CONFIDENCE
 """
 from __future__ import annotations
 import json
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional
 from loguru import logger
 
@@ -18,18 +20,47 @@ from trading_engine.agents.base import AgentSignal, Signal
 from trading_engine.config import settings
 from trading_engine.utils.llm import call_llm
 
+# ── Param file (editable by autoresearch optimizer) ────────────────────────────
+_WEIGHTS_PARAM_PATH = Path(__file__).parent / "autoresearch" / "params" / "judge_weights.json"
 
-# Default weights per agent (can be updated from DB track record)
-DEFAULT_WEIGHTS = {
-    "trend":      1.4,   # High weight — primary direction filter
-    "momentum":   1.2,
-    "volume":     1.1,
-    "orderflow":  1.3,   # High weight for crypto — smart money signal
-    "volatility": 0.8,   # Lower weight — regime filter, not direction
-    "structure":  1.2,
-    "sentiment":  0.9,   # LLM-based — slightly lower trust
-    "macro":      1.0,
+_HARDCODED_DEFAULTS = {
+    "weights": {
+        "trend":      1.4,   # High weight — primary direction filter
+        "momentum":   1.2,
+        "volume":     1.1,
+        "orderflow":  1.3,   # High weight for crypto — smart money signal
+        "volatility": 0.8,   # Lower weight — regime filter, not direction
+        "structure":  1.2,
+        "sentiment":  0.9,   # LLM-based — slightly lower trust
+        "macro":      1.0,
+    },
+    "min_agreement": 5,
+    "min_avg_confidence": 52,
 }
+
+
+def _load_judge_params() -> dict:
+    """Load judge weights and thresholds from param file, with fallback to defaults."""
+    if _WEIGHTS_PARAM_PATH.exists():
+        try:
+            data = json.loads(_WEIGHTS_PARAM_PATH.read_text())
+            # Strip _comment keys (not valid param keys)
+            data = {k: v for k, v in data.items() if not k.startswith("_")}
+            return data
+        except Exception as e:
+            logger.warning(f"judge_weights.json load failed: {e}. Using hardcoded defaults.")
+    return _HARDCODED_DEFAULTS
+
+
+def _get_weights() -> dict:
+    """Return the per-agent weight dict from param file (or defaults)."""
+    params = _load_judge_params()
+    return params.get("weights", _HARDCODED_DEFAULTS["weights"])
+
+
+# Default weights per agent — loaded from param file at call time
+# (keeping backward-compatible module-level name for external imports)
+DEFAULT_WEIGHTS = _get_weights()
 
 
 @dataclass
@@ -48,7 +79,17 @@ def _llm_explain(agents: list[AgentSignal], decision: Signal, confidence: float)
     """Call LLM to generate a concise explanation. Fallback to rule-based summary."""
     reports = [{"agent": a.agent, "signal": a.signal.value,
                 "confidence": a.confidence, "reason": a.reason} for a in agents]
-    prompt = f"""You are JudgeAgent. You never look at charts — only agent reports.
+    
+    from pathlib import Path
+    prompt_path = Path(__file__).parent / "prompts" / "judge_prompt.md"
+    if prompt_path.exists():
+        prompt = prompt_path.read_text().format(
+            reports=json.dumps(reports, indent=2),
+            decision=decision.value,
+            confidence=confidence
+        )
+    else:
+        prompt = f"""You are JudgeAgent. You never look at charts — only agent reports.
 
 Agent reports:
 {json.dumps(reports, indent=2)}
@@ -74,8 +115,12 @@ def evaluate(agents: list[AgentSignal], agent_weights: dict[str, float] = None) 
     """
     Run the weighted ensemble vote.
     Returns JudgeVerdict with approved=True only if thresholds are met.
+    Weights and thresholds are loaded live from autoresearch/params/judge_weights.json
+    so optimizer changes take effect immediately without restarting the process.
     """
-    weights = agent_weights or DEFAULT_WEIGHTS
+    # Reload params live (fast JSON read, ~1μs)
+    live_params = _load_judge_params()
+    weights = agent_weights or live_params.get("weights", _HARDCODED_DEFAULTS["weights"])
 
     buy_score = 0.0
     sell_score = 0.0
@@ -134,9 +179,10 @@ def evaluate(agents: list[AgentSignal], agent_weights: dict[str, float] = None) 
         agreement = agreement_with["HOLD"]
         disagreement = len(agents) - agreement
 
-    # ── Threshold check ────────────────────────────────
-    min_agreement = settings.min_agent_agreement
-    min_confidence = settings.min_avg_confidence
+    # ── Threshold check ───────────────────────────────────
+    # Load live from param file so optimizer changes take effect immediately
+    min_agreement = live_params.get("min_agreement", settings.min_agent_agreement)
+    min_confidence = live_params.get("min_avg_confidence", settings.min_avg_confidence)
     avg_raw_confidence = sum(a.confidence for a in agents) / len(agents) if agents else 0
 
     approved = (

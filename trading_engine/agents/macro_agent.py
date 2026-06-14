@@ -95,14 +95,30 @@ def _get_risk_mode() -> str:
     return _MACRO_CACHE["risk_mode"]
 
 
-def _llm_macro(dxy_trend: str, risk_mode: str, symbol: str, asset_type: str) -> tuple[Signal, float, str]:
+def _llm_macro(dxy_trend: str, risk_mode: str, symbol: str, asset_type: str, current_price: float = 0.0, ma_50: float = 0.0, ma_200: float = 0.0) -> tuple[Signal, float, str]:
     """LLM synthesizes structured macro data."""
-    prompt = f"""You are MacroAgent analyzing {symbol} ({asset_type}).
+    from pathlib import Path
+    prompt_path = Path(__file__).parent.parent / "prompts" / "macro_prompt.md"
+    if prompt_path.exists():
+        template = prompt_path.read_text()
+        escaped = template.replace("{", "{{").replace("}", "}}")
+        for placeholder in ["symbol", "asset_type", "dxy_trend", "risk_mode", "current_price", "ma_50", "ma_200"]:
+            escaped = escaped.replace(f"{{{{{placeholder}}}}}", f"{{{placeholder}}}")
+        prompt = escaped.format(
+            symbol=symbol, asset_type=asset_type,
+            dxy_trend=dxy_trend, risk_mode=risk_mode,
+            current_price=current_price, ma_50=ma_50, ma_200=ma_200
+        )
+    else:
+        prompt = f"""You are MacroAgent analyzing {symbol} ({asset_type}).
 
 Macro data:
 - DXY (dollar) trend: {dxy_trend}
 - Market risk mode: {risk_mode}
 - Asset type: {asset_type}
+- Price: {current_price}
+- MA50: {ma_50}
+- MA200: {ma_200}
 
 Rules:
 - Rising DXY = bearish for crypto and growth stocks
@@ -138,7 +154,7 @@ def analyze(snap: MarketSnapshot) -> AgentSignal:
     snap.dxy_trend = dxy_trend
     snap.risk_mode = risk_mode
 
-    signal, confidence, reason = _llm_macro(dxy_trend, risk_mode, snap.symbol, snap.asset_type)
+    signal, confidence, reason = _llm_macro(dxy_trend, risk_mode, snap.symbol, snap.asset_type, snap.close, snap.ema50, snap.ema200)
     reasons.append(f"DXY: {dxy_trend} | Risk mode: {risk_mode} | {reason}")
 
     return AgentSignal(

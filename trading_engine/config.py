@@ -67,6 +67,20 @@ class Settings(BaseSettings):
     rr_ratio: float = 2.5
     stop_loss_pct_max: float = 0.10
 
+    # ── Bounty Hunter ───────────────────────
+    bounty_hunter_enabled: bool = True
+    bounty_hunter_interval_hours: int = 1
+
+    # ── Bybit CFD Trading ────────────────────
+    # US stock CFD linear perpetuals on Bybit (TICKER/USDT:USDT format)
+    bybit_cfd_stocks: str = "AAPL/USDT:USDT,TSLA/USDT:USDT,NVDA/USDT:USDT,MSFT/USDT:USDT,AMZN/USDT:USDT,GOOGL/USDT:USDT"
+    # Precious metals linear perpetuals on Bybit
+    bybit_cfd_metals: str = "XAU/USDT:USDT,XAG/USDT:USDT"
+    # Master CFD switch
+    cfd_enabled: bool = True
+    # If True: scan pre-market (13:00 UTC EDT) and after-hours (21:00 UTC EDT)
+    extended_cfd_hours: bool = True
+
     # ── API ─────────────────────────────────
     api_host: str = "0.0.0.0"
     api_port: int = 8000
@@ -84,8 +98,24 @@ class Settings(BaseSettings):
         return [a.strip() for a in self.default_watchlist.split(",")]
 
     @property
+    def cfd_stock_assets(self) -> list[str]:
+        return [a.strip() for a in self.bybit_cfd_stocks.split(",") if a.strip()]
+
+    @property
+    def cfd_metal_assets(self) -> list[str]:
+        return [a.strip() for a in self.bybit_cfd_metals.split(",") if a.strip()]
+
+    @property
+    def all_cfd_assets(self) -> list[str]:
+        return self.cfd_stock_assets + self.cfd_metal_assets
+
+    @property
     def get_massive_api_key(self) -> str:
         return self.massive_api_key or self.polygon_api_key
 
 
 settings = Settings()
+
+import os
+if "PORT" in os.environ:
+    settings.api_port = int(os.environ["PORT"])

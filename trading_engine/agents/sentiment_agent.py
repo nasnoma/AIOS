@@ -58,7 +58,12 @@ def _llm_sentiment(
         
     combined_context = "\n\n".join(context_blocks)
 
-    prompt = f"""You are SentimentAgent analyzing {symbol}.
+    from pathlib import Path
+    prompt_path = Path(__file__).parent.parent / "prompts" / "sentiment_prompt.md"
+    if prompt_path.exists():
+        prompt = prompt_path.read_text().format(symbol=symbol, combined_context=combined_context)
+    else:
+        prompt = f"""You are SentimentAgent analyzing {symbol}.
 
 Scraped Social Media and News Context:
 {combined_context}

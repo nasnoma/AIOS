@@ -248,37 +248,80 @@ def retry_and_log_order(symbol: str, side: str, qty: float, price: float, order_
 
 def place_bybit_market_order(symbol: str, side: str, amount_usd: float, current_price: float) -> float:
     """
-    Submits a market order on Bybit.
-    For buy order: places a market buy for base currency quantity.
+    Submits a market order on Bybit Spot.
     Returns the actual average fill price.
     """
     exchange = get_bybit_exchange()
     exchange.load_markets()
-    
-    # Calculate amount in base currency
-    qty = amount_usd / current_price
-    # Format amount with CCXT precision helper
-    qty_str = exchange.amount_to_precision(symbol, qty)
+
+    qty         = amount_usd / current_price
+    qty_str     = exchange.amount_to_precision(symbol, qty)
     qty_formatted = float(qty_str)
-    
+
     logger.info(f"Placing Bybit Spot Market {side.upper()} order for {symbol}: qty={qty_formatted}")
-    
+
     def _place():
         return exchange.create_order(symbol, 'market', side, qty_formatted)
-        
+
     order = retry_and_log_order(
         symbol=symbol,
         side=side,
         qty=qty_formatted,
         price=current_price,
         order_type="market",
-        exchange_func=_place
+        exchange_func=_place,
     )
-    
+
     fill_price = order.get("average") or order.get("price")
-    if fill_price is None:
-        fill_price = current_price
-    return float(fill_price)
+    return float(fill_price) if fill_price else current_price
+
+
+def place_bybit_linear_order(symbol: str, side: str, amount_usd: float, current_price: float) -> float:
+    """
+    Submits a market order on Bybit Linear perpetuals (CFD stocks + precious metals).
+    Supports both 'buy' (long) and 'sell' (short) sides.
+    Returns the actual average fill price.
+    """
+    params: dict = {
+        "options": {"defaultType": "linear"},
+    }
+    if settings.bybit_api_key and settings.bybit_api_secret:
+        params["apiKey"] = settings.bybit_api_key
+        params["secret"] = settings.bybit_api_secret
+
+    exchange = ccxt.bybit(params)
+    if settings.crypto_testnet:
+        if settings.bybit_demo_trading:
+            exchange.enable_demo_trading(True)
+        else:
+            exchange.set_sandbox_mode(True)
+    exchange.load_markets()
+
+    qty           = amount_usd / current_price
+    qty_str       = exchange.amount_to_precision(symbol, qty)
+    qty_formatted = float(qty_str)
+
+    logger.info(f"Placing Bybit Linear Market {side.upper()} order for {symbol}: qty={qty_formatted}")
+
+    # For linear perpetuals, closing a position requires reduceOnly=True on the opposite side.
+    # Opening uses positionIdx=0 (one-way mode) which is the Bybit default.
+    def _place():
+        return exchange.create_order(
+            symbol, "market", side, qty_formatted,
+            params={"positionIdx": 0},
+        )
+
+    order = retry_and_log_order(
+        symbol=symbol,
+        side=side,
+        qty=qty_formatted,
+        price=current_price,
+        order_type="market",
+        exchange_func=_place,
+    )
+
+    fill_price = order.get("average") or order.get("price")
+    return float(fill_price) if fill_price else current_price
 
 
 def place_alpaca_market_order(symbol: str, side_str: str, qty: float, current_price: float) -> float:
@@ -344,25 +387,71 @@ def place_alpaca_market_order(symbol: str, side_str: str, qty: float, current_pr
 
 # ── Public API ────────────────────────────────────────────────────────────
 
-def open_trade(symbol: str, direction: str, entry: float,
-               size_usd: float, stop_loss: float, take_profit: float) -> Optional[Position]:
-    if direction == "short":
-        logger.warning(f"Spot trading does not support short positions for {symbol}. Skipping.")
+def open_trade(
+    symbol: str,
+    direction: str,
+    entry: float,
+    size_usd: float,
+    stop_loss: float,
+    take_profit: float,
+) -> Optional[Position]:
+    """
+    Open a live trade on the appropriate exchange.
+
+    Routing:
+      - Bybit CFD linear perpetuals (AAPL/USDT:USDT, XAU/USDT:USDT) → place_bybit_linear_order
+        • Supports both 'long' (buy) and 'short' (sell)
+        • Market hours guard: raises RuntimeError if market is closed
+      - Bybit crypto spot (BTC/USDT etc.)                            → place_bybit_market_order
+        • Long only (spot cannot go short without margin)
+      - Plain stock tickers (AAPL, TSLA)                             → place_alpaca_market_order
+        • Long only
+    """
+    from trading_engine.market_hours import classify_symbol, AssetClass, market_status
+
+    asset_class = classify_symbol(symbol)
+    is_cfd      = asset_class in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL)
+    is_crypto   = asset_class == AssetClass.CRYPTO
+
+    # ── Market hours guard for CFDs ─────────────────────────────────────────
+    if is_cfd:
+        status = market_status(symbol, extended_stock_hours=settings.extended_cfd_hours)
+        if not status.is_open:
+            status.log(symbol)
+            logger.warning(
+                f"⏸️  Blocking live {direction.upper()} on {symbol} — market is closed. "
+                f"Reason: {status.reason}"
+            )
+            return None
+
+    # ── Short validation ─────────────────────────────────────────────────────
+    if direction == "short" and not is_cfd:
+        logger.warning(
+            f"Short positions are only supported on Bybit linear CFDs. "
+            f"{symbol} ({asset_class.value}) does not support shorting. Skipping."
+        )
         return None
 
-    is_crypto = "/" in symbol or symbol.endswith("USDT") or symbol.endswith("USD")
-    
+    # ── Execute ──────────────────────────────────────────────────────────────
     try:
-        if is_crypto:
+        if is_cfd:
+            # Bybit linear perpetual — supports both buy (long) and sell (short)
+            side       = "buy" if direction == "long" else "sell"
+            fill_price = place_bybit_linear_order(symbol, side, size_usd, entry)
+
+        elif is_crypto:
+            # Bybit spot — long only
             fill_price = place_bybit_market_order(symbol, "buy", size_usd, entry)
+
         else:
-            qty = size_usd / entry
+            # Plain stock via Alpaca — long only
+            qty         = size_usd / entry
             qty_rounded = round(qty, 4)
             if qty_rounded <= 0:
-                logger.warning(f"Calculated stock quantity for {symbol} is too small: {qty}. Skipping.")
+                logger.warning(f"Stock quantity too small for {symbol} ({qty}). Skipping.")
                 return None
             fill_price = place_alpaca_market_order(symbol, "buy", qty_rounded, entry)
-            
+
     except Exception as e:
         logger.error(f"Failed to execute live open trade for {symbol}: {e}")
         send_message(f"⚠️ <b>LIVE execution error</b> for {symbol}: {e}")
@@ -372,7 +461,7 @@ def open_trade(symbol: str, direction: str, entry: float,
 
     # Deduct transaction fee
     entry_fee = size_usd * ENTRY_FEE_RATE
-    portfolio.cash -= entry_fee
+    portfolio.cash       -= entry_fee
     portfolio.total_fees += entry_fee
 
     pos = Position(
@@ -388,20 +477,21 @@ def open_trade(symbol: str, direction: str, entry: float,
     portfolio.positions.append(pos)
     portfolio.cash -= size_usd
     _save_state(portfolio)
-    
+
+    direction_icon = "📈" if direction == "long" else "📉"
     logger.success(
-        f"📝 LIVE {direction.upper()} opened: {symbol} | "
+        f"📝 LIVE {direction.upper()} opened: {symbol} ({asset_class.value}) | "
         f"Size=${size_usd:,.0f} | SL={stop_loss:.4f} | TP={take_profit:.4f} | "
-        f"Entry price={fill_price:.4f}"
+        f"Entry={fill_price:.4f}"
     )
-    
-    # Send Telegram notification
+
     send_message(
-        f"🟢 <b>LIVE {direction.upper()} Opened</b>\n"
+        f"{direction_icon} <b>LIVE {direction.upper()} Opened</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"🪙 Symbol: {symbol}\n"
+        f"📂 Asset: {asset_class.value}\n"
         f"💵 Size: ${size_usd:,.2f}\n"
-        f"📈 Entry Price: <code>{fill_price:.4f}</code>\n"
+        f"📈 Entry: <code>{fill_price:.4f}</code>\n"
         f"🛑 Stop Loss: <code>{stop_loss:.4f}</code>\n"
         f"🎯 Take Profit: <code>{take_profit:.4f}</code>"
     )
@@ -431,12 +521,22 @@ def update_prices(current_prices: dict[str, float]):
 
 
 def _close_position(portfolio: LivePortfolio, pos: Position, exit_price: float, status: str):
-    is_crypto = "/" in pos.symbol or pos.symbol.endswith("USDT") or pos.symbol.endswith("USD")
+    from trading_engine.market_hours import classify_symbol, AssetClass
+    
+    asset_class = classify_symbol(pos.symbol)
+    is_cfd      = asset_class in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL)
+    is_crypto   = asset_class == AssetClass.CRYPTO
     
     try:
-        if is_crypto:
+        if is_cfd:
+            # Linear perpetual — close with reduceOnly-equivalent opposite order
+            side = "sell" if pos.direction == "long" else "buy"
+            fill_price = place_bybit_linear_order(pos.symbol, side, pos.size_usd, exit_price)
+        elif is_crypto:
+            # Crypto Spot — close long with sell order
             fill_price = place_bybit_market_order(pos.symbol, "sell", pos.size_usd, exit_price)
         else:
+            # Alpaca Spot — close long with sell order
             qty = pos.size_usd / pos.entry_price
             qty_rounded = round(qty, 4)
             fill_price = place_alpaca_market_order(pos.symbol, "sell", qty_rounded, exit_price)
@@ -493,8 +593,136 @@ def _close_position(portfolio: LivePortfolio, pos: Position, exit_price: float, 
     )
 
 
+_last_sync_time = 0.0
+
+
+def sync_with_broker() -> bool:
+    """
+    Synchronizes the local live_state.json with actual positions on the broker/exchange.
+    Updates any locally open position that has been closed on the broker, ONLY if the broker queries succeed.
+    """
+    try:
+        portfolio = _load_state()
+        if not portfolio.positions:
+            return False
+
+        open_local_positions = [p for p in portfolio.positions if p.status == "open"]
+        if not open_local_positions:
+            return False
+
+        # 1. Fetch Alpaca positions
+        alpaca_fetched = False
+        alpaca_symbols = set()
+        try:
+            alpaca = get_alpaca_client()
+            for pos in alpaca.get_all_positions():
+                alpaca_symbols.add(pos.symbol.upper())
+            alpaca_fetched = True
+        except Exception as e:
+            logger.warning(f"Failed to fetch Alpaca positions during sync: {e}")
+
+        # 2. Fetch Bybit Spot balances
+        bybit_spot_fetched = False
+        bybit_spot_symbols = set()
+        try:
+            bybit = get_bybit_exchange()
+            balance = bybit.fetch_balance()
+            for currency, total in balance.get('total', {}).items():
+                if currency not in ('USDT', 'USDC', 'USD') and total > 0.00001:
+                    bybit_spot_symbols.add(f"{currency}/USDT".upper())
+            bybit_spot_fetched = True
+        except Exception as e:
+            logger.warning(f"Failed to fetch Bybit Spot balance during sync: {e}")
+
+        # 3. Fetch Bybit Linear positions
+        bybit_linear_fetched = False
+        bybit_linear_symbols = set()
+        try:
+            bybit_linear = get_bybit_exchange()
+            bybit_linear.options["defaultType"] = "linear"
+            bybit_linear.load_markets()
+            for pos in bybit_linear.fetch_positions():
+                if float(pos.get('size', 0)) > 0:
+                    symbol = pos.get('symbol', '').upper()
+                    bybit_linear_symbols.add(symbol)
+            bybit_linear_fetched = True
+        except Exception as e:
+            logger.warning(f"Failed to fetch Bybit Linear positions during sync: {e}")
+
+        # Helper to check if symbol is active on the broker
+        def is_symbol_open(symbol: str, asset_class) -> bool:
+            from trading_engine.market_hours import AssetClass
+            s = symbol.upper().replace("/", "").replace(":", "").replace("-", "").strip()
+            
+            if asset_class in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL):
+                for b_sym in bybit_linear_symbols:
+                    if s == b_sym.replace("/", "").replace(":", "").replace("-", "").strip():
+                        return True
+                return False
+            elif asset_class == AssetClass.CRYPTO:
+                for b_sym in bybit_spot_symbols:
+                    if s == b_sym.replace("/", "").replace(":", "").replace("-", "").strip():
+                        return True
+                return False
+            else:
+                for a_sym in alpaca_symbols:
+                    if s == a_sym.replace("/", "").replace(":", "").replace("-", "").strip():
+                        return True
+                return False
+
+        # 4. Check all open local positions
+        from trading_engine.market_hours import classify_symbol, AssetClass
+        changed = False
+
+        for pos in open_local_positions:
+            ac = classify_symbol(pos.symbol)
+            
+            # Skip checking if we failed to fetch data for the corresponding asset class
+            if ac in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL):
+                if not bybit_linear_fetched:
+                    continue
+            elif ac == AssetClass.CRYPTO:
+                if not bybit_spot_fetched:
+                    continue
+            else:
+                if not alpaca_fetched:
+                    continue
+
+            if not is_symbol_open(pos.symbol, ac):
+                logger.warning(f"Sync: {pos.symbol} is open in live_state.json but closed on broker. Closing locally.")
+                pos.status = "closed"
+                pos.closed_at = datetime.now(timezone.utc).isoformat()
+                pos.exit_price = pos.exit_price or pos.entry_price
+                pos.pnl_usd = pos.pnl_usd or 0.0
+                
+                if not any(c.symbol == pos.symbol and c.opened_at == pos.opened_at for c in portfolio.closed_trades):
+                    portfolio.closed_trades.append(pos)
+                changed = True
+
+        if changed:
+            portfolio.positions = [p for p in portfolio.positions if p.status == "open"]
+            _save_state(portfolio)
+            logger.info("Sync complete. State updated.")
+            return True
+
+    except Exception as e:
+        logger.error(f"Error in sync_with_broker: {e}")
+    return False
+
+
 def get_status() -> dict:
+    global _last_sync_time
+    now = time.time()
+    if now - _last_sync_time > 60.0:
+        try:
+            sync_with_broker()
+        except Exception as e:
+            logger.warning(f"Failed to sync with broker: {e}")
+        _last_sync_time = now
+
     portfolio = _load_state()
+    open_trades = [asdict(p) for p in portfolio.open_positions]
+    closed_trades = [asdict(p) for p in portfolio.closed_trades[-20:]]
     return {
         "account_size": portfolio.account_size,
         "cash": round(portfolio.cash, 2),
@@ -507,5 +735,6 @@ def get_status() -> dict:
         "win_rate": round(portfolio.win_rate * 100, 1),
         "win_count": portfolio.win_count,
         "loss_count": portfolio.loss_count,
-        "trades": [asdict(p) for p in portfolio.closed_trades[-20:]],
+        "trades": open_trades + closed_trades,
     }
+

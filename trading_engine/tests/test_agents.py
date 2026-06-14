@@ -146,7 +146,8 @@ class TestRiskAgent:
             decision=Signal.BUY, confidence=85, agreement=7, disagreement=1,
             weighted_score=0.85, reasoning="Test", agent_reports=[], approved=True,
         )
-        decision = evaluate(verdict, snap, current_portfolio_heat=0.08)  # above 6% limit
+        # Use a high portfolio heat (e.g. 0.20) to exceed the max_portfolio_heat threshold (currently 0.15)
+        decision = evaluate(verdict, snap, current_portfolio_heat=0.20)  # above limit
         assert not decision.approved
 
 

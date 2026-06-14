@@ -185,6 +185,7 @@ def main():
     parser.add_argument("--timeframe", default="4h", help="Data timeframe")
     parser.add_argument("--train-days", type=int, default=180, help="Training period days")
     parser.add_argument("--val-days", type=int, default=90, help="Validation period days")
+    parser.add_argument("--real-llm", action="store_true", help="Use real LLM API calls instead of mock fallback")
     
     args = parser.parse_args()
     
@@ -199,11 +200,15 @@ def main():
     settings.bybit_api_secret = ""
     settings.binance_api_key = ""
     settings.binance_api_secret = ""
-    # Force local mock LLM provider to avoid slow network API calls
-    settings.llm_provider = "mock"
-    settings.openrouter_api_key = ""
-    settings.openai_api_key = ""
-    settings.anthropic_api_key = ""
+    
+    if not args.real_llm:
+        # Force local mock LLM provider to avoid slow network API calls
+        settings.llm_provider = "mock"
+        settings.openrouter_api_key = ""
+        settings.openai_api_key = ""
+        settings.anthropic_api_key = ""
+    else:
+        logger.info(f"Running backtest with real LLM provider: {settings.llm_provider}")
     
     all_asset_results = {}
     fitness_scores = []

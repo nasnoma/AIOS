@@ -23,6 +23,33 @@ from trading_engine.judge import JudgeVerdict
 from trading_engine.data.market_data import MarketSnapshot
 from trading_engine.config import settings
 
+# ── Param file (editable by autoresearch optimizer) ────────────────────────────
+from pathlib import Path
+import json as _json
+
+_RISK_PARAM_PATH = Path(__file__).parent / "autoresearch" / "params" / "risk_thresholds.json"
+
+_RISK_DEFAULTS = {
+    "kelly_fraction":       0.25,
+    "max_portfolio_heat":   0.15,
+    "atr_stop_multiplier":  2.0,
+    "corr_soft_threshold":  0.75,
+    "corr_hard_threshold":  0.90,
+    "max_position_pct":     0.10,
+}
+
+
+def _load_risk_params() -> dict:
+    """Load risk thresholds from param file, falling back to hardcoded defaults."""
+    if _RISK_PARAM_PATH.exists():
+        try:
+            data = _json.loads(_RISK_PARAM_PATH.read_text())
+            return {k: v for k, v in data.items() if not k.startswith("_")}
+        except Exception as e:
+            logger.warning(f"risk_thresholds.json load failed: {e}. Using defaults.")
+    return _RISK_DEFAULTS
+
+
 # ── Correlation groups ─────────────────────────────────────────────────────────
 # Assets in the same group are treated as correlated.
 # Used to detect double-exposure risk.
@@ -32,9 +59,10 @@ CORRELATION_GROUPS = [
     {"SPY", "QQQ", "IWM"},                               # US broad market ETFs
 ]
 
-# Correlation thresholds
-CORR_SOFT_THRESHOLD = 0.75   # Reduce position size by 50%
-CORR_HARD_THRESHOLD = 0.90   # Veto trade entirely
+# Correlation thresholds — loaded live from param file
+# (module-level names kept for backward compatibility)
+CORR_SOFT_THRESHOLD = _RISK_DEFAULTS["corr_soft_threshold"]
+CORR_HARD_THRESHOLD = _RISK_DEFAULTS["corr_hard_threshold"]
 
 
 def _get_correlation_group(symbol: str) -> Optional[set]:
@@ -118,16 +146,20 @@ def check_correlation(
                 f"  📊 {new_symbol} ↔ {open_symbol}: different groups, skipping correlation check"
             )
 
-    if max_corr >= CORR_HARD_THRESHOLD:
+    _params = _load_risk_params()
+    _soft = _params.get("corr_soft_threshold", CORR_SOFT_THRESHOLD)
+    _hard = _params.get("corr_hard_threshold", CORR_HARD_THRESHOLD)
+
+    if max_corr >= _hard:
         return 0.0, (
             f"Correlation veto: {new_symbol} ↔ {most_correlated_symbol} "
-            f"correlation={max_corr:.3f} ≥ hard threshold {CORR_HARD_THRESHOLD:.2f}. "
+            f"correlation={max_corr:.3f} ≥ hard threshold {_hard:.2f}. "
             f"Prevents double-exposure on correlated pair."
         )
-    elif max_corr >= CORR_SOFT_THRESHOLD:
+    elif max_corr >= _soft:
         return 0.5, (
             f"Correlation soft adjustment: {new_symbol} ↔ {most_correlated_symbol} "
-            f"correlation={max_corr:.3f} ≥ soft threshold {CORR_SOFT_THRESHOLD:.2f}. "
+            f"correlation={max_corr:.3f} ≥ soft threshold {_soft:.2f}. "
             f"Position size reduced by 50%."
         )
     else:
@@ -179,8 +211,11 @@ def evaluate(
     atr = snap.atr
     account = settings.account_size
     max_risk_per_trade = settings.max_risk_per_trade
-    max_heat = settings.max_portfolio_heat
-    kelly_frac = settings.kelly_fraction
+
+    # Load risk thresholds live from param file (optimizer can update without restart)
+    _rp = _load_risk_params()
+    max_heat = _rp.get("max_portfolio_heat", settings.max_portfolio_heat)
+    kelly_frac = _rp.get("kelly_fraction", settings.kelly_fraction)
 
     # ── Hard Veto Conditions ───────────────────────────
     if not verdict.approved:
@@ -297,7 +332,7 @@ def evaluate(
     # Remaining heat check
     remaining_heat = max_heat - current_portfolio_heat
     if max_risk_per_trade > remaining_heat:
-        position_size_pct = (remaining_heat / stop_loss_pct)
+        position_size_pct = min(position_size_pct, remaining_heat / stop_loss_pct)
         position_size_usd = account * position_size_pct
         max_loss_usd = position_size_usd * stop_loss_pct
 

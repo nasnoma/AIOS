@@ -254,16 +254,29 @@ def _run_multi_agent_simulation(
             snap = make_historical_snapshot(symbol, asset_type, timeframe, df, i)
             
             # Run 6 quant agents
-            signals = [
+            quant_signals = [
                 trend_agent.analyze(snap),
                 momentum_agent.analyze(snap),
                 volume_agent.analyze(snap),
                 volatility_agent.analyze(snap),
                 structure_agent.analyze(snap),
                 orderflow_agent.analyze(snap),
-                # Placeholders for news/sentiment agents (HOLD)
-                AgentSignal(agent="sentiment", signal=Signal.HOLD, confidence=50.0, reason="mock"),
-                AgentSignal(agent="macro", signal=Signal.HOLD, confidence=50.0, reason="mock"),
+            ]
+            
+            # Derive mock sentiment/macro from quant consensus
+            # (no LLM call — mirrors majority direction with moderate confidence)
+            _buy_ct  = sum(1 for s in quant_signals if s.signal == Signal.BUY)
+            _sell_ct = sum(1 for s in quant_signals if s.signal == Signal.SELL)
+            if _buy_ct > _sell_ct:
+                _mock_dir, _mock_conf = Signal.BUY, 58.0
+            elif _sell_ct > _buy_ct:
+                _mock_dir, _mock_conf = Signal.SELL, 58.0
+            else:
+                _mock_dir, _mock_conf = Signal.HOLD, 50.0
+            
+            signals = quant_signals + [
+                AgentSignal(agent="sentiment", signal=_mock_dir, confidence=_mock_conf, reason="backtest-proxy"),
+                AgentSignal(agent="macro",     signal=_mock_dir, confidence=_mock_conf, reason="backtest-proxy"),
             ]
             
             # Evaluate verdict

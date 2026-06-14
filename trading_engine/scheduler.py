@@ -9,6 +9,7 @@ from __future__ import annotations
 import signal as os_signal
 import sys
 from datetime import datetime
+import requests
 from loguru import logger
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.interval import IntervalTrigger
@@ -20,6 +21,15 @@ from trading_engine.alerts.telegram_bot import send_signal_alert
 
 
 scheduler = BlockingScheduler(timezone="UTC")
+
+
+def send_heartbeat():
+    """Send heartbeat to the API server."""
+    try:
+        url = f"http://localhost:{settings.api_port}/api/scheduler/heartbeat"
+        requests.post(url, timeout=2)
+    except Exception as e:
+        logger.debug(f"Heartbeat failed: {e}")
 
 
 def run_signal_cycle():
@@ -40,7 +50,29 @@ def run_signal_cycle():
     # Run full analysis
     signals = run_all_assets()
 
+    import requests
     for sig in signals:
+        # Post signal details to local dashboard server
+        try:
+            payload = {
+                "symbol": sig.symbol,
+                "asset_type": sig.asset_type,
+                "timeframe": sig.timeframe,
+                "timestamp": sig.timestamp,
+                "agent_signals": sig.agent_signals,
+                "verdict": sig.verdict,
+                "risk": sig.risk,
+                "final_action": sig.final_action,
+                "entry_price": sig.entry_price,
+                "stop_loss": sig.stop_loss,
+                "take_profit": sig.take_profit,
+                "position_size_usd": sig.position_size_usd,
+                "reasoning": sig.reasoning,
+            }
+            requests.post(f"http://localhost:{settings.api_port}/api/signals", json=payload, timeout=2)
+        except Exception as e:
+            logger.debug(f"Failed to post signal to dashboard: {e}")
+
         if sig.final_action in ("BUY", "SELL") and settings.trading_mode != "signal_only":
             direction = "long" if sig.final_action == "BUY" else "short"
             trader.open_trade(
@@ -76,17 +108,31 @@ def monitor_positions():
         return
 
     # Fetch current prices for all open symbols
+    from trading_engine.market_hours import classify_symbol, AssetClass
     from trading_engine.data.market_data import CryptoDataFetcher, StockDataFetcher
+    from trading_engine.data.cfd_data import BybitCFDFetcher
     import ccxt
 
-    current_prices = {}
-    
-    # 1. Fetch crypto prices via exchange
-    crypto_symbols = [pos.symbol for pos in open_positions if "/" in pos.symbol or pos.symbol.endswith("USDT") or pos.symbol.endswith("USD")]
+    current_prices: dict[str, float] = {}
+
+    # Classify all open positions
+    crypto_symbols = []
+    cfd_symbols    = []
+    stock_symbols  = []
+    for pos in open_positions:
+        ac = classify_symbol(pos.symbol)
+        if ac in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL):
+            cfd_symbols.append(pos.symbol)
+        elif ac == AssetClass.CRYPTO:
+            crypto_symbols.append(pos.symbol)
+        else:
+            stock_symbols.append(pos.symbol)
+
+    # 1. Crypto — Bybit spot
     if crypto_symbols:
         try:
             exchange_class = getattr(ccxt, settings.crypto_exchange)
-            exchange = exchange_class()
+            exchange       = exchange_class()
             for asset in crypto_symbols:
                 try:
                     ticker = exchange.fetch_ticker(asset)
@@ -96,12 +142,23 @@ def monitor_positions():
         except Exception as e:
             logger.warning(f"Price monitor fetch error for crypto: {e}")
 
-    # 2. Fetch stock prices via Massive
-    stock_symbols = [pos.symbol for pos in open_positions if pos.symbol not in current_prices]
-    if stock_symbols and settings.get_massive_api_key:
+    # 2. Bybit linear CFDs (stocks + metals)
+    if cfd_symbols:
+        cfd_fetcher = BybitCFDFetcher()
+        for asset in cfd_symbols:
+            try:
+                price = cfd_fetcher.fetch_latest_price(asset)
+                if price > 0:
+                    current_prices[asset] = price
+            except Exception as e:
+                logger.warning(f"Price monitor fetch error for CFD {asset}: {e}")
+
+    # 3. Plain stocks via Massive/Polygon
+    unfetched_stocks = [s for s in stock_symbols if s not in current_prices]
+    if unfetched_stocks and settings.get_massive_api_key:
         try:
             fetcher = StockDataFetcher()
-            for asset in stock_symbols:
+            for asset in unfetched_stocks:
                 try:
                     price = fetcher.fetch_latest_price(asset)
                     if price > 0:
@@ -113,6 +170,62 @@ def monitor_positions():
 
     if current_prices:
         trader.update_prices(current_prices)
+
+
+def run_bounty_hunter_cycle():
+    """Bounty Hunter cycle: scan crypto, Polygon stocks, and Bybit CFDs for trade opportunities."""
+    logger.info(f"\n⚔️ Scheduled Bounty Hunter scan cycle started: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}")
+
+    if settings.trading_mode == "live":
+        trader = live_trader
+    else:
+        trader = paper_trader
+
+    from trading_engine.bounty_hunter import run_bounty_hunt
+    results = run_bounty_hunt(
+        mode="oversold",
+        crypto_limit=3,
+        stock_limit=2,
+        cfd_limit=3,          # Bybit stock CFDs + metals
+        scan_cfds=True,
+    )
+
+    active_buys  = [r for r in results if r["final_action"] == "BUY"]
+    active_sells = [r for r in results if r["final_action"] == "SELL"]
+
+    if settings.trading_mode == "signal_only":
+        logger.info(f"Bounty Hunter [signal_only]: {len(active_buys)} BUY + {len(active_sells)} SELL signals — not executing.")
+        return
+
+    # Execute BUY signals
+    if active_buys:
+        logger.info(f"Bounty Hunter: placing {len(active_buys)} BUY trade(s)...")
+        for b in active_buys:
+            trader.open_trade(
+                symbol=b["symbol"],
+                direction="long",
+                entry=b["entry_price"],
+                size_usd=b["position_size_usd"] or 20.0,
+                stop_loss=b["stop_loss"]    or (b["entry_price"] * 0.95),
+                take_profit=b["take_profit"] or (b["entry_price"] * 1.10),
+            )
+    else:
+        logger.info("Bounty Hunter: no approved BUY candidates in this scan.")
+
+    # Execute SELL (short) signals — only valid for Bybit linear CFDs
+    if active_sells:
+        logger.info(f"Bounty Hunter: placing {len(active_sells)} SELL (short) trade(s)...")
+        for s in active_sells:
+            trader.open_trade(
+                symbol=s["symbol"],
+                direction="short",
+                entry=s["entry_price"],
+                size_usd=s["position_size_usd"] or 20.0,
+                stop_loss=s["stop_loss"]    or (s["entry_price"] * 1.05),
+                take_profit=s["take_profit"] or (s["entry_price"] * 0.90),
+            )
+    else:
+        logger.info("Bounty Hunter: no approved SELL candidates in this scan.")
 
 
 def shutdown(signum, frame):
@@ -133,9 +246,18 @@ def main():
     logger.info(f"   Timeframe: {settings.timeframe}")
 
     # Run once immediately
+    send_heartbeat()
     run_signal_cycle()
+    if settings.bounty_hunter_enabled:
+        run_bounty_hunter_cycle()
 
     # Schedule recurring runs
+    scheduler.add_job(
+        send_heartbeat,
+        trigger=IntervalTrigger(seconds=30),
+        id="heartbeat",
+        name="Scheduler Heartbeat",
+    )
     scheduler.add_job(
         run_signal_cycle,
         trigger=IntervalTrigger(minutes=interval),
@@ -150,6 +272,17 @@ def main():
         id="position_monitor",
         name="Position Monitor",
     )
+
+    # Bounty Hunter scan
+    if settings.bounty_hunter_enabled:
+        interval_hours = settings.bounty_hunter_interval_hours
+        logger.info(f"   Bounty Hunter: scheduled every {interval_hours} hours")
+        scheduler.add_job(
+            run_bounty_hunter_cycle,
+            trigger=IntervalTrigger(hours=interval_hours),
+            id="bounty_hunter_cycle",
+            name="Bounty Hunter Cycle",
+        )
 
     scheduler.start()
 

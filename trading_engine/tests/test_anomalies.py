@@ -66,7 +66,7 @@ class TestRankAndEnrichCandidates:
         mock_social.return_value = {"tweets": [], "stocktwits_raw": "", "news_headlines": []}
         
         # Call rank_and_enrich
-        ranked = bounty_hunter.rank_and_enrich_candidates(["BTC/USDT", "ETH/USDT"], "oversold", limit=2)
+        ranked, snaps = bounty_hunter.rank_and_enrich_candidates(["BTC/USDT", "ETH/USDT"], "oversold", limit=2)
         
         assert len(ranked) == 2
         # BTC should have higher anomaly score in oversold mode due to much lower RSI (25 vs 45)

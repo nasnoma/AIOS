@@ -226,6 +226,8 @@ def _close_position(portfolio: PaperPortfolio, pos: Position, exit_price: float,
 
 def get_status() -> dict:
     portfolio = _load_state()
+    open_trades = [asdict(p) for p in portfolio.open_positions]
+    closed_trades = [asdict(p) for p in portfolio.closed_trades[-20:]]
     return {
         "account_size": portfolio.account_size,
         "cash": round(portfolio.cash, 2),
@@ -238,5 +240,5 @@ def get_status() -> dict:
         "win_rate": round(portfolio.win_rate * 100, 1),
         "win_count": portfolio.win_count,
         "loss_count": portfolio.loss_count,
-        "trades": [asdict(p) for p in portfolio.closed_trades[-20:]],
+        "trades": open_trades + closed_trades,
     }

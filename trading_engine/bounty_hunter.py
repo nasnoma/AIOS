@@ -9,6 +9,7 @@ on the top candidates.
 from __future__ import annotations
 import os
 import sys
+import time
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 from loguru import logger
@@ -21,6 +22,39 @@ from trading_engine.orchestrator import run as run_pipeline
 from trading_engine.utils.http import get_with_retry
 from trading_engine.data.market_data import MarketSnapshot
 
+
+# ── Symbol cooldown cache (fix #4: no duplicate scans within 30 min) ──────────
+_SCAN_COOLDOWN: dict[str, float] = {}   # symbol -> last_scan_timestamp
+_COOLDOWN_SECONDS = 30 * 60             # 30 minutes
+
+
+def _is_on_cooldown(symbol: str) -> bool:
+    """Returns True if the symbol was scanned within the cooldown window."""
+    last = _SCAN_COOLDOWN.get(symbol, 0.0)
+    return (time.time() - last) < _COOLDOWN_SECONDS
+
+
+def _mark_scanned(symbol: str) -> None:
+    """Records that the symbol was just scanned."""
+    _SCAN_COOLDOWN[symbol] = time.time()
+
+
+def _load_live_win_rate() -> float:
+    """Reads win_rate from paper_state.json; falls back to 0.50 if unavailable."""
+    try:
+        import json
+        from pathlib import Path
+        state_path = Path(__file__).parent / "paper_state.json"
+        if state_path.exists():
+            s = json.loads(state_path.read_text())
+            wins   = int(s.get("win_count", 0))
+            losses = int(s.get("loss_count", 0))
+            total  = wins + losses
+            if total >= 5:   # only trust the rate once we have ≥5 closed trades
+                return wins / total
+    except Exception:
+        pass
+    return 0.50
 
 
 def get_latest_trading_date() -> str:
@@ -57,10 +91,9 @@ def scan_bybit_crypto(mode: str = "oversold", limit: int = 5, watchlist: Optiona
     """
     logger.info(f"🔍 Starting Bybit Spot scan (mode={mode}, limit={limit})...")
     exchange = ccxt.bybit({'options': {'defaultType': 'spot'}})
-    
+
     try:
         exchange.load_markets()
-        # fetch_tickers retrieves 24h ticker details for all symbols in a single call
         tickers = exchange.fetch_tickers()
     except Exception as e:
         logger.error(f"Failed to fetch tickers from Bybit: {e}")
@@ -68,17 +101,14 @@ def scan_bybit_crypto(mode: str = "oversold", limit: int = 5, watchlist: Optiona
 
     candidates = []
     for symbol, ticker in tickers.items():
-        # Get market representation to ensure it is spot
         market = exchange.markets.get(symbol)
         if not market or not market.get("spot"):
             continue
-            
-        # Filter for Spot USDT pairs (support standard symbol and alternative CCXT unified format)
+
         base_symbol = symbol.split(":")[0] if ":" in symbol else symbol
         if not base_symbol.endswith("/USDT"):
             continue
-            
-        # Filter by watchlist/favourites
+
         if watchlist is not None:
             match_found = False
             for w in watchlist:
@@ -88,45 +118,116 @@ def scan_bybit_crypto(mode: str = "oversold", limit: int = 5, watchlist: Optiona
             if not match_found:
                 continue
 
-        # Extract volume and change
         quote_volume = ticker.get("quoteVolume")
-        percentage = ticker.get("percentage")
-        
-        # If quoteVolume is missing, estimate using baseVolume * close price
+        percentage   = ticker.get("percentage")
+
         if quote_volume is None:
-            base_vol = ticker.get("baseVolume") or 0.0
-            close_price = ticker.get("close") or 0.0
+            base_vol     = ticker.get("baseVolume") or 0.0
+            close_price  = ticker.get("close") or 0.0
             quote_volume = base_vol * close_price
-            
-        # Require minimum liquidity of 1,000,000 USDT to avoid illiquid pump-and-dumps
+
         if quote_volume < 1_000_000.0:
             continue
-            
+
         if percentage is None:
             continue
-            
-        candidates.append({
-            "symbol": symbol,
-            "volume": quote_volume,
-            "change": percentage,
-        })
-        
+
+        candidates.append({"symbol": symbol, "volume": quote_volume, "change": percentage})
+
     logger.info(f"Found {len(candidates)} liquid Bybit spot pairs.")
-    
-    # Sort based on strategy mode
+
     if mode == "oversold":
-        # Sort ascending (biggest decliners first)
         candidates.sort(key=lambda x: x["change"])
     elif mode == "momentum":
-        # Sort descending (biggest gainers first)
         candidates.sort(key=lambda x: x["change"], reverse=True)
     elif mode in ("volume", "hot"):
-        # Sort descending (highest volume first)
         candidates.sort(key=lambda x: x["volume"], reverse=True)
-        
+
     selected = [c["symbol"] for c in candidates[:limit]]
-    logger.info(f"Selected Bybit candidates: {selected}")
+    logger.info(f"Selected Bybit crypto candidates: {selected}")
     return selected
+
+
+def scan_bybit_cfds(
+    mode: str = "oversold",
+    limit: int = 5,
+    include_stocks: bool = True,
+    include_metals: bool = True,
+    watchlist: Optional[list[str]] = None,
+) -> list[str]:
+    """
+    Scan Bybit linear perpetual CFDs (US stock CFDs + precious metals).
+
+    Applies a market hours guard per symbol — any symbol whose market is closed
+    is silently skipped (not counted against `limit`).
+
+    Args:
+        mode:            Scan mode — 'oversold' | 'momentum' | 'volume' | 'hot'
+        limit:           Max symbols to return (after market hours filtering)
+        include_stocks:  Include US stock CFDs (AAPL/USDT:USDT etc.)
+        include_metals:  Include precious metals (XAU/USDT:USDT, XAG/USDT:USDT)
+        watchlist:       If set, restrict to these symbols only
+
+    Returns:
+        list of symbol strings whose market is currently open.
+    """
+    from trading_engine.market_hours import is_market_open, filter_open_symbols
+    from trading_engine.data.cfd_data import fetch_cfd_ticker
+
+    pool: list[str] = []
+    if include_stocks:
+        pool.extend(settings.cfd_stock_assets)
+    if include_metals:
+        pool.extend(settings.cfd_metal_assets)
+
+    # Watchlist override
+    if watchlist:
+        wl_upper = {w.upper() for w in watchlist}
+        pool = [s for s in pool if s.upper() in wl_upper or s.split("/")[0].upper() in wl_upper]
+
+    logger.info(f"🏦 Bybit CFD scan: {len(pool)} candidate(s) — mode={mode}")
+
+    # Market hours guard: drop closed symbols immediately
+    open_pool = filter_open_symbols(pool, extended_stock_hours=settings.extended_cfd_hours)
+    if not open_pool:
+        logger.info("⏸️  All CFD markets are currently closed — skipping CFD scan.")
+        return []
+
+    # Fetch tickers for sorting
+    exchange = ccxt.bybit({"options": {"defaultType": "linear"}})
+    ranked: list[dict] = []
+
+    for symbol in open_pool:
+        try:
+            ticker = exchange.fetch_ticker(symbol)
+            quote_volume = ticker.get("quoteVolume") or (
+                (ticker.get("baseVolume") or 0) * (ticker.get("close") or 0)
+            )
+            percentage = ticker.get("percentage") or 0.0
+            ranked.append({
+                "symbol":  symbol,
+                "volume":  float(quote_volume),
+                "change":  float(percentage),
+                "close":   float(ticker.get("close") or 0),
+            })
+        except Exception as e:
+            logger.warning(f"CFD ticker fetch failed for {symbol}: {e}")
+
+    if not ranked:
+        return []
+
+    # Sort by mode
+    if mode == "oversold":
+        ranked.sort(key=lambda x: x["change"])
+    elif mode == "momentum":
+        ranked.sort(key=lambda x: x["change"], reverse=True)
+    elif mode in ("volume", "hot"):
+        ranked.sort(key=lambda x: x["volume"], reverse=True)
+
+    selected = [r["symbol"] for r in ranked[:limit]]
+    logger.info(f"Selected Bybit CFD candidates: {selected}")
+    return selected
+
 
 
 def scan_massive_stocks(mode: str = "oversold", limit: int = 5, watchlist: Optional[list[str]] = None) -> list[str]:
@@ -237,64 +338,80 @@ def rank_and_enrich_candidates(symbols: list[str], mode: str, limit: int) -> lis
     """
     For a list of candidate symbols, builds snapshots, computes advanced math anomalies,
     scrapes social sentiment, and returns the top candidates sorted by combined anomaly score.
+    Also returns the built snapshots so run_bounty_hunt can reuse them (fix #2: no double fetch).
     """
     from trading_engine.data.market_data import build_snapshot
     from trading_engine.utils.scrapers import get_social_sentiment_context
-    
+
     enriched = []
     for symbol in symbols:
+        # Fix #4: skip if recently scanned
+        if _is_on_cooldown(symbol):
+            logger.debug(f"⏭️  {symbol} is on cooldown — skipping this cycle")
+            continue
         try:
-            # Build snapshot (automatically fetches OHLCV & calculates technical metrics)
+            # Build snapshot once — reused for pre-flight below (fix #2)
             snap = build_snapshot(symbol, settings.timeframe)
-            
+
+            # Fix #5: Regime filter for oversold mode — skip confirmed downtrends
+            ema20 = getattr(snap, "ema20", 0)
+            ema50 = getattr(snap, "ema50", 0)
+            ema200 = getattr(snap, "ema200", 0)
+            if (isinstance(ema20, (int, float)) and isinstance(ema50, (int, float)) and isinstance(ema200, (int, float))
+                and ema20 > 0 and ema50 > 0 and ema200 > 0):
+                if ema20 < ema50 < ema200:
+                    logger.info(f"🚫 {symbol} skipped (oversold in confirmed downtrend EMA20<50<200)")
+                    continue
+
             # Fetch order book depth
             imbalance = fetch_orderbook_imbalance(symbol)
             snap.orderbook_imbalance = imbalance
-            
+
             # Fetch news & social feeds (Twitter, Stocktwits, Google News)
             social_data = get_social_sentiment_context(symbol)
             snap.tweets = social_data.get("tweets", [])
             snap.stocktwits_raw = social_data.get("stocktwits_raw", "")
             snap.news_headlines = social_data.get("news_headlines", [])
-            
+
             # Calculate Combined Anomaly Score
-            # Base components: volume breakout and order book depth pressure
-            vol_score = snap.rel_volume * 2.0
+            vol_score  = snap.rel_volume * 2.0
             book_score = imbalance * 5.0
-            
+
             if mode == "oversold":
-                # Lower RSI = stronger oversold anomaly
                 rsi_score = max(0, 50 - snap.rsi) * 1.5
                 anomaly_score = rsi_score + vol_score + book_score
             elif mode == "momentum":
-                # Favor RSI between 50 and 75, penalize above 80 (exhaustion)
                 if snap.rsi > 80:
                     rsi_score = max(0, 80 - (snap.rsi - 80)) * 1.5
                 else:
                     rsi_score = max(0, snap.rsi - 50) * 1.5
                 anomaly_score = rsi_score + (snap.rel_volume * 3.0) + book_score
             elif mode == "hot":
-                # Hot score: combination of relative volume, orderbook imbalance, and social buzz frequency
                 mention_count = len(snap.tweets)
                 if snap.stocktwits_raw:
                     mention_count += len([line for line in snap.stocktwits_raw.split("\n") if line.strip()])
                 mention_count += len(snap.news_headlines)
-                
                 anomaly_score = (snap.rel_volume * 3.0) + (imbalance * 4.0) + (mention_count * 2.0)
             else:  # volume breakout mode
                 anomaly_score = (snap.rel_volume * 5.0) + book_score + abs(snap.rsi - 50)
-                
+
             logger.info(f"📊 {symbol} anomaly check: RSI={snap.rsi:.1f} | RelVol={snap.rel_volume:.2f} | Imbalance={imbalance:.2f} -> Score: {anomaly_score:.2f}")
             enriched.append({
-                "symbol": symbol,
+                "symbol":        symbol,
                 "anomaly_score": anomaly_score,
+                "snap":          snap,          # carry snapshot forward (fix #2)
             })
         except Exception as e:
             logger.warning(f"Failed to enrich candidate {symbol}: {e}")
-            
+
     # Sort descending by anomaly score
     enriched.sort(key=lambda x: x["anomaly_score"], reverse=True)
-    return [item["symbol"] for item in enriched[:limit]]
+    top = enriched[:limit]
+    # Return (symbols, snapshots) so run_bounty_hunt can skip the second build_snapshot call
+    return (
+        [item["symbol"] for item in top],
+        {item["symbol"]: item["snap"] for item in top},
+    )
 
 
 def check_preflight_probability(snap: MarketSnapshot, mode: str) -> tuple[bool, float, str]:
@@ -310,18 +427,22 @@ def check_preflight_probability(snap: MarketSnapshot, mode: str) -> tuple[bool, 
     # ── Hard Vetoes ───────────────────────────────────
     if atr <= 0 or close <= 0:
         return False, 0.0, "Veto: ATR or price is zero (bad data)"
-        
+
     atr_pct = (atr / close) * 100
     if atr_pct > 8.0:
         return False, 0.0, f"Veto: Extreme volatility (ATR%={atr_pct:.1f}% > 8.0%)"
-        
-    if bb_width > 0.12:
-        return False, 0.0, f"Veto: Market too volatile (BB width={bb_width:.3f} > 0.12)"
-        
+
+    # Fix #1: Relax BB width veto — crypto regularly runs 0.13-0.20 in trending phases.
+    # Use 0.18 for crypto (symbol has '/'), keep 0.12 for stocks.
+    is_crypto_snap = "/" in snap.symbol if snap.symbol else True
+    bb_veto_threshold = 0.18 if is_crypto_snap else 0.12
+    if bb_width > bb_veto_threshold:
+        return False, 0.0, f"Veto: Market too volatile (BB width={bb_width:.3f} > {bb_veto_threshold})"
+
     stop_loss_pct = (1.5 * atr) / close
     if stop_loss_pct > 0.08:
         return False, 0.0, f"Veto: Stop loss too wide ({stop_loss_pct:.1%} > 8.0%)"
-        
+
     if snap.realized_vol is not None and snap.realized_vol > 1.5:
         return False, 0.0, f"Veto: Extreme realized volatility ({snap.realized_vol:.2f} > 1.5)"
 
@@ -506,68 +627,126 @@ def check_preflight_probability(snap: MarketSnapshot, mode: str) -> tuple[bool, 
     return is_viable, probability, reason_str
 
 
-def run_bounty_hunt(mode: str = "oversold", crypto_limit: int = 5, stock_limit: int = 5, watchlist: Optional[list[str]] = None) -> list[dict]:
+def run_bounty_hunt(
+    mode: str = "oversold",
+    crypto_limit: int = 5,
+    stock_limit: int = 5,
+    cfd_limit: int = 4,
+    scan_cfds: bool = True,
+    watchlist: Optional[list[str]] = None,
+) -> list[dict]:
     """
     Scans the market, picks top candidates, runs the multi-agent pipeline
     on each, and returns a detailed report.
+
+    Args:
+        mode:         Scan mode — 'oversold' | 'momentum' | 'volume' | 'hot'
+        crypto_limit: Max crypto candidates to deep-analyse
+        stock_limit:  Max Polygon/Massive stock candidates to deep-analyse
+        cfd_limit:    Max Bybit CFD candidates (stocks + metals) to deep-analyse
+        scan_cfds:    If True and settings.cfd_enabled, scan Bybit CFD linear perps
+        watchlist:    Optional symbol allow-list
     """
     logger.info("⚔️ Bounty Hunter Scan Cycle Triggered ⚔️")
-    
-    # Fast scan a larger pool in bulk (e.g. limit * 3) to allow math ranking
+
+    # Load live win rate once per hunt cycle
+    live_win_rate = _load_live_win_rate()
+    logger.info(f"📈 Live win rate from paper state: {live_win_rate:.1%}")
+
+    # ── Crypto ──────────────────────────────────────────────────────────────
     raw_crypto = scan_bybit_crypto(mode=mode, limit=crypto_limit * 3, watchlist=watchlist)
+
+    # ── Legacy stocks (Polygon/Massive) ────────────────────────────────────
     raw_stocks = scan_massive_stocks(mode=mode, limit=stock_limit * 3, watchlist=watchlist)
-    
+
+    # ── Bybit CFD stocks + precious metals ──────────────────────────────────
+    raw_cfds: list[str] = []
+    if scan_cfds and settings.cfd_enabled:
+        raw_cfds = scan_bybit_cfds(mode=mode, limit=cfd_limit * 2, watchlist=watchlist)
+    elif not settings.cfd_enabled:
+        logger.debug("CFD trading disabled in config (cfd_enabled=False) — skipping CFD scan")
+
     logger.info("📐 Verifying anomalies and ranking candidates...")
-    crypto_candidates = rank_and_enrich_candidates(raw_crypto, mode, limit=crypto_limit)
-    stock_candidates = rank_and_enrich_candidates(raw_stocks, mode, limit=stock_limit)
-    
-    all_candidates = crypto_candidates + stock_candidates
+    crypto_candidates, crypto_snaps = rank_and_enrich_candidates(raw_crypto, mode, limit=crypto_limit)
+    stock_candidates,  stock_snaps  = rank_and_enrich_candidates(raw_stocks, mode, limit=stock_limit)
+    cfd_candidates,    cfd_snaps    = rank_and_enrich_candidates(raw_cfds,   mode, limit=cfd_limit) if raw_cfds else ([], {})
+
+    all_candidates = crypto_candidates + stock_candidates + cfd_candidates
+    snap_cache = {**crypto_snaps, **stock_snaps, **cfd_snaps}
     results = []
-    
+
     for symbol in all_candidates:
         logger.info(f"Checking pre-flight checklist for candidate: {symbol} ...")
         try:
-            from trading_engine.data.market_data import build_snapshot
-            snap = build_snapshot(symbol, settings.timeframe)
-            
+            # Fix #2: reuse cached snapshot — no second OHLCV fetch
+            snap = snap_cache.get(symbol)
+            if snap is None:
+                from trading_engine.data.market_data import build_snapshot
+                snap = build_snapshot(symbol, settings.timeframe)
+
             is_viable, probability, preflight_reason = check_preflight_probability(snap, mode)
-            
+
             if not is_viable:
                 logger.warning(f"⚠️ Pre-flight check rejected {symbol}: probability={probability:.1f}% | {preflight_reason}")
                 results.append({
-                    "symbol": symbol,
-                    "final_action": "NO_TRADE",
-                    "entry_price": snap.close,
-                    "stop_loss": None,
-                    "take_profit": None,
+                    "symbol":            symbol,
+                    "final_action":      "NO_TRADE",
+                    "entry_price":       snap.close,
+                    "stop_loss":         None,
+                    "take_profit":       None,
                     "position_size_usd": None,
-                    "confidence": probability,
-                    "agreement": 0,
-                    "reasoning": f"Rejected by Bounty Hunter pre-flight checklist. {preflight_reason}"
+                    "confidence":        probability,
+                    "agreement":         0,
+                    "reasoning":         f"Rejected by Bounty Hunter pre-flight checklist. {preflight_reason}"
                 })
                 continue
 
-            logger.info(f"✅ Candidate {symbol} passed pre-flight checklist: probability={probability:.1f}%! Running deep analysis...")
-            # Execute the full pipeline
+            logger.info(f"✅ Candidate {symbol} passed pre-flight (prob={probability:.1f}%)! Running deep analysis...")
+
+            # Fix #3: pass live win_rate into pipeline instead of hardcoded 0.50
             sig = run_pipeline(
                 symbol=symbol,
                 portfolio_heat=0.0,
                 open_positions=0,
-                win_rate=0.50
+                win_rate=live_win_rate,
             )
-            
+
+            # Mark symbol as scanned (fix #4: cooldown)
+            _mark_scanned(symbol)
+
+            # Post signal details to local dashboard server
+            try:
+                payload = {
+                    "symbol":            sig.symbol,
+                    "asset_type":        sig.asset_type,
+                    "timeframe":         sig.timeframe,
+                    "timestamp":         sig.timestamp,
+                    "agent_signals":     sig.agent_signals,
+                    "verdict":           sig.verdict,
+                    "risk":              sig.risk,
+                    "final_action":      sig.final_action,
+                    "entry_price":       sig.entry_price,
+                    "stop_loss":         sig.stop_loss,
+                    "take_profit":       sig.take_profit,
+                    "position_size_usd": sig.position_size_usd,
+                    "reasoning":         sig.reasoning,
+                }
+                requests.post(f"http://localhost:{settings.api_port}/api/signals", json=payload, timeout=2)
+            except Exception as e:
+                logger.debug(f"Failed to post signal to dashboard: {e}")
+
             results.append({
-                "symbol": symbol,
-                "final_action": sig.final_action,
-                "entry_price": sig.entry_price,
-                "stop_loss": sig.stop_loss,
-                "take_profit": sig.take_profit,
+                "symbol":            symbol,
+                "final_action":      sig.final_action,
+                "entry_price":       sig.entry_price,
+                "stop_loss":         sig.stop_loss,
+                "take_profit":       sig.take_profit,
                 "position_size_usd": sig.position_size_usd,
-                "confidence": sig.verdict.get("confidence", 0.0),
-                "agreement": sig.verdict.get("agreement", 0),
-                "reasoning": sig.reasoning
+                "confidence":        sig.verdict.get("confidence", 0.0),
+                "agreement":         sig.verdict.get("agreement", 0),
+                "reasoning":         sig.reasoning,
             })
         except Exception as e:
             logger.error(f"Pipeline failed for candidate {symbol}: {e}")
-            
+
     return results

@@ -2,7 +2,7 @@
 .DS_Store
 AIS-OS/
 Scrapegraph-ai/
-autoresearch/
+/autoresearch/
 graphify-out/
 markitdown/
 rtk/
@@ -17,9 +17,9 @@ trading_engine/.pytest_cache/
 
 # Trading engine runtime/data outputs
 trading_engine/backtest_results/
-trading_engine/storage/
+# trading_engine/storage/
 trading_engine/live_state.json
 trading_engine/paper_state.json
 trading_engine/.env
-data/
+/data/
 

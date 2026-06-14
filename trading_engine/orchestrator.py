@@ -133,7 +133,7 @@ def run(
                        f"TP: {risk.take_profit:.4f} | Size: ${risk.position_size_usd:,.0f}")
     else:
         final_action = "NO_TRADE"
-        logger.warning(f"❌ TRADE REJECTED: {risk.reason}")
+        logger.warning(f"❌ TRADE REJECTED ({symbol}): {risk.reason}")
 
     signal = TradeSignal(
         symbol=symbol,
@@ -189,6 +189,10 @@ def run_all_assets() -> list[TradeSignal]:
     all_assets = settings.crypto_assets
     if settings.get_massive_api_key:
         all_assets += settings.stock_assets
+
+    # Filter out any closed assets to prevent pipeline errors / API requests on closed markets
+    from trading_engine.market_hours import filter_open_symbols
+    all_assets = filter_open_symbols(all_assets, extended_stock_hours=settings.extended_cfd_hours)
 
     # Pre-populate snap_cache with currently-held open positions
     status = trader.get_status()

@@ -1,0 +1,170 @@
+[
+  {
+    "iteration": 0,
+    "prompt_file": "sentiment_prompt.md",
+    "prompt_content": "You are SentimentAgent analyzing {symbol}.\n\nScraped Social Media and News Context:\n{combined_context}\n\nBased ONLY on this news and social sentiment context, output JSON:\n{{\"signal\": \"BUY|SELL|HOLD\", \"confidence\": 0-100, \"reason\": \"one sentence\"}}\n\nRules:\n- BUY = clearly positive news or extremely bullish social/retail sentiment/hype.\n- SELL = clearly negative news, crash fears, hacks, or extremely bearish panic.\n- HOLD = mixed, neutral, or conflicting sentiment.\n- confidence reflects how strong/consistent the sentiment is.\nOutput ONLY the JSON object.\n",
+    "fitness": -5.2007,
+    "metrics": {
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 1,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": -0.71,
+          "max_drawdown_pct": 0.7,
+          "sortino_ratio": -1.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.2007
+      }
+    },
+    "improved": true
+  },
+  {
+    "iteration": 1,
+    "prompt_file": "sentiment_prompt.md",
+    "prompt_content": "You are SentimentAgent analyzing {symbol} with a focus on {asset_type} assets.\n\nScraped Social Media and News Context:\n{combined_context}\n\nBased ONLY on this news and social sentiment context, and considering the current {dxy_trend} and {risk_mode}, output JSON:\n{{\"signal\": \"BUY|SELL|HOLD\", \"confidence\": 0-100, \"reason\": \"one sentence\", \"stop_loss_pct\": 0-10, \"take_profit_pct\": 0-20}}\n\nRules:\n- BUY = clearly positive news or extremely bullish social/retail sentiment/hype, with a minimum confidence of 70.\n- SELL = clearly negative news, crash fears, hacks, or extremely bearish panic, with a minimum confidence of 70.\n- HOLD = mixed, neutral, or conflicting sentiment, or when confidence is below 70.\n- confidence reflects how strong/consistent the sentiment is, considering both the intensity and the consistency of the signals across different sources.\n- stop_loss_pct should be set between 2-5% for high-confidence BUY signals, 5-10% for low-confidence BUY signals, and 1-3% for SELL signals, based on the volatility of {symbol}.\n- take_profit_pct should be set based on the potential upside, with a minimum of 5% for high-confidence BUY signals and a maximum of 15% for low-confidence BUY signals.\n- when {risk_mode} is high, prioritize risk management by adjusting stop_loss_pct and take_profit_pct accordingly, and when {dxy_trend} is strongly positive or negative, consider its impact on {symbol}.\n\nOutput ONLY the JSON object.",
+    "fitness": -5.2007,
+    "metrics": {
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 1,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": -0.71,
+          "max_drawdown_pct": 0.7,
+          "sortino_ratio": -1.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.2007
+      }
+    },
+    "improved": false
+  },
+  {
+    "iteration": 2,
+    "prompt_file": "sentiment_prompt.md",
+    "prompt_content": "You are SentimentAgent analyzing {symbol}.\n\nScraped Social Media and News Context:\n{combined_context}\n\nBased ONLY on this news and social sentiment context, output JSON:\n{{\"signal\": \"BUY|SELL|HOLD\", \"confidence\": 0-100, \"reason\": \"one sentence\", \"risk_level\": \"LOW|MEDIUM|HIGH\"}}\n\nRules:\n- BUY = clearly positive news or extremely bullish social/retail sentiment/hype with a strong trend confirmation.\n- SELL = clearly negative news, crash fears, hacks, or extremely bearish panic with a strong trend reversal signal.\n- HOLD = mixed, neutral, or conflicting sentiment, or when the sentiment is not strong enough to warrant a trade.\n- confidence reflects how strong/consistent the sentiment is, considering both the intensity and the consistency of the signals across different sources.\n- risk_level reflects the potential volatility or uncertainty associated with the trade, with LOW being a stable market, MEDIUM being a trending market, and HIGH being a highly volatile or uncertain market.\n- When the risk_level is HIGH, prioritize caution and consider a smaller position size or a more conservative strategy.\n- When the confidence is below 50, consider a HOLD signal to avoid low-conviction trades.\nOutput ONLY the JSON object.",
+    "fitness": -5.2007,
+    "metrics": {
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 1,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": -0.71,
+          "max_drawdown_pct": 0.7,
+          "sortino_ratio": -1.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.2007
+      }
+    },
+    "improved": false
+  },
+  {
+    "iteration": 0,
+    "prompt_file": "macro_prompt.md",
+    "prompt_content": "You are MacroAgent analyzing {symbol} ({asset_type}).\n\nMacro data:\n- DXY (dollar) trend: {dxy_trend}\n- Market risk mode: {risk_mode}\n- Asset type: {asset_type}\n\nRules:\n- Rising DXY = bearish for crypto and growth stocks\n- Falling DXY = bullish for crypto and growth stocks\n- Risk-off = avoid crypto and high-beta stocks\n- Risk-on = favorable for crypto and growth stocks\n\nBased on this macro context, output JSON:\n{{\"signal\": \"BUY|SELL|HOLD\", \"confidence\": 0-100, \"reason\": \"one sentence\"}}\n\nOutput ONLY the JSON object.\n",
+    "fitness": -5.2007,
+    "metrics": {
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 1,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": -0.72,
+          "max_drawdown_pct": 0.71,
+          "sortino_ratio": -1.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.2007
+      }
+    },
+    "improved": true
+  },
+  {
+    "iteration": 1,
+    "prompt_file": "macro_prompt.md",
+    "prompt_content": "You are MacroAgent analyzing {symbol} ({asset_type}).\n\nMacro data:\n- DXY (dollar) trend: {dxy_trend}\n- Market risk mode: {risk_mode}\n- Asset type: {asset_type}\n- Current price: {current_price}\n- 50-day moving average: {ma_50}\n- 200-day moving average: {ma_200}\n\nRules:\n- Rising DXY = bearish for crypto and growth stocks, but bullish for safe-haven assets like gold and bonds\n- Falling DXY = bullish for crypto and growth stocks, but bearish for safe-haven assets\n- Risk-off = avoid crypto and high-beta stocks, favor safe-haven assets and low-beta stocks\n- Risk-on = favorable for crypto and growth stocks, but beware of overbought conditions\n- Golden Cross (50-day MA > 200-day MA) = bullish signal\n- Death Cross (50-day MA < 200-day MA) = bearish signal\n- Consider the asset type: for example, a rising DXY may be more bearish for BTC than for ETH\n\nSignal generation:\n- If {dxy_trend} is rising and {risk_mode} is risk-off, signal SELL\n- If {dxy_trend} is falling and {risk_mode} is risk-on, signal BUY\n- If 50-day MA is above 200-day MA, signal BUY\n- If 50-day MA is below 200-day MA, signal SELL\n- If {current_price} is above 200-day MA, signal HOLD\n- If {current_price} is below 50-day MA, signal SELL\n\nOutput JSON:\n{\"signal\": \"BUY|SELL|HOLD\", \"confidence\": 0-100, \"reason\": \"one sentence explaining the signal\"}",
+    "fitness": -5.2007,
+    "metrics": {
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 1,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": -0.72,
+          "max_drawdown_pct": 0.71,
+          "sortino_ratio": -1.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.2007
+      }
+    },
+    "improved": false
+  },
+  {
+    "iteration": 2,
+    "prompt_file": "macro_prompt.md",
+    "prompt_content": "You are MacroAgent analyzing {symbol} ({asset_type}).\n\nMacro data:\n- DXY (dollar) trend: {dxy_trend}\n- Market risk mode: {risk_mode}\n- Asset type: {asset_type}\n- Current price: {current_price}\n- 50-day moving average: {ma_50}\n- 200-day moving average: {ma_200}\n\nRules:\n- Rising DXY and risk-off mode = strong bearish for crypto and growth stocks\n- Falling DXY and risk-on mode = strong bullish for crypto and growth stocks\n- Risk-off mode = avoid crypto and high-beta stocks, favor safe-haven assets\n- Risk-on mode = favorable for crypto and growth stocks, but monitor for overbought conditions\n- Golden cross (50-day MA > 200-day MA) = bullish signal\n- Death cross (50-day MA < 200-day MA) = bearish signal\n- Consider the impact of {asset_type} on trading decisions, as different assets respond differently to macro conditions\n\nBased on this macro context, output JSON:\n{\"signal\": \"BUY|SELL|HOLD\", \"confidence\": 0-100, \"reason\": \"one sentence explaining the decision, including reference to specific macro data or rules\"}",
+    "fitness": -5.2007,
+    "metrics": {
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 1,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": -0.72,
+          "max_drawdown_pct": 0.71,
+          "sortino_ratio": -1.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.2007
+      }
+    },
+    "improved": false
+  }
+]

@@ -1,0 +1,8 @@
+commit	fitness	status	description
+931ac54	-5.0	baseline	Initial baseline with default settings
+31b17bf	-4.8585	improved	lower min_agent_agreement=4 and min_avg_confidence=45.0
+c30364c	2.0835	improved	lower min_agent_agreement=3 and min_avg_confidence=30.0
+b6db6e6	3.1118	improved	atr_multiplier=1.8, rr_ratio=2.5, stop_loss_pct_max=0.10
+eb728f3	3.1118	reverted	try min_avg_confidence=35
+ee176fc	1.8885	reverted	try atr_multiplier=1.5, rr_ratio=2.5
+82b0232	1.2925	improved	atr_multiplier=2.2, exposing parameters in config

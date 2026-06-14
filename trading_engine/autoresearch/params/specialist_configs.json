@@ -1,0 +1,10 @@
+{
+  "ema_fast": 23,
+  "ema_slow": 50,
+  "ema_trend": 244,
+  "rsi_period": 15,
+  "atr_period": 9,
+  "bb_period": 16,
+  "roc_period": 7,
+  "rel_vol_period": 24
+}

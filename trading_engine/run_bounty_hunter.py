@@ -106,78 +106,51 @@ def main():
         print("=" * 80)
         print("                 ⚔️  EXECUTING LIVE BOUNTY OPPORTUNITIES  ⚔️")
         print("=" * 80)
-        
+
         # Load live trader
         from trading_engine.execution import live_trader
-        
-        # 1. Look for approved BUY signals
-        active_buys = [r for r in results if r["final_action"] == "BUY"]
-        
-        if active_buys:
-            print(f"Placing trades for {len(active_buys)} approved candidates...")
+
+        # Fix #6: Execute BOTH BUY and SELL signals
+        active_buys  = [r for r in results if r["final_action"] == "BUY"]
+        active_sells = [r for r in results if r["final_action"] == "SELL"]
+
+        if active_buys or active_sells:
+            total_signals = len(active_buys) + len(active_sells)
+            print(f"Placing {total_signals} approved signal(s): {len(active_buys)} BUY, {len(active_sells)} SELL...")
+
             for b in active_buys:
-                live_trader.open_trade(
-                    symbol=b["symbol"],
-                    direction="long",
-                    entry=b["entry_price"],
-                    size_usd=b["position_size_usd"] or 20.0,
-                    stop_loss=b["stop_loss"] or (b["entry_price"] * 0.95),
-                    take_profit=b["take_profit"] or (b["entry_price"] * 1.10),
-                )
+                try:
+                    live_trader.open_trade(
+                        symbol=b["symbol"],
+                        direction="long",
+                        entry=b["entry_price"],
+                        size_usd=b["position_size_usd"] or 20.0,
+                        stop_loss=b["stop_loss"] or (b["entry_price"] * 0.95),
+                        take_profit=b["take_profit"] or (b["entry_price"] * 1.10),
+                    )
+                    print(f"  ✅ BUY placed: {b['symbol']} @ ${b['entry_price']:.4f}")
+                except Exception as e:
+                    print(f"  ❌ BUY failed for {b['symbol']}: {e}")
+
+            for s in active_sells:
+                try:
+                    live_trader.open_trade(
+                        symbol=s["symbol"],
+                        direction="short",
+                        entry=s["entry_price"],
+                        size_usd=s["position_size_usd"] or 20.0,
+                        stop_loss=s["stop_loss"] or (s["entry_price"] * 1.05),
+                        take_profit=s["take_profit"] or (s["entry_price"] * 0.90),
+                    )
+                    print(f"  ✅ SELL placed: {s['symbol']} @ ${s['entry_price']:.4f}")
+                except Exception as e:
+                    print(f"  ❌ SELL failed for {s['symbol']}: {e}")
+
         else:
-            print("No approved BUY setups were detected by the agents.")
-            print("Forcing demonstration trade placement on the top crypto and stock candidates...")
-            
-            # Let's find the first crypto candidate and the first stock candidate
-            crypto_cand = None
-            stock_cand = None
-            for r in results:
-                is_crypto = "/" in r["symbol"] or r["symbol"].endswith("USDT") or r["symbol"].endswith("USD")
-                if is_crypto and crypto_cand is None:
-                    crypto_cand = r
-                elif not is_crypto and stock_cand is None:
-                    stock_cand = r
-            
-            # Place demo trade for crypto
-            if crypto_cand:
-                print(f"\nPlacing demo trade on top crypto: {crypto_cand['symbol']}...")
-                from trading_engine.data.market_data import build_snapshot
-                try:
-                    snap = build_snapshot(crypto_cand["symbol"], settings.timeframe)
-                    entry = snap.close
-                    stop_loss = entry - (1.5 * snap.atr) if snap.atr > 0 else entry * 0.95
-                    take_profit = entry + (3.0 * snap.atr) if snap.atr > 0 else entry * 1.10
-                    live_trader.open_trade(
-                        symbol=crypto_cand["symbol"],
-                        direction="long",
-                        entry=entry,
-                        size_usd=15.0,
-                        stop_loss=stop_loss,
-                        take_profit=take_profit
-                    )
-                except Exception as e:
-                    print(f"Failed to place demo crypto trade: {e}")
-                    
-            # Place demo trade for stock
-            if stock_cand:
-                print(f"\nPlacing demo trade on top stock: {stock_cand['symbol']}...")
-                from trading_engine.data.market_data import build_snapshot
-                try:
-                    snap = build_snapshot(stock_cand["symbol"], settings.timeframe)
-                    entry = snap.close
-                    stop_loss = entry - (1.5 * snap.atr) if snap.atr > 0 else entry * 0.95
-                    take_profit = entry + (3.0 * snap.atr) if snap.atr > 0 else entry * 1.10
-                    live_trader.open_trade(
-                        symbol=stock_cand["symbol"],
-                        direction="long",
-                        entry=entry,
-                        size_usd=15.0,
-                        stop_loss=stop_loss,
-                        take_profit=take_profit
-                    )
-                except Exception as e:
-                    print(f"Failed to place demo stock trade: {e}")
+            print("No approved BUY or SELL setups detected. No trades placed.")
+
         print("\n" + "=" * 80 + "\n")
+
 
 if __name__ == "__main__":
     main()

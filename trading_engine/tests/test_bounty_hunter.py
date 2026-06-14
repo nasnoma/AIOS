@@ -14,6 +14,11 @@ def mock_massive_key():
         yield
 
 
+@pytest.fixture(autouse=True)
+def clear_cooldown():
+    bounty_hunter._SCAN_COOLDOWN.clear()
+
+
 class TestBountyHunterDateResolver:
     @patch("trading_engine.bounty_hunter.get_with_retry")
     def test_get_latest_trading_date_success(self, mock_get, mock_massive_key):
@@ -102,7 +107,7 @@ class TestBountyHunterExecution:
     def test_run_bounty_hunt(self, mock_pipeline, mock_preflight, mock_enrich, mock_stocks, mock_crypto):
         mock_crypto.return_value = ["BTC/USDT", "ETH/USDT"]
         mock_stocks.return_value = ["AAPL"]
-        mock_enrich.side_effect = lambda symbols, mode, limit: symbols[:limit]
+        mock_enrich.side_effect = lambda symbols, mode, limit: (symbols[:limit], {s: MagicMock() for s in symbols[:limit]})
         mock_preflight.return_value = (True, 100.0, "mocked")
         
         mock_sig = MagicMock()
@@ -115,7 +120,7 @@ class TestBountyHunterExecution:
         mock_sig.reasoning = "Test reasoning"
         mock_pipeline.return_value = mock_sig
 
-        results = bounty_hunter.run_bounty_hunt(mode="oversold", crypto_limit=2, stock_limit=1)
+        results = bounty_hunter.run_bounty_hunt(mode="oversold", crypto_limit=2, stock_limit=1, scan_cfds=False)
         
         assert len(results) == 3
         assert results[0]["symbol"] == "BTC/USDT"
@@ -183,7 +188,7 @@ class TestBountyHunterWatchlistAndHotMode:
             "news_headlines": ["Headline1"]
         }
         
-        ranked = bounty_hunter.rank_and_enrich_candidates(["BTC/USDT"], "hot", limit=1)
+        ranked, snaps = bounty_hunter.rank_and_enrich_candidates(["BTC/USDT"], "hot", limit=1)
         assert len(ranked) == 1
 
 
@@ -278,7 +283,7 @@ class TestBountyHunterPreflightCheck:
         # We have BTC/USDT (fails pre-flight) and ETH/USDT (passes pre-flight)
         mock_crypto.return_value = ["BTC/USDT", "ETH/USDT"]
         mock_stocks.return_value = []
-        mock_enrich.side_effect = lambda symbols, mode, limit: symbols[:limit]
+        mock_enrich.side_effect = lambda symbols, mode, limit: (symbols[:limit], {"BTC/USDT": mock_snap_btc, "ETH/USDT": mock_snap_eth})
         
         # BTC/USDT snapshot: bad ATR or BB width -> fails
         mock_snap_btc = MagicMock()
@@ -312,7 +317,7 @@ class TestBountyHunterPreflightCheck:
         mock_sig.reasoning = "ETH passed"
         mock_pipeline.return_value = mock_sig
 
-        results = bounty_hunter.run_bounty_hunt(mode="oversold", crypto_limit=2, stock_limit=0)
+        results = bounty_hunter.run_bounty_hunt(mode="oversold", crypto_limit=2, stock_limit=0, scan_cfds=False)
         
         assert len(results) == 2
         
