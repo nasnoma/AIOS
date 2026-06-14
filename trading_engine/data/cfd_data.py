@@ -53,12 +53,19 @@ _TF_MAP = {
     "12h": 720, "1d": "D", "1w": "W",
 }
 
-# timeframe → yfinance interval / period
+# timeframe → yfinance (interval, period) — commodities have limited intraday history
 _YF_TF = {
-    "1m": ("1m", "7d"),   "5m": ("5m", "60d"),
-    "15m": ("15m", "60d"), "30m": ("30m", "60d"),
-    "1h": ("1h", "730d"), "4h": ("1h", "730d"),   # yfinance max for intraday is 1h
-    "1d": ("1d", "5y"),   "1w": ("1wk", "10y"),
+    "1m":  ("2m",  "5d"),     # use 2m as closest to 1m for futures
+    "5m":  ("5m",  "5d"),     # only 5d of 5m data available on futures
+    "15m": ("15m", "30d"),
+    "30m": ("30m", "30d"),
+    "1h":  ("1h",  "90d"),
+    "2h":  ("1h",  "90d"),    # yfinance has no 2h; use 1h
+    "4h":  ("1h",  "90d"),    # yfinance has no 4h; use 1h
+    "6h":  ("1h",  "90d"),
+    "12h": ("1d",  "2y"),
+    "1d":  ("1d",  "5y"),
+    "1w":  ("1wk", "10y"),
 }
 
 _BYBIT_REST = "https://api.bybit.com"
@@ -74,24 +81,26 @@ def _fetch_yfinance_ohlcv(symbol: str, timeframe: str, limit: int) -> pd.DataFra
     if not yf_ticker:
         raise RuntimeError(f"No Yahoo Finance mapping for {symbol}")
 
-    yf_interval, yf_period = _YF_TF.get(timeframe, ("1h", "60d"))
-    logger.info(f"CFD fallback → Yahoo Finance: {symbol} ({yf_ticker}) interval={yf_interval}")
+    yf_interval, yf_period = _YF_TF.get(timeframe, ("1h", "90d"))
+    logger.info(f"CFD fallback → Yahoo Finance: {symbol} ({yf_ticker}) interval={yf_interval} period={yf_period}")
 
-    df = yf.download(
-        yf_ticker,
-        period=yf_period,
-        interval=yf_interval,
-        progress=False,
-        auto_adjust=True,
-    )
-    if df.empty:
-        raise RuntimeError(f"Yahoo Finance returned empty data for {yf_ticker}")
+    ticker_obj = yf.Ticker(yf_ticker)
+    df = ticker_obj.history(period=yf_period, interval=yf_interval, auto_adjust=True)
+
+    if df is None or df.empty:
+        # Last resort: daily data
+        logger.warning(f"Yahoo Finance returned empty for {yf_ticker} at {yf_interval} — retrying with 1d")
+        df = ticker_obj.history(period="2y", interval="1d", auto_adjust=True)
+
+    if df is None or df.empty:
+        raise RuntimeError(f"Yahoo Finance returned no data for {yf_ticker}")
 
     # Normalise columns
     df.index = pd.to_datetime(df.index, utc=True)
-    df = df.rename(columns=str.lower)
+    df.columns = [c.lower() for c in df.columns]
     df = df[["open", "high", "low", "close", "volume"]].tail(limit)
     return df.astype(float)
+
 
 
 # ── Primary Bybit REST fetch ──────────────────────────────────────────────────
