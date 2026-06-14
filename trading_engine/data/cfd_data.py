@@ -1,11 +1,18 @@
 """
 trading_engine/data/cfd_data.py
 
-Bybit linear perpetual OHLCV fetcher for CFD symbols (US stock CFDs and precious metals).
+Bybit linear perpetual OHLCV/ticker fetcher for CFD symbols (stock CFDs and metals).
 
-Uses Bybit's public REST API directly (v5/market/kline) instead of ccxt, to avoid
-the ccxt market-loading step which hits v5/asset/coin/query-info — a CloudFront-blocked
-endpoint on many cloud providers (Railway US servers).
+Primary:  Bybit public REST  v5/market/kline  (works outside US)
+Fallback: Yahoo Finance (yfinance) for metals/commodities when Bybit is
+          geo-blocked (e.g. Railway US West servers — api.bybit.com returns 403).
+
+Symbol mapping  (ccxt → Bybit REST → Yahoo Finance):
+    XAU/USDT:USDT  →  XAUUSDT  →  GC=F   (Gold futures)
+    XAG/USDT:USDT  →  XAGUSDT  →  SI=F   (Silver futures)
+    CL/USDT:USDT   →  CLUSDT   →  CL=F   (WTI Crude Oil futures)
+    AAPL/USDT:USDT →  AAPLUSDT →  AAPL   (Stock)
+    TSLA/USDT:USDT →  TSLAUSDT →  TSLA
 """
 from __future__ import annotations
 
@@ -20,42 +27,85 @@ import pandas as pd
 from trading_engine.config import settings
 
 
-# ── Bybit symbol mapping ──────────────────────────────────────────────────────
-# ccxt uses  "XAU/USDT:USDT"  →  Bybit REST uses  "XAUUSDT"
+# ── Symbol maps ───────────────────────────────────────────────────────────────
 
+# ccxt "BASE/QUOTE:SETTLE" → Bybit REST symbol
 def _to_bybit_symbol(symbol: str) -> str:
-    """Convert ccxt-style  XAU/USDT:USDT  →  XAUUSDT  for the REST API."""
-    # Strip settle currency (:USDT) then remove slash
-    base = symbol.split(":")[0]          # "XAU/USDT"
-    return base.replace("/", "")         # "XAUUSDT"
+    return symbol.split(":")[0].replace("/", "")   # "XAU/USDT:USDT" → "XAUUSDT"
 
+# ccxt symbol → Yahoo Finance ticker
+_YAHOO_MAP: dict[str, str] = {
+    "XAU/USDT:USDT": "GC=F",    # Gold futures
+    "XAG/USDT:USDT": "SI=F",    # Silver futures
+    "CL/USDT:USDT":  "CL=F",    # WTI Crude Oil futures
+    "AAPL/USDT:USDT": "AAPL",
+    "TSLA/USDT:USDT": "TSLA",
+    "NVDA/USDT:USDT": "NVDA",
+    "MSFT/USDT:USDT": "MSFT",
+    "AMZN/USDT:USDT": "AMZN",
+    "GOOGL/USDT:USDT": "GOOGL",
+}
 
-# ── Timeframe map ─────────────────────────────────────────────────────────────
-
+# timeframe → Bybit REST interval
 _TF_MAP = {
     "1m": 1, "3m": 3, "5m": 5, "15m": 15, "30m": 30,
     "1h": 60, "2h": 120, "4h": 240, "6h": 360,
     "12h": 720, "1d": "D", "1w": "W",
 }
 
+# timeframe → yfinance interval / period
+_YF_TF = {
+    "1m": ("1m", "7d"),   "5m": ("5m", "60d"),
+    "15m": ("15m", "60d"), "30m": ("30m", "60d"),
+    "1h": ("1h", "730d"), "4h": ("1h", "730d"),   # yfinance max for intraday is 1h
+    "1d": ("1d", "5y"),   "1w": ("1wk", "10y"),
+}
+
 _BYBIT_REST = "https://api.bybit.com"
 
 
-# ── Direct REST OHLCV fetch ───────────────────────────────────────────────────
+# ── Yahoo Finance fallback ────────────────────────────────────────────────────
+
+def _fetch_yfinance_ohlcv(symbol: str, timeframe: str, limit: int) -> pd.DataFrame:
+    """Fetch OHLCV via yfinance. Used when Bybit is geo-blocked."""
+    import yfinance as yf
+
+    yf_ticker = _YAHOO_MAP.get(symbol)
+    if not yf_ticker:
+        raise RuntimeError(f"No Yahoo Finance mapping for {symbol}")
+
+    yf_interval, yf_period = _YF_TF.get(timeframe, ("1h", "60d"))
+    logger.info(f"CFD fallback → Yahoo Finance: {symbol} ({yf_ticker}) interval={yf_interval}")
+
+    df = yf.download(
+        yf_ticker,
+        period=yf_period,
+        interval=yf_interval,
+        progress=False,
+        auto_adjust=True,
+    )
+    if df.empty:
+        raise RuntimeError(f"Yahoo Finance returned empty data for {yf_ticker}")
+
+    # Normalise columns
+    df.index = pd.to_datetime(df.index, utc=True)
+    df = df.rename(columns=str.lower)
+    df = df[["open", "high", "low", "close", "volume"]].tail(limit)
+    return df.astype(float)
+
+
+# ── Primary Bybit REST fetch ──────────────────────────────────────────────────
 
 def fetch_cfd_ohlcv(
     symbol: str,
     timeframe: str = "4h",
     limit: int = 300,
-    retries: int = 3,
+    retries: int = 2,
 ) -> pd.DataFrame:
     """
-    Fetch OHLCV data for a Bybit linear CFD symbol via direct REST (no ccxt market loading).
-
-    Returns a DataFrame with columns: [timestamp, open, high, low, close, volume]
-    indexed by datetime (UTC).
-
-    Raises RuntimeError if data cannot be fetched after `retries` attempts.
+    Fetch OHLCV for a Bybit linear CFD symbol.
+    Primary: Bybit v5/market/kline (direct REST, no ccxt market loading).
+    Fallback: Yahoo Finance when Bybit is geo-blocked.
     """
     bybit_symbol = _to_bybit_symbol(symbol)
     interval = _TF_MAP.get(timeframe, timeframe)
@@ -70,18 +120,22 @@ def fetch_cfd_ohlcv(
     for attempt in range(1, retries + 1):
         try:
             resp = requests.get(url, params=params, timeout=10)
+            if resp.status_code == 403:
+                # Geo-blocked — go straight to yfinance fallback
+                logger.info(f"Bybit geo-blocked for {symbol} — switching to Yahoo Finance fallback")
+                return _fetch_yfinance_ohlcv(symbol, timeframe, limit)
+
             resp.raise_for_status()
             data = resp.json()
 
             if data.get("retCode") != 0:
-                raise ValueError(f"Bybit API error: {data.get('retMsg')} (code={data.get('retCode')})")
+                raise ValueError(f"Bybit API error: {data.get('retMsg')}")
 
             raw = data["result"]["list"]
             if not raw:
-                raise ValueError(f"Empty OHLCV response for {symbol}")
+                raise ValueError(f"Empty OHLCV from Bybit for {symbol}")
 
-            # Bybit returns: [startTime, open, high, low, close, volume, turnover]
-            # Newest first — reverse to chronological order
+            # Bybit returns newest-first → reverse to chronological
             df = pd.DataFrame(
                 reversed(raw),
                 columns=["timestamp", "open", "high", "low", "close", "volume", "turnover"],
@@ -89,19 +143,19 @@ def fetch_cfd_ohlcv(
             df["timestamp"] = pd.to_datetime(df["timestamp"].astype(float), unit="ms", utc=True)
             df.set_index("timestamp", inplace=True)
             df = df[["open", "high", "low", "close", "volume"]].astype(float)
-
-            logger.debug(
-                f"CFD OHLCV fetched: {symbol} | {len(df)} bars | latest close={df['close'].iloc[-1]:.4f}"
-            )
+            logger.debug(f"CFD OHLCV (Bybit): {symbol} | {len(df)} bars | close={df['close'].iloc[-1]:.4f}")
             return df
 
-        except requests.HTTPError as e:
-            wait = 2 ** attempt
-            logger.warning(f"CFD fetch attempt {attempt}/{retries} failed for {symbol}: {e} — retrying in {wait}s")
-            time.sleep(wait)
+        except RuntimeError:
+            raise
         except Exception as e:
             if attempt == retries:
-                raise RuntimeError(f"CFD OHLCV fetch exhausted retries for {symbol}: {e}") from e
+                # Last attempt — try yfinance fallback before giving up
+                logger.warning(f"Bybit failed for {symbol} after {retries} attempts: {e} — trying Yahoo Finance")
+                try:
+                    return _fetch_yfinance_ohlcv(symbol, timeframe, limit)
+                except Exception as yf_e:
+                    raise RuntimeError(f"CFD OHLCV exhausted all sources for {symbol}: Bybit={e}, Yahoo={yf_e}")
             wait = 2 ** attempt
             logger.warning(f"CFD fetch attempt {attempt}/{retries} failed for {symbol}: {e} — retrying in {wait}s")
             time.sleep(wait)
@@ -109,18 +163,17 @@ def fetch_cfd_ohlcv(
     raise RuntimeError(f"CFD OHLCV fetch exhausted retries for {symbol}")
 
 
-# ── Ticker / latest price via REST ────────────────────────────────────────────
+# ── Ticker / latest price ─────────────────────────────────────────────────────
 
 def fetch_cfd_ticker(symbol: str) -> dict:
-    """
-    Fetch the latest ticker for a CFD symbol via Bybit REST.
-    Returns a dict with keys: last, bid, ask, volume.
-    """
+    """Latest ticker via Bybit REST, falling back to yfinance."""
     bybit_symbol = _to_bybit_symbol(symbol)
     url = f"{_BYBIT_REST}/v5/market/tickers"
     params = {"category": "linear", "symbol": bybit_symbol}
     try:
         resp = requests.get(url, params=params, timeout=8)
+        if resp.status_code == 403:
+            raise RuntimeError("geo-blocked")
         resp.raise_for_status()
         data = resp.json()
         if data.get("retCode") != 0:
@@ -132,12 +185,17 @@ def fetch_cfd_ticker(symbol: str) -> dict:
             "ask":    float(item.get("ask1Price", 0)),
             "volume": float(item.get("volume24h", 0)),
         }
-    except Exception as e:
-        raise RuntimeError(f"CFD ticker fetch failed for {symbol}: {e}") from e
+    except Exception:
+        # Fallback: pull latest close from yfinance
+        try:
+            df = _fetch_yfinance_ohlcv(symbol, "1d", 2)
+            last = float(df["close"].iloc[-1])
+            return {"last": last, "bid": last, "ask": last, "volume": 0.0}
+        except Exception as e:
+            raise RuntimeError(f"CFD ticker fetch failed for {symbol}: {e}") from e
 
 
 def fetch_cfd_price(symbol: str) -> float:
-    """Return the latest price for a CFD symbol."""
     ticker = fetch_cfd_ticker(symbol)
     price = ticker.get("last", 0.0)
     if price <= 0:
@@ -145,7 +203,7 @@ def fetch_cfd_price(symbol: str) -> float:
     return float(price)
 
 
-# ── Exchange singleton (kept for compatibility, not used for OHLCV) ───────────
+# ── Exchange singleton (for order execution in live_trader only) ──────────────
 
 _bybit_linear: Optional[ccxt.bybit] = None
 
@@ -154,9 +212,7 @@ def _get_exchange() -> ccxt.bybit:
     """ccxt instance — only used for order placement in live_trader, not for data reads."""
     global _bybit_linear
     if _bybit_linear is None:
-        params: dict = {
-            "options": {"defaultType": "linear"},
-        }
+        params: dict = {"options": {"defaultType": "linear"}}
         if settings.bybit_api_key and settings.bybit_api_secret:
             params["apiKey"] = settings.bybit_api_key
             params["secret"] = settings.bybit_api_secret
@@ -167,10 +223,7 @@ def _get_exchange() -> ccxt.bybit:
 
 
 class BybitCFDFetcher:
-    """
-    Thin wrapper around the module-level functions for use in the data pipeline.
-    Mirrors the interface of CryptoDataFetcher / StockDataFetcher.
-    """
+    """Thin wrapper for use in the data pipeline."""
 
     def fetch_ohlcv(self, symbol: str, timeframe: str = "4h", limit: int = 300) -> pd.DataFrame:
         return fetch_cfd_ohlcv(symbol, timeframe=timeframe, limit=limit)
