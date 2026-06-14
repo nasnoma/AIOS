@@ -111,18 +111,13 @@ class CryptoDataFetcher:
             
         self.exchange: ccxt.Exchange = exchange_class(params)
         
-        # Enable sandbox/testnet mode
-        if settings.crypto_testnet:
-            if exchange_name == "binance":
-                self.exchange.options = {"defaultType": "future"}
-                self.exchange.urls["api"]["public"] = "https://testnet.binance.vision/api"
-            elif exchange_name == "bybit":
-                if settings.bybit_demo_trading:
-                    self.exchange.enable_demo_trading(True)
-                else:
-                    self.exchange.set_sandbox_mode(True)
-            else:
-                self.exchange.set_sandbox_mode(True)
+        # NOTE: Do NOT enable demo trading for market data fetches —
+        # api-demo.bybit.com is geo-blocked on many cloud providers (CloudFront 403).
+        # Market data always comes from the public api.bybit.com.
+        # Demo/testnet mode is only applied in the live_trader execution layer.
+        if settings.crypto_testnet and exchange_name == "binance":
+            self.exchange.options = {"defaultType": "future"}
+            self.exchange.urls["api"]["public"] = "https://testnet.binance.vision/api"
 
     def fetch_ohlcv(self, symbol: str, timeframe: str = "4h", limit: int = 300) -> pd.DataFrame:
         """Fetch OHLCV candles and return raw DataFrame with auto-pagination for large limits."""

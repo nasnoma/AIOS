@@ -25,11 +25,17 @@ scheduler = BlockingScheduler(timezone="UTC")
 
 def send_heartbeat():
     """Send heartbeat to the API server."""
-    try:
-        url = f"http://localhost:{settings.api_port}/api/scheduler/heartbeat"
-        requests.post(url, timeout=2)
-    except Exception as e:
-        logger.debug(f"Heartbeat failed: {e}")
+    import time
+    url = f"http://localhost:{settings.api_port}/api/scheduler/heartbeat"
+    for attempt in range(3):
+        try:
+            requests.post(url, timeout=3)
+            return
+        except Exception as e:
+            if attempt < 2:
+                time.sleep(2)
+            else:
+                logger.debug(f"Heartbeat failed: {e}")
 
 
 def run_signal_cycle():
@@ -244,6 +250,11 @@ def main():
     logger.info(f"   Assets: {settings.default_assets}")
     logger.info(f"   Interval: every {interval} minutes")
     logger.info(f"   Timeframe: {settings.timeframe}")
+
+    # Wait for API server to fully start before sending heartbeat
+    import time
+    logger.info("   Waiting for API server to start...")
+    time.sleep(5)
 
     # Run once immediately
     send_heartbeat()

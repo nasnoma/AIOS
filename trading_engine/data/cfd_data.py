@@ -34,11 +34,9 @@ def _get_exchange() -> ccxt.bybit:
             params["apiKey"] = settings.bybit_api_key
             params["secret"] = settings.bybit_api_secret
         _bybit_linear = ccxt.bybit(params)
-        if settings.crypto_testnet:
-            if settings.bybit_demo_trading:
-                _bybit_linear.enable_demo_trading(True)
-            else:
-                _bybit_linear.set_sandbox_mode(True)
+        # NOTE: Do NOT enable demo/testnet for market data reads.
+        # api-demo.bybit.com is geo-blocked on cloud providers (CloudFront 403).
+        # Market data always comes from the public api.bybit.com.
     return _bybit_linear
 
 
