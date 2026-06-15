@@ -234,25 +234,53 @@ class StockDataFetcher:
                 logger.warning(f"Failed to fetch stock bars from Alpaca for {symbol}: {e}. Falling back to Massive.")
 
         # 2. Fallback to Massive.com
-        api_key = settings.get_massive_api_key
-        multiplier, span = self._parse_timeframe(timeframe)
-        url = f"{self.BASE}/v2/aggs/ticker/{symbol}/range/{multiplier}/{span}/2023-01-01/2099-01-01"
-        params = {
-            "adjusted": "true",
-            "sort": "desc",
-            "limit": limit,
-            "apiKey": api_key,
-        }
-        resp = get_with_retry(url, params=params, timeout=10)
-        resp.raise_for_status()
-        results = resp.json().get("results", [])
-        df = pd.DataFrame(results)
-        df.rename(columns={"t": "timestamp", "o": "open", "h": "high",
-                            "l": "low", "c": "close", "v": "volume"}, inplace=True)
-        df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
-        df.set_index("timestamp", inplace=True)
-        df.sort_index(inplace=True)
-        return df[["open", "high", "low", "close", "volume"]]
+        try:
+            api_key = settings.get_massive_api_key
+            multiplier, span = self._parse_timeframe(timeframe)
+            url = f"{self.BASE}/v2/aggs/ticker/{symbol}/range/{multiplier}/{span}/2023-01-01/2099-01-01"
+            params = {
+                "adjusted": "true",
+                "sort": "desc",
+                "limit": limit,
+                "apiKey": api_key,
+            }
+            resp = get_with_retry(url, params=params, timeout=10)
+            resp.raise_for_status()
+            results = resp.json().get("results", [])
+            if results:
+                df = pd.DataFrame(results)
+                df.rename(columns={"t": "timestamp", "o": "open", "h": "high",
+                                    "l": "low", "c": "close", "v": "volume"}, inplace=True)
+                df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
+                df.set_index("timestamp", inplace=True)
+                df.sort_index(inplace=True)
+                return df[["open", "high", "low", "close", "volume"]]
+        except Exception as e:
+            logger.warning(f"Massive API failed for {symbol}: {e} — falling back to Yahoo Finance")
+
+        # 3. Yahoo Finance fallback (free, no rate limits, covers all US stocks)
+        try:
+            import yfinance as yf
+            _YF_INTERVAL = {
+                "1m": ("2m", "5d"), "5m": ("5m", "5d"), "15m": ("15m", "30d"),
+                "30m": ("30m", "30d"), "1h": ("1h", "90d"), "2h": ("1h", "90d"),
+                "4h": ("1h", "90d"), "1d": ("1d", "5y"), "1w": ("1wk", "10y"),
+            }
+            yf_interval, yf_period = _YF_INTERVAL.get(timeframe, ("1h", "90d"))
+            logger.info(f"Yahoo Finance fallback for stock {symbol} (interval={yf_interval})")
+            ticker_obj = yf.Ticker(symbol)
+            df = ticker_obj.history(period=yf_period, interval=yf_interval, auto_adjust=True)
+            if df is not None and not df.empty:
+                df.index = pd.to_datetime(df.index, utc=True)
+                df.columns = [c.lower() for c in df.columns]
+                df = df[["open", "high", "low", "close", "volume"]].tail(limit)
+                logger.info(f"Yahoo Finance: {len(df)} bars for {symbol}")
+                return df.astype(float)
+        except Exception as e:
+            logger.warning(f"Yahoo Finance also failed for {symbol}: {e}")
+
+        raise RuntimeError(f"All data sources exhausted for stock {symbol}")
+
 
     def fetch_latest_price(self, symbol: str) -> float:
         """Fetch latest close price for a stock via Alpaca (with fallback to Massive/Polygon)."""
