@@ -100,16 +100,19 @@ def run(
     # Step 3: Judge evaluates
     logger.info("⚖️  Judge evaluating...")
     
-    # Try to load optimized weights from Walk-Forward Optimization
-    opt_weights_path = Path(__file__).parent / "optimized_weights.json"
+    # Try to load optimized weights from Walk-Forward Optimization (only for crypto, as they are optimized on BTC/SOL)
     agent_weights = None
-    if opt_weights_path.exists():
-        try:
-            with open(opt_weights_path) as f:
-                agent_weights = json.load(f)
-            logger.info("   Loaded dynamic walk-forward optimized weights successfully.")
-        except Exception as e:
-            logger.warning(f"   Could not load optimized weights: {e}. Using static defaults.")
+    if snap.asset_type == "crypto":
+        opt_weights_path = Path(__file__).parent / "optimized_weights.json"
+        if opt_weights_path.exists():
+            try:
+                with open(opt_weights_path) as f:
+                    agent_weights = json.load(f)
+                logger.info("   Loaded dynamic walk-forward optimized weights for crypto.")
+            except Exception as e:
+                logger.warning(f"   Could not load optimized weights: {e}. Using static defaults.")
+    else:
+        logger.info(f"   Using default static weights for non-crypto asset ({snap.asset_type}).")
             
     verdict: JudgeVerdict = judge_evaluate(agent_signals, agent_weights=agent_weights)
     logger.info(f"   Decision: {verdict.decision.value} | Conf={verdict.confidence:.0f}% | "

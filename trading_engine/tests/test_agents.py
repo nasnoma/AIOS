@@ -169,6 +169,7 @@ class TestJudge:
         assert verdict.agreement == 7
 
     def test_below_threshold_not_approved(self):
+        from unittest.mock import patch
         from trading_engine.judge import evaluate
         from trading_engine.agents.base import AgentSignal, Signal
         from trading_engine.config import settings
@@ -185,8 +186,9 @@ class TestJudge:
         try:
             settings.min_agent_agreement = 6
             settings.min_avg_confidence = 75.0
-            verdict = evaluate(agents)
-            assert not verdict.approved
+            with patch("trading_engine.judge._load_judge_params", return_value={}):
+                verdict = evaluate(agents)
+                assert not verdict.approved
         finally:
             settings.min_agent_agreement = original_agreement
             settings.min_avg_confidence = original_confidence

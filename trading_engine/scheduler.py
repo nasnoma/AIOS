@@ -8,7 +8,7 @@ Also handles position monitoring between signal cycles.
 from __future__ import annotations
 import signal as os_signal
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 import requests
 from loguru import logger
 from apscheduler.schedulers.blocking import BlockingScheduler
@@ -256,11 +256,8 @@ def main():
     logger.info("   Waiting for API server to start...")
     time.sleep(5)
 
-    # Run once immediately
+    # Initial heartbeat sent to API server
     send_heartbeat()
-    run_signal_cycle()
-    if settings.bounty_hunter_enabled:
-        run_bounty_hunter_cycle()
 
     # Schedule recurring runs
     scheduler.add_job(
@@ -268,12 +265,14 @@ def main():
         trigger=IntervalTrigger(seconds=30),
         id="heartbeat",
         name="Scheduler Heartbeat",
+        next_run_time=datetime.now(timezone.utc),
     )
     scheduler.add_job(
         run_signal_cycle,
         trigger=IntervalTrigger(minutes=interval),
         id="signal_cycle",
         name="Trading Signal Cycle",
+        next_run_time=datetime.now(timezone.utc),
     )
 
     # Position monitor every 15 minutes
@@ -293,6 +292,7 @@ def main():
             trigger=IntervalTrigger(hours=interval_hours),
             id="bounty_hunter_cycle",
             name="Bounty Hunter Cycle",
+            next_run_time=datetime.now(timezone.utc),
         )
 
     scheduler.start()

@@ -22,11 +22,15 @@ def _get_news_headlines(symbol: str) -> list[str]:
     headlines = []
     api_key = settings.get_massive_api_key
     if api_key:
-        ticker = symbol.replace("/USDT", "").replace("/USD", "")
+        ticker = symbol.split(":")[0].split("/")[0]
         url = f"{settings.massive_api_base}/v2/reference/news"
         params = {"ticker": ticker, "limit": 5, "apiKey": api_key}
         try:
-            resp = get_with_retry(url, params=params, timeout=5)
+            # Avoid using get_with_retry to prevent blocking the pipeline on 429 rate limits
+            resp = requests.get(url, params=params, timeout=5)
+            if resp.status_code == 429:
+                logger.debug(f"News fetch rate-limited (429) for {symbol} — skipping news headlines")
+                return []
             if resp.ok:
                 for item in resp.json().get("results", []):
                     headlines.append(item.get("title", ""))

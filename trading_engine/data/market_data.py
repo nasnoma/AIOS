@@ -105,9 +105,8 @@ class CryptoDataFetcher:
             params["secret"] = settings.binance_api_secret
         elif exchange_name == "bybit":
             params["options"] = {"defaultType": "spot"}
-            if settings.bybit_api_key:
-                params["apiKey"] = settings.bybit_api_key
-                params["secret"] = settings.bybit_api_secret
+            # Public market data read does NOT need API key & secret. Passing a demo/testnet
+            # API key to the production endpoint results in invalid API key errors (retCode 10003).
             
         self.exchange: ccxt.Exchange = exchange_class(params)
         
@@ -121,6 +120,9 @@ class CryptoDataFetcher:
 
     def fetch_ohlcv(self, symbol: str, timeframe: str = "4h", limit: int = 300) -> pd.DataFrame:
         """Fetch OHLCV candles and return raw DataFrame with auto-pagination for large limits."""
+        # Map IOTA/USDT to linear perp since Bybit doesn't have IOTA/USDT spot
+        if symbol == "IOTA/USDT" and settings.crypto_exchange.lower() == "bybit":
+            symbol = "IOTA/USDT:USDT"
         logger.info(f"Fetching OHLCV: {symbol} {timeframe} (limit={limit})")
         import time
         try:
@@ -153,6 +155,32 @@ class CryptoDataFetcher:
             return df
         except Exception as e:
             logger.warning(f"Crypto fetch failed via exchange for {symbol}: {e}")
+            
+            # Fallback 1: Direct Yahoo Finance (free, fast, covers all major crypto under TICKER-USD format)
+            try:
+                base_ticker = symbol.split(":")[0].split("/")[0]
+                yf_symbol = f"{base_ticker}-USD"
+                
+                import yfinance as yf
+                _YF_INTERVAL = {
+                    "1m": ("2m", "5d"), "5m": ("5m", "5d"), "15m": ("15m", "30d"),
+                    "30m": ("30m", "30d"), "1h": ("1h", "90d"), "2h": ("1h", "90d"),
+                    "4h": ("1h", "90d"), "1d": ("1d", "5y"), "1w": ("1wk", "10y"),
+                }
+                yf_interval, yf_period = _YF_INTERVAL.get(timeframe, ("1h", "90d"))
+                logger.info(f"Crypto fallback → Yahoo Finance: {symbol} ({yf_symbol}) interval={yf_interval}")
+                ticker_obj = yf.Ticker(yf_symbol)
+                df = ticker_obj.history(period=yf_period, interval=yf_interval, auto_adjust=True)
+                if df is not None and not df.empty:
+                    df.index = pd.to_datetime(df.index, utc=True)
+                    df.columns = [c.lower() for c in df.columns]
+                    df = df[["open", "high", "low", "close", "volume"]].tail(limit)
+                    logger.info(f"Successfully fetched {len(df)} crypto bars from Yahoo Finance for {yf_symbol}")
+                    return df.astype(float)
+            except Exception as yf_err:
+                logger.warning(f"Yahoo Finance crypto fallback failed for {symbol}: {yf_err}")
+
+            # Fallback 2: Massive / Polygon API
             api_key = settings.get_massive_api_key
             if api_key:
                 logger.info(f"Attempting fallback fetch via Massive API for {symbol}")
@@ -261,20 +289,29 @@ class StockDataFetcher:
         # 3. Yahoo Finance fallback (free, no rate limits, covers all US stocks)
         try:
             import yfinance as yf
+            yf_symbol = symbol
+            if symbol.startswith("X:"):
+                # "X:BTCUSD" -> "BTC-USD"
+                clean_sym = symbol[2:]
+                if clean_sym.endswith("USD"):
+                    yf_symbol = clean_sym[:-3] + "-USD"
+                else:
+                    yf_symbol = clean_sym + "-USD"
+
             _YF_INTERVAL = {
                 "1m": ("2m", "5d"), "5m": ("5m", "5d"), "15m": ("15m", "30d"),
                 "30m": ("30m", "30d"), "1h": ("1h", "90d"), "2h": ("1h", "90d"),
                 "4h": ("1h", "90d"), "1d": ("1d", "5y"), "1w": ("1wk", "10y"),
             }
             yf_interval, yf_period = _YF_INTERVAL.get(timeframe, ("1h", "90d"))
-            logger.info(f"Yahoo Finance fallback for stock {symbol} (interval={yf_interval})")
-            ticker_obj = yf.Ticker(symbol)
+            logger.info(f"Yahoo Finance fallback for stock {symbol} ({yf_symbol}) (interval={yf_interval})")
+            ticker_obj = yf.Ticker(yf_symbol)
             df = ticker_obj.history(period=yf_period, interval=yf_interval, auto_adjust=True)
             if df is not None and not df.empty:
                 df.index = pd.to_datetime(df.index, utc=True)
                 df.columns = [c.lower() for c in df.columns]
                 df = df[["open", "high", "low", "close", "volume"]].tail(limit)
-                logger.info(f"Yahoo Finance: {len(df)} bars for {symbol}")
+                logger.info(f"Yahoo Finance: {len(df)} bars for {yf_symbol}")
                 return df.astype(float)
         except Exception as e:
             logger.warning(f"Yahoo Finance also failed for {symbol}: {e}")
@@ -436,7 +473,13 @@ def compute_indicators(df: pd.DataFrame, overrides: dict | None = None) -> pd.Da
 
     if len(df) >= rsi_p:
         try:
-            df.ta.stochrsi(length=rsi_p, rsi_length=rsi_p, k=3, d=3, append=True)
+            # Calculate StochRSI manually to avoid cross-platform import/accessor bugs in pandas-ta
+            min_rsi = df["RSI_14"].rolling(rsi_p).min()
+            max_rsi = df["RSI_14"].rolling(rsi_p).max()
+            rsi_range = max_rsi - min_rsi
+            stochrsi_series = 100 * (df["RSI_14"] - min_rsi) / rsi_range.replace(0, 1e-9)
+            df["STOCHRSIk_14_14_3_3"] = stochrsi_series.rolling(3).mean()
+            df["STOCHRSId_14_14_3_3"] = df["STOCHRSIk_14_14_3_3"].rolling(3).mean()
         except Exception as e:
             logger.warning(f"Failed to calculate StochRSI: {e}")
     df["STOCHRSIk_14_14_3_3"] = df.get("STOCHRSIk_14_14_3_3", pd.Series(50.0, index=df.index))
@@ -457,7 +500,8 @@ def compute_indicators(df: pd.DataFrame, overrides: dict | None = None) -> pd.Da
     # Volatility — use dollar ATR (percent=False) so snap.atr is a real price delta
     if len(df) >= atr_p:
         df.ta.atr(length=atr_p, percent=False, append=True)
-    df["ATR_14"] = df.get(f"ATR_{atr_p}", df.get("ATR_14", pd.Series(0.0, index=df.index)))
+    df["ATR_14"] = df.get(f"ATRr_{atr_p}", df.get(f"ATR_{atr_p}", df.get("ATR_14", pd.Series(0.0, index=df.index))))
+
 
     if len(df) >= bb_p:
         df.ta.bbands(length=bb_p, std=2, append=True)
@@ -473,7 +517,14 @@ def compute_indicators(df: pd.DataFrame, overrides: dict | None = None) -> pd.Da
     df["REAL_VOL"] = df["close"].pct_change().rolling(atr_p).std() * (252 ** 0.5)
     df["REAL_VOL"] = df["REAL_VOL"].fillna(0.0)
 
+    # Precompute pivots for Market Structure Agent
+    df["is_pivot_high"] = (df["high"] > df["high"].shift(1)) & (df["high"] > df["high"].shift(2)) & \
+                          (df["high"] > df["high"].shift(-1)) & (df["high"] > df["high"].shift(-2))
+    df["is_pivot_low"] = (df["low"] < df["low"].shift(1)) & (df["low"] < df["low"].shift(2)) & \
+                         (df["low"] < df["low"].shift(-1)) & (df["low"] < df["low"].shift(-2))
+
     return df
+
 
 
 # ─────────────────────────────────────────────

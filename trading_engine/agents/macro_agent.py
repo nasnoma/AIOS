@@ -33,43 +33,72 @@ CACHE_DURATION_SEC = 300  # Cache for 5 minutes
 def _fetch_dxy_trend() -> str:
     """Approximate DXY trend via UUP ETF (USD bull ETF) from Massive."""
     try:
+        # Try Yahoo Finance first (free, fast, no rate limits)
+        try:
+            import yfinance as yf
+            ticker_obj = yf.Ticker("UUP")
+            df = ticker_obj.history(period="1mo", interval="1d")
+            if df is not None and len(df) >= 10:
+                recent_avg = df["Close"].tail(5).mean()
+                older_avg = df["Close"].tail(10).head(5).mean()
+                if recent_avg > older_avg * 1.005:
+                    return "rising"
+                elif recent_avg < older_avg * 0.995:
+                    return "falling"
+                return "neutral"
+        except Exception as yf_err:
+            logger.warning(f"Yahoo Finance DXY fetch failed: {yf_err}. Trying Massive.")
+
         api_key = settings.get_massive_api_key
-        if not api_key:
-            return "unknown"
-        url = f"{settings.massive_api_base}/v2/aggs/ticker/UUP/range/1/day/2024-01-01/2099-01-01"
-        params = {"adjusted": "true", "sort": "desc", "limit": 20, "apiKey": api_key}
-        resp = get_with_retry(url, params=params, timeout=5)
-        results = resp.json().get("results", [])
-        if len(results) >= 10:
-            recent_avg = sum(r["c"] for r in results[:5]) / 5
-            older_avg = sum(r["c"] for r in results[5:10]) / 5
-            if recent_avg > older_avg * 1.005:
-                return "rising"
-            elif recent_avg < older_avg * 0.995:
-                return "falling"
-        return "neutral"
+        if api_key:
+            url = f"{settings.massive_api_base}/v2/aggs/ticker/UUP/range/1/day/2024-01-01/2099-01-01"
+            params = {"adjusted": "true", "sort": "desc", "limit": 20, "apiKey": api_key}
+            resp = get_with_retry(url, params=params, timeout=5)
+            results = resp.json().get("results", [])
+            if len(results) >= 10:
+                recent_avg = sum(r["c"] for r in results[:5]) / 5
+                older_avg = sum(r["c"] for r in results[5:10]) / 5
+                if recent_avg > older_avg * 1.005:
+                    return "rising"
+                elif recent_avg < older_avg * 0.995:
+                    return "falling"
+                return "neutral"
     except Exception as e:
         logger.warning(f"DXY fetch error: {e}")
-        return "unknown"
+    return "unknown"
 
 
 def _fetch_risk_mode() -> str:
     """Risk-on/off via VIX proxy: if VIX > 25 = risk-off, < 18 = risk-on."""
     try:
+        # Try Yahoo Finance first (free, fast, no rate limits)
+        try:
+            import yfinance as yf
+            ticker_obj = yf.Ticker("VIXY")
+            df = ticker_obj.history(period="1mo", interval="1d")
+            if df is not None and not df.empty:
+                vixy_price = float(df["Close"].iloc[-1])
+                if vixy_price > 25:
+                    return "risk-off"
+                elif vixy_price < 18:
+                    return "risk-on"
+                return "neutral"
+        except Exception as yf_err:
+            logger.warning(f"Yahoo Finance VIXY fetch failed: {yf_err}. Trying Massive.")
+
         api_key = settings.get_massive_api_key
-        if not api_key:
-            return "unknown"
-        url = f"{settings.massive_api_base}/v2/aggs/ticker/VIXY/range/1/day/2024-01-01/2099-01-01"
-        params = {"adjusted": "true", "sort": "desc", "limit": 3, "apiKey": api_key}
-        resp = get_with_retry(url, params=params, timeout=5)
-        results = resp.json().get("results", [])
-        if results:
-            vixy_price = results[0]["c"]
-            if vixy_price > 25:
-                return "risk-off"
-            elif vixy_price < 18:
-                return "risk-on"
-            return "neutral"
+        if api_key:
+            url = f"{settings.massive_api_base}/v2/aggs/ticker/VIXY/range/1/day/2024-01-01/2099-01-01"
+            params = {"adjusted": "true", "sort": "desc", "limit": 3, "apiKey": api_key}
+            resp = get_with_retry(url, params=params, timeout=5)
+            results = resp.json().get("results", [])
+            if results:
+                vixy_price = results[0]["c"]
+                if vixy_price > 25:
+                    return "risk-off"
+                elif vixy_price < 18:
+                    return "risk-on"
+                return "neutral"
     except Exception as e:
         logger.warning(f"Risk mode fetch error: {e}")
     return "unknown"

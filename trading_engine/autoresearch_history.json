@@ -222,5 +222,4961 @@
     },
     "reasoning": "The current weights seem to favor trend and orderflow, but the performance metrics suggest that trend and momentum are underperforming in terms of win rate and profit factor. Volatility and structure have higher profit factors but lower win rates. To improve the composite fitness score, I propose reducing the weights of trend and orderflow, and increasing the weights of volatility and structure. I also suggest a slight increase in the weight of momentum to improve its win rate.",
     "improved": false
+  },
+  {
+    "iteration": 0,
+    "weights": {
+      "trend": 1.38,
+      "momentum": 1.14,
+      "volume": 1.0,
+      "orderflow": 1.3,
+      "volatility": 0.68,
+      "structure": 0.76,
+      "sentiment": 0.9,
+      "macro": 1.0
+    },
+    "fitness": -5.0,
+    "metrics": {
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "RUNE/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "CHZ/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      }
+    },
+    "reasoning": "Baseline configuration",
+    "improved": true
+  },
+  {
+    "iteration": 1,
+    "weights": {
+      "trend": 0.8,
+      "momentum": 1.4,
+      "volume": 1.2,
+      "orderflow": 1.0,
+      "volatility": 1.2,
+      "structure": 1.1,
+      "sentiment": 1.0,
+      "macro": 1.1
+    },
+    "fitness": -5.0,
+    "metrics": {
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "RUNE/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "CHZ/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      }
+    },
+    "reasoning": "The current weights seem to be ineffective as all metrics show zero trades and a fitness score of -5.0, indicating a poor performance. Given the lack of trades, it's reasonable to assume that the agents are not triggering trades due to their weights. A more balanced approach might be beneficial. Reducing the weights of trend and orderflow, which are currently high, and increasing the weights of volatility and structure, which are relatively low, could potentially lead to more trades and better performance. Also, increasing the weight of momentum might help in capturing trends.",
+    "improved": false
+  },
+  {
+    "iteration": 2,
+    "weights": {
+      "trend": 2.0,
+      "momentum": 2.2,
+      "volume": 1.2,
+      "orderflow": 1.5,
+      "volatility": 0.5,
+      "structure": 0.6,
+      "sentiment": 1.1,
+      "macro": 1.3
+    },
+    "fitness": -5.0,
+    "metrics": {
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "RUNE/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "CHZ/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      }
+    },
+    "reasoning": "The current weights seem to be ineffective as the fitness score is -5.0. Given that all metrics are 0.0, it's likely that the agents are not generating trades. To improve, I'll reduce the weights of potentially noisy or less reliable agents like volatility and structure, and increase the weights of more fundamental agents like trend and momentum. I'll also ensure that all weights are within the specified range.",
+    "improved": false
+  },
+  {
+    "iteration": 3,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.1,
+      "volume": 1.1,
+      "orderflow": 1.2,
+      "volatility": 1.0,
+      "structure": 1.1,
+      "sentiment": 1.0,
+      "macro": 1.1
+    },
+    "fitness": -5.0,
+    "metrics": {
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "RUNE/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "CHZ/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      }
+    },
+    "reasoning": "The current weights seem to be ineffective as the fitness score is -5.0, indicating poor performance. Given that there's no clear indication of which agents are overweighted or underweighted due to the lack of trades and returns in the performance metrics, a balanced approach seems prudent. The optimization history suggests that significant changes in weights haven't led to improvements. Thus, resetting the weights to a more balanced state could help in exploring a wider range of possibilities in future iterations.",
+    "improved": false
+  },
+  {
+    "iteration": 4,
+    "weights": {
+      "trend": 0.8,
+      "momentum": 0.9,
+      "volume": 1.1,
+      "orderflow": 1.2,
+      "volatility": 1.4,
+      "structure": 1.0,
+      "sentiment": 1.3,
+      "macro": 1.1
+    },
+    "fitness": -5.0,
+    "metrics": {
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "RUNE/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "CHZ/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      }
+    },
+    "reasoning": "The current weights seem to be not effective as the fitness score is -5.0 across all assets, indicating no trades were made. Given the lack of trades, it's reasonable to assume that the agents are not triggering trading decisions effectively. A more balanced approach might help. Increasing the weight of volatility and sentiment could help in making more informed trading decisions, as these factors are crucial in determining market movements. Decreasing the weight of trend and momentum might reduce the influence of these factors, which seem to be not contributing positively. The new weights aim to strike a balance and encourage trading activity.",
+    "improved": false
+  },
+  {
+    "iteration": 5,
+    "weights": {
+      "trend": 0.8,
+      "momentum": 0.9,
+      "volume": 1.2,
+      "orderflow": 1.1,
+      "volatility": 1.4,
+      "structure": 1.3,
+      "sentiment": 1.0,
+      "macro": 1.1
+    },
+    "fitness": -5.0,
+    "metrics": {
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "RUNE/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "CHZ/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      }
+    },
+    "reasoning": "The current weights show a mix of over and underweighting across agents. Trend and momentum are overweighted, while volatility and structure are underweighted. Given the poor performance across all assets and the lack of trades, a more balanced approach may be necessary. Increasing the weights of underweighted agents like volatility and structure, while decreasing the weights of overweighted agents like trend and momentum, could lead to a more balanced and potentially improved performance.",
+    "improved": false
+  },
+  {
+    "iteration": 6,
+    "weights": {
+      "trend": 2.5,
+      "momentum": 2.2,
+      "volume": 1.2,
+      "orderflow": 2.0,
+      "volatility": 0.5,
+      "structure": 0.6,
+      "sentiment": 1.1,
+      "macro": 1.3
+    },
+    "fitness": -5.0,
+    "metrics": {
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "RUNE/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "CHZ/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      }
+    },
+    "reasoning": "Given the current fitness score of -5.0 and the lack of improvement in recent iterations, it's clear that the current weight distribution is not effective. Since all metrics show zero trades and no improvement, a drastic change is needed. Increasing the weights of trend, momentum, and orderflow could help capture market movements and trading opportunities more effectively, while reducing the weights of volatility and structure might mitigate over-reaction to market fluctuations. The weights of volume, sentiment, and macro are adjusted to maintain a balanced approach.",
+    "improved": false
+  },
+  {
+    "iteration": 7,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.0,
+      "volume": 1.1,
+      "orderflow": 1.2,
+      "volatility": 1.5,
+      "structure": 1.0,
+      "sentiment": 1.1,
+      "macro": 1.0
+    },
+    "fitness": -5.0,
+    "metrics": {
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "RUNE/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "CHZ/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      }
+    },
+    "reasoning": "The current weights and optimization history suggest that the agents are not effectively contributing to the composite fitness score, with most iterations resulting in no improvement. Given the lack of trades and poor performance metrics across all assets, a more balanced approach may be necessary. The volatility agent is underweighted, while the trend and momentum agents may be overemphasized. A new set of weights with increased emphasis on volatility and a more balanced distribution among the other agents could potentially improve the fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 8,
+    "weights": {
+      "trend": 2.5,
+      "momentum": 2.2,
+      "volume": 1.2,
+      "orderflow": 1.5,
+      "volatility": 1.8,
+      "structure": 1.6,
+      "sentiment": 1.1,
+      "macro": 1.3
+    },
+    "fitness": -5.0,
+    "metrics": {
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "RUNE/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "CHZ/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      }
+    },
+    "reasoning": "Given the current performance metrics, all agents appear underutilized with zero trades, indicating a need for increased weighting to stimulate trading activity. The trend and momentum agents, typically key drivers of trading decisions, are assigned higher weights to emphasize their importance. Volatility and structure, often crucial for risk management and market understanding, are also increased. Meanwhile, sentiment and macro, which can provide valuable context, are maintained at moderate levels. Volume and orderflow, essential for execution and market dynamics, are slightly elevated.",
+    "improved": false
+  },
+  {
+    "iteration": 9,
+    "weights": {
+      "trend": 1.0,
+      "momentum": 1.0,
+      "volume": 1.0,
+      "orderflow": 1.0,
+      "volatility": 1.0,
+      "structure": 1.0,
+      "sentiment": 1.0,
+      "macro": 1.0
+    },
+    "fitness": -5.0,
+    "metrics": {
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "RUNE/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "CHZ/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      }
+    },
+    "reasoning": "The current agent weights and optimization history suggest that no combination has yielded a positive fitness score, indicating a need for a balanced approach. Given the lack of positive outcomes, a neutral weighting strategy is proposed, where each agent is assigned an equal weight, allowing the system to reassess performance without overemphasis on any single agent.",
+    "improved": false
+  },
+  {
+    "iteration": 10,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.1,
+      "volume": 1.1,
+      "orderflow": 1.2,
+      "volatility": 1.0,
+      "structure": 1.1,
+      "sentiment": 1.1,
+      "macro": 1.1
+    },
+    "fitness": -5.0,
+    "metrics": {
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "RUNE/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      },
+      "CHZ/USDT": {
+        "train": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "val": {
+          "total_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "sortino_ratio": 0.0
+        },
+        "fitness_score": -5.0
+      }
+    },
+    "reasoning": "Given the consistent lack of improvement across iterations and the uniform fitness score of -5.0, it suggests that the current weight adjustments are not effectively capturing market dynamics. A balanced approach might be more effective, as it allows each agent to contribute equally to the decision-making process without overemphasizing any single factor. This could potentially lead to a more robust and adaptable trading strategy.",
+    "improved": false
+  },
+  {
+    "iteration": 0,
+    "weights": {
+      "trend": 1.38,
+      "momentum": 1.14,
+      "volume": 1.0,
+      "orderflow": 1.3,
+      "volatility": 0.68,
+      "structure": 0.76,
+      "sentiment": 0.9,
+      "macro": 1.0
+    },
+    "fitness": 0.2969,
+    "metrics": {
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 1178,
+          "win_rate": 28.7,
+          "profit_factor": 0.91,
+          "total_return_pct": -7.81,
+          "max_drawdown_pct": 6.68,
+          "sortino_ratio": -0.06341162707013706
+        },
+        "val": {
+          "total_trades": 687,
+          "win_rate": 27.5,
+          "profit_factor": 0.78,
+          "total_return_pct": -6.61,
+          "max_drawdown_pct": 4.73,
+          "sortino_ratio": -0.1739992898653516
+        },
+        "fitness_score": 0.2791
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 1265,
+          "win_rate": 27.6,
+          "profit_factor": 0.88,
+          "total_return_pct": -9.33,
+          "max_drawdown_pct": 6.62,
+          "sortino_ratio": -0.08908328182793314
+        },
+        "val": {
+          "total_trades": 654,
+          "win_rate": 27.2,
+          "profit_factor": 0.75,
+          "total_return_pct": -6.31,
+          "max_drawdown_pct": 4.46,
+          "sortino_ratio": -0.18734941464163565
+        },
+        "fitness_score": 0.2596
+      },
+      "ADA/USDT": {
+        "train": {
+          "total_trades": 1340,
+          "win_rate": 28.3,
+          "profit_factor": 0.87,
+          "total_return_pct": -10.86,
+          "max_drawdown_pct": 6.85,
+          "sortino_ratio": -0.10031665072213285
+        },
+        "val": {
+          "total_trades": 833,
+          "win_rate": 29.2,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.3,
+          "max_drawdown_pct": 3.35,
+          "sortino_ratio": -0.08082678994746506
+        },
+        "fitness_score": 0.3056
+      },
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 1287,
+          "win_rate": 28.8,
+          "profit_factor": 0.84,
+          "total_return_pct": -9.03,
+          "max_drawdown_pct": 5.65,
+          "sortino_ratio": -0.11856825481317541
+        },
+        "val": {
+          "total_trades": 664,
+          "win_rate": 29.2,
+          "profit_factor": 0.8,
+          "total_return_pct": -4.8,
+          "max_drawdown_pct": 2.79,
+          "sortino_ratio": -0.150343052237783
+        },
+        "fitness_score": 0.2658
+      },
+      "XRP/USDT": {
+        "train": {
+          "total_trades": 1395,
+          "win_rate": 29.7,
+          "profit_factor": 0.96,
+          "total_return_pct": -6.61,
+          "max_drawdown_pct": 3.23,
+          "sortino_ratio": -0.028461273825834264
+        },
+        "val": {
+          "total_trades": 698,
+          "win_rate": 28.7,
+          "profit_factor": 0.8,
+          "total_return_pct": -5.62,
+          "max_drawdown_pct": 3.76,
+          "sortino_ratio": -0.15033164846293118
+        },
+        "fitness_score": 0.3093
+      },
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2153,
+          "win_rate": 28.7,
+          "profit_factor": 0.86,
+          "total_return_pct": -15.36,
+          "max_drawdown_pct": 8.87,
+          "sortino_ratio": -0.10213263485547928
+        },
+        "val": {
+          "total_trades": 1121,
+          "win_rate": 30.2,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.84,
+          "max_drawdown_pct": 3.68,
+          "sortino_ratio": -0.06582241354288687
+        },
+        "fitness_score": 0.3079
+      },
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1620,
+          "win_rate": 30.2,
+          "profit_factor": 0.97,
+          "total_return_pct": -6.98,
+          "max_drawdown_pct": 4.0,
+          "sortino_ratio": -0.01914767623698238
+        },
+        "val": {
+          "total_trades": 726,
+          "win_rate": 29.5,
+          "profit_factor": 0.9,
+          "total_return_pct": -4.43,
+          "max_drawdown_pct": 3.57,
+          "sortino_ratio": -0.07500141173965251
+        },
+        "fitness_score": 0.3476
+      },
+      "LINK/USDT": {
+        "train": {
+          "total_trades": 1354,
+          "win_rate": 28.2,
+          "profit_factor": 0.91,
+          "total_return_pct": -9.01,
+          "max_drawdown_pct": 5.81,
+          "sortino_ratio": -0.06724559997976927
+        },
+        "val": {
+          "total_trades": 787,
+          "win_rate": 29.1,
+          "profit_factor": 0.85,
+          "total_return_pct": -5.63,
+          "max_drawdown_pct": 3.73,
+          "sortino_ratio": -0.11233399938745697
+        },
+        "fitness_score": 0.3065
+      },
+      "XLM/USDT": {
+        "train": {
+          "total_trades": 1452,
+          "win_rate": 28.8,
+          "profit_factor": 0.9,
+          "total_return_pct": -9.2,
+          "max_drawdown_pct": 6.19,
+          "sortino_ratio": -0.07222027385710916
+        },
+        "val": {
+          "total_trades": 976,
+          "win_rate": 28.7,
+          "profit_factor": 0.95,
+          "total_return_pct": -4.83,
+          "max_drawdown_pct": 3.46,
+          "sortino_ratio": -0.031972240097370916
+        },
+        "fitness_score": 0.3395
+      },
+      "LTC/USDT": {
+        "train": {
+          "total_trades": 1342,
+          "win_rate": 28.2,
+          "profit_factor": 0.86,
+          "total_return_pct": -10.35,
+          "max_drawdown_pct": 6.69,
+          "sortino_ratio": -0.10272298689228046
+        },
+        "val": {
+          "total_trades": 744,
+          "win_rate": 26.7,
+          "profit_factor": 0.69,
+          "total_return_pct": -7.33,
+          "max_drawdown_pct": 4.97,
+          "sortino_ratio": -0.2334223329578784
+        },
+        "fitness_score": 0.2311
+      },
+      "POL/USDT": {
+        "train": {
+          "total_trades": 1995,
+          "win_rate": 27.4,
+          "profit_factor": 0.84,
+          "total_return_pct": -16.45,
+          "max_drawdown_pct": 10.0,
+          "sortino_ratio": -0.1140439454020087
+        },
+        "val": {
+          "total_trades": 1013,
+          "win_rate": 28.6,
+          "profit_factor": 0.83,
+          "total_return_pct": -7.3,
+          "max_drawdown_pct": 4.89,
+          "sortino_ratio": -0.13066436168848372
+        },
+        "fitness_score": 0.2702
+      },
+      "UNI/USDT": {
+        "train": {
+          "total_trades": 1477,
+          "win_rate": 28.4,
+          "profit_factor": 0.97,
+          "total_return_pct": -7.1,
+          "max_drawdown_pct": 7.18,
+          "sortino_ratio": -0.02429186782348113
+        },
+        "val": {
+          "total_trades": 973,
+          "win_rate": 27.4,
+          "profit_factor": 0.81,
+          "total_return_pct": -8.2,
+          "max_drawdown_pct": 5.75,
+          "sortino_ratio": -0.14462115442801915
+        },
+        "fitness_score": 0.3093
+      },
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1539,
+          "win_rate": 27.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.68,
+          "max_drawdown_pct": 9.63,
+          "sortino_ratio": -0.1056862782956388
+        },
+        "val": {
+          "total_trades": 878,
+          "win_rate": 28.9,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.51,
+          "max_drawdown_pct": 3.78,
+          "sortino_ratio": -0.11027702935282052
+        },
+        "fitness_score": 0.2854
+      },
+      "HBAR/USDT": {
+        "train": {
+          "total_trades": 1669,
+          "win_rate": 28.8,
+          "profit_factor": 0.89,
+          "total_return_pct": -11.61,
+          "max_drawdown_pct": 6.66,
+          "sortino_ratio": -0.08000674600574818
+        },
+        "val": {
+          "total_trades": 927,
+          "win_rate": 28.4,
+          "profit_factor": 0.87,
+          "total_return_pct": -5.93,
+          "max_drawdown_pct": 3.05,
+          "sortino_ratio": -0.09693269933800051
+        },
+        "fitness_score": 0.3069
+      },
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1540,
+          "win_rate": 30.8,
+          "profit_factor": 0.96,
+          "total_return_pct": -6.65,
+          "max_drawdown_pct": 2.89,
+          "sortino_ratio": -0.023002628157699278
+        },
+        "val": {
+          "total_trades": 808,
+          "win_rate": 30.0,
+          "profit_factor": 0.84,
+          "total_return_pct": -5.05,
+          "max_drawdown_pct": 2.93,
+          "sortino_ratio": -0.11913135879075094
+        },
+        "fitness_score": 0.3258
+      },
+      "XTZ/USDT": {
+        "train": {
+          "total_trades": 2090,
+          "win_rate": 28.3,
+          "profit_factor": 0.84,
+          "total_return_pct": -16.19,
+          "max_drawdown_pct": 9.77,
+          "sortino_ratio": -0.11463243933802497
+        },
+        "val": {
+          "total_trades": 1305,
+          "win_rate": 31.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.63,
+          "max_drawdown_pct": 3.5,
+          "sortino_ratio": -0.06618158647045613
+        },
+        "fitness_score": 0.3006
+      }
+    },
+    "reasoning": "Baseline configuration",
+    "improved": true
+  },
+  {
+    "iteration": 1,
+    "weights": {
+      "trend": 0.8,
+      "momentum": 0.9,
+      "volume": 1.1,
+      "orderflow": 1.5,
+      "volatility": 1.2,
+      "structure": 0.9,
+      "sentiment": 1.1,
+      "macro": 1.2
+    },
+    "fitness": 0.3013,
+    "metrics": {
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 1156,
+          "win_rate": 28.5,
+          "profit_factor": 0.92,
+          "total_return_pct": -7.5,
+          "max_drawdown_pct": 6.23,
+          "sortino_ratio": -0.0598975063610366
+        },
+        "val": {
+          "total_trades": 675,
+          "win_rate": 26.8,
+          "profit_factor": 0.74,
+          "total_return_pct": -7.2,
+          "max_drawdown_pct": 5.27,
+          "sortino_ratio": -0.2014433956075311
+        },
+        "fitness_score": 0.2682
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 1240,
+          "win_rate": 27.3,
+          "profit_factor": 0.88,
+          "total_return_pct": -9.32,
+          "max_drawdown_pct": 6.51,
+          "sortino_ratio": -0.0915719386824488
+        },
+        "val": {
+          "total_trades": 638,
+          "win_rate": 26.8,
+          "profit_factor": 0.74,
+          "total_return_pct": -6.54,
+          "max_drawdown_pct": 4.78,
+          "sortino_ratio": -0.2029592990230557
+        },
+        "fitness_score": 0.2538
+      },
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 1286,
+          "win_rate": 28.8,
+          "profit_factor": 0.85,
+          "total_return_pct": -8.79,
+          "max_drawdown_pct": 5.43,
+          "sortino_ratio": -0.1127293057446526
+        },
+        "val": {
+          "total_trades": 653,
+          "win_rate": 29.7,
+          "profit_factor": 0.82,
+          "total_return_pct": -4.42,
+          "max_drawdown_pct": 2.42,
+          "sortino_ratio": -0.13204258918558098
+        },
+        "fitness_score": 0.2772
+      },
+      "XRP/USDT": {
+        "train": {
+          "total_trades": 1424,
+          "win_rate": 28.8,
+          "profit_factor": 0.93,
+          "total_return_pct": -7.84,
+          "max_drawdown_pct": 4.25,
+          "sortino_ratio": -0.04667928844517793
+        },
+        "val": {
+          "total_trades": 694,
+          "win_rate": 29.0,
+          "profit_factor": 0.82,
+          "total_return_pct": -5.21,
+          "max_drawdown_pct": 3.37,
+          "sortino_ratio": -0.1348631736508085
+        },
+        "fitness_score": 0.3061
+      },
+      "ADA/USDT": {
+        "train": {
+          "total_trades": 136,
+          "win_rate": 33.8,
+          "profit_factor": 1.09,
+          "total_return_pct": -0.14,
+          "max_drawdown_pct": 0.81,
+          "sortino_ratio": 0.07251530954352647
+        },
+        "val": {
+          "total_trades": 106,
+          "win_rate": 26.4,
+          "profit_factor": 0.84,
+          "total_return_pct": -1.29,
+          "max_drawdown_pct": 1.89,
+          "sortino_ratio": -0.1252153998119135
+        },
+        "fitness_score": 0.3728
+      },
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2102,
+          "win_rate": 28.8,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.44,
+          "max_drawdown_pct": 8.17,
+          "sortino_ratio": -0.09396187729303924
+        },
+        "val": {
+          "total_trades": 1137,
+          "win_rate": 30.4,
+          "profit_factor": 0.92,
+          "total_return_pct": -6.49,
+          "max_drawdown_pct": 3.3,
+          "sortino_ratio": -0.055274505912273
+        },
+        "fitness_score": 0.3167
+      },
+      "LINK/USDT": {
+        "train": {
+          "total_trades": 1383,
+          "win_rate": 27.8,
+          "profit_factor": 0.9,
+          "total_return_pct": -9.67,
+          "max_drawdown_pct": 5.93,
+          "sortino_ratio": -0.07541769789294821
+        },
+        "val": {
+          "total_trades": 786,
+          "win_rate": 29.0,
+          "profit_factor": 0.86,
+          "total_return_pct": -5.56,
+          "max_drawdown_pct": 3.41,
+          "sortino_ratio": -0.10989023843740596
+        },
+        "fitness_score": 0.3056
+      },
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1613,
+          "win_rate": 30.5,
+          "profit_factor": 0.99,
+          "total_return_pct": -6.01,
+          "max_drawdown_pct": 4.17,
+          "sortino_ratio": -0.005382938534524241
+        },
+        "val": {
+          "total_trades": 727,
+          "win_rate": 29.3,
+          "profit_factor": 0.88,
+          "total_return_pct": -4.76,
+          "max_drawdown_pct": 3.73,
+          "sortino_ratio": -0.08854198520240805
+        },
+        "fitness_score": 0.3473
+      },
+      "LTC/USDT": {
+        "train": {
+          "total_trades": 1346,
+          "win_rate": 27.3,
+          "profit_factor": 0.83,
+          "total_return_pct": -11.48,
+          "max_drawdown_pct": 7.79,
+          "sortino_ratio": -0.12365933121322395
+        },
+        "val": {
+          "total_trades": 743,
+          "win_rate": 26.6,
+          "profit_factor": 0.69,
+          "total_return_pct": -7.34,
+          "max_drawdown_pct": 4.9,
+          "sortino_ratio": -0.2332114633611404
+        },
+        "fitness_score": 0.2199
+      },
+      "XLM/USDT": {
+        "train": {
+          "total_trades": 1442,
+          "win_rate": 28.3,
+          "profit_factor": 0.88,
+          "total_return_pct": -10.27,
+          "max_drawdown_pct": 6.76,
+          "sortino_ratio": -0.09137360027458924
+        },
+        "val": {
+          "total_trades": 952,
+          "win_rate": 28.9,
+          "profit_factor": 0.94,
+          "total_return_pct": -5.07,
+          "max_drawdown_pct": 3.23,
+          "sortino_ratio": -0.03906000913517122
+        },
+        "fitness_score": 0.3279
+      },
+      "UNI/USDT": {
+        "train": {
+          "total_trades": 1482,
+          "win_rate": 28.7,
+          "profit_factor": 0.97,
+          "total_return_pct": -6.87,
+          "max_drawdown_pct": 7.16,
+          "sortino_ratio": -0.021068141283261094
+        },
+        "val": {
+          "total_trades": 957,
+          "win_rate": 28.0,
+          "profit_factor": 0.83,
+          "total_return_pct": -7.57,
+          "max_drawdown_pct": 5.17,
+          "sortino_ratio": -0.12872936600673499
+        },
+        "fitness_score": 0.3177
+      },
+      "POL/USDT": {
+        "train": {
+          "total_trades": 1945,
+          "win_rate": 27.9,
+          "profit_factor": 0.86,
+          "total_return_pct": -15.25,
+          "max_drawdown_pct": 9.61,
+          "sortino_ratio": -0.10252384173424316
+        },
+        "val": {
+          "total_trades": 1003,
+          "win_rate": 29.3,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.72,
+          "max_drawdown_pct": 4.28,
+          "sortino_ratio": -0.11309389155543578
+        },
+        "fitness_score": 0.285
+      },
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1512,
+          "win_rate": 27.8,
+          "profit_factor": 0.88,
+          "total_return_pct": -11.6,
+          "max_drawdown_pct": 8.68,
+          "sortino_ratio": -0.09203652409747028
+        },
+        "val": {
+          "total_trades": 877,
+          "win_rate": 28.8,
+          "profit_factor": 0.84,
+          "total_return_pct": -6.75,
+          "max_drawdown_pct": 4.03,
+          "sortino_ratio": -0.11813876687423916
+        },
+        "fitness_score": 0.2893
+      },
+      "HBAR/USDT": {
+        "train": {
+          "total_trades": 1680,
+          "win_rate": 28.7,
+          "profit_factor": 0.88,
+          "total_return_pct": -12.16,
+          "max_drawdown_pct": 7.12,
+          "sortino_ratio": -0.08643007495542372
+        },
+        "val": {
+          "total_trades": 920,
+          "win_rate": 28.2,
+          "profit_factor": 0.86,
+          "total_return_pct": -6.1,
+          "max_drawdown_pct": 3.17,
+          "sortino_ratio": -0.1049637606740476
+        },
+        "fitness_score": 0.2994
+      },
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1527,
+          "win_rate": 30.3,
+          "profit_factor": 0.95,
+          "total_return_pct": -7.16,
+          "max_drawdown_pct": 3.49,
+          "sortino_ratio": -0.03305492252915778
+        },
+        "val": {
+          "total_trades": 797,
+          "win_rate": 30.2,
+          "profit_factor": 0.85,
+          "total_return_pct": -4.74,
+          "max_drawdown_pct": 2.55,
+          "sortino_ratio": -0.10608323193824534
+        },
+        "fitness_score": 0.3261
+      },
+      "XTZ/USDT": {
+        "train": {
+          "total_trades": 2050,
+          "win_rate": 28.7,
+          "profit_factor": 0.85,
+          "total_return_pct": -15.25,
+          "max_drawdown_pct": 9.02,
+          "sortino_ratio": -0.1053868172812334
+        },
+        "val": {
+          "total_trades": 1287,
+          "win_rate": 31.1,
+          "profit_factor": 0.92,
+          "total_return_pct": -6.37,
+          "max_drawdown_pct": 3.4,
+          "sortino_ratio": -0.060164849052478944
+        },
+        "fitness_score": 0.3085
+      }
+    },
+    "reasoning": "Analyzing the provided metrics, trend and momentum agents seem to be underperforming with lower profit factors and higher max drawdowns. In contrast, orderflow and volatility agents show relatively better performance. To improve the composite fitness score, I propose increasing the weights of orderflow and volatility agents while decreasing the weights of trend and momentum agents. Additionally, sentiment and macro agents will be adjusted to balance the overall performance.",
+    "improved": true
+  },
+  {
+    "iteration": 2,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.2,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.0,
+      "structure": 0.9,
+      "sentiment": 1.1,
+      "macro": 1.1
+    },
+    "fitness": 0.2941,
+    "metrics": {
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 1189,
+          "win_rate": 28.5,
+          "profit_factor": 0.91,
+          "total_return_pct": -7.93,
+          "max_drawdown_pct": 6.6,
+          "sortino_ratio": -0.06437199131622767
+        },
+        "val": {
+          "total_trades": 694,
+          "win_rate": 26.9,
+          "profit_factor": 0.74,
+          "total_return_pct": -7.48,
+          "max_drawdown_pct": 5.57,
+          "sortino_ratio": -0.204694698978927
+        },
+        "fitness_score": 0.264
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 1239,
+          "win_rate": 28.0,
+          "profit_factor": 0.9,
+          "total_return_pct": -8.29,
+          "max_drawdown_pct": 5.89,
+          "sortino_ratio": -0.07259505709511786
+        },
+        "val": {
+          "total_trades": 648,
+          "win_rate": 27.5,
+          "profit_factor": 0.76,
+          "total_return_pct": -6.18,
+          "max_drawdown_pct": 4.35,
+          "sortino_ratio": -0.18248982442622425
+        },
+        "fitness_score": 0.2707
+      },
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 1290,
+          "win_rate": 28.8,
+          "profit_factor": 0.84,
+          "total_return_pct": -9.12,
+          "max_drawdown_pct": 5.83,
+          "sortino_ratio": -0.12044175207258272
+        },
+        "val": {
+          "total_trades": 665,
+          "win_rate": 29.2,
+          "profit_factor": 0.8,
+          "total_return_pct": -4.81,
+          "max_drawdown_pct": 2.75,
+          "sortino_ratio": -0.15036605874267142
+        },
+        "fitness_score": 0.2653
+      },
+      "XRP/USDT": {
+        "train": {
+          "total_trades": 1412,
+          "win_rate": 29.3,
+          "profit_factor": 0.94,
+          "total_return_pct": -7.42,
+          "max_drawdown_pct": 3.84,
+          "sortino_ratio": -0.040623440140981175
+        },
+        "val": {
+          "total_trades": 706,
+          "win_rate": 28.5,
+          "profit_factor": 0.79,
+          "total_return_pct": -5.78,
+          "max_drawdown_pct": 3.9,
+          "sortino_ratio": -0.15512918728444086
+        },
+        "fitness_score": 0.2991
+      },
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2138,
+          "win_rate": 28.9,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.79,
+          "max_drawdown_pct": 8.31,
+          "sortino_ratio": -0.09560969226648683
+        },
+        "val": {
+          "total_trades": 1137,
+          "win_rate": 30.2,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.85,
+          "max_drawdown_pct": 3.43,
+          "sortino_ratio": -0.06369854335786158
+        },
+        "fitness_score": 0.3124
+      },
+      "LINK/USDT": {
+        "train": {
+          "total_trades": 1359,
+          "win_rate": 28.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -9.05,
+          "max_drawdown_pct": 5.81,
+          "sortino_ratio": -0.06832514917831711
+        },
+        "val": {
+          "total_trades": 786,
+          "win_rate": 29.0,
+          "profit_factor": 0.85,
+          "total_return_pct": -5.6,
+          "max_drawdown_pct": 3.65,
+          "sortino_ratio": -0.11171185393166672
+        },
+        "fitness_score": 0.3065
+      },
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1643,
+          "win_rate": 30.1,
+          "profit_factor": 0.97,
+          "total_return_pct": -7.35,
+          "max_drawdown_pct": 4.2,
+          "sortino_ratio": -0.023129750915169035
+        },
+        "val": {
+          "total_trades": 724,
+          "win_rate": 29.3,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.69,
+          "max_drawdown_pct": 3.8,
+          "sortino_ratio": -0.0860301992338135
+        },
+        "fitness_score": 0.3422
+      },
+      "LTC/USDT": {
+        "train": {
+          "total_trades": 1358,
+          "win_rate": 27.8,
+          "profit_factor": 0.84,
+          "total_return_pct": -11.07,
+          "max_drawdown_pct": 7.43,
+          "sortino_ratio": -0.11421765563080766
+        },
+        "val": {
+          "total_trades": 747,
+          "win_rate": 26.4,
+          "profit_factor": 0.68,
+          "total_return_pct": -7.52,
+          "max_drawdown_pct": 5.15,
+          "sortino_ratio": -0.24193600159992443
+        },
+        "fitness_score": 0.2202
+      },
+      "XLM/USDT": {
+        "train": {
+          "total_trades": 1456,
+          "win_rate": 29.0,
+          "profit_factor": 0.91,
+          "total_return_pct": -8.99,
+          "max_drawdown_pct": 5.89,
+          "sortino_ratio": -0.06778509643527925
+        },
+        "val": {
+          "total_trades": 973,
+          "win_rate": 28.9,
+          "profit_factor": 0.94,
+          "total_return_pct": -5.18,
+          "max_drawdown_pct": 3.27,
+          "sortino_ratio": -0.03951814905085282
+        },
+        "fitness_score": 0.3394
+      },
+      "POL/USDT": {
+        "train": {
+          "total_trades": 1980,
+          "win_rate": 27.6,
+          "profit_factor": 0.85,
+          "total_return_pct": -15.96,
+          "max_drawdown_pct": 9.72,
+          "sortino_ratio": -0.10905954583804676
+        },
+        "val": {
+          "total_trades": 1016,
+          "win_rate": 28.5,
+          "profit_factor": 0.82,
+          "total_return_pct": -7.42,
+          "max_drawdown_pct": 4.95,
+          "sortino_ratio": -0.1342123405647311
+        },
+        "fitness_score": 0.2707
+      },
+      "UNI/USDT": {
+        "train": {
+          "total_trades": 1504,
+          "win_rate": 28.0,
+          "profit_factor": 0.95,
+          "total_return_pct": -8.33,
+          "max_drawdown_pct": 8.24,
+          "sortino_ratio": -0.038752012898429486
+        },
+        "val": {
+          "total_trades": 976,
+          "win_rate": 27.6,
+          "profit_factor": 0.81,
+          "total_return_pct": -8.2,
+          "max_drawdown_pct": 5.74,
+          "sortino_ratio": -0.14364504303024275
+        },
+        "fitness_score": 0.3015
+      },
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1546,
+          "win_rate": 27.2,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.51,
+          "max_drawdown_pct": 9.25,
+          "sortino_ratio": -0.10242631347722116
+        },
+        "val": {
+          "total_trades": 881,
+          "win_rate": 29.1,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.57,
+          "max_drawdown_pct": 3.82,
+          "sortino_ratio": -0.11129154324163248
+        },
+        "fitness_score": 0.2862
+      },
+      "HBAR/USDT": {
+        "train": {
+          "total_trades": 1672,
+          "win_rate": 28.9,
+          "profit_factor": 0.9,
+          "total_return_pct": -11.22,
+          "max_drawdown_pct": 6.34,
+          "sortino_ratio": -0.07427496108944519
+        },
+        "val": {
+          "total_trades": 929,
+          "win_rate": 28.2,
+          "profit_factor": 0.87,
+          "total_return_pct": -6.04,
+          "max_drawdown_pct": 3.08,
+          "sortino_ratio": -0.1005314694975744
+        },
+        "fitness_score": 0.3096
+      },
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1545,
+          "win_rate": 30.5,
+          "profit_factor": 0.95,
+          "total_return_pct": -7.2,
+          "max_drawdown_pct": 3.28,
+          "sortino_ratio": -0.03232446359571168
+        },
+        "val": {
+          "total_trades": 819,
+          "win_rate": 29.9,
+          "profit_factor": 0.83,
+          "total_return_pct": -5.16,
+          "max_drawdown_pct": 2.94,
+          "sortino_ratio": -0.12187510635571856
+        },
+        "fitness_score": 0.3189
+      },
+      "ADA/USDT": {
+        "train": {
+          "total_trades": 1328,
+          "win_rate": 28.5,
+          "profit_factor": 0.88,
+          "total_return_pct": -10.11,
+          "max_drawdown_pct": 6.49,
+          "sortino_ratio": -0.08940656694095213
+        },
+        "val": {
+          "total_trades": 841,
+          "win_rate": 29.4,
+          "profit_factor": 0.9,
+          "total_return_pct": -5.21,
+          "max_drawdown_pct": 3.3,
+          "sortino_ratio": -0.07636257934023787
+        },
+        "fitness_score": 0.3131
+      },
+      "XTZ/USDT": {
+        "train": {
+          "total_trades": 2087,
+          "win_rate": 28.5,
+          "profit_factor": 0.84,
+          "total_return_pct": -16.16,
+          "max_drawdown_pct": 9.91,
+          "sortino_ratio": -0.1141001063075193
+        },
+        "val": {
+          "total_trades": 1321,
+          "win_rate": 30.7,
+          "profit_factor": 0.9,
+          "total_return_pct": -7.01,
+          "max_drawdown_pct": 3.72,
+          "sortino_ratio": -0.0757270144535575
+        },
+        "fitness_score": 0.2964
+      },
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1689,
+          "win_rate": 27.4,
+          "profit_factor": 0.81,
+          "total_return_pct": -16.4,
+          "max_drawdown_pct": 11.2,
+          "sortino_ratio": -0.133544315048107
+        },
+        "val": {
+          "total_trades": 844,
+          "win_rate": 28.7,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.53,
+          "max_drawdown_pct": 3.42,
+          "sortino_ratio": -0.07950405508548988
+        },
+        "fitness_score": 0.2828
+      }
+    },
+    "reasoning": "Based on the provided metrics, the agents with the highest fitness scores are ADA/USDT, AVAX/USDT, and BNB/USDT. These agents have higher win rates and profit factors. The trend and momentum agents are slightly underweighted, while the orderflow and volatility agents are overweighted. To improve the composite fitness score, we should adjust the weights to give more importance to the trend and momentum agents, while reducing the weights of the orderflow and volatility agents. The new set of weights should also consider the performance of the other agents, such as volume, structure, sentiment, and macro, to achieve a balanced approach.",
+    "improved": false
+  },
+  {
+    "iteration": 3,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.1,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.0,
+      "structure": 1.0,
+      "sentiment": 1.0,
+      "macro": 1.1
+    },
+    "fitness": 0.2949,
+    "metrics": {
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 1175,
+          "win_rate": 28.5,
+          "profit_factor": 0.91,
+          "total_return_pct": -7.84,
+          "max_drawdown_pct": 6.55,
+          "sortino_ratio": -0.06406224718250655
+        },
+        "val": {
+          "total_trades": 695,
+          "win_rate": 26.9,
+          "profit_factor": 0.74,
+          "total_return_pct": -7.51,
+          "max_drawdown_pct": 5.59,
+          "sortino_ratio": -0.2053756198766117
+        },
+        "fitness_score": 0.264
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 1237,
+          "win_rate": 28.0,
+          "profit_factor": 0.9,
+          "total_return_pct": -8.25,
+          "max_drawdown_pct": 5.8,
+          "sortino_ratio": -0.07214334629646166
+        },
+        "val": {
+          "total_trades": 649,
+          "win_rate": 27.6,
+          "profit_factor": 0.76,
+          "total_return_pct": -6.16,
+          "max_drawdown_pct": 4.33,
+          "sortino_ratio": -0.18151039635417257
+        },
+        "fitness_score": 0.2711
+      },
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 1289,
+          "win_rate": 28.8,
+          "profit_factor": 0.84,
+          "total_return_pct": -9.05,
+          "max_drawdown_pct": 5.7,
+          "sortino_ratio": -0.11858268946832444
+        },
+        "val": {
+          "total_trades": 666,
+          "win_rate": 29.1,
+          "profit_factor": 0.8,
+          "total_return_pct": -4.83,
+          "max_drawdown_pct": 2.77,
+          "sortino_ratio": -0.15108708480342417
+        },
+        "fitness_score": 0.2656
+      },
+      "XRP/USDT": {
+        "train": {
+          "total_trades": 1419,
+          "win_rate": 29.1,
+          "profit_factor": 0.94,
+          "total_return_pct": -7.68,
+          "max_drawdown_pct": 3.99,
+          "sortino_ratio": -0.044412599568112096
+        },
+        "val": {
+          "total_trades": 706,
+          "win_rate": 28.5,
+          "profit_factor": 0.79,
+          "total_return_pct": -5.78,
+          "max_drawdown_pct": 3.9,
+          "sortino_ratio": -0.15512918728444086
+        },
+        "fitness_score": 0.2982
+      },
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2134,
+          "win_rate": 29.1,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.41,
+          "max_drawdown_pct": 8.05,
+          "sortino_ratio": -0.0910293384342654
+        },
+        "val": {
+          "total_trades": 1138,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.82,
+          "max_drawdown_pct": 3.37,
+          "sortino_ratio": -0.06301514727089676
+        },
+        "fitness_score": 0.3138
+      },
+      "LINK/USDT": {
+        "train": {
+          "total_trades": 1370,
+          "win_rate": 28.2,
+          "profit_factor": 0.91,
+          "total_return_pct": -8.7,
+          "max_drawdown_pct": 5.08,
+          "sortino_ratio": -0.06187277190340899
+        },
+        "val": {
+          "total_trades": 788,
+          "win_rate": 29.1,
+          "profit_factor": 0.85,
+          "total_return_pct": -5.68,
+          "max_drawdown_pct": 3.73,
+          "sortino_ratio": -0.11406634999459973
+        },
+        "fitness_score": 0.308
+      },
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1645,
+          "win_rate": 30.1,
+          "profit_factor": 0.97,
+          "total_return_pct": -7.34,
+          "max_drawdown_pct": 4.24,
+          "sortino_ratio": -0.022926935232444125
+        },
+        "val": {
+          "total_trades": 723,
+          "win_rate": 29.3,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.66,
+          "max_drawdown_pct": 3.78,
+          "sortino_ratio": -0.08527072768456073
+        },
+        "fitness_score": 0.3423
+      },
+      "LTC/USDT": {
+        "train": {
+          "total_trades": 1366,
+          "win_rate": 27.7,
+          "profit_factor": 0.84,
+          "total_return_pct": -11.26,
+          "max_drawdown_pct": 7.58,
+          "sortino_ratio": -0.11671726402642224
+        },
+        "val": {
+          "total_trades": 751,
+          "win_rate": 26.4,
+          "profit_factor": 0.68,
+          "total_return_pct": -7.55,
+          "max_drawdown_pct": 5.17,
+          "sortino_ratio": -0.24199684721428538
+        },
+        "fitness_score": 0.2195
+      },
+      "XLM/USDT": {
+        "train": {
+          "total_trades": 1453,
+          "win_rate": 29.0,
+          "profit_factor": 0.91,
+          "total_return_pct": -9.01,
+          "max_drawdown_pct": 5.91,
+          "sortino_ratio": -0.06837895808460309
+        },
+        "val": {
+          "total_trades": 973,
+          "win_rate": 28.9,
+          "profit_factor": 0.94,
+          "total_return_pct": -5.18,
+          "max_drawdown_pct": 3.27,
+          "sortino_ratio": -0.03951814905085282
+        },
+        "fitness_score": 0.3392
+      },
+      "UNI/USDT": {
+        "train": {
+          "total_trades": 1501,
+          "win_rate": 28.1,
+          "profit_factor": 0.95,
+          "total_return_pct": -8.06,
+          "max_drawdown_pct": 8.1,
+          "sortino_ratio": -0.03536632279664109
+        },
+        "val": {
+          "total_trades": 977,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -8.06,
+          "max_drawdown_pct": 5.6,
+          "sortino_ratio": -0.13967048786739297
+        },
+        "fitness_score": 0.3053
+      },
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1541,
+          "win_rate": 27.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.63,
+          "max_drawdown_pct": 9.49,
+          "sortino_ratio": -0.10460468709768023
+        },
+        "val": {
+          "total_trades": 885,
+          "win_rate": 29.0,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.62,
+          "max_drawdown_pct": 3.83,
+          "sortino_ratio": -0.112215536460235
+        },
+        "fitness_score": 0.2853
+      },
+      "HBAR/USDT": {
+        "train": {
+          "total_trades": 1676,
+          "win_rate": 28.9,
+          "profit_factor": 0.9,
+          "total_return_pct": -11.39,
+          "max_drawdown_pct": 6.45,
+          "sortino_ratio": -0.07622800678752445
+        },
+        "val": {
+          "total_trades": 930,
+          "win_rate": 28.2,
+          "profit_factor": 0.87,
+          "total_return_pct": -6.07,
+          "max_drawdown_pct": 3.1,
+          "sortino_ratio": -0.10141427962731699
+        },
+        "fitness_score": 0.3089
+      },
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1546,
+          "win_rate": 30.4,
+          "profit_factor": 0.95,
+          "total_return_pct": -7.25,
+          "max_drawdown_pct": 3.26,
+          "sortino_ratio": -0.033251728965038266
+        },
+        "val": {
+          "total_trades": 820,
+          "win_rate": 30.0,
+          "profit_factor": 0.84,
+          "total_return_pct": -5.11,
+          "max_drawdown_pct": 2.88,
+          "sortino_ratio": -0.11873581122938538
+        },
+        "fitness_score": 0.3215
+      },
+      "ADA/USDT": {
+        "train": {
+          "total_trades": 1308,
+          "win_rate": 28.6,
+          "profit_factor": 0.88,
+          "total_return_pct": -9.8,
+          "max_drawdown_pct": 6.61,
+          "sortino_ratio": -0.08609532291335599
+        },
+        "val": {
+          "total_trades": 841,
+          "win_rate": 29.5,
+          "profit_factor": 0.9,
+          "total_return_pct": -5.12,
+          "max_drawdown_pct": 3.27,
+          "sortino_ratio": -0.07339730965396421
+        },
+        "fitness_score": 0.3142
+      },
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1686,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.16,
+          "max_drawdown_pct": 10.97,
+          "sortino_ratio": -0.13048618918831387
+        },
+        "val": {
+          "total_trades": 844,
+          "win_rate": 28.7,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.53,
+          "max_drawdown_pct": 3.42,
+          "sortino_ratio": -0.07948339977862766
+        },
+        "fitness_score": 0.2856
+      },
+      "XTZ/USDT": {
+        "train": {
+          "total_trades": 2094,
+          "win_rate": 28.6,
+          "profit_factor": 0.84,
+          "total_return_pct": -15.88,
+          "max_drawdown_pct": 9.61,
+          "sortino_ratio": -0.10993674203411714
+        },
+        "val": {
+          "total_trades": 1319,
+          "win_rate": 31.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.73,
+          "max_drawdown_pct": 3.49,
+          "sortino_ratio": -0.0674234760687153
+        },
+        "fitness_score": 0.3014
+      },
+      "POL/USDT": {
+        "train": {
+          "total_trades": 1982,
+          "win_rate": 27.6,
+          "profit_factor": 0.85,
+          "total_return_pct": -16.04,
+          "max_drawdown_pct": 9.85,
+          "sortino_ratio": -0.10989180790067811
+        },
+        "val": {
+          "total_trades": 1018,
+          "win_rate": 28.5,
+          "profit_factor": 0.82,
+          "total_return_pct": -7.47,
+          "max_drawdown_pct": 4.99,
+          "sortino_ratio": -0.13556419381343074
+        },
+        "fitness_score": 0.2701
+      }
+    },
+    "reasoning": "The current weights seem to be slightly biased towards orderflow and volatility, with trend and momentum being slightly underweighted. Given the performance metrics, it appears that a more balanced approach might yield better results. The new weights aim to balance the influence of each agent, with a slight emphasis on trend and momentum to potentially improve the overall win rate and profit factor.",
+    "improved": false
+  },
+  {
+    "iteration": 4,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.1,
+      "volume": 1.0,
+      "orderflow": 1.3,
+      "volatility": 1.1,
+      "structure": 1.1,
+      "sentiment": 1.0,
+      "macro": 1.1
+    },
+    "fitness": 0.2949,
+    "metrics": {
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 1188,
+          "win_rate": 28.5,
+          "profit_factor": 0.91,
+          "total_return_pct": -7.98,
+          "max_drawdown_pct": 6.65,
+          "sortino_ratio": -0.06534782913268072
+        },
+        "val": {
+          "total_trades": 695,
+          "win_rate": 26.9,
+          "profit_factor": 0.74,
+          "total_return_pct": -7.5,
+          "max_drawdown_pct": 5.59,
+          "sortino_ratio": -0.20533487561715183
+        },
+        "fitness_score": 0.2636
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 1237,
+          "win_rate": 28.0,
+          "profit_factor": 0.9,
+          "total_return_pct": -8.26,
+          "max_drawdown_pct": 5.8,
+          "sortino_ratio": -0.0722024172195372
+        },
+        "val": {
+          "total_trades": 649,
+          "win_rate": 27.6,
+          "profit_factor": 0.76,
+          "total_return_pct": -6.16,
+          "max_drawdown_pct": 4.33,
+          "sortino_ratio": -0.18151039635417257
+        },
+        "fitness_score": 0.2711
+      },
+      "ADA/USDT": {
+        "train": {
+          "total_trades": 1309,
+          "win_rate": 28.6,
+          "profit_factor": 0.88,
+          "total_return_pct": -9.83,
+          "max_drawdown_pct": 6.63,
+          "sortino_ratio": -0.0864551758507244
+        },
+        "val": {
+          "total_trades": 841,
+          "win_rate": 29.5,
+          "profit_factor": 0.9,
+          "total_return_pct": -5.12,
+          "max_drawdown_pct": 3.27,
+          "sortino_ratio": -0.07339730965396421
+        },
+        "fitness_score": 0.3141
+      },
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 1288,
+          "win_rate": 28.8,
+          "profit_factor": 0.84,
+          "total_return_pct": -9.01,
+          "max_drawdown_pct": 5.67,
+          "sortino_ratio": -0.11793124087882503
+        },
+        "val": {
+          "total_trades": 666,
+          "win_rate": 29.1,
+          "profit_factor": 0.8,
+          "total_return_pct": -4.83,
+          "max_drawdown_pct": 2.77,
+          "sortino_ratio": -0.15108708480342417
+        },
+        "fitness_score": 0.2658
+      },
+      "XRP/USDT": {
+        "train": {
+          "total_trades": 1419,
+          "win_rate": 29.1,
+          "profit_factor": 0.94,
+          "total_return_pct": -7.68,
+          "max_drawdown_pct": 3.99,
+          "sortino_ratio": -0.044412599568112096
+        },
+        "val": {
+          "total_trades": 706,
+          "win_rate": 28.5,
+          "profit_factor": 0.79,
+          "total_return_pct": -5.78,
+          "max_drawdown_pct": 3.9,
+          "sortino_ratio": -0.15512918728444086
+        },
+        "fitness_score": 0.2982
+      },
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2134,
+          "win_rate": 29.0,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.47,
+          "max_drawdown_pct": 8.1,
+          "sortino_ratio": -0.09192373277032825
+        },
+        "val": {
+          "total_trades": 1137,
+          "win_rate": 30.2,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.8,
+          "max_drawdown_pct": 3.37,
+          "sortino_ratio": -0.06269039964013588
+        },
+        "fitness_score": 0.3136
+      },
+      "LINK/USDT": {
+        "train": {
+          "total_trades": 1374,
+          "win_rate": 28.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -9.13,
+          "max_drawdown_pct": 5.48,
+          "sortino_ratio": -0.06841542492005712
+        },
+        "val": {
+          "total_trades": 788,
+          "win_rate": 29.1,
+          "profit_factor": 0.85,
+          "total_return_pct": -5.68,
+          "max_drawdown_pct": 3.73,
+          "sortino_ratio": -0.11406634999459973
+        },
+        "fitness_score": 0.3063
+      },
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1644,
+          "win_rate": 30.1,
+          "profit_factor": 0.97,
+          "total_return_pct": -7.3,
+          "max_drawdown_pct": 4.2,
+          "sortino_ratio": -0.02242267591016308
+        },
+        "val": {
+          "total_trades": 724,
+          "win_rate": 29.3,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.71,
+          "max_drawdown_pct": 3.78,
+          "sortino_ratio": -0.08675846874586982
+        },
+        "fitness_score": 0.3422
+      },
+      "LTC/USDT": {
+        "train": {
+          "total_trades": 1368,
+          "win_rate": 27.7,
+          "profit_factor": 0.84,
+          "total_return_pct": -11.32,
+          "max_drawdown_pct": 7.58,
+          "sortino_ratio": -0.11762878674580433
+        },
+        "val": {
+          "total_trades": 753,
+          "win_rate": 26.4,
+          "profit_factor": 0.69,
+          "total_return_pct": -7.51,
+          "max_drawdown_pct": 5.12,
+          "sortino_ratio": -0.2392670546073408
+        },
+        "fitness_score": 0.2219
+      },
+      "XLM/USDT": {
+        "train": {
+          "total_trades": 1452,
+          "win_rate": 29.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -8.87,
+          "max_drawdown_pct": 5.78,
+          "sortino_ratio": -0.06612709728882969
+        },
+        "val": {
+          "total_trades": 972,
+          "win_rate": 28.9,
+          "profit_factor": 0.94,
+          "total_return_pct": -5.16,
+          "max_drawdown_pct": 3.27,
+          "sortino_ratio": -0.03902762944222612
+        },
+        "fitness_score": 0.3399
+      },
+      "UNI/USDT": {
+        "train": {
+          "total_trades": 1504,
+          "win_rate": 28.0,
+          "profit_factor": 0.95,
+          "total_return_pct": -8.21,
+          "max_drawdown_pct": 8.05,
+          "sortino_ratio": -0.03721817842011127
+        },
+        "val": {
+          "total_trades": 976,
+          "win_rate": 27.7,
+          "profit_factor": 0.82,
+          "total_return_pct": -8.03,
+          "max_drawdown_pct": 5.57,
+          "sortino_ratio": -0.13889883684144225
+        },
+        "fitness_score": 0.3052
+      },
+      "POL/USDT": {
+        "train": {
+          "total_trades": 1979,
+          "win_rate": 27.6,
+          "profit_factor": 0.85,
+          "total_return_pct": -15.94,
+          "max_drawdown_pct": 9.75,
+          "sortino_ratio": -0.10881673140927355
+        },
+        "val": {
+          "total_trades": 1017,
+          "win_rate": 28.5,
+          "profit_factor": 0.82,
+          "total_return_pct": -7.45,
+          "max_drawdown_pct": 4.98,
+          "sortino_ratio": -0.13502291218875895
+        },
+        "fitness_score": 0.2705
+      },
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1541,
+          "win_rate": 27.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.73,
+          "max_drawdown_pct": 9.59,
+          "sortino_ratio": -0.10605508149436933
+        },
+        "val": {
+          "total_trades": 883,
+          "win_rate": 29.1,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.6,
+          "max_drawdown_pct": 3.85,
+          "sortino_ratio": -0.1119834896336965
+        },
+        "fitness_score": 0.285
+      },
+      "HBAR/USDT": {
+        "train": {
+          "total_trades": 1676,
+          "win_rate": 28.9,
+          "profit_factor": 0.9,
+          "total_return_pct": -11.39,
+          "max_drawdown_pct": 6.45,
+          "sortino_ratio": -0.07622800678752445
+        },
+        "val": {
+          "total_trades": 929,
+          "win_rate": 28.2,
+          "profit_factor": 0.87,
+          "total_return_pct": -6.04,
+          "max_drawdown_pct": 3.08,
+          "sortino_ratio": -0.10058427038908097
+        },
+        "fitness_score": 0.3091
+      },
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1686,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.16,
+          "max_drawdown_pct": 10.97,
+          "sortino_ratio": -0.13048618918831387
+        },
+        "val": {
+          "total_trades": 843,
+          "win_rate": 28.7,
+          "profit_factor": 0.9,
+          "total_return_pct": -5.5,
+          "max_drawdown_pct": 3.39,
+          "sortino_ratio": -0.07861543210414028
+        },
+        "fitness_score": 0.2878
+      },
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1546,
+          "win_rate": 30.4,
+          "profit_factor": 0.95,
+          "total_return_pct": -7.25,
+          "max_drawdown_pct": 3.26,
+          "sortino_ratio": -0.033251728965038266
+        },
+        "val": {
+          "total_trades": 822,
+          "win_rate": 29.9,
+          "profit_factor": 0.84,
+          "total_return_pct": -5.14,
+          "max_drawdown_pct": 2.91,
+          "sortino_ratio": -0.12015131088068048
+        },
+        "fitness_score": 0.3211
+      },
+      "XTZ/USDT": {
+        "train": {
+          "total_trades": 2092,
+          "win_rate": 28.6,
+          "profit_factor": 0.84,
+          "total_return_pct": -15.83,
+          "max_drawdown_pct": 9.59,
+          "sortino_ratio": -0.10949102379293263
+        },
+        "val": {
+          "total_trades": 1323,
+          "win_rate": 30.8,
+          "profit_factor": 0.9,
+          "total_return_pct": -6.9,
+          "max_drawdown_pct": 3.56,
+          "sortino_ratio": -0.07207756536198638
+        },
+        "fitness_score": 0.2985
+      }
+    },
+    "reasoning": "Analyzing the detailed performance metrics, it's observed that the agents with higher fitness scores tend to have lower max drawdown percentages and higher profit factors. Agents like trend, momentum, and structure have lower weights but decent performance, suggesting they might be underweighted. On the other hand, orderflow and volatility have higher weights but mixed performance across different pairs, indicating potential for optimization. The new set of weights aims to balance these observations by slightly increasing the weights of underperforming but stable agents and adjusting the overweighted agents to improve overall composite fitness.",
+    "improved": false
+  },
+  {
+    "iteration": 5,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.3,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.0,
+      "structure": 1.1,
+      "sentiment": 1.0,
+      "macro": 1.1
+    },
+    "fitness": 0.2943,
+    "metrics": {
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 1176,
+          "win_rate": 28.4,
+          "profit_factor": 0.9,
+          "total_return_pct": -8.35,
+          "max_drawdown_pct": 6.82,
+          "sortino_ratio": -0.07284647972505459
+        },
+        "val": {
+          "total_trades": 694,
+          "win_rate": 26.9,
+          "profit_factor": 0.74,
+          "total_return_pct": -7.49,
+          "max_drawdown_pct": 5.58,
+          "sortino_ratio": -0.20482863746958987
+        },
+        "fitness_score": 0.2601
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 1256,
+          "win_rate": 27.8,
+          "profit_factor": 0.89,
+          "total_return_pct": -8.8,
+          "max_drawdown_pct": 6.05,
+          "sortino_ratio": -0.0802294138349876
+        },
+        "val": {
+          "total_trades": 648,
+          "win_rate": 27.5,
+          "profit_factor": 0.76,
+          "total_return_pct": -6.18,
+          "max_drawdown_pct": 4.35,
+          "sortino_ratio": -0.18248982442622425
+        },
+        "fitness_score": 0.2671
+      },
+      "ADA/USDT": {
+        "train": {
+          "total_trades": 1312,
+          "win_rate": 28.7,
+          "profit_factor": 0.89,
+          "total_return_pct": -9.74,
+          "max_drawdown_pct": 6.57,
+          "sortino_ratio": -0.08476542518405601
+        },
+        "val": {
+          "total_trades": 840,
+          "win_rate": 29.4,
+          "profit_factor": 0.9,
+          "total_return_pct": -5.17,
+          "max_drawdown_pct": 3.3,
+          "sortino_ratio": -0.0751021660450965
+        },
+        "fitness_score": 0.3162
+      },
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 1290,
+          "win_rate": 28.8,
+          "profit_factor": 0.84,
+          "total_return_pct": -9.12,
+          "max_drawdown_pct": 5.83,
+          "sortino_ratio": -0.12044175207258272
+        },
+        "val": {
+          "total_trades": 665,
+          "win_rate": 29.2,
+          "profit_factor": 0.8,
+          "total_return_pct": -4.81,
+          "max_drawdown_pct": 2.75,
+          "sortino_ratio": -0.15036605874267142
+        },
+        "fitness_score": 0.2653
+      },
+      "XRP/USDT": {
+        "train": {
+          "total_trades": 1416,
+          "win_rate": 29.4,
+          "profit_factor": 0.94,
+          "total_return_pct": -7.34,
+          "max_drawdown_pct": 3.75,
+          "sortino_ratio": -0.0389804494827659
+        },
+        "val": {
+          "total_trades": 706,
+          "win_rate": 28.5,
+          "profit_factor": 0.79,
+          "total_return_pct": -5.78,
+          "max_drawdown_pct": 3.9,
+          "sortino_ratio": -0.15512918728444086
+        },
+        "fitness_score": 0.2995
+      },
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2137,
+          "win_rate": 28.9,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.63,
+          "max_drawdown_pct": 8.15,
+          "sortino_ratio": -0.093763185216157
+        },
+        "val": {
+          "total_trades": 1136,
+          "win_rate": 30.2,
+          "profit_factor": 0.92,
+          "total_return_pct": -6.77,
+          "max_drawdown_pct": 3.52,
+          "sortino_ratio": -0.0621695266449274
+        },
+        "fitness_score": 0.3151
+      },
+      "LINK/USDT": {
+        "train": {
+          "total_trades": 1358,
+          "win_rate": 28.2,
+          "profit_factor": 0.91,
+          "total_return_pct": -8.78,
+          "max_drawdown_pct": 5.54,
+          "sortino_ratio": -0.06421036343865683
+        },
+        "val": {
+          "total_trades": 789,
+          "win_rate": 28.9,
+          "profit_factor": 0.84,
+          "total_return_pct": -5.83,
+          "max_drawdown_pct": 3.87,
+          "sortino_ratio": -0.11941283888232666
+        },
+        "fitness_score": 0.3039
+      },
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1640,
+          "win_rate": 30.1,
+          "profit_factor": 0.97,
+          "total_return_pct": -7.33,
+          "max_drawdown_pct": 4.2,
+          "sortino_ratio": -0.023061521277525872
+        },
+        "val": {
+          "total_trades": 724,
+          "win_rate": 29.3,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.69,
+          "max_drawdown_pct": 3.8,
+          "sortino_ratio": -0.0860301992338135
+        },
+        "fitness_score": 0.3422
+      },
+      "LTC/USDT": {
+        "train": {
+          "total_trades": 1357,
+          "win_rate": 27.9,
+          "profit_factor": 0.84,
+          "total_return_pct": -10.97,
+          "max_drawdown_pct": 7.33,
+          "sortino_ratio": -0.1127245015222408
+        },
+        "val": {
+          "total_trades": 747,
+          "win_rate": 26.4,
+          "profit_factor": 0.68,
+          "total_return_pct": -7.52,
+          "max_drawdown_pct": 5.15,
+          "sortino_ratio": -0.24193600159992443
+        },
+        "fitness_score": 0.2206
+      },
+      "XLM/USDT": {
+        "train": {
+          "total_trades": 1456,
+          "win_rate": 29.0,
+          "profit_factor": 0.91,
+          "total_return_pct": -8.99,
+          "max_drawdown_pct": 5.89,
+          "sortino_ratio": -0.06788899308551381
+        },
+        "val": {
+          "total_trades": 970,
+          "win_rate": 28.9,
+          "profit_factor": 0.95,
+          "total_return_pct": -4.84,
+          "max_drawdown_pct": 3.27,
+          "sortino_ratio": -0.032436547435205576
+        },
+        "fitness_score": 0.3428
+      },
+      "POL/USDT": {
+        "train": {
+          "total_trades": 1987,
+          "win_rate": 27.6,
+          "profit_factor": 0.85,
+          "total_return_pct": -16.16,
+          "max_drawdown_pct": 9.91,
+          "sortino_ratio": -0.11100455782968208
+        },
+        "val": {
+          "total_trades": 1017,
+          "win_rate": 28.5,
+          "profit_factor": 0.82,
+          "total_return_pct": -7.46,
+          "max_drawdown_pct": 4.98,
+          "sortino_ratio": -0.13516737266445794
+        },
+        "fitness_score": 0.2699
+      },
+      "UNI/USDT": {
+        "train": {
+          "total_trades": 1506,
+          "win_rate": 28.1,
+          "profit_factor": 0.95,
+          "total_return_pct": -7.98,
+          "max_drawdown_pct": 7.9,
+          "sortino_ratio": -0.03412354301009504
+        },
+        "val": {
+          "total_trades": 975,
+          "win_rate": 27.6,
+          "profit_factor": 0.81,
+          "total_return_pct": -8.14,
+          "max_drawdown_pct": 5.69,
+          "sortino_ratio": -0.14223302339042518
+        },
+        "fitness_score": 0.3031
+      },
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1555,
+          "win_rate": 27.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.83,
+          "max_drawdown_pct": 9.55,
+          "sortino_ratio": -0.1063605164066526
+        },
+        "val": {
+          "total_trades": 880,
+          "win_rate": 29.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -6.49,
+          "max_drawdown_pct": 3.74,
+          "sortino_ratio": -0.1090676629701232
+        },
+        "fitness_score": 0.2876
+      },
+      "HBAR/USDT": {
+        "train": {
+          "total_trades": 1668,
+          "win_rate": 28.9,
+          "profit_factor": 0.89,
+          "total_return_pct": -11.48,
+          "max_drawdown_pct": 6.53,
+          "sortino_ratio": -0.07830853288070647
+        },
+        "val": {
+          "total_trades": 929,
+          "win_rate": 28.2,
+          "profit_factor": 0.87,
+          "total_return_pct": -6.04,
+          "max_drawdown_pct": 3.08,
+          "sortino_ratio": -0.1005314694975744
+        },
+        "fitness_score": 0.3066
+      },
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1687,
+          "win_rate": 27.4,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.28,
+          "max_drawdown_pct": 11.08,
+          "sortino_ratio": -0.13215007531230757
+        },
+        "val": {
+          "total_trades": 845,
+          "win_rate": 28.5,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.65,
+          "max_drawdown_pct": 3.54,
+          "sortino_ratio": -0.08266534967594641
+        },
+        "fitness_score": 0.2844
+      },
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1542,
+          "win_rate": 30.5,
+          "profit_factor": 0.96,
+          "total_return_pct": -6.95,
+          "max_drawdown_pct": 3.04,
+          "sortino_ratio": -0.028172937974183878
+        },
+        "val": {
+          "total_trades": 819,
+          "win_rate": 29.9,
+          "profit_factor": 0.83,
+          "total_return_pct": -5.16,
+          "max_drawdown_pct": 2.94,
+          "sortino_ratio": -0.12187510635571856
+        },
+        "fitness_score": 0.322
+      },
+      "XTZ/USDT": {
+        "train": {
+          "total_trades": 2092,
+          "win_rate": 28.5,
+          "profit_factor": 0.84,
+          "total_return_pct": -16.06,
+          "max_drawdown_pct": 9.78,
+          "sortino_ratio": -0.11224992982969677
+        },
+        "val": {
+          "total_trades": 1321,
+          "win_rate": 30.7,
+          "profit_factor": 0.9,
+          "total_return_pct": -7.01,
+          "max_drawdown_pct": 3.72,
+          "sortino_ratio": -0.0757270144535575
+        },
+        "fitness_score": 0.2969
+      }
+    },
+    "reasoning": "The current weights seem to be underweighting trend and momentum, while over-weighting orderflow and volatility. Based on the performance metrics, it appears that trend and momentum are crucial for improving the win rate and profit factor. Meanwhile, orderflow and volatility, although important, seem to be over-emphasized. A more balanced approach, with increased weights on trend and momentum, and decreased weights on orderflow and volatility, could potentially improve the composite fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 6,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.2,
+      "volume": 1.0,
+      "orderflow": 1.3,
+      "volatility": 1.0,
+      "structure": 1.2,
+      "sentiment": 1.0,
+      "macro": 1.1
+    },
+    "fitness": 0.2951,
+    "metrics": {
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 1169,
+          "win_rate": 28.3,
+          "profit_factor": 0.9,
+          "total_return_pct": -8.42,
+          "max_drawdown_pct": 6.85,
+          "sortino_ratio": -0.07467241574171853
+        },
+        "val": {
+          "total_trades": 693,
+          "win_rate": 27.0,
+          "profit_factor": 0.74,
+          "total_return_pct": -7.46,
+          "max_drawdown_pct": 5.56,
+          "sortino_ratio": -0.20419202432364708
+        },
+        "fitness_score": 0.2598
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 1238,
+          "win_rate": 28.1,
+          "profit_factor": 0.9,
+          "total_return_pct": -8.12,
+          "max_drawdown_pct": 5.67,
+          "sortino_ratio": -0.06964952410949872
+        },
+        "val": {
+          "total_trades": 649,
+          "win_rate": 27.6,
+          "profit_factor": 0.76,
+          "total_return_pct": -6.16,
+          "max_drawdown_pct": 4.33,
+          "sortino_ratio": -0.18139331469215042
+        },
+        "fitness_score": 0.2718
+      },
+      "ADA/USDT": {
+        "train": {
+          "total_trades": 1312,
+          "win_rate": 28.6,
+          "profit_factor": 0.88,
+          "total_return_pct": -9.84,
+          "max_drawdown_pct": 6.63,
+          "sortino_ratio": -0.08634904485466939
+        },
+        "val": {
+          "total_trades": 840,
+          "win_rate": 29.5,
+          "profit_factor": 0.9,
+          "total_return_pct": -5.07,
+          "max_drawdown_pct": 3.24,
+          "sortino_ratio": -0.07202957952465869
+        },
+        "fitness_score": 0.3145
+      },
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 1298,
+          "win_rate": 28.7,
+          "profit_factor": 0.84,
+          "total_return_pct": -9.13,
+          "max_drawdown_pct": 5.75,
+          "sortino_ratio": -0.11945598215211653
+        },
+        "val": {
+          "total_trades": 667,
+          "win_rate": 29.1,
+          "profit_factor": 0.8,
+          "total_return_pct": -4.86,
+          "max_drawdown_pct": 2.79,
+          "sortino_ratio": -0.1521691000559504
+        },
+        "fitness_score": 0.2651
+      },
+      "XRP/USDT": {
+        "train": {
+          "total_trades": 1419,
+          "win_rate": 29.1,
+          "profit_factor": 0.94,
+          "total_return_pct": -7.57,
+          "max_drawdown_pct": 3.82,
+          "sortino_ratio": -0.0426577082228837
+        },
+        "val": {
+          "total_trades": 704,
+          "win_rate": 28.6,
+          "profit_factor": 0.8,
+          "total_return_pct": -5.73,
+          "max_drawdown_pct": 3.85,
+          "sortino_ratio": -0.1534225426507483
+        },
+        "fitness_score": 0.3011
+      },
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2133,
+          "win_rate": 29.1,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.36,
+          "max_drawdown_pct": 8.05,
+          "sortino_ratio": -0.09051133831485714
+        },
+        "val": {
+          "total_trades": 1139,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.91,
+          "max_drawdown_pct": 3.45,
+          "sortino_ratio": -0.06482599980254618
+        },
+        "fitness_score": 0.3134
+      },
+      "LINK/USDT": {
+        "train": {
+          "total_trades": 1378,
+          "win_rate": 28.0,
+          "profit_factor": 0.9,
+          "total_return_pct": -9.44,
+          "max_drawdown_pct": 5.84,
+          "sortino_ratio": -0.0730144492481858
+        },
+        "val": {
+          "total_trades": 792,
+          "win_rate": 28.9,
+          "profit_factor": 0.84,
+          "total_return_pct": -5.95,
+          "max_drawdown_pct": 3.98,
+          "sortino_ratio": -0.1229711900139032
+        },
+        "fitness_score": 0.299
+      },
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1644,
+          "win_rate": 30.1,
+          "profit_factor": 0.97,
+          "total_return_pct": -7.27,
+          "max_drawdown_pct": 4.24,
+          "sortino_ratio": -0.021980964154642426
+        },
+        "val": {
+          "total_trades": 728,
+          "win_rate": 29.3,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.71,
+          "max_drawdown_pct": 3.81,
+          "sortino_ratio": -0.0862588719317185
+        },
+        "fitness_score": 0.3423
+      },
+      "LTC/USDT": {
+        "train": {
+          "total_trades": 1366,
+          "win_rate": 27.7,
+          "profit_factor": 0.84,
+          "total_return_pct": -11.25,
+          "max_drawdown_pct": 7.58,
+          "sortino_ratio": -0.11662229623565748
+        },
+        "val": {
+          "total_trades": 751,
+          "win_rate": 26.4,
+          "profit_factor": 0.68,
+          "total_return_pct": -7.55,
+          "max_drawdown_pct": 5.17,
+          "sortino_ratio": -0.24199090397352238
+        },
+        "fitness_score": 0.2195
+      },
+      "XLM/USDT": {
+        "train": {
+          "total_trades": 1451,
+          "win_rate": 29.0,
+          "profit_factor": 0.91,
+          "total_return_pct": -8.93,
+          "max_drawdown_pct": 5.92,
+          "sortino_ratio": -0.06714464731508756
+        },
+        "val": {
+          "total_trades": 969,
+          "win_rate": 29.0,
+          "profit_factor": 0.95,
+          "total_return_pct": -4.67,
+          "max_drawdown_pct": 3.27,
+          "sortino_ratio": -0.028438347425586204
+        },
+        "fitness_score": 0.3437
+      },
+      "UNI/USDT": {
+        "train": {
+          "total_trades": 1502,
+          "win_rate": 28.2,
+          "profit_factor": 0.96,
+          "total_return_pct": -7.67,
+          "max_drawdown_pct": 7.76,
+          "sortino_ratio": -0.030299332951773523
+        },
+        "val": {
+          "total_trades": 971,
+          "win_rate": 27.8,
+          "profit_factor": 0.83,
+          "total_return_pct": -7.79,
+          "max_drawdown_pct": 5.35,
+          "sortino_ratio": -0.1330890888035226
+        },
+        "fitness_score": 0.3122
+      },
+      "POL/USDT": {
+        "train": {
+          "total_trades": 1979,
+          "win_rate": 27.5,
+          "profit_factor": 0.84,
+          "total_return_pct": -16.16,
+          "max_drawdown_pct": 9.75,
+          "sortino_ratio": -0.11175753490963171
+        },
+        "val": {
+          "total_trades": 1018,
+          "win_rate": 28.5,
+          "profit_factor": 0.82,
+          "total_return_pct": -7.47,
+          "max_drawdown_pct": 4.99,
+          "sortino_ratio": -0.13558401963594696
+        },
+        "fitness_score": 0.2678
+      },
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1534,
+          "win_rate": 27.3,
+          "profit_factor": 0.87,
+          "total_return_pct": -12.19,
+          "max_drawdown_pct": 9.13,
+          "sortino_ratio": -0.0987413395803904
+        },
+        "val": {
+          "total_trades": 882,
+          "win_rate": 29.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -6.53,
+          "max_drawdown_pct": 3.74,
+          "sortino_ratio": -0.10973707738636282
+        },
+        "fitness_score": 0.2914
+      },
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1685,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.11,
+          "max_drawdown_pct": 10.92,
+          "sortino_ratio": -0.1298988162372881
+        },
+        "val": {
+          "total_trades": 843,
+          "win_rate": 28.6,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.6,
+          "max_drawdown_pct": 3.49,
+          "sortino_ratio": -0.08150822338753437
+        },
+        "fitness_score": 0.2853
+      },
+      "HBAR/USDT": {
+        "train": {
+          "total_trades": 1668,
+          "win_rate": 28.9,
+          "profit_factor": 0.9,
+          "total_return_pct": -11.37,
+          "max_drawdown_pct": 6.54,
+          "sortino_ratio": -0.0768281472417067
+        },
+        "val": {
+          "total_trades": 928,
+          "win_rate": 28.2,
+          "profit_factor": 0.87,
+          "total_return_pct": -5.98,
+          "max_drawdown_pct": 3.07,
+          "sortino_ratio": -0.09849396797636581
+        },
+        "fitness_score": 0.3093
+      },
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1540,
+          "win_rate": 30.4,
+          "profit_factor": 0.95,
+          "total_return_pct": -7.11,
+          "max_drawdown_pct": 3.15,
+          "sortino_ratio": -0.031292733075780156
+        },
+        "val": {
+          "total_trades": 820,
+          "win_rate": 29.9,
+          "profit_factor": 0.83,
+          "total_return_pct": -5.14,
+          "max_drawdown_pct": 2.93,
+          "sortino_ratio": -0.12057888471699252
+        },
+        "fitness_score": 0.3195
+      },
+      "XTZ/USDT": {
+        "train": {
+          "total_trades": 2095,
+          "win_rate": 28.5,
+          "profit_factor": 0.84,
+          "total_return_pct": -16.12,
+          "max_drawdown_pct": 9.86,
+          "sortino_ratio": -0.11309355153779689
+        },
+        "val": {
+          "total_trades": 1318,
+          "win_rate": 31.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.72,
+          "max_drawdown_pct": 3.47,
+          "sortino_ratio": -0.06703434141824725
+        },
+        "fitness_score": 0.3006
+      }
+    },
+    "reasoning": "The current weights seem to be slightly underweighting trend and momentum, while over-weighting orderflow and volatility. Given the relatively low win rates across most pairs and the negative total return percentages, it seems prudent to adjust the weights to emphasize trend and momentum slightly more, while reducing the emphasis on orderflow and volatility. Additionally, increasing the weight on structure might help given its relatively stable performance across different pairs. The weights for volume, sentiment, and macro seem balanced and can be adjusted slightly based on their performance across different assets.",
+    "improved": false
+  },
+  {
+    "iteration": 7,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.3,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 0.9,
+      "structure": 1.1,
+      "sentiment": 1.0,
+      "macro": 1.1
+    },
+    "fitness": 0.2949,
+    "metrics": {
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 1175,
+          "win_rate": 28.5,
+          "profit_factor": 0.91,
+          "total_return_pct": -7.84,
+          "max_drawdown_pct": 6.55,
+          "sortino_ratio": -0.06406224718250655
+        },
+        "val": {
+          "total_trades": 695,
+          "win_rate": 26.9,
+          "profit_factor": 0.74,
+          "total_return_pct": -7.51,
+          "max_drawdown_pct": 5.59,
+          "sortino_ratio": -0.2053756198766117
+        },
+        "fitness_score": 0.264
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 1237,
+          "win_rate": 28.0,
+          "profit_factor": 0.9,
+          "total_return_pct": -8.25,
+          "max_drawdown_pct": 5.8,
+          "sortino_ratio": -0.07214334629646166
+        },
+        "val": {
+          "total_trades": 649,
+          "win_rate": 27.6,
+          "profit_factor": 0.76,
+          "total_return_pct": -6.16,
+          "max_drawdown_pct": 4.33,
+          "sortino_ratio": -0.18151039635417257
+        },
+        "fitness_score": 0.2711
+      },
+      "ADA/USDT": {
+        "train": {
+          "total_trades": 1308,
+          "win_rate": 28.6,
+          "profit_factor": 0.88,
+          "total_return_pct": -9.8,
+          "max_drawdown_pct": 6.61,
+          "sortino_ratio": -0.08609532291335599
+        },
+        "val": {
+          "total_trades": 841,
+          "win_rate": 29.5,
+          "profit_factor": 0.9,
+          "total_return_pct": -5.12,
+          "max_drawdown_pct": 3.27,
+          "sortino_ratio": -0.07339730965396421
+        },
+        "fitness_score": 0.3142
+      },
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 1289,
+          "win_rate": 28.8,
+          "profit_factor": 0.84,
+          "total_return_pct": -9.05,
+          "max_drawdown_pct": 5.7,
+          "sortino_ratio": -0.11858268946832444
+        },
+        "val": {
+          "total_trades": 666,
+          "win_rate": 29.1,
+          "profit_factor": 0.8,
+          "total_return_pct": -4.83,
+          "max_drawdown_pct": 2.77,
+          "sortino_ratio": -0.15108708480342417
+        },
+        "fitness_score": 0.2656
+      },
+      "XRP/USDT": {
+        "train": {
+          "total_trades": 1419,
+          "win_rate": 29.1,
+          "profit_factor": 0.94,
+          "total_return_pct": -7.68,
+          "max_drawdown_pct": 3.99,
+          "sortino_ratio": -0.044412599568112096
+        },
+        "val": {
+          "total_trades": 706,
+          "win_rate": 28.5,
+          "profit_factor": 0.79,
+          "total_return_pct": -5.78,
+          "max_drawdown_pct": 3.9,
+          "sortino_ratio": -0.15512918728444086
+        },
+        "fitness_score": 0.2982
+      },
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2134,
+          "win_rate": 29.1,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.41,
+          "max_drawdown_pct": 8.05,
+          "sortino_ratio": -0.0910293384342654
+        },
+        "val": {
+          "total_trades": 1138,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.82,
+          "max_drawdown_pct": 3.37,
+          "sortino_ratio": -0.06301514727089676
+        },
+        "fitness_score": 0.3138
+      },
+      "LINK/USDT": {
+        "train": {
+          "total_trades": 1373,
+          "win_rate": 28.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -9.1,
+          "max_drawdown_pct": 5.48,
+          "sortino_ratio": -0.06804473088882884
+        },
+        "val": {
+          "total_trades": 788,
+          "win_rate": 29.1,
+          "profit_factor": 0.85,
+          "total_return_pct": -5.68,
+          "max_drawdown_pct": 3.73,
+          "sortino_ratio": -0.11406634999459973
+        },
+        "fitness_score": 0.3064
+      },
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1645,
+          "win_rate": 30.1,
+          "profit_factor": 0.97,
+          "total_return_pct": -7.34,
+          "max_drawdown_pct": 4.24,
+          "sortino_ratio": -0.022926935232444125
+        },
+        "val": {
+          "total_trades": 723,
+          "win_rate": 29.3,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.66,
+          "max_drawdown_pct": 3.78,
+          "sortino_ratio": -0.08527072768456073
+        },
+        "fitness_score": 0.3423
+      },
+      "LTC/USDT": {
+        "train": {
+          "total_trades": 1366,
+          "win_rate": 27.7,
+          "profit_factor": 0.84,
+          "total_return_pct": -11.26,
+          "max_drawdown_pct": 7.58,
+          "sortino_ratio": -0.11671726402642224
+        },
+        "val": {
+          "total_trades": 751,
+          "win_rate": 26.4,
+          "profit_factor": 0.68,
+          "total_return_pct": -7.55,
+          "max_drawdown_pct": 5.17,
+          "sortino_ratio": -0.24199684721428538
+        },
+        "fitness_score": 0.2195
+      },
+      "XLM/USDT": {
+        "train": {
+          "total_trades": 1453,
+          "win_rate": 29.0,
+          "profit_factor": 0.91,
+          "total_return_pct": -9.01,
+          "max_drawdown_pct": 5.91,
+          "sortino_ratio": -0.06837895808460309
+        },
+        "val": {
+          "total_trades": 973,
+          "win_rate": 28.9,
+          "profit_factor": 0.94,
+          "total_return_pct": -5.18,
+          "max_drawdown_pct": 3.27,
+          "sortino_ratio": -0.03951814905085282
+        },
+        "fitness_score": 0.3392
+      },
+      "UNI/USDT": {
+        "train": {
+          "total_trades": 1501,
+          "win_rate": 28.1,
+          "profit_factor": 0.95,
+          "total_return_pct": -8.06,
+          "max_drawdown_pct": 8.1,
+          "sortino_ratio": -0.03536632279664109
+        },
+        "val": {
+          "total_trades": 977,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -8.06,
+          "max_drawdown_pct": 5.6,
+          "sortino_ratio": -0.13967048786739297
+        },
+        "fitness_score": 0.3053
+      },
+      "POL/USDT": {
+        "train": {
+          "total_trades": 1982,
+          "win_rate": 27.6,
+          "profit_factor": 0.85,
+          "total_return_pct": -16.04,
+          "max_drawdown_pct": 9.85,
+          "sortino_ratio": -0.10989180790067811
+        },
+        "val": {
+          "total_trades": 1018,
+          "win_rate": 28.5,
+          "profit_factor": 0.82,
+          "total_return_pct": -7.47,
+          "max_drawdown_pct": 4.99,
+          "sortino_ratio": -0.13556419381343074
+        },
+        "fitness_score": 0.2701
+      },
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1540,
+          "win_rate": 27.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.56,
+          "max_drawdown_pct": 9.48,
+          "sortino_ratio": -0.10372321713640553
+        },
+        "val": {
+          "total_trades": 885,
+          "win_rate": 29.0,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.62,
+          "max_drawdown_pct": 3.83,
+          "sortino_ratio": -0.112215536460235
+        },
+        "fitness_score": 0.2855
+      },
+      "HBAR/USDT": {
+        "train": {
+          "total_trades": 1676,
+          "win_rate": 28.9,
+          "profit_factor": 0.9,
+          "total_return_pct": -11.39,
+          "max_drawdown_pct": 6.45,
+          "sortino_ratio": -0.07622800678752445
+        },
+        "val": {
+          "total_trades": 930,
+          "win_rate": 28.2,
+          "profit_factor": 0.87,
+          "total_return_pct": -6.07,
+          "max_drawdown_pct": 3.1,
+          "sortino_ratio": -0.10141427962731699
+        },
+        "fitness_score": 0.3089
+      },
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1686,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.16,
+          "max_drawdown_pct": 10.97,
+          "sortino_ratio": -0.13048618918831387
+        },
+        "val": {
+          "total_trades": 844,
+          "win_rate": 28.7,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.53,
+          "max_drawdown_pct": 3.42,
+          "sortino_ratio": -0.07948339977862766
+        },
+        "fitness_score": 0.2856
+      },
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1546,
+          "win_rate": 30.4,
+          "profit_factor": 0.95,
+          "total_return_pct": -7.25,
+          "max_drawdown_pct": 3.26,
+          "sortino_ratio": -0.033251728965038266
+        },
+        "val": {
+          "total_trades": 820,
+          "win_rate": 30.0,
+          "profit_factor": 0.84,
+          "total_return_pct": -5.11,
+          "max_drawdown_pct": 2.88,
+          "sortino_ratio": -0.11873581122938538
+        },
+        "fitness_score": 0.3215
+      },
+      "XTZ/USDT": {
+        "train": {
+          "total_trades": 2094,
+          "win_rate": 28.6,
+          "profit_factor": 0.84,
+          "total_return_pct": -15.88,
+          "max_drawdown_pct": 9.61,
+          "sortino_ratio": -0.10993674203411714
+        },
+        "val": {
+          "total_trades": 1319,
+          "win_rate": 31.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.73,
+          "max_drawdown_pct": 3.49,
+          "sortino_ratio": -0.0674234760687153
+        },
+        "fitness_score": 0.3014
+      }
+    },
+    "reasoning": "The current weights seem to be underutilizing the trend and momentum agents, which have shown potential in previous iterations. Meanwhile, the orderflow and volatility agents are overweighted. A more balanced approach, increasing trend and momentum while reducing orderflow and volatility, could lead to improved performance. The volume, structure, sentiment, and macro agents will be adjusted slightly to maintain a balanced composite.",
+    "improved": false
+  },
+  {
+    "iteration": 8,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.1,
+      "volume": 1.1,
+      "orderflow": 1.2,
+      "volatility": 1.2,
+      "structure": 0.9,
+      "sentiment": 1.0,
+      "macro": 1.1
+    },
+    "fitness": 0.2945,
+    "metrics": {
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 1168,
+          "win_rate": 28.3,
+          "profit_factor": 0.9,
+          "total_return_pct": -8.2,
+          "max_drawdown_pct": 6.63,
+          "sortino_ratio": -0.0709238373604113
+        },
+        "val": {
+          "total_trades": 693,
+          "win_rate": 27.0,
+          "profit_factor": 0.74,
+          "total_return_pct": -7.46,
+          "max_drawdown_pct": 5.56,
+          "sortino_ratio": -0.20415120204998896
+        },
+        "fitness_score": 0.2608
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 1238,
+          "win_rate": 28.1,
+          "profit_factor": 0.9,
+          "total_return_pct": -8.13,
+          "max_drawdown_pct": 5.67,
+          "sortino_ratio": -0.06969034072887906
+        },
+        "val": {
+          "total_trades": 649,
+          "win_rate": 27.6,
+          "profit_factor": 0.76,
+          "total_return_pct": -6.16,
+          "max_drawdown_pct": 4.33,
+          "sortino_ratio": -0.18139331469215042
+        },
+        "fitness_score": 0.2718
+      },
+      "ADA/USDT": {
+        "train": {
+          "total_trades": 1308,
+          "win_rate": 28.6,
+          "profit_factor": 0.88,
+          "total_return_pct": -9.8,
+          "max_drawdown_pct": 6.61,
+          "sortino_ratio": -0.08609532291335599
+        },
+        "val": {
+          "total_trades": 840,
+          "win_rate": 29.5,
+          "profit_factor": 0.9,
+          "total_return_pct": -5.07,
+          "max_drawdown_pct": 3.24,
+          "sortino_ratio": -0.07202957952465869
+        },
+        "fitness_score": 0.3145
+      },
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 1297,
+          "win_rate": 28.7,
+          "profit_factor": 0.84,
+          "total_return_pct": -9.1,
+          "max_drawdown_pct": 5.72,
+          "sortino_ratio": -0.11880834139393452
+        },
+        "val": {
+          "total_trades": 667,
+          "win_rate": 29.1,
+          "profit_factor": 0.8,
+          "total_return_pct": -4.86,
+          "max_drawdown_pct": 2.79,
+          "sortino_ratio": -0.1521691000559504
+        },
+        "fitness_score": 0.2653
+      },
+      "XRP/USDT": {
+        "train": {
+          "total_trades": 1419,
+          "win_rate": 29.1,
+          "profit_factor": 0.94,
+          "total_return_pct": -7.57,
+          "max_drawdown_pct": 3.82,
+          "sortino_ratio": -0.0426577082228837
+        },
+        "val": {
+          "total_trades": 704,
+          "win_rate": 28.6,
+          "profit_factor": 0.8,
+          "total_return_pct": -5.73,
+          "max_drawdown_pct": 3.85,
+          "sortino_ratio": -0.1534225426507483
+        },
+        "fitness_score": 0.3011
+      },
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2133,
+          "win_rate": 29.1,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.39,
+          "max_drawdown_pct": 8.06,
+          "sortino_ratio": -0.09083340776777676
+        },
+        "val": {
+          "total_trades": 1139,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.91,
+          "max_drawdown_pct": 3.45,
+          "sortino_ratio": -0.06482599980254618
+        },
+        "fitness_score": 0.3134
+      },
+      "LINK/USDT": {
+        "train": {
+          "total_trades": 1374,
+          "win_rate": 28.1,
+          "profit_factor": 0.9,
+          "total_return_pct": -9.17,
+          "max_drawdown_pct": 5.55,
+          "sortino_ratio": -0.06907831840612703
+        },
+        "val": {
+          "total_trades": 789,
+          "win_rate": 29.0,
+          "profit_factor": 0.85,
+          "total_return_pct": -5.71,
+          "max_drawdown_pct": 3.75,
+          "sortino_ratio": -0.11486521342591494
+        },
+        "fitness_score": 0.3039
+      },
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1643,
+          "win_rate": 30.0,
+          "profit_factor": 0.97,
+          "total_return_pct": -7.57,
+          "max_drawdown_pct": 4.24,
+          "sortino_ratio": -0.026281481092094258
+        },
+        "val": {
+          "total_trades": 729,
+          "win_rate": 29.2,
+          "profit_factor": 0.88,
+          "total_return_pct": -4.76,
+          "max_drawdown_pct": 3.81,
+          "sortino_ratio": -0.08773876193555363
+        },
+        "fitness_score": 0.3391
+      },
+      "LTC/USDT": {
+        "train": {
+          "total_trades": 1368,
+          "win_rate": 27.7,
+          "profit_factor": 0.84,
+          "total_return_pct": -11.31,
+          "max_drawdown_pct": 7.58,
+          "sortino_ratio": -0.11753420082791338
+        },
+        "val": {
+          "total_trades": 753,
+          "win_rate": 26.4,
+          "profit_factor": 0.69,
+          "total_return_pct": -7.51,
+          "max_drawdown_pct": 5.12,
+          "sortino_ratio": -0.2392611051608736
+        },
+        "fitness_score": 0.2219
+      },
+      "XLM/USDT": {
+        "train": {
+          "total_trades": 1450,
+          "win_rate": 29.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -8.79,
+          "max_drawdown_pct": 5.79,
+          "sortino_ratio": -0.06478330288646493
+        },
+        "val": {
+          "total_trades": 971,
+          "win_rate": 28.9,
+          "profit_factor": 0.94,
+          "total_return_pct": -5.1,
+          "max_drawdown_pct": 3.27,
+          "sortino_ratio": -0.03778148312850966
+        },
+        "fitness_score": 0.3404
+      },
+      "POL/USDT": {
+        "train": {
+          "total_trades": 1978,
+          "win_rate": 27.5,
+          "profit_factor": 0.84,
+          "total_return_pct": -16.13,
+          "max_drawdown_pct": 9.72,
+          "sortino_ratio": -0.11146481573799148
+        },
+        "val": {
+          "total_trades": 1017,
+          "win_rate": 28.5,
+          "profit_factor": 0.82,
+          "total_return_pct": -7.45,
+          "max_drawdown_pct": 4.98,
+          "sortino_ratio": -0.13504275766791876
+        },
+        "fitness_score": 0.268
+      },
+      "UNI/USDT": {
+        "train": {
+          "total_trades": 1502,
+          "win_rate": 28.0,
+          "profit_factor": 0.95,
+          "total_return_pct": -8.12,
+          "max_drawdown_pct": 8.0,
+          "sortino_ratio": -0.03609474500788275
+        },
+        "val": {
+          "total_trades": 972,
+          "win_rate": 27.8,
+          "profit_factor": 0.82,
+          "total_return_pct": -7.85,
+          "max_drawdown_pct": 5.4,
+          "sortino_ratio": -0.13453082794765825
+        },
+        "fitness_score": 0.3065
+      },
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1533,
+          "win_rate": 27.2,
+          "profit_factor": 0.87,
+          "total_return_pct": -12.37,
+          "max_drawdown_pct": 9.32,
+          "sortino_ratio": -0.10156995700184368
+        },
+        "val": {
+          "total_trades": 882,
+          "win_rate": 29.1,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.58,
+          "max_drawdown_pct": 3.79,
+          "sortino_ratio": -0.11135773124645142
+        },
+        "fitness_score": 0.2883
+      },
+      "HBAR/USDT": {
+        "train": {
+          "total_trades": 1669,
+          "win_rate": 28.9,
+          "profit_factor": 0.9,
+          "total_return_pct": -11.32,
+          "max_drawdown_pct": 6.48,
+          "sortino_ratio": -0.07587886850538644
+        },
+        "val": {
+          "total_trades": 928,
+          "win_rate": 28.2,
+          "profit_factor": 0.87,
+          "total_return_pct": -5.98,
+          "max_drawdown_pct": 3.07,
+          "sortino_ratio": -0.09849396797636581
+        },
+        "fitness_score": 0.3096
+      },
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1686,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.18,
+          "max_drawdown_pct": 10.98,
+          "sortino_ratio": -0.13063472228627415
+        },
+        "val": {
+          "total_trades": 842,
+          "win_rate": 28.6,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.56,
+          "max_drawdown_pct": 3.46,
+          "sortino_ratio": -0.08058912459667174
+        },
+        "fitness_score": 0.2853
+      },
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1543,
+          "win_rate": 30.3,
+          "profit_factor": 0.95,
+          "total_return_pct": -7.37,
+          "max_drawdown_pct": 3.4,
+          "sortino_ratio": -0.035691374187505676
+        },
+        "val": {
+          "total_trades": 822,
+          "win_rate": 29.8,
+          "profit_factor": 0.83,
+          "total_return_pct": -5.18,
+          "max_drawdown_pct": 2.96,
+          "sortino_ratio": -0.12199053383390475
+        },
+        "fitness_score": 0.3181
+      },
+      "XTZ/USDT": {
+        "train": {
+          "total_trades": 2094,
+          "win_rate": 28.6,
+          "profit_factor": 0.84,
+          "total_return_pct": -16.11,
+          "max_drawdown_pct": 9.86,
+          "sortino_ratio": -0.11293313390965047
+        },
+        "val": {
+          "total_trades": 1324,
+          "win_rate": 30.9,
+          "profit_factor": 0.9,
+          "total_return_pct": -6.87,
+          "max_drawdown_pct": 3.55,
+          "sortino_ratio": -0.07093606769898
+        },
+        "fitness_score": 0.2978
+      }
+    },
+    "reasoning": "Analyzing the provided metrics, it appears that the trend and momentum agents are slightly underweighted, while the orderflow agent is overweighted. The volume, volatility, structure, sentiment, and macro agents seem to be relatively balanced. To improve the composite fitness score, I propose adjusting the weights to give more emphasis to trend and momentum, while reducing the weight of orderflow. This should help to improve the overall performance of the system.",
+    "improved": false
+  },
+  {
+    "iteration": 9,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.2,
+      "volume": 0.9,
+      "orderflow": 1.4,
+      "volatility": 1.1,
+      "structure": 0.8,
+      "sentiment": 1.0,
+      "macro": 1.1
+    },
+    "fitness": 0.2982,
+    "metrics": {
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 1155,
+          "win_rate": 28.5,
+          "profit_factor": 0.91,
+          "total_return_pct": -7.77,
+          "max_drawdown_pct": 6.48,
+          "sortino_ratio": -0.064861272990854
+        },
+        "val": {
+          "total_trades": 684,
+          "win_rate": 27.5,
+          "profit_factor": 0.78,
+          "total_return_pct": -6.57,
+          "max_drawdown_pct": 4.69,
+          "sortino_ratio": -0.17381221948954356
+        },
+        "fitness_score": 0.2791
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 1259,
+          "win_rate": 27.8,
+          "profit_factor": 0.9,
+          "total_return_pct": -8.46,
+          "max_drawdown_pct": 5.73,
+          "sortino_ratio": -0.07387331930154484
+        },
+        "val": {
+          "total_trades": 642,
+          "win_rate": 27.6,
+          "profit_factor": 0.76,
+          "total_return_pct": -6.14,
+          "max_drawdown_pct": 4.34,
+          "sortino_ratio": -0.1828453642708445
+        },
+        "fitness_score": 0.2706
+      },
+      "ADA/USDT": {
+        "train": {
+          "total_trades": 1330,
+          "win_rate": 28.3,
+          "profit_factor": 0.86,
+          "total_return_pct": -10.93,
+          "max_drawdown_pct": 7.28,
+          "sortino_ratio": -0.10215432853278923
+        },
+        "val": {
+          "total_trades": 833,
+          "win_rate": 29.2,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.34,
+          "max_drawdown_pct": 3.29,
+          "sortino_ratio": -0.08227780358149944
+        },
+        "fitness_score": 0.3025
+      },
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 1276,
+          "win_rate": 28.4,
+          "profit_factor": 0.83,
+          "total_return_pct": -9.35,
+          "max_drawdown_pct": 6.01,
+          "sortino_ratio": -0.1284919242273294
+        },
+        "val": {
+          "total_trades": 645,
+          "win_rate": 29.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -4.43,
+          "max_drawdown_pct": 2.47,
+          "sortino_ratio": -0.13466272289271694
+        },
+        "fitness_score": 0.2689
+      },
+      "XRP/USDT": {
+        "train": {
+          "total_trades": 1400,
+          "win_rate": 29.4,
+          "profit_factor": 0.95,
+          "total_return_pct": -7.06,
+          "max_drawdown_pct": 3.69,
+          "sortino_ratio": -0.03559864992998716
+        },
+        "val": {
+          "total_trades": 696,
+          "win_rate": 28.2,
+          "profit_factor": 0.78,
+          "total_return_pct": -5.91,
+          "max_drawdown_pct": 4.07,
+          "sortino_ratio": -0.1648128302498949
+        },
+        "fitness_score": 0.2982
+      },
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2106,
+          "win_rate": 29.0,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.41,
+          "max_drawdown_pct": 8.37,
+          "sortino_ratio": -0.09332807278912567
+        },
+        "val": {
+          "total_trades": 1119,
+          "win_rate": 29.9,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.96,
+          "max_drawdown_pct": 3.68,
+          "sortino_ratio": -0.06931743392798051
+        },
+        "fitness_score": 0.3114
+      },
+      "LINK/USDT": {
+        "train": {
+          "total_trades": 1399,
+          "win_rate": 27.6,
+          "profit_factor": 0.89,
+          "total_return_pct": -10.1,
+          "max_drawdown_pct": 6.35,
+          "sortino_ratio": -0.08087949811782313
+        },
+        "val": {
+          "total_trades": 784,
+          "win_rate": 28.6,
+          "profit_factor": 0.84,
+          "total_return_pct": -5.8,
+          "max_drawdown_pct": 3.63,
+          "sortino_ratio": -0.11995457870568174
+        },
+        "fitness_score": 0.2959
+      },
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1634,
+          "win_rate": 29.5,
+          "profit_factor": 0.95,
+          "total_return_pct": -8.39,
+          "max_drawdown_pct": 4.71,
+          "sortino_ratio": -0.03893569912546328
+        },
+        "val": {
+          "total_trades": 717,
+          "win_rate": 29.6,
+          "profit_factor": 0.91,
+          "total_return_pct": -4.27,
+          "max_drawdown_pct": 3.43,
+          "sortino_ratio": -0.0704993882760803
+        },
+        "fitness_score": 0.342
+      },
+      "LTC/USDT": {
+        "train": {
+          "total_trades": 1355,
+          "win_rate": 27.9,
+          "profit_factor": 0.85,
+          "total_return_pct": -10.76,
+          "max_drawdown_pct": 6.91,
+          "sortino_ratio": -0.10918007465546589
+        },
+        "val": {
+          "total_trades": 736,
+          "win_rate": 27.0,
+          "profit_factor": 0.7,
+          "total_return_pct": -7.13,
+          "max_drawdown_pct": 4.8,
+          "sortino_ratio": -0.22704591155555218
+        },
+        "fitness_score": 0.231
+      },
+      "XLM/USDT": {
+        "train": {
+          "total_trades": 1437,
+          "win_rate": 29.4,
+          "profit_factor": 0.92,
+          "total_return_pct": -8.22,
+          "max_drawdown_pct": 5.23,
+          "sortino_ratio": -0.05615953978805749
+        },
+        "val": {
+          "total_trades": 955,
+          "win_rate": 29.1,
+          "profit_factor": 0.96,
+          "total_return_pct": -4.45,
+          "max_drawdown_pct": 3.15,
+          "sortino_ratio": -0.02474548960210703
+        },
+        "fitness_score": 0.3514
+      },
+      "POL/USDT": {
+        "train": {
+          "total_trades": 1973,
+          "win_rate": 27.4,
+          "profit_factor": 0.84,
+          "total_return_pct": -16.29,
+          "max_drawdown_pct": 9.9,
+          "sortino_ratio": -0.11397136751328256
+        },
+        "val": {
+          "total_trades": 999,
+          "win_rate": 28.9,
+          "profit_factor": 0.84,
+          "total_return_pct": -7.07,
+          "max_drawdown_pct": 4.51,
+          "sortino_ratio": -0.12542214940613455
+        },
+        "fitness_score": 0.2737
+      },
+      "UNI/USDT": {
+        "train": {
+          "total_trades": 1458,
+          "win_rate": 28.5,
+          "profit_factor": 0.98,
+          "total_return_pct": -6.48,
+          "max_drawdown_pct": 6.62,
+          "sortino_ratio": -0.017316538629607397
+        },
+        "val": {
+          "total_trades": 951,
+          "win_rate": 28.1,
+          "profit_factor": 0.83,
+          "total_return_pct": -7.47,
+          "max_drawdown_pct": 5.09,
+          "sortino_ratio": -0.12697841398709808
+        },
+        "fitness_score": 0.3214
+      },
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1526,
+          "win_rate": 27.4,
+          "profit_factor": 0.87,
+          "total_return_pct": -12.11,
+          "max_drawdown_pct": 9.78,
+          "sortino_ratio": -0.09824610268361254
+        },
+        "val": {
+          "total_trades": 858,
+          "win_rate": 29.3,
+          "profit_factor": 0.86,
+          "total_return_pct": -6.22,
+          "max_drawdown_pct": 3.55,
+          "sortino_ratio": -0.10550783321010845
+        },
+        "fitness_score": 0.2919
+      },
+      "HBAR/USDT": {
+        "train": {
+          "total_trades": 1662,
+          "win_rate": 28.8,
+          "profit_factor": 0.89,
+          "total_return_pct": -11.9,
+          "max_drawdown_pct": 7.06,
+          "sortino_ratio": -0.0845747600875623
+        },
+        "val": {
+          "total_trades": 913,
+          "win_rate": 28.6,
+          "profit_factor": 0.88,
+          "total_return_pct": -5.64,
+          "max_drawdown_pct": 2.73,
+          "sortino_ratio": -0.08933592004069153
+        },
+        "fitness_score": 0.3094
+      },
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1668,
+          "win_rate": 27.5,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.03,
+          "max_drawdown_pct": 10.89,
+          "sortino_ratio": -0.1307058476498958
+        },
+        "val": {
+          "total_trades": 839,
+          "win_rate": 28.5,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.67,
+          "max_drawdown_pct": 3.64,
+          "sortino_ratio": -0.08450967839735032
+        },
+        "fitness_score": 0.2844
+      },
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1500,
+          "win_rate": 30.7,
+          "profit_factor": 0.97,
+          "total_return_pct": -6.32,
+          "max_drawdown_pct": 2.61,
+          "sortino_ratio": -0.019758978365550565
+        },
+        "val": {
+          "total_trades": 810,
+          "win_rate": 30.0,
+          "profit_factor": 0.85,
+          "total_return_pct": -4.84,
+          "max_drawdown_pct": 2.71,
+          "sortino_ratio": -0.1075907707651781
+        },
+        "fitness_score": 0.3332
+      },
+      "XTZ/USDT": {
+        "train": {
+          "total_trades": 2104,
+          "win_rate": 28.8,
+          "profit_factor": 0.85,
+          "total_return_pct": -15.53,
+          "max_drawdown_pct": 9.12,
+          "sortino_ratio": -0.10488191561250605
+        },
+        "val": {
+          "total_trades": 1306,
+          "win_rate": 31.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.62,
+          "max_drawdown_pct": 3.48,
+          "sortino_ratio": -0.06591055262219764
+        },
+        "fitness_score": 0.3052
+      }
+    },
+    "reasoning": "The current set of weights seems to be underperforming, with most metrics indicating a need for adjustment. Agents with higher fitness scores such as AVAX/USDT and XLM/USDT have higher win rates and profit factors, suggesting that trend and momentum agents may be underweighted. Conversely, agents with lower fitness scores such as LTC/USDT and POL/USDT have lower win rates and profit factors, indicating that volume and structure agents may be overweighted. A new set of weights is proposed to balance these factors and improve the composite fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 10,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.1,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.0,
+      "structure": 0.9,
+      "sentiment": 1.1,
+      "macro": 1.1
+    },
+    "fitness": 0.295,
+    "metrics": {
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 1188,
+          "win_rate": 28.5,
+          "profit_factor": 0.91,
+          "total_return_pct": -7.98,
+          "max_drawdown_pct": 6.65,
+          "sortino_ratio": -0.06530242573843692
+        },
+        "val": {
+          "total_trades": 695,
+          "win_rate": 26.9,
+          "profit_factor": 0.74,
+          "total_return_pct": -7.51,
+          "max_drawdown_pct": 5.59,
+          "sortino_ratio": -0.2053756198766117
+        },
+        "fitness_score": 0.2636
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 1237,
+          "win_rate": 28.0,
+          "profit_factor": 0.9,
+          "total_return_pct": -8.25,
+          "max_drawdown_pct": 5.8,
+          "sortino_ratio": -0.07214334629646166
+        },
+        "val": {
+          "total_trades": 649,
+          "win_rate": 27.6,
+          "profit_factor": 0.76,
+          "total_return_pct": -6.16,
+          "max_drawdown_pct": 4.33,
+          "sortino_ratio": -0.18151039635417257
+        },
+        "fitness_score": 0.2711
+      },
+      "ADA/USDT": {
+        "train": {
+          "total_trades": 1309,
+          "win_rate": 28.6,
+          "profit_factor": 0.88,
+          "total_return_pct": -9.83,
+          "max_drawdown_pct": 6.63,
+          "sortino_ratio": -0.0864551758507244
+        },
+        "val": {
+          "total_trades": 841,
+          "win_rate": 29.5,
+          "profit_factor": 0.9,
+          "total_return_pct": -5.12,
+          "max_drawdown_pct": 3.27,
+          "sortino_ratio": -0.07339730965396421
+        },
+        "fitness_score": 0.3141
+      },
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 1289,
+          "win_rate": 28.8,
+          "profit_factor": 0.84,
+          "total_return_pct": -9.05,
+          "max_drawdown_pct": 5.7,
+          "sortino_ratio": -0.11858268946832444
+        },
+        "val": {
+          "total_trades": 666,
+          "win_rate": 29.1,
+          "profit_factor": 0.8,
+          "total_return_pct": -4.83,
+          "max_drawdown_pct": 2.77,
+          "sortino_ratio": -0.15108708480342417
+        },
+        "fitness_score": 0.2656
+      },
+      "XRP/USDT": {
+        "train": {
+          "total_trades": 1419,
+          "win_rate": 29.1,
+          "profit_factor": 0.94,
+          "total_return_pct": -7.68,
+          "max_drawdown_pct": 3.99,
+          "sortino_ratio": -0.044412599568112096
+        },
+        "val": {
+          "total_trades": 706,
+          "win_rate": 28.5,
+          "profit_factor": 0.79,
+          "total_return_pct": -5.78,
+          "max_drawdown_pct": 3.9,
+          "sortino_ratio": -0.15512918728444086
+        },
+        "fitness_score": 0.2982
+      },
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2134,
+          "win_rate": 29.0,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.45,
+          "max_drawdown_pct": 8.09,
+          "sortino_ratio": -0.09160196802031846
+        },
+        "val": {
+          "total_trades": 1137,
+          "win_rate": 30.2,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.8,
+          "max_drawdown_pct": 3.37,
+          "sortino_ratio": -0.06269039964013588
+        },
+        "fitness_score": 0.3137
+      },
+      "LINK/USDT": {
+        "train": {
+          "total_trades": 1370,
+          "win_rate": 28.2,
+          "profit_factor": 0.91,
+          "total_return_pct": -8.7,
+          "max_drawdown_pct": 5.08,
+          "sortino_ratio": -0.06187277190340899
+        },
+        "val": {
+          "total_trades": 788,
+          "win_rate": 29.1,
+          "profit_factor": 0.85,
+          "total_return_pct": -5.68,
+          "max_drawdown_pct": 3.73,
+          "sortino_ratio": -0.11406634999459973
+        },
+        "fitness_score": 0.308
+      },
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1644,
+          "win_rate": 30.1,
+          "profit_factor": 0.97,
+          "total_return_pct": -7.3,
+          "max_drawdown_pct": 4.2,
+          "sortino_ratio": -0.022396985651197868
+        },
+        "val": {
+          "total_trades": 723,
+          "win_rate": 29.3,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.66,
+          "max_drawdown_pct": 3.78,
+          "sortino_ratio": -0.08527072768456073
+        },
+        "fitness_score": 0.3425
+      },
+      "LTC/USDT": {
+        "train": {
+          "total_trades": 1366,
+          "win_rate": 27.7,
+          "profit_factor": 0.84,
+          "total_return_pct": -11.26,
+          "max_drawdown_pct": 7.58,
+          "sortino_ratio": -0.11671726402642224
+        },
+        "val": {
+          "total_trades": 751,
+          "win_rate": 26.4,
+          "profit_factor": 0.68,
+          "total_return_pct": -7.55,
+          "max_drawdown_pct": 5.17,
+          "sortino_ratio": -0.24199684721428538
+        },
+        "fitness_score": 0.2195
+      },
+      "XLM/USDT": {
+        "train": {
+          "total_trades": 1453,
+          "win_rate": 29.0,
+          "profit_factor": 0.91,
+          "total_return_pct": -9.01,
+          "max_drawdown_pct": 5.91,
+          "sortino_ratio": -0.06837895808460309
+        },
+        "val": {
+          "total_trades": 973,
+          "win_rate": 28.9,
+          "profit_factor": 0.94,
+          "total_return_pct": -5.18,
+          "max_drawdown_pct": 3.27,
+          "sortino_ratio": -0.03951814905085282
+        },
+        "fitness_score": 0.3392
+      },
+      "UNI/USDT": {
+        "train": {
+          "total_trades": 1501,
+          "win_rate": 28.1,
+          "profit_factor": 0.95,
+          "total_return_pct": -8.06,
+          "max_drawdown_pct": 8.1,
+          "sortino_ratio": -0.03536632279664109
+        },
+        "val": {
+          "total_trades": 976,
+          "win_rate": 27.7,
+          "profit_factor": 0.82,
+          "total_return_pct": -8.03,
+          "max_drawdown_pct": 5.57,
+          "sortino_ratio": -0.13889883684144225
+        },
+        "fitness_score": 0.3055
+      },
+      "POL/USDT": {
+        "train": {
+          "total_trades": 1980,
+          "win_rate": 27.6,
+          "profit_factor": 0.85,
+          "total_return_pct": -15.96,
+          "max_drawdown_pct": 9.78,
+          "sortino_ratio": -0.109108884272655
+        },
+        "val": {
+          "total_trades": 1018,
+          "win_rate": 28.5,
+          "profit_factor": 0.82,
+          "total_return_pct": -7.47,
+          "max_drawdown_pct": 4.99,
+          "sortino_ratio": -0.13556419381343074
+        },
+        "fitness_score": 0.2703
+      },
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1541,
+          "win_rate": 27.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.63,
+          "max_drawdown_pct": 9.49,
+          "sortino_ratio": -0.10462946059241895
+        },
+        "val": {
+          "total_trades": 883,
+          "win_rate": 29.1,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.55,
+          "max_drawdown_pct": 3.8,
+          "sortino_ratio": -0.1103638739938033
+        },
+        "fitness_score": 0.2857
+      },
+      "HBAR/USDT": {
+        "train": {
+          "total_trades": 1676,
+          "win_rate": 28.9,
+          "profit_factor": 0.9,
+          "total_return_pct": -11.39,
+          "max_drawdown_pct": 6.45,
+          "sortino_ratio": -0.07621191788097471
+        },
+        "val": {
+          "total_trades": 929,
+          "win_rate": 28.2,
+          "profit_factor": 0.87,
+          "total_return_pct": -6.04,
+          "max_drawdown_pct": 3.08,
+          "sortino_ratio": -0.10058427038908097
+        },
+        "fitness_score": 0.3091
+      },
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1686,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.16,
+          "max_drawdown_pct": 10.97,
+          "sortino_ratio": -0.13048618918831387
+        },
+        "val": {
+          "total_trades": 844,
+          "win_rate": 28.7,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.53,
+          "max_drawdown_pct": 3.42,
+          "sortino_ratio": -0.07953921791508385
+        },
+        "fitness_score": 0.2856
+      },
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1546,
+          "win_rate": 30.4,
+          "profit_factor": 0.95,
+          "total_return_pct": -7.25,
+          "max_drawdown_pct": 3.26,
+          "sortino_ratio": -0.033251728965038266
+        },
+        "val": {
+          "total_trades": 820,
+          "win_rate": 30.0,
+          "profit_factor": 0.84,
+          "total_return_pct": -5.11,
+          "max_drawdown_pct": 2.88,
+          "sortino_ratio": -0.11873581122938538
+        },
+        "fitness_score": 0.3215
+      },
+      "XTZ/USDT": {
+        "train": {
+          "total_trades": 2102,
+          "win_rate": 28.6,
+          "profit_factor": 0.84,
+          "total_return_pct": -15.87,
+          "max_drawdown_pct": 9.58,
+          "sortino_ratio": -0.1091720231973249
+        },
+        "val": {
+          "total_trades": 1318,
+          "win_rate": 31.0,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.77,
+          "max_drawdown_pct": 3.49,
+          "sortino_ratio": -0.06859240971268325
+        },
+        "fitness_score": 0.3014
+      }
+    },
+    "reasoning": "Based on the optimization history and detailed performance metrics, it appears that the trend and momentum agents are underweighted, while the orderflow and volatility agents are overweighted. The sentiment and macro agents seem to be performing well. To improve the composite fitness score, I propose reducing the weights of orderflow and volatility, and increasing the weights of trend and momentum. The volume, structure, sentiment, and macro agents will be adjusted slightly to maintain a balanced portfolio.",
+    "improved": false
   }
 ]

@@ -14,25 +14,37 @@ from trading_engine.data.market_data import MarketSnapshot
 
 def _find_support_resistance(df, lookback=50):
     """Identify key S/R levels from pivot highs/lows."""
-    highs = df["high"].values[-lookback:]
-    lows = df["low"].values[-lookback:]
     close = df["close"].values[-1]
 
-    # Swing highs/lows: pivot points
-    resistance_levels = []
-    support_levels = []
-    for i in range(2, len(highs) - 2):
-        if highs[i] > highs[i-1] and highs[i] > highs[i-2] and \
-           highs[i] > highs[i+1] and highs[i] > highs[i+2]:
-            resistance_levels.append(highs[i])
-        if lows[i] < lows[i-1] and lows[i] < lows[i-2] and \
-           lows[i] < lows[i+1] and lows[i] < lows[i+2]:
-            support_levels.append(lows[i])
+    if "is_pivot_high" in df.columns and "is_pivot_low" in df.columns:
+        # Vectorized precomputed path using numpy (much faster, used in backtests)
+        high_vals = df["high"].values
+        low_vals = df["low"].values
+        piv_high_vals = df["is_pivot_high"].values
+        piv_low_vals = df["is_pivot_low"].values
+
+        resistance_levels = high_vals[-lookback:-2][piv_high_vals[-lookback:-2]]
+        support_levels = low_vals[-lookback:-2][piv_low_vals[-lookback:-2]]
+
+    else:
+        # Fallback original python loop (used in live scans where lookback is small anyway)
+        highs = df["high"].values[-lookback:]
+        lows = df["low"].values[-lookback:]
+        resistance_levels = []
+        support_levels = []
+        for i in range(2, len(highs) - 2):
+            if highs[i] > highs[i-1] and highs[i] > highs[i-2] and \
+               highs[i] > highs[i+1] and highs[i] > highs[i+2]:
+                resistance_levels.append(highs[i])
+            if lows[i] < lows[i-1] and lows[i] < lows[i-2] and \
+               lows[i] < lows[i+1] and lows[i] < lows[i+2]:
+                support_levels.append(lows[i])
 
     nearest_resistance = min((r for r in resistance_levels if r > close), default=None)
     nearest_support = max((s for s in support_levels if s < close), default=None)
 
     return nearest_support, nearest_resistance
+
 
 
 def _detect_bos(df, lookback=20):
