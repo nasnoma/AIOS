@@ -70,6 +70,8 @@ class Settings(BaseSettings):
     # ── Bounty Hunter ───────────────────────
     bounty_hunter_enabled: bool = True
     bounty_hunter_interval_hours: int = 1
+    bounty_hunter_interval_minutes: int = 0
+    bounty_hunter_watchlist: str = ""
 
     # ── Bybit CFD Trading ────────────────────
     # US stock CFD linear perpetuals on Bybit (TICKER/USDT:USDT format)
@@ -96,6 +98,12 @@ class Settings(BaseSettings):
     @property
     def watchlist_assets(self) -> list[str]:
         return [a.strip() for a in self.default_watchlist.split(",")]
+
+    @property
+    def bounty_hunter_watchlist_assets(self) -> list[str] | None:
+        if not self.bounty_hunter_watchlist:
+            return None
+        return [a.strip() for a in self.bounty_hunter_watchlist.split(",") if a.strip()]
 
     @property
     def cfd_stock_assets(self) -> list[str]:

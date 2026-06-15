@@ -188,12 +188,14 @@ def run_bounty_hunter_cycle():
         trader = paper_trader
 
     from trading_engine.bounty_hunter import run_bounty_hunt
+    watchlist = settings.bounty_hunter_watchlist_assets
     results = run_bounty_hunt(
         mode="oversold",
-        crypto_limit=3,
-        stock_limit=2,
-        cfd_limit=3,          # Bybit stock CFDs + metals
+        crypto_limit=15,
+        stock_limit=5,
+        cfd_limit=5,          # Bybit stock CFDs + metals
         scan_cfds=True,
+        watchlist=watchlist,
     )
 
     active_buys  = [r for r in results if r["final_action"] == "BUY"]
@@ -285,15 +287,26 @@ def main():
 
     # Bounty Hunter scan
     if settings.bounty_hunter_enabled:
-        interval_hours = settings.bounty_hunter_interval_hours
-        logger.info(f"   Bounty Hunter: scheduled every {interval_hours} hours")
-        scheduler.add_job(
-            run_bounty_hunter_cycle,
-            trigger=IntervalTrigger(hours=interval_hours),
-            id="bounty_hunter_cycle",
-            name="Bounty Hunter Cycle",
-            next_run_time=datetime.now(timezone.utc),
-        )
+        if settings.bounty_hunter_interval_minutes > 0:
+            interval_val = settings.bounty_hunter_interval_minutes
+            logger.info(f"   Bounty Hunter: scheduled every {interval_val} minutes")
+            scheduler.add_job(
+                run_bounty_hunter_cycle,
+                trigger=IntervalTrigger(minutes=interval_val),
+                id="bounty_hunter_cycle",
+                name="Bounty Hunter Cycle",
+                next_run_time=datetime.now(timezone.utc),
+            )
+        else:
+            interval_hours = settings.bounty_hunter_interval_hours
+            logger.info(f"   Bounty Hunter: scheduled every {interval_hours} hours")
+            scheduler.add_job(
+                run_bounty_hunter_cycle,
+                trigger=IntervalTrigger(hours=interval_hours),
+                id="bounty_hunter_cycle",
+                name="Bounty Hunter Cycle",
+                next_run_time=datetime.now(timezone.utc),
+            )
 
     scheduler.start()
 
