@@ -61,7 +61,7 @@ def make_historical_snapshot(symbol: str, asset_type: str, timeframe: str, df: p
         obv=float(latest.get("OBV", 0) or 0),
         rel_volume=float(latest.get("REL_VOL", 1) or 1),
         vwap=float(latest.get("VWAP_D", latest["close"]) or latest["close"]),
-        atr=float(latest.get("ATRr_14", 0) or 0),
+        atr=float(latest.get("ATR_14", 0) or 0),
         bb_width=float(bb_width),
         realized_vol=float(latest.get("REAL_VOL", 0) or 0),
         open_interest=float(latest.get("open_interest", 0) or 0) if "open_interest" in latest else None,

@@ -426,10 +426,10 @@ def compute_indicators(df: pd.DataFrame, overrides: dict | None = None) -> pd.Da
         logger.warning(f"Failed to calculate VWAP: {e}")
     df["VWAP_D"] = df.get("VWAP_D", df["close"])
 
-    # Volatility
+    # Volatility — use dollar ATR (percent=False) so snap.atr is a real price delta
     if len(df) >= atr_p:
-        df.ta.atr(length=atr_p, append=True)
-    df["ATRr_14"] = df.get(f"ATRr_{atr_p}", df.get("ATRr_14", pd.Series(0.0, index=df.index)))
+        df.ta.atr(length=atr_p, percent=False, append=True)
+    df["ATR_14"] = df.get(f"ATR_{atr_p}", df.get("ATR_14", pd.Series(0.0, index=df.index)))
 
     if len(df) >= bb_p:
         df.ta.bbands(length=bb_p, std=2, append=True)
@@ -551,7 +551,7 @@ def build_snapshot(symbol: str, timeframe: str = None) -> MarketSnapshot:
         obv=float(latest.get("OBV", 0) or 0),
         rel_volume=float(latest.get("REL_VOL", 1) or 1),
         vwap=float(latest.get("VWAP_D", latest["close"]) or latest["close"]),
-        atr=float(latest.get("ATRr_14", 0) or 0),
+        atr=float(latest.get("ATR_14", 0) or 0),
         bb_width=float(bb_width),
         realized_vol=float(latest.get("REAL_VOL", 0) or 0),
         open_interest=order_flow.get("open_interest"),
