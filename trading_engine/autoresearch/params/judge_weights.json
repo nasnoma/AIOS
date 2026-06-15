@@ -10,6 +10,6 @@
     "sentiment":  0.9,
     "macro":      1.0
   },
-  "min_agreement": 5,
-  "min_avg_confidence": 52
+  "min_agreement": 4,
+  "min_avg_confidence": 47
 }

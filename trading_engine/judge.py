@@ -183,7 +183,14 @@ def evaluate(agents: list[AgentSignal], agent_weights: dict[str, float] = None) 
     # Load live from param file so optimizer changes take effect immediately
     min_agreement = live_params.get("min_agreement", settings.min_agent_agreement)
     min_confidence = live_params.get("min_avg_confidence", settings.min_avg_confidence)
-    avg_raw_confidence = sum(a.confidence for a in agents) / len(agents) if agents else 0
+
+    # Only average confidence of agents that agree with the winning direction
+    # (excluding HOLD voters — their 60% confidence dilutes directional signals)
+    agreeing_agents = [a for a in agents if a.signal == decision]
+    if agreeing_agents:
+        avg_raw_confidence = sum(a.confidence for a in agreeing_agents) / len(agreeing_agents)
+    else:
+        avg_raw_confidence = sum(a.confidence for a in agents) / len(agents) if agents else 0
 
     approved = (
         agreement >= min_agreement
