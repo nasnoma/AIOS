@@ -410,6 +410,12 @@ def open_trade(
     from trading_engine.market_hours import classify_symbol, AssetClass, market_status
 
     asset_class = classify_symbol(symbol)
+    # Map plain stocks to Bybit linear perpetual CFDs to enforce Bybit-only execution
+    if asset_class == AssetClass.STOCK:
+        logger.info(f"Mapping plain stock symbol {symbol} to Bybit CFD: {symbol}/USDT:USDT")
+        symbol = f"{symbol}/USDT:USDT"
+        asset_class = AssetClass.STOCK_CFD
+
     is_cfd      = asset_class in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL)
     is_crypto   = asset_class == AssetClass.CRYPTO
 

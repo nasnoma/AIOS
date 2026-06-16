@@ -111,22 +111,22 @@ class TestTradeLifecycle:
         assert status["open_positions"] == 1
         assert len(live_trader._load_state().positions) == 1
 
-    @patch("trading_engine.execution.live_trader.place_alpaca_market_order")
+    @patch("trading_engine.execution.live_trader.place_bybit_linear_order")
     def test_open_trade_stock(self, mock_place_order, mock_alpaca_keys):
         mock_place_order.return_value = 170.0
         
         pos = live_trader.open_trade("AAPL", "long", 169.0, 1700.0, 150.0, 200.0)
         
         assert pos is not None
-        assert pos.symbol == "AAPL"
+        assert pos.symbol == "AAPL/USDT:USDT"
         assert pos.entry_price == 170.0
         assert pos.size_usd == 1700.0
         
         status = live_trader.get_status()
         assert status["open_positions"] == 1
         
-        # Verify rounded quantity calculation: 1700 / 169 = ~10.0592 shares
-        mock_place_order.assert_called_once_with("AAPL", "buy", round(1700.0 / 169.0, 4), 169.0)
+        # Verify call to place_bybit_linear_order
+        mock_place_order.assert_called_once_with("AAPL/USDT:USDT", "buy", 1700.0, 169.0)
 
     def test_open_trade_short_rejected(self):
         pos = live_trader.open_trade("BTC/USDT", "short", 65000.0, 1000.0, 66000.0, 60000.0)

@@ -51,8 +51,8 @@ class Settings(BaseSettings):
     # ── Trading ─────────────────────────────
     trading_mode: str = "paper"          # paper | live | signal_only
     default_assets: str = "BTC/USDT,ETH/USDT"
-    default_stock_assets: str = "AAPL,TSLA,NVDA"
-    default_watchlist: str = "BTC/USDT,ETH/USDT,SOL/USDT,AAPL,TSLA,NVDA,MSFT,AMZN"
+    default_stock_assets: str = "AAPL/USDT:USDT,TSLA/USDT:USDT,NVDA/USDT:USDT"
+    default_watchlist: str = "BTC/USDT,ETH/USDT,SOL/USDT,AAPL/USDT:USDT,TSLA/USDT:USDT,NVDA/USDT:USDT,MSFT/USDT:USDT,AMZN/USDT:USDT"
     timeframe: str = "4h"
     signal_interval_minutes: int = 240
 
