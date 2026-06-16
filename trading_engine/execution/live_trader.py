@@ -57,6 +57,7 @@ class LivePortfolio:
     total_fees: float = 0.0   # cumulative fees paid across all trades
     win_count: int = 0
     loss_count: int = 0
+    self_healing_state: dict[str, dict] = field(default_factory=dict)
 
     @property
     def open_positions(self) -> list[Position]:
@@ -86,6 +87,7 @@ class LivePortfolio:
             "total_fees": self.total_fees,
             "win_count": self.win_count,
             "loss_count": self.loss_count,
+            "self_healing_state": self.self_healing_state,
         }
 
     @classmethod
@@ -93,7 +95,8 @@ class LivePortfolio:
         p = cls(account_size=d["account_size"], cash=d["cash"],
                 total_pnl=d["total_pnl"], win_count=d["win_count"],
                 loss_count=d["loss_count"],
-                total_fees=d.get("total_fees", 0.0))
+                total_fees=d.get("total_fees", 0.0),
+                self_healing_state=d.get("self_healing_state", {}))
         p.positions = [Position(**pos) for pos in d.get("positions", [])]
         p.closed_trades = [Position(**pos) for pos in d.get("closed_trades", [])]
         return p
@@ -573,12 +576,44 @@ def _close_position(portfolio: LivePortfolio, pos: Position, exit_price: float, 
     portfolio.total_pnl += net_pnl
     if net_pnl > 0:
         portfolio.win_count += 1
+        # Reset consecutive losses for this symbol on a win
+        sh_state = portfolio.self_healing_state.setdefault(pos.symbol, {"consecutive_losses": 0, "last_optimized_at": None})
+        sh_state["consecutive_losses"] = 0
     else:
         portfolio.loss_count += 1
-        try:
-            _trigger_self_healing(pos.symbol)
-        except Exception as ex_sh:
-            logger.error(f"Failed to trigger self-healing for {pos.symbol}: {ex_sh}")
+        
+        # Track self-healing state
+        sh_state = portfolio.self_healing_state.setdefault(pos.symbol, {"consecutive_losses": 0, "last_optimized_at": None})
+        sh_state["consecutive_losses"] += 1
+        
+        # Check consecutive loss threshold (>= 2 losses) and 24h cooldown
+        trigger_healing = False
+        consec_losses = sh_state["consecutive_losses"]
+        last_opt_str = sh_state.get("last_optimized_at")
+        
+        if consec_losses >= 2:
+            if not last_opt_str:
+                trigger_healing = True
+            else:
+                try:
+                    last_opt_dt = datetime.fromisoformat(last_opt_str)
+                    time_elapsed = datetime.now(timezone.utc) - last_opt_dt
+                    if time_elapsed.total_seconds() >= 24 * 3600:
+                        trigger_healing = True
+                    else:
+                        logger.info(f"Self-Healing: {pos.symbol} skipped optimization — cooldown active (last optimized {time_elapsed.total_seconds()/3600:.1f}h ago).")
+                except Exception as e_dt:
+                    logger.warning(f"Error parsing last_optimized_at for {pos.symbol}: {e_dt}. Triggering anyway.")
+                    trigger_healing = True
+        else:
+            logger.info(f"Self-Healing: {pos.symbol} has {consec_losses} consecutive loss(es) (requires 2). Skipping optimization.")
+                    
+        if trigger_healing:
+            try:
+                _trigger_self_healing(pos.symbol)
+                sh_state["last_optimized_at"] = datetime.now(timezone.utc).isoformat()
+            except Exception as ex_sh:
+                logger.error(f"Failed to trigger self-healing for {pos.symbol}: {ex_sh}")
             
     portfolio.positions.remove(pos)
     portfolio.closed_trades.append(pos)
