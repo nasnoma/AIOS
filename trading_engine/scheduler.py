@@ -81,11 +81,23 @@ def run_signal_cycle():
 
         if sig.final_action in ("BUY", "SELL") and settings.trading_mode != "signal_only":
             direction = "long" if sig.final_action == "BUY" else "short"
+            
+            # Real-time safety validation
+            portfolio = trader._load_state()
+            if len(portfolio.open_positions) >= 5:
+                logger.warning(f"Trade execution blocked for {sig.symbol}: Max concurrent positions limit (5) reached.")
+                continue
+            
+            size_needed = sig.position_size_usd or 0
+            if portfolio.cash < size_needed:
+                logger.warning(f"Trade execution blocked for {sig.symbol}: Insufficient cash (cash=${portfolio.cash:,.2f}, needed=${size_needed:,.2f})")
+                continue
+
             trader.open_trade(
                 symbol=sig.symbol,
                 direction=direction,
                 entry=sig.entry_price,
-                size_usd=sig.position_size_usd or 0,
+                size_usd=size_needed,
                 stop_loss=sig.stop_loss or 0,
                 take_profit=sig.take_profit or 0,
             )
@@ -209,11 +221,20 @@ def run_bounty_hunter_cycle():
     if active_buys:
         logger.info(f"Bounty Hunter: placing {len(active_buys)} BUY trade(s)...")
         for b in active_buys:
+            portfolio = trader._load_state()
+            if len(portfolio.open_positions) >= 5:
+                logger.warning(f"Bounty Hunter execution blocked: Max concurrent positions (5) reached.")
+                break
+            size_needed = b["position_size_usd"] or 20.0
+            if portfolio.cash < size_needed:
+                logger.warning(f"Bounty Hunter execution blocked for {b['symbol']}: Insufficient cash (cash=${portfolio.cash:,.2f}, needed=${size_needed:,.2f})")
+                continue
+
             trader.open_trade(
                 symbol=b["symbol"],
                 direction="long",
                 entry=b["entry_price"],
-                size_usd=b["position_size_usd"] or 20.0,
+                size_usd=size_needed,
                 stop_loss=b["stop_loss"]    or (b["entry_price"] * 0.95),
                 take_profit=b["take_profit"] or (b["entry_price"] * 1.10),
             )
@@ -224,11 +245,20 @@ def run_bounty_hunter_cycle():
     if active_sells:
         logger.info(f"Bounty Hunter: placing {len(active_sells)} SELL (short) trade(s)...")
         for s in active_sells:
+            portfolio = trader._load_state()
+            if len(portfolio.open_positions) >= 5:
+                logger.warning(f"Bounty Hunter execution blocked: Max concurrent positions (5) reached.")
+                break
+            size_needed = s["position_size_usd"] or 20.0
+            if portfolio.cash < size_needed:
+                logger.warning(f"Bounty Hunter execution blocked for {s['symbol']}: Insufficient cash (cash=${portfolio.cash:,.2f}, needed=${size_needed:,.2f})")
+                continue
+
             trader.open_trade(
                 symbol=s["symbol"],
                 direction="short",
                 entry=s["entry_price"],
-                size_usd=s["position_size_usd"] or 20.0,
+                size_usd=size_needed,
                 stop_loss=s["stop_loss"]    or (s["entry_price"] * 1.05),
                 take_profit=s["take_profit"] or (s["entry_price"] * 0.90),
             )

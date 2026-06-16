@@ -57,6 +57,37 @@ def _load_live_win_rate() -> float:
     return 0.50
 
 
+def _load_live_portfolio_state() -> tuple[float, int]:
+    """Reads portfolio_heat and open_positions count from the appropriate state file."""
+    try:
+        import json
+        from pathlib import Path
+        mode = settings.trading_mode
+        state_file = "live_state.json" if mode == "live" else "paper_state.json"
+        state_path = Path(__file__).parent / state_file
+        
+        if state_path.exists():
+            s = json.loads(state_path.read_text())
+            positions = s.get("positions", [])
+            open_positions = [p for p in positions if p.get("status") == "open"]
+            open_count = len(open_positions)
+            
+            account_size = float(s.get("account_size", settings.account_size))
+            
+            total_risk = 0.0
+            for p in open_positions:
+                entry = float(p.get("entry_price", 1.0))
+                sl = float(p.get("stop_loss", entry))
+                size = float(p.get("size_usd", 0.0))
+                total_risk += size * abs(entry - sl) / entry
+                
+            portfolio_heat = total_risk / account_size if account_size > 0 else 0.0
+            return portfolio_heat, open_count
+    except Exception as e:
+        logger.warning(f"Failed to load live portfolio state: {e}")
+    return 0.0, 0
+
+
 def get_latest_trading_date() -> str:
     """Finds the most recent date that has Grouped Daily Aggregates data by checking backward."""
     api_key = settings.get_massive_api_key
@@ -673,6 +704,9 @@ def run_bounty_hunt(
 
     all_candidates = crypto_candidates + stock_candidates + cfd_candidates
     snap_cache = {**crypto_snaps, **stock_snaps, **cfd_snaps}
+    portfolio_heat, open_count = _load_live_portfolio_state()
+    running_heat = portfolio_heat
+    running_open_count = open_count
     results = []
 
     for symbol in all_candidates:
@@ -703,13 +737,21 @@ def run_bounty_hunt(
 
             logger.info(f"✅ Candidate {symbol} passed pre-flight (prob={probability:.1f}%)! Running deep analysis...")
 
-            # Fix #3: pass live win_rate into pipeline instead of hardcoded 0.50
+            # Pass live running stats into pipeline instead of hardcoded 0.0
             sig = run_pipeline(
                 symbol=symbol,
-                portfolio_heat=0.0,
-                open_positions=0,
+                portfolio_heat=running_heat,
+                open_positions=running_open_count,
                 win_rate=live_win_rate,
             )
+
+            # Update simulated running open_positions and portfolio_heat if signal is approved
+            if sig.final_action in ("BUY", "SELL"):
+                running_open_count += 1
+                if sig.risk and sig.risk.get("approved"):
+                    stop_loss_pct = float(sig.risk.get("stop_loss_pct", 0.05))
+                    size_pct = float(sig.risk.get("position_size_pct", 0.05))
+                    running_heat += size_pct * stop_loss_pct
 
             # Mark symbol as scanned (fix #4: cooldown)
             _mark_scanned(symbol)

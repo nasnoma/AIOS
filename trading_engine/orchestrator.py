@@ -222,17 +222,28 @@ def run_all_assets() -> list[TradeSignal]:
     open_pos_count = status["open_positions"]
     win_rate = status.get("win_rate", 50) / 100
 
+    running_heat = portfolio_heat
+    running_open_count = open_pos_count
+
     for symbol in all_assets:
         try:
             # Pass snap_cache built so far as the correlation reference
             signal = run(
                 symbol,
-                portfolio_heat=portfolio_heat,
-                open_positions=open_pos_count,
+                portfolio_heat=running_heat,
+                open_positions=running_open_count,
                 win_rate=win_rate,
                 open_position_snaps=snap_cache,
             )
             results.append(signal)
+
+            # Update running stats if trade was approved
+            if signal.final_action in ("BUY", "SELL"):
+                running_open_count += 1
+                if signal.risk and signal.risk.get("approved"):
+                    stop_loss_pct = float(signal.risk.get("stop_loss_pct", 0.05))
+                    size_pct = float(signal.risk.get("position_size_pct", 0.05))
+                    running_heat += size_pct * stop_loss_pct
 
             # After running, add this symbol's snapshot to the cache
             # (so the next symbol in the loop sees it as an existing scan)

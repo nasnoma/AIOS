@@ -119,9 +119,10 @@ def test_compute_fitness_penalty():
     assert compute_fitness(metrics_low_trades) == -3.3015
 
 
+@patch("trading_engine.scratch.autoresearch_harness.Path.exists", return_value=False)
 @patch("trading_engine.scratch.autoresearch_harness._run_multi_agent_simulation")
 @patch("trading_engine.data.market_data.CryptoDataFetcher")
-def test_evaluate_asset(mock_fetcher_cls, mock_run_sim):
+def test_evaluate_asset(mock_fetcher_cls, mock_run_sim, mock_exists):
     """Test the complete train/validation split evaluation workflow with mock fetcher and simulation."""
     # 1. Setup mock DataFrame returned by fetch_ohlcv
     idx = pd.date_range("2026-01-01", periods=300, freq="4h", tz="UTC")
