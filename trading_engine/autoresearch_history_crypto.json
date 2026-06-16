@@ -1,0 +1,827 @@
+[
+  {
+    "iteration": 0,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.3,
+      "volatility": 0.8,
+      "structure": 1.2,
+      "sentiment": 0.9,
+      "macro": 1.0
+    },
+    "fitness": 0.4829,
+    "metrics": {
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 30,
+          "win_rate": 36.7,
+          "profit_factor": 1.3,
+          "total_return_pct": 1.68,
+          "max_drawdown_pct": 2.15,
+          "sortino_ratio": 0.2323128938065309
+        },
+        "val": {
+          "total_trades": 20,
+          "win_rate": 35.0,
+          "profit_factor": 1.21,
+          "total_return_pct": 0.65,
+          "max_drawdown_pct": 1.61,
+          "sortino_ratio": 0.17040586393566326
+        },
+        "fitness_score": 0.5788
+      },
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 47,
+          "win_rate": 17.0,
+          "profit_factor": 0.49,
+          "total_return_pct": -7.01,
+          "max_drawdown_pct": 7.74,
+          "sortino_ratio": -0.45259231981588405
+        },
+        "val": {
+          "total_trades": 16,
+          "win_rate": 31.2,
+          "profit_factor": 0.9,
+          "total_return_pct": -0.34,
+          "max_drawdown_pct": 1.98,
+          "sortino_ratio": -0.07600069514782251
+        },
+        "fitness_score": 0.1626
+      },
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 33,
+          "win_rate": 30.3,
+          "profit_factor": 1.06,
+          "total_return_pct": 0.14,
+          "max_drawdown_pct": 2.04,
+          "sortino_ratio": 0.04696555564380519
+        },
+        "val": {
+          "total_trades": 11,
+          "win_rate": 45.5,
+          "profit_factor": 1.84,
+          "total_return_pct": 0.88,
+          "max_drawdown_pct": 0.38,
+          "sortino_ratio": 0.6016366047959097
+        },
+        "fitness_score": 0.7073
+      }
+    },
+    "reasoning": "Baseline configuration",
+    "improved": true
+  },
+  {
+    "iteration": 1,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.1,
+      "volume": 1.2,
+      "orderflow": 1.1,
+      "volatility": 1.4,
+      "structure": 1.2,
+      "sentiment": 1.0,
+      "macro": 1.1
+    },
+    "fitness": 0.4988,
+    "metrics": {
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 33,
+          "win_rate": 30.3,
+          "profit_factor": 1.06,
+          "total_return_pct": 0.14,
+          "max_drawdown_pct": 2.04,
+          "sortino_ratio": 0.04699491998687374
+        },
+        "val": {
+          "total_trades": 11,
+          "win_rate": 45.5,
+          "profit_factor": 1.84,
+          "total_return_pct": 0.88,
+          "max_drawdown_pct": 0.38,
+          "sortino_ratio": 0.6016366047959097
+        },
+        "fitness_score": 0.7073
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 30,
+          "win_rate": 36.7,
+          "profit_factor": 1.3,
+          "total_return_pct": 1.68,
+          "max_drawdown_pct": 2.15,
+          "sortino_ratio": 0.2323128938065309
+        },
+        "val": {
+          "total_trades": 12,
+          "win_rate": 41.7,
+          "profit_factor": 1.3,
+          "total_return_pct": 0.6,
+          "max_drawdown_pct": 1.4,
+          "sortino_ratio": 0.2305064750119347
+        },
+        "fitness_score": 0.609
+      },
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 44,
+          "win_rate": 18.2,
+          "profit_factor": 0.53,
+          "total_return_pct": -5.92,
+          "max_drawdown_pct": 6.68,
+          "sortino_ratio": -0.40968409890640517
+        },
+        "val": {
+          "total_trades": 16,
+          "win_rate": 31.2,
+          "profit_factor": 0.9,
+          "total_return_pct": -0.34,
+          "max_drawdown_pct": 1.98,
+          "sortino_ratio": -0.07600069514782251
+        },
+        "fitness_score": 0.1802
+      }
+    },
+    "reasoning": "The current weights seem to favor trend and orderflow slightly, while volatility is underweighted. Given the performance metrics, ETH/USDT and BTC/USDT have higher fitness scores and better Sortino ratios, suggesting that trend and momentum might be more effective for these pairs. However, the overall low win rates and profit factors across all pairs indicate a need for a more balanced approach. I propose reducing the weights of trend and orderflow, increasing the weight of volatility, and making slight adjustments to other agents to achieve a more balanced portfolio.",
+    "improved": true
+  },
+  {
+    "iteration": 2,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.3,
+      "volume": 1.1,
+      "orderflow": 1.0,
+      "volatility": 1.1,
+      "structure": 1.1,
+      "sentiment": 1.2,
+      "macro": 1.0
+    },
+    "fitness": 0.4988,
+    "metrics": {
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 33,
+          "win_rate": 30.3,
+          "profit_factor": 1.06,
+          "total_return_pct": 0.14,
+          "max_drawdown_pct": 2.04,
+          "sortino_ratio": 0.04699491998687374
+        },
+        "val": {
+          "total_trades": 11,
+          "win_rate": 45.5,
+          "profit_factor": 1.84,
+          "total_return_pct": 0.88,
+          "max_drawdown_pct": 0.38,
+          "sortino_ratio": 0.6016366047959097
+        },
+        "fitness_score": 0.7073
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 30,
+          "win_rate": 36.7,
+          "profit_factor": 1.3,
+          "total_return_pct": 1.68,
+          "max_drawdown_pct": 2.15,
+          "sortino_ratio": 0.2323128938065309
+        },
+        "val": {
+          "total_trades": 12,
+          "win_rate": 41.7,
+          "profit_factor": 1.3,
+          "total_return_pct": 0.6,
+          "max_drawdown_pct": 1.4,
+          "sortino_ratio": 0.2305064750119347
+        },
+        "fitness_score": 0.609
+      },
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 44,
+          "win_rate": 18.2,
+          "profit_factor": 0.53,
+          "total_return_pct": -5.92,
+          "max_drawdown_pct": 6.68,
+          "sortino_ratio": -0.40968409890640517
+        },
+        "val": {
+          "total_trades": 16,
+          "win_rate": 31.2,
+          "profit_factor": 0.9,
+          "total_return_pct": -0.34,
+          "max_drawdown_pct": 1.98,
+          "sortino_ratio": -0.07600069514782251
+        },
+        "fitness_score": 0.1802
+      }
+    },
+    "reasoning": "The current weights seem to be overemphasizing volatility and structure, while underemphasizing trend and momentum. The performance metrics suggest that BTC/USDT and ETH/USDT are the strongest performers, with high win rates and profit factors in the validation set. To improve the composite fitness score, I propose reducing the weight on volatility and increasing the weights on trend and momentum, while also slightly increasing the weight on sentiment to capture market mood.",
+    "improved": false
+  },
+  {
+    "iteration": 3,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.3,
+      "volume": 1.1,
+      "orderflow": 1.0,
+      "volatility": 1.1,
+      "structure": 1.0,
+      "sentiment": 1.3,
+      "macro": 1.2
+    },
+    "fitness": 0.4988,
+    "metrics": {
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 33,
+          "win_rate": 30.3,
+          "profit_factor": 1.06,
+          "total_return_pct": 0.14,
+          "max_drawdown_pct": 2.04,
+          "sortino_ratio": 0.04699491998687374
+        },
+        "val": {
+          "total_trades": 11,
+          "win_rate": 45.5,
+          "profit_factor": 1.84,
+          "total_return_pct": 0.88,
+          "max_drawdown_pct": 0.38,
+          "sortino_ratio": 0.6016366047959097
+        },
+        "fitness_score": 0.7073
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 30,
+          "win_rate": 36.7,
+          "profit_factor": 1.3,
+          "total_return_pct": 1.68,
+          "max_drawdown_pct": 2.15,
+          "sortino_ratio": 0.2323128938065309
+        },
+        "val": {
+          "total_trades": 12,
+          "win_rate": 41.7,
+          "profit_factor": 1.3,
+          "total_return_pct": 0.6,
+          "max_drawdown_pct": 1.4,
+          "sortino_ratio": 0.2305064750119347
+        },
+        "fitness_score": 0.609
+      },
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 44,
+          "win_rate": 18.2,
+          "profit_factor": 0.53,
+          "total_return_pct": -5.92,
+          "max_drawdown_pct": 6.68,
+          "sortino_ratio": -0.40968409890640517
+        },
+        "val": {
+          "total_trades": 16,
+          "win_rate": 31.2,
+          "profit_factor": 0.9,
+          "total_return_pct": -0.34,
+          "max_drawdown_pct": 1.98,
+          "sortino_ratio": -0.07600069514782251
+        },
+        "fitness_score": 0.1802
+      }
+    },
+    "reasoning": "The current weights seem to be overemphasizing volatility and structure, while underemphasizing trend and momentum. The performance metrics show that BTC/USDT and ETH/USDT have higher fitness scores, indicating that the current weights are more suitable for these pairs. However, the overall fitness score is still relatively low. To improve the composite fitness score, I propose reducing the weight of volatility and increasing the weights of trend and momentum. I also suggest increasing the weight of sentiment, as it has a relatively low weight currently. The new set of weights should be more balanced and adaptive to different market conditions.",
+    "improved": false
+  },
+  {
+    "iteration": 4,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.4,
+      "volume": 1.1,
+      "orderflow": 1.0,
+      "volatility": 1.0,
+      "structure": 1.2,
+      "sentiment": 1.1,
+      "macro": 1.1
+    },
+    "fitness": 0.4988,
+    "metrics": {
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 33,
+          "win_rate": 30.3,
+          "profit_factor": 1.06,
+          "total_return_pct": 0.14,
+          "max_drawdown_pct": 2.04,
+          "sortino_ratio": 0.04699491998687374
+        },
+        "val": {
+          "total_trades": 11,
+          "win_rate": 45.5,
+          "profit_factor": 1.84,
+          "total_return_pct": 0.88,
+          "max_drawdown_pct": 0.38,
+          "sortino_ratio": 0.6016366047959097
+        },
+        "fitness_score": 0.7073
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 30,
+          "win_rate": 36.7,
+          "profit_factor": 1.3,
+          "total_return_pct": 1.68,
+          "max_drawdown_pct": 2.15,
+          "sortino_ratio": 0.2323128938065309
+        },
+        "val": {
+          "total_trades": 12,
+          "win_rate": 41.7,
+          "profit_factor": 1.3,
+          "total_return_pct": 0.6,
+          "max_drawdown_pct": 1.4,
+          "sortino_ratio": 0.2305064750119347
+        },
+        "fitness_score": 0.609
+      },
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 44,
+          "win_rate": 18.2,
+          "profit_factor": 0.53,
+          "total_return_pct": -5.92,
+          "max_drawdown_pct": 6.68,
+          "sortino_ratio": -0.40968409890640517
+        },
+        "val": {
+          "total_trades": 16,
+          "win_rate": 31.2,
+          "profit_factor": 0.9,
+          "total_return_pct": -0.34,
+          "max_drawdown_pct": 1.98,
+          "sortino_ratio": -0.07600069514782251
+        },
+        "fitness_score": 0.1802
+      }
+    },
+    "reasoning": "The current weights seem to be overemphasizing volatility and underemphasizing trend and momentum, given the performance metrics. The high win rate and profit factor for ETH/USDT and BTC/USDT in the validation set suggest that trend and momentum are important factors. Meanwhile, the poor performance of SOL/USDT indicates that volatility may be overemphasized. A more balanced approach, with increased weights on trend and momentum, and decreased weight on volatility, may improve overall performance.",
+    "improved": false
+  },
+  {
+    "iteration": 5,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.4,
+      "volume": 1.1,
+      "orderflow": 1.0,
+      "volatility": 1.0,
+      "structure": 1.0,
+      "sentiment": 1.2,
+      "macro": 1.2
+    },
+    "fitness": 0.4988,
+    "metrics": {
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 33,
+          "win_rate": 30.3,
+          "profit_factor": 1.06,
+          "total_return_pct": 0.14,
+          "max_drawdown_pct": 2.04,
+          "sortino_ratio": 0.04699491998687374
+        },
+        "val": {
+          "total_trades": 11,
+          "win_rate": 45.5,
+          "profit_factor": 1.84,
+          "total_return_pct": 0.88,
+          "max_drawdown_pct": 0.38,
+          "sortino_ratio": 0.6016366047959097
+        },
+        "fitness_score": 0.7073
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 30,
+          "win_rate": 36.7,
+          "profit_factor": 1.3,
+          "total_return_pct": 1.68,
+          "max_drawdown_pct": 2.15,
+          "sortino_ratio": 0.2323128938065309
+        },
+        "val": {
+          "total_trades": 12,
+          "win_rate": 41.7,
+          "profit_factor": 1.3,
+          "total_return_pct": 0.6,
+          "max_drawdown_pct": 1.4,
+          "sortino_ratio": 0.2305064750119347
+        },
+        "fitness_score": 0.609
+      },
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 44,
+          "win_rate": 18.2,
+          "profit_factor": 0.53,
+          "total_return_pct": -5.92,
+          "max_drawdown_pct": 6.68,
+          "sortino_ratio": -0.40968409890640517
+        },
+        "val": {
+          "total_trades": 16,
+          "win_rate": 31.2,
+          "profit_factor": 0.9,
+          "total_return_pct": -0.34,
+          "max_drawdown_pct": 1.98,
+          "sortino_ratio": -0.07600069514782251
+        },
+        "fitness_score": 0.1802
+      }
+    },
+    "reasoning": "The current weights seem to be overemphasizing volatility and structure, while underemphasizing trend and momentum. The performance metrics for BTC/USDT and ETH/USDT suggest that trend and momentum are important factors, while the poor performance of SOL/USDT may be due to overreliance on volatility. A more balanced approach, with increased weights on trend and momentum, and decreased weights on volatility and structure, may lead to improved overall performance.",
+    "improved": false
+  },
+  {
+    "iteration": 6,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.3,
+      "volume": 1.1,
+      "orderflow": 1.0,
+      "volatility": 1.1,
+      "structure": 1.2,
+      "sentiment": 1.2,
+      "macro": 1.2
+    },
+    "fitness": 0.4988,
+    "metrics": {
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 33,
+          "win_rate": 30.3,
+          "profit_factor": 1.06,
+          "total_return_pct": 0.14,
+          "max_drawdown_pct": 2.04,
+          "sortino_ratio": 0.04699491998687374
+        },
+        "val": {
+          "total_trades": 11,
+          "win_rate": 45.5,
+          "profit_factor": 1.84,
+          "total_return_pct": 0.88,
+          "max_drawdown_pct": 0.38,
+          "sortino_ratio": 0.6016366047959097
+        },
+        "fitness_score": 0.7073
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 30,
+          "win_rate": 36.7,
+          "profit_factor": 1.3,
+          "total_return_pct": 1.68,
+          "max_drawdown_pct": 2.15,
+          "sortino_ratio": 0.2323128938065309
+        },
+        "val": {
+          "total_trades": 12,
+          "win_rate": 41.7,
+          "profit_factor": 1.3,
+          "total_return_pct": 0.6,
+          "max_drawdown_pct": 1.4,
+          "sortino_ratio": 0.2305064750119347
+        },
+        "fitness_score": 0.609
+      },
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 44,
+          "win_rate": 18.2,
+          "profit_factor": 0.53,
+          "total_return_pct": -5.92,
+          "max_drawdown_pct": 6.68,
+          "sortino_ratio": -0.40968409890640517
+        },
+        "val": {
+          "total_trades": 16,
+          "win_rate": 31.2,
+          "profit_factor": 0.9,
+          "total_return_pct": -0.34,
+          "max_drawdown_pct": 1.98,
+          "sortino_ratio": -0.07600069514782251
+        },
+        "fitness_score": 0.1802
+      }
+    },
+    "reasoning": "The current weights seem to be overemphasizing volatility and underemphasizing trend and momentum, given the relatively low fitness scores of SOL/USDT and the high win rates of BTC/USDT and ETH/USDT in the validation set. Increasing the weights of trend and momentum while decreasing the weight of volatility may lead to improved performance. Additionally, the sentiment and macro weights seem relatively low and could be increased to capture more market information.",
+    "improved": false
+  },
+  {
+    "iteration": 7,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.4,
+      "volume": 1.1,
+      "orderflow": 1.2,
+      "volatility": 1.1,
+      "structure": 1.0,
+      "sentiment": 1.2,
+      "macro": 1.2
+    },
+    "fitness": 0.4988,
+    "metrics": {
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 33,
+          "win_rate": 30.3,
+          "profit_factor": 1.06,
+          "total_return_pct": 0.14,
+          "max_drawdown_pct": 2.04,
+          "sortino_ratio": 0.04699491998687374
+        },
+        "val": {
+          "total_trades": 11,
+          "win_rate": 45.5,
+          "profit_factor": 1.84,
+          "total_return_pct": 0.88,
+          "max_drawdown_pct": 0.38,
+          "sortino_ratio": 0.6016366047959097
+        },
+        "fitness_score": 0.7073
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 30,
+          "win_rate": 36.7,
+          "profit_factor": 1.3,
+          "total_return_pct": 1.68,
+          "max_drawdown_pct": 2.15,
+          "sortino_ratio": 0.2323128938065309
+        },
+        "val": {
+          "total_trades": 12,
+          "win_rate": 41.7,
+          "profit_factor": 1.3,
+          "total_return_pct": 0.6,
+          "max_drawdown_pct": 1.4,
+          "sortino_ratio": 0.2305064750119347
+        },
+        "fitness_score": 0.609
+      },
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 44,
+          "win_rate": 18.2,
+          "profit_factor": 0.53,
+          "total_return_pct": -5.92,
+          "max_drawdown_pct": 6.68,
+          "sortino_ratio": -0.40968409890640517
+        },
+        "val": {
+          "total_trades": 16,
+          "win_rate": 31.2,
+          "profit_factor": 0.9,
+          "total_return_pct": -0.34,
+          "max_drawdown_pct": 1.98,
+          "sortino_ratio": -0.07600069514782251
+        },
+        "fitness_score": 0.1802
+      }
+    },
+    "reasoning": "The current weights seem to overemphasize volatility and structure, while underemphasizing trend and momentum. Given the performance metrics, increasing the weights of trend and momentum, while decreasing the weights of volatility and structure, may lead to improved overall performance. Additionally, the sentiment and macro weights appear to be relatively low, so a slight increase in these weights could also be beneficial.",
+    "improved": false
+  },
+  {
+    "iteration": 8,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.3,
+      "volume": 1.1,
+      "orderflow": 1.0,
+      "volatility": 1.2,
+      "structure": 1.3,
+      "sentiment": 1.1,
+      "macro": 1.0
+    },
+    "fitness": 0.4988,
+    "metrics": {
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 33,
+          "win_rate": 30.3,
+          "profit_factor": 1.06,
+          "total_return_pct": 0.14,
+          "max_drawdown_pct": 2.04,
+          "sortino_ratio": 0.04699491998687374
+        },
+        "val": {
+          "total_trades": 11,
+          "win_rate": 45.5,
+          "profit_factor": 1.84,
+          "total_return_pct": 0.88,
+          "max_drawdown_pct": 0.38,
+          "sortino_ratio": 0.6016366047959097
+        },
+        "fitness_score": 0.7073
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 30,
+          "win_rate": 36.7,
+          "profit_factor": 1.3,
+          "total_return_pct": 1.68,
+          "max_drawdown_pct": 2.15,
+          "sortino_ratio": 0.2323128938065309
+        },
+        "val": {
+          "total_trades": 12,
+          "win_rate": 41.7,
+          "profit_factor": 1.3,
+          "total_return_pct": 0.6,
+          "max_drawdown_pct": 1.4,
+          "sortino_ratio": 0.2305064750119347
+        },
+        "fitness_score": 0.609
+      },
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 44,
+          "win_rate": 18.2,
+          "profit_factor": 0.53,
+          "total_return_pct": -5.92,
+          "max_drawdown_pct": 6.68,
+          "sortino_ratio": -0.40968409890640517
+        },
+        "val": {
+          "total_trades": 16,
+          "win_rate": 31.2,
+          "profit_factor": 0.9,
+          "total_return_pct": -0.34,
+          "max_drawdown_pct": 1.98,
+          "sortino_ratio": -0.07600069514782251
+        },
+        "fitness_score": 0.1802
+      }
+    },
+    "reasoning": "The current weights seem to be slightly over-emphasizing volatility and under-emphasizing trend and momentum, given the relatively high win rates and profit factors in the validation sets for BTC/USDT and ETH/USDT. To improve the composite fitness score, I propose adjusting the weights to give more importance to trend and momentum, while reducing the weight on volatility. Additionally, increasing the weight on structure could help, as it has a relatively high fitness score for ETH/USDT. The weights for orderflow, sentiment, and macro will be adjusted slightly to maintain a balanced approach.",
+    "improved": false
+  },
+  {
+    "iteration": 9,
+    "weights": {
+      "trend": 0.8,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.1,
+      "volatility": 1.1,
+      "structure": 1.2,
+      "sentiment": 1.4,
+      "macro": 1.3
+    },
+    "fitness": 0.4988,
+    "metrics": {
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 33,
+          "win_rate": 30.3,
+          "profit_factor": 1.06,
+          "total_return_pct": 0.14,
+          "max_drawdown_pct": 2.04,
+          "sortino_ratio": 0.04699491998687374
+        },
+        "val": {
+          "total_trades": 11,
+          "win_rate": 45.5,
+          "profit_factor": 1.84,
+          "total_return_pct": 0.88,
+          "max_drawdown_pct": 0.38,
+          "sortino_ratio": 0.6016366047959097
+        },
+        "fitness_score": 0.7073
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 30,
+          "win_rate": 36.7,
+          "profit_factor": 1.3,
+          "total_return_pct": 1.68,
+          "max_drawdown_pct": 2.15,
+          "sortino_ratio": 0.2323128938065309
+        },
+        "val": {
+          "total_trades": 12,
+          "win_rate": 41.7,
+          "profit_factor": 1.3,
+          "total_return_pct": 0.6,
+          "max_drawdown_pct": 1.4,
+          "sortino_ratio": 0.2305064750119347
+        },
+        "fitness_score": 0.609
+      },
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 44,
+          "win_rate": 18.2,
+          "profit_factor": 0.53,
+          "total_return_pct": -5.92,
+          "max_drawdown_pct": 6.68,
+          "sortino_ratio": -0.40968409890640517
+        },
+        "val": {
+          "total_trades": 16,
+          "win_rate": 31.2,
+          "profit_factor": 0.9,
+          "total_return_pct": -0.34,
+          "max_drawdown_pct": 1.98,
+          "sortino_ratio": -0.07600069514782251
+        },
+        "fitness_score": 0.1802
+      }
+    },
+    "reasoning": "Analyzing the performance metrics, we see that the trend and momentum agents have relatively low fitness scores and win rates, while the volatility agent has a high weight but mixed performance across assets. The sentiment and macro agents have lower weights but show potential in certain assets. To improve the composite fitness score, we should adjust the weights to emphasize agents with consistent performance and de-emphasize those with poor performance. Increasing the weight of the sentiment agent, which has a relatively low weight but shows promise, and decreasing the weight of the trend agent, which has a low win rate, may lead to improvement. Additionally, reducing the weight of the volatility agent, which has a high weight but inconsistent performance, could help. The new weights aim to strike a balance between these considerations.",
+    "improved": false
+  },
+  {
+    "iteration": 10,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.2,
+      "volume": 1.0,
+      "orderflow": 1.0,
+      "volatility": 1.1,
+      "structure": 1.1,
+      "sentiment": 1.3,
+      "macro": 1.3
+    },
+    "fitness": 0.4988,
+    "metrics": {
+      "BTC/USDT": {
+        "train": {
+          "total_trades": 33,
+          "win_rate": 30.3,
+          "profit_factor": 1.06,
+          "total_return_pct": 0.14,
+          "max_drawdown_pct": 2.04,
+          "sortino_ratio": 0.04699491998687374
+        },
+        "val": {
+          "total_trades": 11,
+          "win_rate": 45.5,
+          "profit_factor": 1.84,
+          "total_return_pct": 0.88,
+          "max_drawdown_pct": 0.38,
+          "sortino_ratio": 0.6016366047959097
+        },
+        "fitness_score": 0.7073
+      },
+      "ETH/USDT": {
+        "train": {
+          "total_trades": 30,
+          "win_rate": 36.7,
+          "profit_factor": 1.3,
+          "total_return_pct": 1.68,
+          "max_drawdown_pct": 2.15,
+          "sortino_ratio": 0.2323128938065309
+        },
+        "val": {
+          "total_trades": 12,
+          "win_rate": 41.7,
+          "profit_factor": 1.3,
+          "total_return_pct": 0.6,
+          "max_drawdown_pct": 1.4,
+          "sortino_ratio": 0.2305064750119347
+        },
+        "fitness_score": 0.609
+      },
+      "SOL/USDT": {
+        "train": {
+          "total_trades": 44,
+          "win_rate": 18.2,
+          "profit_factor": 0.53,
+          "total_return_pct": -5.92,
+          "max_drawdown_pct": 6.68,
+          "sortino_ratio": -0.40968409890640517
+        },
+        "val": {
+          "total_trades": 16,
+          "win_rate": 31.2,
+          "profit_factor": 0.9,
+          "total_return_pct": -0.34,
+          "max_drawdown_pct": 1.98,
+          "sortino_ratio": -0.07600069514782251
+        },
+        "fitness_score": 0.1802
+      }
+    },
+    "reasoning": "The current agent weights show that volatility and structure are overweighted, while sentiment is underweighted. The performance metrics indicate that BTC/USDT and ETH/USDT have higher fitness scores, suggesting that the trend and momentum agents may be more effective for these pairs. The optimization history shows that increasing the trend and momentum weights has not led to significant improvements. Therefore, a new set of weights is proposed to balance the agents and give more importance to sentiment and macro, which may help improve the overall fitness score.",
+    "improved": false
+  }
+]
