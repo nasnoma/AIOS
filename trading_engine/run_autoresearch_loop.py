@@ -25,7 +25,7 @@ from trading_engine.config import settings
 WEIGHTS_FILE = PROJECT_ROOT / "trading_engine" / "optimized_weights.json"
 HISTORY_FILE = PROJECT_ROOT / "trading_engine" / "autoresearch_history.json"
 
-def run_harness(symbols: str, timeframe: str, train_days: int, val_days: int) -> dict:
+def run_harness(symbols: str, timeframe: str, train_days: int, val_days: int, target: str = "crypto") -> dict:
     """Executes the autoresearch harness and returns parsed JSON results."""
     cmd = [
         str(PROJECT_ROOT / "trading_engine" / "venv" / "bin" / "python"),
@@ -33,7 +33,8 @@ def run_harness(symbols: str, timeframe: str, train_days: int, val_days: int) ->
         "--symbols", symbols,
         "--timeframe", timeframe,
         "--train-days", str(train_days),
-        "--val-days", str(val_days)
+        "--val-days", str(val_days),
+        "--target", target
     ]
     
     try:
@@ -157,34 +158,50 @@ def main():
     parser.add_argument("--timeframe", default="4h", help="Backtest timeframe")
     parser.add_argument("--train-days", type=int, default=180, help="Training period days")
     parser.add_argument("--val-days", type=int, default=90, help="Validation period days")
+    parser.add_argument("--target", choices=["crypto", "stock", "metal", "oil"], default="crypto", help="Weight optimization target")
     args = parser.parse_args()
 
     logger.info("================================================================================")
-    logger.info("                 AUTONOMOUS TRADING ENGINE OPTIMIZATION LOOP")
+    logger.info(f"       AUTONOMOUS TRADING ENGINE OPTIMIZATION LOOP ({args.target.upper()})")
     logger.info("================================================================================")
     
+    target = args.target
+    weights_file = PROJECT_ROOT / "trading_engine" / f"optimized_weights_{target}.json"
+    history_file = PROJECT_ROOT / "trading_engine" / f"autoresearch_history_{target}.json"
+
     # Ensure baseline weights file exists
-    if not WEIGHTS_FILE.exists():
-        logger.info("No optimized weights file found. Initializing with DEFAULT_WEIGHTS.")
+    if not weights_file.exists():
+        if target == "crypto":
+            old_weights_file = PROJECT_ROOT / "trading_engine" / "optimized_weights.json"
+            if old_weights_file.exists():
+                import shutil
+                try:
+                    shutil.copy(old_weights_file, weights_file)
+                    logger.info(f"Copied existing optimized_weights.json to {weights_file}")
+                except Exception as e:
+                    logger.warning(f"Could not copy optimized_weights.json: {e}")
+            
+    if not weights_file.exists():
+        logger.info(f"No optimized weights file found for {target}. Initializing with DEFAULT_WEIGHTS.")
         from trading_engine import judge
-        with open(WEIGHTS_FILE, "w") as f:
+        with open(weights_file, "w") as f:
             json.dump(judge.DEFAULT_WEIGHTS, f, indent=2)
 
     # Load starting weights
-    with open(WEIGHTS_FILE) as f:
+    with open(weights_file) as f:
         best_weights = json.load(f)
 
     # Establish baseline performance
     logger.info("Running baseline backtest...")
-    baseline_res = run_harness(args.symbols, args.timeframe, args.train_days, args.val_days)
+    baseline_res = run_harness(args.symbols, args.timeframe, args.train_days, args.val_days, target)
     best_fitness = baseline_res["overall_fitness"]
     logger.success(f"Baseline established! Fitness Score: {best_fitness:.4f}")
 
     # Load or initialize history
     history = []
-    if HISTORY_FILE.exists():
+    if history_file.exists():
         try:
-            with open(HISTORY_FILE) as f:
+            with open(history_file) as f:
                 history = json.load(f)
         except Exception:
             pass
@@ -217,12 +234,12 @@ def main():
             logger.info(f"Proposed weights: {proposed_weights}")
             
             # 2. Write proposed weights
-            with open(WEIGHTS_FILE, "w") as f:
+            with open(weights_file, "w") as f:
                 json.dump(proposed_weights, f, indent=2)
                 
             # 3. Run backtest harness
             logger.info("Running backtest with proposed weights...")
-            res = run_harness(args.symbols, args.timeframe, args.train_days, args.val_days)
+            res = run_harness(args.symbols, args.timeframe, args.train_days, args.val_days, target)
             proposed_fitness = res["overall_fitness"]
             
             # 4. Compare results
@@ -234,7 +251,7 @@ def main():
             else:
                 logger.warning(f"❌ REJECTED: Fitness ({proposed_fitness:.4f}) did not exceed best ({best_fitness:.4f})")
                 # Revert
-                with open(WEIGHTS_FILE, "w") as f:
+                with open(weights_file, "w") as f:
                     json.dump(best_weights, f, indent=2)
 
             # Record iteration details
@@ -248,13 +265,13 @@ def main():
             })
             
             # Save history log
-            with open(HISTORY_FILE, "w") as f:
+            with open(history_file, "w") as f:
                 json.dump(history, f, indent=2)
 
         except Exception as e:
             logger.error(f"Error in cycle {it}: {e}")
             # Ensure we are reverted to best weights in case of failure
-            with open(WEIGHTS_FILE, "w") as f:
+            with open(weights_file, "w") as f:
                 json.dump(best_weights, f, indent=2)
             continue
 
@@ -262,7 +279,7 @@ def main():
     logger.info("                         OPTIMIZATION LOOP COMPLETE")
     logger.info("================================================================================")
     logger.success(f"Final Best Fitness Score: {best_fitness:.4f}")
-    logger.success(f"Optimal weights written to {WEIGHTS_FILE}")
+    logger.success(f"Optimal weights written to {weights_file}")
 
 if __name__ == "__main__":
     main()

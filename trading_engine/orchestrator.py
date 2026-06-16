@@ -100,19 +100,38 @@ def run(
     # Step 3: Judge evaluates
     logger.info("⚖️  Judge evaluating...")
     
-    # Try to load optimized weights from Walk-Forward Optimization (only for crypto, as they are optimized on BTC/SOL)
+    # Try to load optimized weights from Walk-Forward Optimization
     agent_weights = None
-    if snap.asset_type == "crypto":
-        opt_weights_path = Path(__file__).parent / "optimized_weights.json"
+    try:
+        from trading_engine.market_hours import classify_symbol, AssetClass
+        ac = classify_symbol(symbol)
+        
+        # Map symbol to optimization target category
+        if ac == AssetClass.CRYPTO:
+            target = "crypto"
+        elif ac in (AssetClass.STOCK, AssetClass.STOCK_CFD):
+            target = "stock"
+        elif ac == AssetClass.PRECIOUS_METAL:
+            if symbol.upper().startswith("CL") or symbol.upper().startswith("USOIL"):
+                target = "oil"
+            else:
+                target = "metal"
+        else:
+            target = "crypto"
+            
+        opt_weights_path = Path(__file__).parent / f"optimized_weights_{target}.json"
+        if target == "crypto" and not opt_weights_path.exists():
+            # Fallback to general optimized_weights.json for backward compatibility
+            opt_weights_path = Path(__file__).parent / "optimized_weights.json"
+            
         if opt_weights_path.exists():
-            try:
-                with open(opt_weights_path) as f:
-                    agent_weights = json.load(f)
-                logger.info("   Loaded dynamic walk-forward optimized weights for crypto.")
-            except Exception as e:
-                logger.warning(f"   Could not load optimized weights: {e}. Using static defaults.")
-    else:
-        logger.info(f"   Using default static weights for non-crypto asset ({snap.asset_type}).")
+            with open(opt_weights_path) as f:
+                agent_weights = json.load(f)
+            logger.info(f"   Loaded dynamic optimized weights for {target} ({opt_weights_path.name}).")
+        else:
+            logger.info(f"   No optimized weights file found for {target} (searched {opt_weights_path.name}). Using static defaults.")
+    except Exception as e:
+        logger.warning(f"   Failed to resolve/load optimized weights for {symbol}: {e}. Using static defaults.")
             
     verdict: JudgeVerdict = judge_evaluate(agent_signals, agent_weights=agent_weights)
     logger.info(f"   Decision: {verdict.decision.value} | Conf={verdict.confidence:.0f}% | "

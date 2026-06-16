@@ -1,0 +1,76 @@
+[
+  {
+    "iteration": 0,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.3,
+      "volatility": 0.8,
+      "structure": 1.2,
+      "sentiment": 0.9,
+      "macro": 1.0
+    },
+    "fitness": 0.6479,
+    "metrics": {
+      "AAPL": {
+        "train": {
+          "total_trades": 9,
+          "win_rate": 44.4,
+          "profit_factor": 2.04,
+          "total_return_pct": 0.55,
+          "max_drawdown_pct": 0.31,
+          "sortino_ratio": 0.7686826177822776
+        },
+        "val": {
+          "total_trades": 4,
+          "win_rate": 25.0,
+          "profit_factor": 0.69,
+          "total_return_pct": -0.12,
+          "max_drawdown_pct": 0.23,
+          "sortino_ratio": -0.2566996741249944
+        },
+        "fitness_score": 0.6479
+      }
+    },
+    "reasoning": "Baseline configuration",
+    "improved": true
+  },
+  {
+    "iteration": 1,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.2,
+      "volatility": 1.2,
+      "structure": 1.2,
+      "sentiment": 1.1,
+      "macro": 1.2
+    },
+    "fitness": 0.6341,
+    "metrics": {
+      "AAPL": {
+        "train": {
+          "total_trades": 9,
+          "win_rate": 44.4,
+          "profit_factor": 2.0,
+          "total_return_pct": 0.52,
+          "max_drawdown_pct": 0.31,
+          "sortino_ratio": 0.7397340079232222
+        },
+        "val": {
+          "total_trades": 4,
+          "win_rate": 25.0,
+          "profit_factor": 0.69,
+          "total_return_pct": -0.12,
+          "max_drawdown_pct": 0.23,
+          "sortino_ratio": -0.2566996741249944
+        },
+        "fitness_score": 0.6341
+      }
+    },
+    "reasoning": "The current weights show trend and orderflow as the most prominent agents, while volatility and sentiment are underweighted. Given the relatively low win rate and negative return in the validation set, it suggests overfitting to the training data. To address this, reducing the weights of trend and orderflow while increasing those of volatility and sentiment could help improve generalization. Additionally, increasing the weight of macro might help capture broader market trends.",
+    "improved": false
+  }
+]

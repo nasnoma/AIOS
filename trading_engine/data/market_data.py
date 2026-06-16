@@ -250,7 +250,8 @@ class StockDataFetcher:
                 if resp.ok:
                     data = resp.json()
                     bars = data.get("bars", {}).get(symbol, [])
-                    if bars:
+                    min_bars = min(100, int(limit * 0.5))
+                    if len(bars) >= min_bars:
                         df = pd.DataFrame(bars)
                         df.rename(columns={"t": "timestamp", "o": "open", "h": "high",
                                             "l": "low", "c": "close", "v": "volume"}, inplace=True)
@@ -258,6 +259,8 @@ class StockDataFetcher:
                         df.set_index("timestamp", inplace=True)
                         logger.info(f"Successfully fetched {len(df)} stock bars from Alpaca for {symbol}")
                         return df[["open", "high", "low", "close", "volume"]]
+                    else:
+                        logger.warning(f"Alpaca returned insufficient bars ({len(bars)} < {min_bars}) for {symbol}. Trying fallback.")
             except Exception as e:
                 logger.warning(f"Failed to fetch stock bars from Alpaca for {symbol}: {e}. Falling back to Massive.")
 
@@ -275,7 +278,8 @@ class StockDataFetcher:
             resp = get_with_retry(url, params=params, timeout=10)
             resp.raise_for_status()
             results = resp.json().get("results", [])
-            if results:
+            min_bars = min(100, int(limit * 0.5))
+            if len(results) >= min_bars:
                 df = pd.DataFrame(results)
                 df.rename(columns={"t": "timestamp", "o": "open", "h": "high",
                                     "l": "low", "c": "close", "v": "volume"}, inplace=True)
@@ -283,6 +287,8 @@ class StockDataFetcher:
                 df.set_index("timestamp", inplace=True)
                 df.sort_index(inplace=True)
                 return df[["open", "high", "low", "close", "volume"]]
+            else:
+                logger.warning(f"Massive returned insufficient bars ({len(results)} < {min_bars}) for {symbol}. Trying fallback.")
         except Exception as e:
             logger.warning(f"Massive API failed for {symbol}: {e} — falling back to Yahoo Finance")
 

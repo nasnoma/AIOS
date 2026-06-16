@@ -49,7 +49,7 @@ def calculate_sortino_ratio(trades: list[dict], risk_free_rate: float = 0.0) -> 
     return float((avg_return - risk_free_rate) / downside_std)
 
 
-def evaluate_asset(symbol: str, timeframe: str, train_days: int, val_days: int) -> dict:
+def evaluate_asset(symbol: str, timeframe: str, train_days: int, val_days: int, target: str = "crypto") -> dict:
     """Runs train/validation split backtest on a single asset and returns performance metrics."""
     # Force settings overrides in case we are running in spawned child processes
     settings.crypto_testnet = False
@@ -62,8 +62,15 @@ def evaluate_asset(symbol: str, timeframe: str, train_days: int, val_days: int) 
 
     logger.info(f"Running research evaluation for {symbol} ({timeframe})")
     
-    is_crypto = "/" in symbol or symbol.endswith("USDT") or symbol.endswith("USD")
-    asset_type = "crypto" if is_crypto else "stock"
+    from trading_engine.market_hours import classify_symbol, AssetClass
+    ac = classify_symbol(symbol)
+    
+    if ac == AssetClass.CRYPTO:
+        asset_type = "crypto"
+    elif ac == AssetClass.STOCK:
+        asset_type = "stock"
+    else:
+        asset_type = "cfd"
 
     
     tf_mapping = {
@@ -100,7 +107,10 @@ def evaluate_asset(symbol: str, timeframe: str, train_days: int, val_days: int) 
     if df is None:
         # Fetch data using our standard data layer fetchers
         try:
-            if asset_type == "crypto":
+            if ac in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL):
+                from trading_engine.data.cfd_data import BybitCFDFetcher
+                fetcher = BybitCFDFetcher()
+            elif ac == AssetClass.CRYPTO:
                 from trading_engine.data.market_data import CryptoDataFetcher
                 fetcher = CryptoDataFetcher()
             else:
@@ -129,7 +139,11 @@ def evaluate_asset(symbol: str, timeframe: str, train_days: int, val_days: int) 
     train_size = int(N * train_days / total_days)
     
     # Load optimized weights if they exist (written by run_autoresearch_loop.py)
-    weights_path = Path(__file__).parent.parent / "optimized_weights.json"
+    weights_path = Path(__file__).parent.parent / f"optimized_weights_{target}.json"
+    if not weights_path.exists() and target == "crypto":
+        # Fallback to general optimized_weights.json for backward compatibility
+        weights_path = Path(__file__).parent.parent / "optimized_weights.json"
+        
     agent_weights = judge.DEFAULT_WEIGHTS
     if weights_path.exists():
         try:
@@ -231,6 +245,7 @@ def main():
     parser.add_argument("--train-days", type=int, default=180, help="Training period days")
     parser.add_argument("--val-days", type=int, default=90, help="Validation period days")
     parser.add_argument("--real-llm", action="store_true", help="Use real LLM API calls instead of mock fallback")
+    parser.add_argument("--target", choices=["crypto", "stock", "metal", "oil"], default="crypto", help="Weight optimization target")
     
     args = parser.parse_args()
     
@@ -263,7 +278,7 @@ def main():
     with concurrent.futures.ProcessPoolExecutor(max_workers=6) as executor:
         # Submit tasks
         future_to_symbol = {
-            executor.submit(evaluate_asset, symbol, args.timeframe, args.train_days, args.val_days): symbol
+            executor.submit(evaluate_asset, symbol, args.timeframe, args.train_days, args.val_days, args.target): symbol
             for symbol in symbol_list
         }
         
