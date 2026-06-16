@@ -609,12 +609,7 @@ def sync_with_broker() -> bool:
     """
     try:
         portfolio = _load_state()
-        if not portfolio.positions:
-            return False
-
-        open_local_positions = [p for p in portfolio.positions if p.status == "open"]
-        if not open_local_positions:
-            return False
+        changed = False
 
         # 1. Fetch Alpaca positions
         alpaca_fetched = False
@@ -633,6 +628,18 @@ def sync_with_broker() -> bool:
         try:
             bybit = get_bybit_exchange()
             balance = bybit.fetch_balance()
+            
+            # Sync USDT cash balance from exchange
+            usdt_free = balance.get('USDT', {}).get('free')
+            if usdt_free is not None:
+                cash_val = float(usdt_free)
+                if abs(portfolio.cash - cash_val) > 0.01:
+                    portfolio.cash = cash_val
+                    # Scale initial account_size to match current balance if it is at default
+                    if portfolio.account_size == settings.account_size or portfolio.account_size == 10000.0:
+                        portfolio.account_size = cash_val
+                    changed = True
+
             for currency, total in balance.get('total', {}).items():
                 if currency not in ('USDT', 'USDC', 'USD') and total > 0.00001:
                     bybit_spot_symbols.add(f"{currency}/USDT".upper())
@@ -678,8 +685,8 @@ def sync_with_broker() -> bool:
 
         # 4. Check all open local positions
         from trading_engine.market_hours import classify_symbol, AssetClass
-        changed = False
-
+        open_local_positions = [p for p in portfolio.positions if p.status == "open"]
+        
         for pos in open_local_positions:
             ac = classify_symbol(pos.symbol)
             
