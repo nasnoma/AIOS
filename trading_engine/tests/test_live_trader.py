@@ -174,6 +174,53 @@ class TestTradeLifecycle:
         assert len(status["trades"]) == 1
         assert status["trades"][0]["status"] == "closed"
 
+    @patch("trading_engine.execution.live_trader._trigger_self_healing")
+    @patch("trading_engine.execution.live_trader.place_bybit_market_order")
+    def test_self_healing_trigger(self, mock_place_order, mock_trigger_healing, mock_bybit_keys):
+        # Reset state file
+        live_trader._save_state(live_trader.LivePortfolio(account_size=10000.0, cash=10000.0))
+        
+        # Configure thresholds
+        settings.self_healing_consecutive_losses = 2
+        settings.self_healing_cooldown_hours = 24.0
+
+        # Loss 1
+        mock_place_order.return_value = 65000.0
+        live_trader.open_trade("BTC/USDT", "long", 65000.0, 1000.0, 60000.0, 75000.0)
+        mock_place_order.return_value = 59500.0
+        live_trader.update_prices({"BTC/USDT": 59500.0})
+        
+        # Assert healing NOT triggered (losses = 1)
+        mock_trigger_healing.assert_not_called()
+        
+        # Loss 2
+        mock_place_order.return_value = 65000.0
+        live_trader.open_trade("BTC/USDT", "long", 65000.0, 1000.0, 60000.0, 75000.0)
+        mock_place_order.return_value = 59500.0
+        live_trader.update_prices({"BTC/USDT": 59500.0})
+        
+        # Assert healing triggered (losses = 2)
+        mock_trigger_healing.assert_called_once_with("BTC/USDT")
+        mock_trigger_healing.reset_mock()
+        
+        # Loss 3 (cooldown should prevent execution)
+        mock_place_order.return_value = 65000.0
+        live_trader.open_trade("BTC/USDT", "long", 65000.0, 1000.0, 60000.0, 75000.0)
+        mock_place_order.return_value = 59500.0
+        live_trader.update_prices({"BTC/USDT": 59500.0})
+        
+        # Assert healing NOT triggered again due to cooldown
+        mock_trigger_healing.assert_not_called()
+        
+        # Win trade (resets consecutive losses)
+        mock_place_order.return_value = 65000.0
+        live_trader.open_trade("BTC/USDT", "long", 65000.0, 1000.0, 60000.0, 75000.0)
+        mock_place_order.return_value = 76000.0
+        live_trader.update_prices({"BTC/USDT": 76000.0})
+        
+        status = live_trader.get_status()
+        assert status["self_healing_state"]["BTC/USDT"]["consecutive_losses"] == 0
+
 
 class TestSchedulerRouting:
     @patch("trading_engine.orchestrator.run_all_assets")

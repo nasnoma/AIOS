@@ -586,19 +586,19 @@ def _close_position(portfolio: LivePortfolio, pos: Position, exit_price: float, 
         sh_state = portfolio.self_healing_state.setdefault(pos.symbol, {"consecutive_losses": 0, "last_optimized_at": None})
         sh_state["consecutive_losses"] += 1
         
-        # Check consecutive loss threshold (>= 2 losses) and 24h cooldown
+        # Check consecutive loss threshold and cooldown
         trigger_healing = False
         consec_losses = sh_state["consecutive_losses"]
         last_opt_str = sh_state.get("last_optimized_at")
         
-        if consec_losses >= 2:
+        if consec_losses >= settings.self_healing_consecutive_losses:
             if not last_opt_str:
                 trigger_healing = True
             else:
                 try:
                     last_opt_dt = datetime.fromisoformat(last_opt_str)
                     time_elapsed = datetime.now(timezone.utc) - last_opt_dt
-                    if time_elapsed.total_seconds() >= 24 * 3600:
+                    if time_elapsed.total_seconds() >= settings.self_healing_cooldown_hours * 3600:
                         trigger_healing = True
                     else:
                         logger.info(f"Self-Healing: {pos.symbol} skipped optimization — cooldown active (last optimized {time_elapsed.total_seconds()/3600:.1f}h ago).")
@@ -606,7 +606,7 @@ def _close_position(portfolio: LivePortfolio, pos: Position, exit_price: float, 
                     logger.warning(f"Error parsing last_optimized_at for {pos.symbol}: {e_dt}. Triggering anyway.")
                     trigger_healing = True
         else:
-            logger.info(f"Self-Healing: {pos.symbol} has {consec_losses} consecutive loss(es) (requires 2). Skipping optimization.")
+            logger.info(f"Self-Healing: {pos.symbol} has {consec_losses} consecutive loss(es) (requires {settings.self_healing_consecutive_losses}). Skipping optimization.")
                     
         if trigger_healing:
             try:
@@ -892,6 +892,7 @@ def get_status() -> dict:
         "win_count": portfolio.win_count,
         "loss_count": portfolio.loss_count,
         "trades": open_trades + closed_trades,
+        "self_healing_state": portfolio.self_healing_state,
     }
 
 

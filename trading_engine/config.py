@@ -68,6 +68,10 @@ class Settings(BaseSettings):
     stop_loss_pct_max: float = 0.10
     max_concurrent_positions: int = 20
 
+    # ── Self Healing ────────────────────────
+    self_healing_consecutive_losses: int = 2
+    self_healing_cooldown_hours: float = 24.0
+
     # ── Bounty Hunter ───────────────────────
     bounty_hunter_enabled: bool = True
     bounty_hunter_interval_hours: int = 1
