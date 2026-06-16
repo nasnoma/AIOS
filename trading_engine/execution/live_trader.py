@@ -575,6 +575,11 @@ def _close_position(portfolio: LivePortfolio, pos: Position, exit_price: float, 
         portfolio.win_count += 1
     else:
         portfolio.loss_count += 1
+        try:
+            _trigger_self_healing(pos.symbol)
+        except Exception as ex_sh:
+            logger.error(f"Failed to trigger self-healing for {pos.symbol}: {ex_sh}")
+            
     portfolio.positions.remove(pos)
     portfolio.closed_trades.append(pos)
 
@@ -840,4 +845,33 @@ def get_status() -> dict:
         "loss_count": portfolio.loss_count,
         "trades": open_trades + closed_trades,
     }
+
+
+def _trigger_self_healing(symbol: str):
+    """Launches the self-healing optimization script in the background for a lost trade symbol."""
+    import subprocess
+    from pathlib import Path
+    
+    project_root = Path(__file__).resolve().parent.parent
+    python_bin = project_root / "trading_engine" / "venv" / "bin" / "python"
+    script_path = project_root / "trading_engine" / "run_self_healing.py"
+    
+    cmd = [
+        str(python_bin),
+        str(script_path),
+        "--symbol", symbol
+    ]
+    try:
+        logger.info(f"❤️  Self-Healing: launching background optimization for {symbol}...")
+        # Launch non-blocking background process
+        subprocess.Popen(
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,  # Detached from parent process group
+            cwd=str(project_root)
+        )
+    except Exception as e:
+        logger.error(f"Failed to launch self-healing for {symbol}: {e}")
+
 
