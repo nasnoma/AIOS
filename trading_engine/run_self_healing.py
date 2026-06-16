@@ -14,6 +14,8 @@ from pathlib import Path
 from loguru import logger
 
 PROJECT_ROOT = Path("/Users/nasir.noma/claude_projects/AIOS")
+sys.path.append(str(PROJECT_ROOT))
+from trading_engine.config import settings
 
 def main():
     parser = argparse.ArgumentParser(description="Run self-healing optimization on lost asset")
@@ -41,8 +43,8 @@ def main():
     except Exception as e:
         logger.error(f"Error calling downloader: {e}")
 
-    # Step 2: Run 10-iteration optimization
-    logger.info(f"2. Running 10-iteration weight optimization for {symbol}...")
+    # Step 2: Run weight optimization
+    logger.info(f"2. Running {settings.self_healing_iterations}-iteration weight optimization for {symbol}...")
     opt_cmd = [
         str(python_bin),
         "-m", "trading_engine.run_autoresearch_loop",
@@ -50,7 +52,7 @@ def main():
         "--timeframe", "5m",
         "--train-days", "180",
         "--val-days", "90",
-        "--iterations", "10",
+        "--iterations", str(settings.self_healing_iterations),
         "--symbol-specific"
     ]
     try:
