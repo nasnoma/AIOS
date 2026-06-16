@@ -611,6 +611,96 @@ def sync_with_broker() -> bool:
         portfolio = _load_state()
         changed = False
 
+        # If running in live mode and the local portfolio is completely empty (e.g. after container redeployment),
+        # attempt to reconstruct positions and closed trades from Bybit execution history.
+        if settings.trading_mode == "live" and not portfolio.positions and not portfolio.closed_trades:
+            logger.info("Local live state is empty. Reconstructing from Bybit execution history...")
+            try:
+                # Fetch Spot executions
+                spot_execs = []
+                try:
+                    bybit_spot = get_bybit_exchange()
+                    bybit_spot.options["defaultType"] = "spot"
+                    spot_execs = bybit_spot.fetch_my_trades(limit=100)
+                except Exception as e:
+                    logger.warning(f"Failed to fetch Spot executions for reconstruction: {e}")
+                    
+                # Fetch Linear executions
+                linear_execs = []
+                try:
+                    bybit_linear = get_bybit_exchange()
+                    bybit_linear.options["defaultType"] = "linear"
+                    linear_execs = bybit_linear.fetch_my_trades(limit=100)
+                except Exception as e:
+                    logger.warning(f"Failed to fetch Linear executions for reconstruction: {e}")
+
+                all_execs = spot_execs + linear_execs
+                if all_execs:
+                    by_symbol = {}
+                    for ex in all_execs:
+                        sym = ex["symbol"]
+                        by_symbol.setdefault(sym, []).append(ex)
+                        
+                    reconstructed_positions = []
+                    reconstructed_closed = []
+                    
+                    for sym, symbol_execs in by_symbol.items():
+                        symbol_execs.sort(key=lambda x: x["timestamp"])
+                        
+                        current_pos = None
+                        for ex in symbol_execs:
+                            side = ex["side"].lower()
+                            price = float(ex["price"])
+                            cost = float(ex["cost"])
+                            timestamp = int(ex["timestamp"])
+                            dt = datetime.fromtimestamp(timestamp / 1000, tz=timezone.utc).isoformat()
+                            
+                            fee_cost = 0.0
+                            if ex.get("fee") and isinstance(ex["fee"], dict):
+                                fee_cost = float(ex["fee"].get("cost", 0.0))
+                            
+                            if side == "buy":
+                                if current_pos is None:
+                                    current_pos = Position(
+                                        symbol=sym,
+                                        direction="long",
+                                        entry_price=price,
+                                        size_usd=cost,
+                                        stop_loss=round(price * 0.95, 4),      # 5% default SL fallback
+                                        take_profit=round(price * 1.10, 4),    # 10% default TP fallback
+                                        opened_at=dt,
+                                        status="open",
+                                        fee_usd=fee_cost
+                                    )
+                            elif side == "sell":
+                                if current_pos is not None:
+                                    current_pos.exit_price = price
+                                    current_pos.closed_at = dt
+                                    current_pos.fee_usd = (current_pos.fee_usd or 0.0) + fee_cost
+                                    
+                                    qty = current_pos.size_usd / current_pos.entry_price
+                                    pnl = (price - current_pos.entry_price) * qty
+                                    current_pos.pnl_usd = round(pnl, 4)
+                                    current_pos.status = "closed" if pnl >= 0 else "stopped"
+                                    
+                                    reconstructed_closed.append(current_pos)
+                                    current_pos = None
+                                    
+                        if current_pos is not None:
+                            reconstructed_positions.append(current_pos)
+                            
+                    portfolio.positions = reconstructed_positions
+                    portfolio.closed_trades = reconstructed_closed
+                    portfolio.win_count = sum(1 for t in reconstructed_closed if t.status == "closed")
+                    portfolio.loss_count = sum(1 for t in reconstructed_closed if t.status == "stopped")
+                    portfolio.total_pnl = sum(t.pnl_usd for t in reconstructed_closed if t.pnl_usd is not None)
+                    portfolio.total_fees = sum(t.fee_usd for t in reconstructed_closed if t.fee_usd is not None) + \
+                                           sum(p.fee_usd for p in reconstructed_positions if p.fee_usd is not None)
+                    changed = True
+                    logger.success(f"Reconstructed {len(portfolio.positions)} open positions and {len(portfolio.closed_trades)} closed trades from Bybit.")
+            except Exception as e:
+                logger.error(f"Failed to reconstruct portfolio from Bybit: {e}")
+
         # 1. Fetch Alpaca positions
         alpaca_fetched = False
         alpaca_symbols = set()
