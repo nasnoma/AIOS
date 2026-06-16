@@ -111,9 +111,13 @@ class TestTradeLifecycle:
         assert status["open_positions"] == 1
         assert len(live_trader._load_state().positions) == 1
 
+    @patch("trading_engine.market_hours.market_status")
     @patch("trading_engine.execution.live_trader.place_bybit_linear_order")
-    def test_open_trade_stock(self, mock_place_order, mock_alpaca_keys):
+    def test_open_trade_stock(self, mock_place_order, mock_market_status, mock_alpaca_keys):
         mock_place_order.return_value = 170.0
+        mock_status = MagicMock()
+        mock_status.is_open = True
+        mock_market_status.return_value = mock_status
         
         pos = live_trader.open_trade("AAPL", "long", 169.0, 1700.0, 150.0, 200.0)
         

@@ -66,6 +66,7 @@ class Settings(BaseSettings):
     atr_multiplier: float = 2.2
     rr_ratio: float = 2.5
     stop_loss_pct_max: float = 0.10
+    max_concurrent_positions: int = 20
 
     # ── Bounty Hunter ───────────────────────
     bounty_hunter_enabled: bool = True

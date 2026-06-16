@@ -158,20 +158,29 @@ def main():
     parser.add_argument("--timeframe", default="4h", help="Backtest timeframe")
     parser.add_argument("--train-days", type=int, default=180, help="Training period days")
     parser.add_argument("--val-days", type=int, default=90, help="Validation period days")
-    parser.add_argument("--target", choices=["crypto", "stock", "metal", "oil"], default="crypto", help="Weight optimization target")
+    parser.add_argument("--target", default="crypto", help="Weight optimization target")
+    parser.add_argument("--symbol-specific", action="store_true", help="Optimize and save weights specifically for a single symbol")
     args = parser.parse_args()
 
+    # Determine target name and file paths
+    target = args.target
+    if args.symbol_specific:
+        symbols_list = [s.strip() for s in args.symbols.split(",") if s.strip()]
+        if len(symbols_list) == 1:
+            target = symbols_list[0].replace("/", "_").replace(":", "_").upper()
+        else:
+            raise ValueError("Can only use --symbol-specific with a single symbol.")
+
     logger.info("================================================================================")
-    logger.info(f"       AUTONOMOUS TRADING ENGINE OPTIMIZATION LOOP ({args.target.upper()})")
+    logger.info(f"       AUTONOMOUS TRADING ENGINE OPTIMIZATION LOOP ({target.upper()})")
     logger.info("================================================================================")
     
-    target = args.target
     weights_file = PROJECT_ROOT / "trading_engine" / f"optimized_weights_{target}.json"
     history_file = PROJECT_ROOT / "trading_engine" / f"autoresearch_history_{target}.json"
 
     # Ensure baseline weights file exists
     if not weights_file.exists():
-        if target == "crypto":
+        if args.target == "crypto" or args.symbol_specific:
             old_weights_file = PROJECT_ROOT / "trading_engine" / "optimized_weights.json"
             if old_weights_file.exists():
                 import shutil

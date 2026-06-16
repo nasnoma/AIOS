@@ -245,7 +245,7 @@ def main():
     parser.add_argument("--train-days", type=int, default=180, help="Training period days")
     parser.add_argument("--val-days", type=int, default=90, help="Validation period days")
     parser.add_argument("--real-llm", action="store_true", help="Use real LLM API calls instead of mock fallback")
-    parser.add_argument("--target", choices=["crypto", "stock", "metal", "oil"], default="crypto", help="Weight optimization target")
+    parser.add_argument("--target", default="crypto", help="Weight optimization target")
     
     args = parser.parse_args()
     

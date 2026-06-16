@@ -82,10 +82,9 @@ def run_signal_cycle():
         if sig.final_action in ("BUY", "SELL") and settings.trading_mode != "signal_only":
             direction = "long" if sig.final_action == "BUY" else "short"
             
-            # Real-time safety validation
-            portfolio = trader._load_state()
-            if len(portfolio.open_positions) >= 5:
-                logger.warning(f"Trade execution blocked for {sig.symbol}: Max concurrent positions limit (5) reached.")
+            max_positions = settings.max_concurrent_positions
+            if len(portfolio.open_positions) >= max_positions:
+                logger.warning(f"Trade execution blocked for {sig.symbol}: Max concurrent positions limit ({max_positions}) reached.")
                 continue
             
             size_needed = sig.position_size_usd or 0
@@ -221,9 +220,9 @@ def run_bounty_hunter_cycle():
     if active_buys:
         logger.info(f"Bounty Hunter: placing {len(active_buys)} BUY trade(s)...")
         for b in active_buys:
-            portfolio = trader._load_state()
-            if len(portfolio.open_positions) >= 5:
-                logger.warning(f"Bounty Hunter execution blocked: Max concurrent positions (5) reached.")
+            max_positions = settings.max_concurrent_positions
+            if len(portfolio.open_positions) >= max_positions:
+                logger.warning(f"Bounty Hunter execution blocked: Max concurrent positions ({max_positions}) reached.")
                 break
             size_needed = b["position_size_usd"] or 20.0
             if portfolio.cash < size_needed:
@@ -245,9 +244,9 @@ def run_bounty_hunter_cycle():
     if active_sells:
         logger.info(f"Bounty Hunter: placing {len(active_sells)} SELL (short) trade(s)...")
         for s in active_sells:
-            portfolio = trader._load_state()
-            if len(portfolio.open_positions) >= 5:
-                logger.warning(f"Bounty Hunter execution blocked: Max concurrent positions (5) reached.")
+            max_positions = settings.max_concurrent_positions
+            if len(portfolio.open_positions) >= max_positions:
+                logger.warning(f"Bounty Hunter execution blocked: Max concurrent positions ({max_positions}) reached.")
                 break
             size_needed = s["position_size_usd"] or 20.0
             if portfolio.cash < size_needed:

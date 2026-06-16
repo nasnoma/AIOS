@@ -256,9 +256,10 @@ def evaluate(
             max_loss_usd=0, atr=atr,
         )
 
-    if open_positions >= 5:
+    max_positions = settings.max_concurrent_positions
+    if open_positions >= max_positions:
         return RiskDecision(
-            approved=False, reason=f"Max concurrent positions reached ({open_positions})",
+            approved=False, reason=f"Max concurrent positions reached ({open_positions} >= {max_positions})",
             position_size_pct=0, position_size_usd=0,
             entry_price=entry, stop_loss=0, take_profit=0,
             stop_loss_pct=0, take_profit_pct=0, risk_reward=0,
