@@ -1,0 +1,1630 @@
+[
+  {
+    "iteration": 0,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.3,
+      "volatility": 0.8,
+      "structure": 1.2,
+      "sentiment": 0.9,
+      "macro": 1.0
+    },
+    "fitness": 0.3159,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2136,
+          "win_rate": 29.1,
+          "profit_factor": 0.88,
+          "total_return_pct": -14.28,
+          "max_drawdown_pct": 7.86,
+          "sortino_ratio": -0.08938226868808043
+        },
+        "val": {
+          "total_trades": 1127,
+          "win_rate": 30.2,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.77,
+          "max_drawdown_pct": 3.57,
+          "sortino_ratio": -0.06376370223905589
+        },
+        "fitness_score": 0.3159
+      }
+    },
+    "reasoning": "Baseline configuration",
+    "improved": true
+  },
+  {
+    "iteration": 1,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.0,
+      "volume": 1.1,
+      "orderflow": 1.2,
+      "volatility": 1.4,
+      "structure": 1.0,
+      "sentiment": 1.2,
+      "macro": 1.0
+    },
+    "fitness": 0.3184,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2129,
+          "win_rate": 29.1,
+          "profit_factor": 0.88,
+          "total_return_pct": -14.26,
+          "max_drawdown_pct": 8.02,
+          "sortino_ratio": -0.08946362796711887
+        },
+        "val": {
+          "total_trades": 1133,
+          "win_rate": 30.2,
+          "profit_factor": 0.92,
+          "total_return_pct": -6.76,
+          "max_drawdown_pct": 3.29,
+          "sortino_ratio": -0.06211217092195502
+        },
+        "fitness_score": 0.3184
+      }
+    },
+    "reasoning": "The current weights show trend and orderflow are overweighted, while volatility and sentiment are underweighted. Given the low win rate and negative total return, increasing the weight of volatility to reduce risk and decreasing trend to avoid overfitting to trends may improve performance. Also, increasing sentiment weight could help in making more informed decisions. The momentum and structure weights seem balanced but could be slightly reduced to compensate for the increases elsewhere.",
+    "improved": true
+  },
+  {
+    "iteration": 2,
+    "weights": {
+      "trend": 1.05,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.15,
+      "volatility": 1.1,
+      "structure": 1.2,
+      "sentiment": 1.0,
+      "macro": 1.0
+    },
+    "fitness": 0.3139,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2133,
+          "win_rate": 29.1,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.36,
+          "max_drawdown_pct": 8.05,
+          "sortino_ratio": -0.09051133831485714
+        },
+        "val": {
+          "total_trades": 1138,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.82,
+          "max_drawdown_pct": 3.37,
+          "sortino_ratio": -0.06301514727089676
+        },
+        "fitness_score": 0.3139
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on volatility and sentiment, while momentum and structure are underweighted. Given the low win rates and negative total return percentages, it's likely that the strategy is over-relying on volatility and sentiment. To improve, we should reduce the weights of volatility and sentiment, and increase the weights of momentum and structure to achieve a better balance. The trend and orderflow weights can be slightly adjusted to maintain their current influence.",
+    "improved": false
+  },
+  {
+    "iteration": 3,
+    "weights": {
+      "trend": 1.0,
+      "momentum": 1.3,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.2,
+      "structure": 1.2,
+      "sentiment": 1.1,
+      "macro": 1.0
+    },
+    "fitness": 0.3132,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2136,
+          "win_rate": 29.2,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.39,
+          "max_drawdown_pct": 8.05,
+          "sortino_ratio": -0.0905047813606476
+        },
+        "val": {
+          "total_trades": 1138,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.95,
+          "max_drawdown_pct": 3.44,
+          "sortino_ratio": -0.06583144315885778
+        },
+        "fitness_score": 0.3132
+      }
+    },
+    "reasoning": "The current weights show a slight overweighting in volatility and sentiment, while trend and orderflow are also slightly above average. Momentum, volume, structure, and macro are at or below average. Given the relatively poor performance metrics, including a low win rate and negative total return, it's reasonable to adjust the weights to emphasize momentum and structure, which could help improve the win rate and reduce drawdown. Decreasing the weight on volatility might also help, as its high weight hasn't led to better performance. The new weights aim to balance these factors while keeping all weights within the specified range.",
+    "improved": false
+  },
+  {
+    "iteration": 4,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.2,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.1,
+      "structure": 1.2,
+      "sentiment": 1.0,
+      "macro": 1.0
+    },
+    "fitness": 0.3132,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2134,
+          "win_rate": 29.0,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.47,
+          "max_drawdown_pct": 8.1,
+          "sortino_ratio": -0.09192373277032825
+        },
+        "val": {
+          "total_trades": 1138,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.89,
+          "max_drawdown_pct": 3.45,
+          "sortino_ratio": -0.06450312776710297
+        },
+        "fitness_score": 0.3132
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on volatility and sentiment, while momentum and structure are at baseline. Given the negative total return and low profit factor, it seems that the strategy is overemphasizing riskier factors. To improve, I will reduce the weight on volatility and increase the weight on trend and momentum to focus on more stable growth. I will also slightly increase the weight on structure to improve overall market understanding.",
+    "improved": false
+  },
+  {
+    "iteration": 5,
+    "weights": {
+      "trend": 0.9,
+      "momentum": 1.3,
+      "volume": 1.1,
+      "orderflow": 1.1,
+      "volatility": 1.2,
+      "structure": 1.2,
+      "sentiment": 1.1,
+      "macro": 1.0
+    },
+    "fitness": 0.3136,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2137,
+          "win_rate": 29.1,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.54,
+          "max_drawdown_pct": 8.14,
+          "sortino_ratio": -0.09238801364657127
+        },
+        "val": {
+          "total_trades": 1134,
+          "win_rate": 30.2,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.79,
+          "max_drawdown_pct": 3.29,
+          "sortino_ratio": -0.06267021845998536
+        },
+        "fitness_score": 0.3136
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on volatility and sentiment, with trend and orderflow also being overweighted. However, the optimization history suggests that reducing trend and increasing momentum may lead to improvement. The poor performance metrics, such as a low win rate and negative total return, indicate a need for a more balanced approach. Therefore, I propose reducing the weights of trend and volatility, and increasing the weights of momentum and structure to achieve a more balanced portfolio.",
+    "improved": false
+  },
+  {
+    "iteration": 6,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.3,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.2,
+      "structure": 1.3,
+      "sentiment": 1.1,
+      "macro": 1.0
+    },
+    "fitness": 0.3134,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2138,
+          "win_rate": 29.1,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.42,
+          "max_drawdown_pct": 8.09,
+          "sortino_ratio": -0.09085315766370175
+        },
+        "val": {
+          "total_trades": 1137,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.89,
+          "max_drawdown_pct": 3.39,
+          "sortino_ratio": -0.06462077094263988
+        },
+        "fitness_score": 0.3134
+      }
+    },
+    "reasoning": "The current weights show that volatility and sentiment are overweighted, while momentum and structure are underweighted. The optimization history suggests that reducing volatility and increasing momentum and structure weights may lead to improved fitness scores. The new weights aim to balance the agents, with a slight emphasis on momentum and structure to improve the win rate and profit factor.",
+    "improved": false
+  },
+  {
+    "iteration": 7,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.1,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.2,
+      "structure": 1.2,
+      "sentiment": 1.1,
+      "macro": 1.0
+    },
+    "fitness": 0.3137,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2134,
+          "win_rate": 29.1,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.43,
+          "max_drawdown_pct": 8.06,
+          "sortino_ratio": -0.09135116866244808
+        },
+        "val": {
+          "total_trades": 1138,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.82,
+          "max_drawdown_pct": 3.37,
+          "sortino_ratio": -0.06301514727089676
+        },
+        "fitness_score": 0.3137
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on volatility and sentiment, while momentum and macro are at baseline. Given the lack of improvement in recent iterations, a slight adjustment towards trend and structure, while reducing the emphasis on volatility, may help. The goal is to find a balance that improves the overall fitness score, considering the metrics provided.",
+    "improved": false
+  },
+  {
+    "iteration": 8,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.3,
+      "volume": 1.1,
+      "orderflow": 1.2,
+      "volatility": 1.2,
+      "structure": 1.0,
+      "sentiment": 1.1,
+      "macro": 1.1
+    },
+    "fitness": 0.315,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2137,
+          "win_rate": 28.9,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.76,
+          "max_drawdown_pct": 8.28,
+          "sortino_ratio": -0.09533460854462862
+        },
+        "val": {
+          "total_trades": 1135,
+          "win_rate": 30.2,
+          "profit_factor": 0.92,
+          "total_return_pct": -6.73,
+          "max_drawdown_pct": 3.34,
+          "sortino_ratio": -0.0613299823271396
+        },
+        "fitness_score": 0.315
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on volatility and sentiment, while momentum and macro are at baseline. Given the no improvement outcomes in recent iterations, a subtle adjustment to reduce volatility's weight and increase momentum's weight could potentially improve the fitness score. Additionally, a slight increase in the weight of trend might help, as it has shown some promise in earlier iterations. The goal is to find a balance that enhances the overall performance without overemphasizing any single agent.",
+    "improved": false
+  },
+  {
+    "iteration": 9,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.2,
+      "volume": 1.0,
+      "orderflow": 1.0,
+      "volatility": 1.1,
+      "structure": 1.2,
+      "sentiment": 1.0,
+      "macro": 1.1
+    },
+    "fitness": 0.3133,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2134,
+          "win_rate": 29.1,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.41,
+          "max_drawdown_pct": 8.05,
+          "sortino_ratio": -0.0910293384342654
+        },
+        "val": {
+          "total_trades": 1139,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.91,
+          "max_drawdown_pct": 3.45,
+          "sortino_ratio": -0.06482599980254618
+        },
+        "fitness_score": 0.3133
+      }
+    },
+    "reasoning": "The current weights seem to overemphasize volatility and sentiment, while underemphasizing trend and momentum. The optimization history suggests that reducing the weight of volatility and increasing the weight of trend and momentum may lead to improved performance. Additionally, the win rate and profit factor in the validation set are higher than in the training set, indicating potential overfitting. Reducing the weight of orderflow and increasing the weight of structure may help to mitigate this issue.",
+    "improved": false
+  },
+  {
+    "iteration": 10,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.2,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.3,
+      "structure": 1.1,
+      "sentiment": 1.2,
+      "macro": 1.0
+    },
+    "fitness": 0.3137,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2134,
+          "win_rate": 29.0,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.45,
+          "max_drawdown_pct": 8.09,
+          "sortino_ratio": -0.09160196802031846
+        },
+        "val": {
+          "total_trades": 1137,
+          "win_rate": 30.2,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.8,
+          "max_drawdown_pct": 3.37,
+          "sortino_ratio": -0.06269039964013588
+        },
+        "fitness_score": 0.3137
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on volatility and sentiment, while momentum and structure are relatively neutral. The optimization history suggests that increasing trend and momentum weights may lead to improved fitness scores, as seen in iterations 0 and 1. However, the most recent iterations indicate that over-emphasizing any single agent may not yield significant improvements. A balanced approach, slightly increasing trend and momentum while maintaining a moderate emphasis on volatility and sentiment, may lead to a better composite fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 11,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.3,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.1,
+      "structure": 1.0,
+      "sentiment": 1.1,
+      "macro": 1.0
+    },
+    "fitness": 0.3114,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2140,
+          "win_rate": 28.9,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.92,
+          "max_drawdown_pct": 8.43,
+          "sortino_ratio": -0.09716870644848201
+        },
+        "val": {
+          "total_trades": 1134,
+          "win_rate": 30.2,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.92,
+          "max_drawdown_pct": 3.57,
+          "sortino_ratio": -0.06559925792017395
+        },
+        "fitness_score": 0.3114
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on volatility and sentiment, with trend, momentum, and volume being relatively neutral. However, the optimization history suggests that attempts to adjust these weights have not yielded significant improvements. Given the lack of clear direction from the optimization history, a slight adjustment towards giving more weight to trend and momentum, while reducing the emphasis on volatility, may help improve the fitness score. This adjustment is based on the premise that trend and momentum are fundamental drivers of market movement, and their increased weight may help capture more consistent trading opportunities.",
+    "improved": false
+  },
+  {
+    "iteration": 12,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.3,
+      "volume": 0.8,
+      "orderflow": 1.1,
+      "volatility": 1.2,
+      "structure": 1.0,
+      "sentiment": 1.1,
+      "macro": 0.9
+    },
+    "fitness": 0.3163,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2118,
+          "win_rate": 29.1,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.3,
+          "max_drawdown_pct": 8.01,
+          "sortino_ratio": -0.09068494416108855
+        },
+        "val": {
+          "total_trades": 1113,
+          "win_rate": 30.4,
+          "profit_factor": 0.92,
+          "total_return_pct": -6.59,
+          "max_drawdown_pct": 3.49,
+          "sortino_ratio": -0.06041920286663386
+        },
+        "fitness_score": 0.3163
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on volatility and sentiment, but the optimization history suggests that changes to these weights have not significantly improved the fitness score. The win rate and profit factor are relatively low, indicating a need for improvement in identifying profitable trades. The max drawdown is relatively low, suggesting that risk management is adequate. To improve the composite fitness score, I propose increasing the weight on trend and momentum, as these factors are often key drivers of price movement, and decreasing the weight on volume and macro, as these factors may be less relevant in this context.",
+    "improved": false
+  },
+  {
+    "iteration": 13,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.2,
+      "volume": 1.3,
+      "orderflow": 1.1,
+      "volatility": 1.1,
+      "structure": 1.2,
+      "sentiment": 1.1,
+      "macro": 1.0
+    },
+    "fitness": 0.3138,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2134,
+          "win_rate": 29.1,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.41,
+          "max_drawdown_pct": 8.05,
+          "sortino_ratio": -0.0910293384342654
+        },
+        "val": {
+          "total_trades": 1138,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.82,
+          "max_drawdown_pct": 3.37,
+          "sortino_ratio": -0.06301514727089676
+        },
+        "fitness_score": 0.3138
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on volatility and sentiment, while trend and momentum are relatively balanced. However, the optimization history suggests that increasing trend and momentum weights has not led to significant improvements. The low win rate and negative total return percentage across all metrics indicate a need for a more balanced approach. Reducing the weight on volatility, which has one of the highest current weights, and increasing the weight on volume, which has a relatively low weight, might help improve the overall performance. Additionally, a slight increase in the weight on structure could potentially enhance the system's ability to adapt to different market conditions.",
+    "improved": false
+  },
+  {
+    "iteration": 14,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.3,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.1,
+      "structure": 1.2,
+      "sentiment": 1.1,
+      "macro": 1.0
+    },
+    "fitness": 0.3121,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2137,
+          "win_rate": 28.9,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.76,
+          "max_drawdown_pct": 8.28,
+          "sortino_ratio": -0.09533460854462862
+        },
+        "val": {
+          "total_trades": 1138,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.94,
+          "max_drawdown_pct": 3.51,
+          "sortino_ratio": -0.06542014992861771
+        },
+        "fitness_score": 0.3121
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on volatility and sentiment, but the overall performance metrics suggest that the algorithm is underperforming. The optimization history indicates that small changes to the weights have not resulted in significant improvements. To improve the composite fitness score, I propose increasing the weights of trend and momentum, which are currently underweighted, and decreasing the weight of volatility, which may be contributing to the algorithm's high drawdown. I also suggest increasing the weight of structure, which may help improve the algorithm's win rate.",
+    "improved": false
+  },
+  {
+    "iteration": 15,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.4,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.1,
+      "structure": 1.0,
+      "sentiment": 1.1,
+      "macro": 1.0
+    },
+    "fitness": 0.3122,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2132,
+          "win_rate": 28.9,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.71,
+          "max_drawdown_pct": 8.24,
+          "sortino_ratio": -0.0951134524599087
+        },
+        "val": {
+          "total_trades": 1129,
+          "win_rate": 30.2,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.87,
+          "max_drawdown_pct": 3.53,
+          "sortino_ratio": -0.06492131519857029
+        },
+        "fitness_score": 0.3122
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on volatility and sentiment, but overall, the distribution is relatively balanced. However, the performance metrics indicate a low win rate and negative total return percentage, suggesting that the strategy is not effectively capturing trends or momentum. The optimization history shows minimal improvement across iterations, indicating that the current weight adjustments are not significantly impacting the fitness score. To improve, I propose increasing the weight on trend and momentum while slightly reducing the weight on volatility, as these factors seem underutilized given the strategy's poor trend capture and negative returns.",
+    "improved": false
+  },
+  {
+    "iteration": 16,
+    "weights": {
+      "trend": 1.5,
+      "momentum": 1.4,
+      "volume": 0.8,
+      "orderflow": 1.1,
+      "volatility": 1.6,
+      "structure": 1.3,
+      "sentiment": 1.2,
+      "macro": 1.1
+    },
+    "fitness": 0.3121,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2033,
+          "win_rate": 29.3,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.11,
+          "max_drawdown_pct": 8.3,
+          "sortino_ratio": -0.09363842204840152
+        },
+        "val": {
+          "total_trades": 1085,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.71,
+          "max_drawdown_pct": 3.55,
+          "sortino_ratio": -0.06667515295103754
+        },
+        "fitness_score": 0.3121
+      }
+    },
+    "reasoning": "Based on the optimization history, the trend and volatility agents have shown potential for improvement when overweighted. The momentum and structure agents have also shown promise when adjusted. However, the volume and orderflow agents seem to be less impactful. The sentiment and macro agents have been relatively stable. Given the current metrics, a slight increase in trend and volatility, along with adjustments to momentum and structure, could potentially improve the composite fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 17,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.3,
+      "volume": 1.1,
+      "orderflow": 1.1,
+      "volatility": 1.1,
+      "structure": 1.2,
+      "sentiment": 1.0,
+      "macro": 1.1
+    },
+    "fitness": 0.3132,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2134,
+          "win_rate": 29.0,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.45,
+          "max_drawdown_pct": 8.09,
+          "sortino_ratio": -0.09160196802031846
+        },
+        "val": {
+          "total_trades": 1138,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.89,
+          "max_drawdown_pct": 3.45,
+          "sortino_ratio": -0.06450312776710297
+        },
+        "fitness_score": 0.3132
+      }
+    },
+    "reasoning": "The current weights seem to overemphasize volatility and sentiment, while underemphasizing trend and momentum. The optimization history suggests that increasing trend and momentum weights may lead to improved fitness scores. Therefore, a new set of weights is proposed with increased trend and momentum, and decreased volatility and sentiment.",
+    "improved": false
+  },
+  {
+    "iteration": 18,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.2,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.1,
+      "structure": 1.3,
+      "sentiment": 1.0,
+      "macro": 1.1
+    },
+    "fitness": 0.3133,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2134,
+          "win_rate": 29.1,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.43,
+          "max_drawdown_pct": 8.06,
+          "sortino_ratio": -0.09135116866244808
+        },
+        "val": {
+          "total_trades": 1139,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.91,
+          "max_drawdown_pct": 3.45,
+          "sortino_ratio": -0.06482599980254618
+        },
+        "fitness_score": 0.3133
+      }
+    },
+    "reasoning": "The current agent weights show a slight bias towards volatility and sentiment, while the optimization history suggests that increasing trend and momentum weights may lead to improved fitness scores. However, the last few iterations indicate that over-emphasizing trend and momentum may not yield significant improvements. A balanced approach, reducing the weight on volatility and increasing the weight on structure, while maintaining a moderate emphasis on trend and momentum, could potentially lead to a better composite fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 19,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.3,
+      "volume": 0.9,
+      "orderflow": 1.1,
+      "volatility": 1.2,
+      "structure": 1.1,
+      "sentiment": 1.1,
+      "macro": 0.9
+    },
+    "fitness": 0.3122,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2131,
+          "win_rate": 28.9,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.65,
+          "max_drawdown_pct": 8.23,
+          "sortino_ratio": -0.0944429507643985
+        },
+        "val": {
+          "total_trades": 1121,
+          "win_rate": 30.2,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.86,
+          "max_drawdown_pct": 3.56,
+          "sortino_ratio": -0.06537971406181717
+        },
+        "fitness_score": 0.3122
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on volatility and sentiment, but overall, the weights are relatively balanced. However, the optimization history suggests that increasing trend and momentum weights while slightly decreasing others may lead to improved performance. The goal is to find a balance that maximizes the fitness score, considering the metrics provided. Given the lack of significant improvement in recent iterations, a moderate adjustment is proposed to avoid overfitting while exploring potential improvements.",
+    "improved": false
+  },
+  {
+    "iteration": 20,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.2,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.2,
+      "structure": 1.1,
+      "sentiment": 1.1,
+      "macro": 1.0
+    },
+    "fitness": 0.3125,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2137,
+          "win_rate": 28.9,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.76,
+          "max_drawdown_pct": 8.28,
+          "sortino_ratio": -0.09533460854462862
+        },
+        "val": {
+          "total_trades": 1137,
+          "win_rate": 30.2,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.84,
+          "max_drawdown_pct": 3.43,
+          "sortino_ratio": -0.06361122292796553
+        },
+        "fitness_score": 0.3125
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on volatility and sentiment, but the optimization history suggests that increasing trend and momentum weights may improve the fitness score. The val metrics show a slightly better win rate and profit factor compared to the train metrics, indicating potential overfitting. To address this, I will slightly decrease the weights of volatility and sentiment while increasing the weights of trend and momentum. The volume and orderflow weights will be adjusted to maintain a balance between market activity and trading signals.",
+    "improved": false
+  },
+  {
+    "iteration": 21,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.2,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.2,
+      "structure": 1.2,
+      "sentiment": 1.1,
+      "macro": 1.0
+    },
+    "fitness": 0.3136,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2134,
+          "win_rate": 29.0,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.47,
+          "max_drawdown_pct": 8.1,
+          "sortino_ratio": -0.09192373277032825
+        },
+        "val": {
+          "total_trades": 1137,
+          "win_rate": 30.2,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.8,
+          "max_drawdown_pct": 3.37,
+          "sortino_ratio": -0.06269039964013588
+        },
+        "fitness_score": 0.3136
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on volatility and sentiment, but overall, the weights are relatively balanced. However, the performance metrics indicate a low win rate and negative total return percentage, suggesting that the strategy is not capturing trends effectively. The optimization history shows that increasing the trend weight has not led to significant improvements. Given this, a new approach could be to slightly decrease the volatility weight, which has the highest current weight, and redistribute it to trend and momentum, which could help in capturing trends more effectively. Additionally, a slight increase in the structure weight could help in better market understanding.",
+    "improved": false
+  },
+  {
+    "iteration": 22,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.3,
+      "volume": 1.1,
+      "orderflow": 1.2,
+      "volatility": 1.1,
+      "structure": 1.1,
+      "sentiment": 1.0,
+      "macro": 1.2
+    },
+    "fitness": 0.3127,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2133,
+          "win_rate": 29.0,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.59,
+          "max_drawdown_pct": 8.18,
+          "sortino_ratio": -0.09348359785615308
+        },
+        "val": {
+          "total_trades": 1138,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.9,
+          "max_drawdown_pct": 3.46,
+          "sortino_ratio": -0.06459013137855639
+        },
+        "fitness_score": 0.3127
+      }
+    },
+    "reasoning": "The current weights seem to overemphasize volatility and sentiment, while underemphasizing trend and momentum. The optimization history suggests that increasing trend and momentum weights, while decreasing volatility and sentiment weights, may lead to improved performance. Additionally, the volume and orderflow weights appear to be relatively stable, so minor adjustments will be made to these. The macro weight will be increased slightly to account for its potential impact on overall market conditions.",
+    "improved": false
+  },
+  {
+    "iteration": 23,
+    "weights": {
+      "trend": 1.8,
+      "momentum": 1.7,
+      "volume": 0.8,
+      "orderflow": 0.9,
+      "volatility": 1.1,
+      "structure": 1.4,
+      "sentiment": 1.0,
+      "macro": 0.7
+    },
+    "fitness": 0.323,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2049,
+          "win_rate": 29.6,
+          "profit_factor": 0.89,
+          "total_return_pct": -13.08,
+          "max_drawdown_pct": 7.15,
+          "sortino_ratio": -0.07892949426901628
+        },
+        "val": {
+          "total_trades": 1093,
+          "win_rate": 30.3,
+          "profit_factor": 0.92,
+          "total_return_pct": -6.57,
+          "max_drawdown_pct": 3.57,
+          "sortino_ratio": -0.06260908838268861
+        },
+        "fitness_score": 0.323
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on volatility and sentiment, but overall, the distribution is relatively even. However, the performance metrics indicate a low win rate and negative total return percentage, suggesting that the current weighting strategy may not be effective. To improve the composite fitness score, I propose adjusting the weights to focus more on trend and momentum, which are often key drivers of market movements, while also slightly increasing the weight on structure to help with risk management. The weights on volume, orderflow, and macro will be decreased slightly to reduce their influence, as their current performance metrics do not justify a significant allocation.",
+    "improved": true
+  },
+  {
+    "iteration": 24,
+    "weights": {
+      "trend": 1.6,
+      "momentum": 1.5,
+      "volume": 1.0,
+      "orderflow": 0.9,
+      "volatility": 1.1,
+      "structure": 1.3,
+      "sentiment": 1.0,
+      "macro": 0.9
+    },
+    "fitness": 0.3125,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2133,
+          "win_rate": 29.0,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.67,
+          "max_drawdown_pct": 8.23,
+          "sortino_ratio": -0.09444037975716282
+        },
+        "val": {
+          "total_trades": 1132,
+          "win_rate": 30.2,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.82,
+          "max_drawdown_pct": 3.63,
+          "sortino_ratio": -0.06351251868547722
+        },
+        "fitness_score": 0.3125
+      }
+    },
+    "reasoning": "The current weights show trend and momentum being overweighted, while volume and macro are underweighted. The optimization history suggests that increasing trend and momentum weights led to the current improved fitness score. However, to further improve, it's reasonable to slightly adjust the weights to balance the contributions. Decreasing trend and momentum slightly, while increasing volume and macro, could lead to a more balanced and potentially improved performance.",
+    "improved": false
+  },
+  {
+    "iteration": 26,
+    "weights": {
+      "trend": 1.6,
+      "momentum": 1.5,
+      "volume": 1.2,
+      "orderflow": 1.0,
+      "volatility": 1.1,
+      "structure": 1.2,
+      "sentiment": 1.0,
+      "macro": 1.2
+    },
+    "fitness": 0.3127,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2133,
+          "win_rate": 29.0,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.59,
+          "max_drawdown_pct": 8.18,
+          "sortino_ratio": -0.09348359785615308
+        },
+        "val": {
+          "total_trades": 1138,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.9,
+          "max_drawdown_pct": 3.46,
+          "sortino_ratio": -0.06459013137855639
+        },
+        "fitness_score": 0.3127
+      }
+    },
+    "reasoning": "The current weights seem to favor trend and momentum, with trend and momentum having the highest weights at 1.8 and 1.7 respectively. However, the optimization history suggests that reducing these weights and increasing the weights of other agents such as volume and macro may lead to improved performance. The fact that iteration 23 with higher trend and momentum weights resulted in an improved fitness score suggests that these agents are still important, but may be overemphasized. A more balanced approach may be beneficial, with a slight emphasis on trend and momentum, and increased weights for volume and macro to capture more market dynamics.",
+    "improved": false
+  },
+  {
+    "iteration": 27,
+    "weights": {
+      "trend": 1.6,
+      "momentum": 1.5,
+      "volume": 1.2,
+      "orderflow": 1.0,
+      "volatility": 1.2,
+      "structure": 1.3,
+      "sentiment": 1.1,
+      "macro": 1.1
+    },
+    "fitness": 0.3132,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2135,
+          "win_rate": 29.0,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.47,
+          "max_drawdown_pct": 8.09,
+          "sortino_ratio": -0.09187982220773627
+        },
+        "val": {
+          "total_trades": 1138,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.89,
+          "max_drawdown_pct": 3.45,
+          "sortino_ratio": -0.06450312776710297
+        },
+        "fitness_score": 0.3132
+      }
+    },
+    "reasoning": "The current weights have trend and momentum overweighted, while volume and macro are underweighted. The optimization history shows that increasing trend and momentum weights led to an improved fitness score in iteration 23. However, the subsequent iterations with similar weight distributions did not yield further improvements. To explore alternative weight combinations, I propose reducing the trend and momentum weights slightly, increasing the volume weight, and adjusting the other weights to maintain a balanced distribution.",
+    "improved": false
+  },
+  {
+    "iteration": 28,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.3,
+      "volume": 1.2,
+      "orderflow": 1.0,
+      "volatility": 1.1,
+      "structure": 1.3,
+      "sentiment": 1.0,
+      "macro": 1.1
+    },
+    "fitness": 0.3133,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2134,
+          "win_rate": 29.1,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.41,
+          "max_drawdown_pct": 8.05,
+          "sortino_ratio": -0.0910293384342654
+        },
+        "val": {
+          "total_trades": 1139,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.91,
+          "max_drawdown_pct": 3.45,
+          "sortino_ratio": -0.06482599980254618
+        },
+        "fitness_score": 0.3133
+      }
+    },
+    "reasoning": "The current set of weights has a high trend and momentum weight, which may be contributing to the low win rate and profit factor. The volume and macro weights are underweighted, which may be causing the algorithm to miss important trading opportunities. The orderflow and volatility weights are relatively balanced. To improve the composite fitness score, I propose increasing the volume and macro weights, while decreasing the trend and momentum weights. This should help to improve the win rate and profit factor, while also reducing the max drawdown.",
+    "improved": false
+  },
+  {
+    "iteration": 29,
+    "weights": {
+      "trend": 1.5,
+      "momentum": 1.4,
+      "volume": 1.1,
+      "orderflow": 0.9,
+      "volatility": 1.0,
+      "structure": 1.3,
+      "sentiment": 1.0,
+      "macro": 1.2
+    },
+    "fitness": 0.3158,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2133,
+          "win_rate": 29.1,
+          "profit_factor": 0.88,
+          "total_return_pct": -14.26,
+          "max_drawdown_pct": 7.91,
+          "sortino_ratio": -0.08920229176374354
+        },
+        "val": {
+          "total_trades": 1139,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.91,
+          "max_drawdown_pct": 3.45,
+          "sortino_ratio": -0.06482599980254618
+        },
+        "fitness_score": 0.3158
+      }
+    },
+    "reasoning": "The current weights show trend and momentum are overweighted, while macro and volume are underweighted. The optimization history suggests that increasing the weights of volume and macro, while slightly decreasing the weights of trend and momentum, could lead to improved performance. The new weights aim to strike a balance between these agents to enhance the composite fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 30,
+    "weights": {
+      "trend": 1.6,
+      "momentum": 1.5,
+      "volume": 1.0,
+      "orderflow": 0.9,
+      "volatility": 1.1,
+      "structure": 1.3,
+      "sentiment": 1.0,
+      "macro": 0.9
+    },
+    "fitness": 0.3125,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2133,
+          "win_rate": 29.0,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.67,
+          "max_drawdown_pct": 8.23,
+          "sortino_ratio": -0.09444037975716282
+        },
+        "val": {
+          "total_trades": 1132,
+          "win_rate": 30.2,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.82,
+          "max_drawdown_pct": 3.63,
+          "sortino_ratio": -0.06351251868547722
+        },
+        "fitness_score": 0.3125
+      }
+    },
+    "reasoning": "Based on the optimization history, the current set of weights with trend and momentum being overweighted at 1.8 and 1.7 respectively, and volume and macro being underweighted at 0.8 and 0.7, has resulted in the highest fitness score of 0.323. The metrics suggest that trend and momentum are significant contributors to the performance. However, to further improve, a slight adjustment to reduce the overweighting on trend and momentum, and increase the weighting on volume and macro could potentially lead to better performance. The val metrics show a slightly better win rate and profit factor compared to the train metrics, indicating some level of overfitting, thus a balanced approach is necessary.",
+    "improved": false
+  },
+  {
+    "iteration": 31,
+    "weights": {
+      "trend": 1.6,
+      "momentum": 1.5,
+      "volume": 1.1,
+      "orderflow": 1.0,
+      "volatility": 1.2,
+      "structure": 1.3,
+      "sentiment": 1.1,
+      "macro": 1.2
+    },
+    "fitness": 0.3128,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2130,
+          "win_rate": 29.0,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.57,
+          "max_drawdown_pct": 8.18,
+          "sortino_ratio": -0.09343582409337933
+        },
+        "val": {
+          "total_trades": 1137,
+          "win_rate": 30.2,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.88,
+          "max_drawdown_pct": 3.45,
+          "sortino_ratio": -0.06419861992023727
+        },
+        "fitness_score": 0.3128
+      }
+    },
+    "reasoning": "The current weights show trend and momentum are overweighted, while volume and macro are underweighted. The optimization history suggests that increasing trend and momentum weights led to an improved fitness score in iteration 23. However, subsequent iterations with similar weights did not yield further improvements. To explore new possibilities, I will slightly reduce the trend and momentum weights, increase the volume and macro weights, and adjust other weights to maintain a balanced distribution.",
+    "improved": false
+  },
+  {
+    "iteration": 32,
+    "weights": {
+      "trend": 2.0,
+      "momentum": 1.9,
+      "volume": 0.9,
+      "orderflow": 1.0,
+      "volatility": 1.2,
+      "structure": 1.3,
+      "sentiment": 1.1,
+      "macro": 0.8
+    },
+    "fitness": 0.3166,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2115,
+          "win_rate": 29.1,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.29,
+          "max_drawdown_pct": 8.03,
+          "sortino_ratio": -0.0908960914573663
+        },
+        "val": {
+          "total_trades": 1111,
+          "win_rate": 30.4,
+          "profit_factor": 0.92,
+          "total_return_pct": -6.5,
+          "max_drawdown_pct": 3.42,
+          "sortino_ratio": -0.05861516039887866
+        },
+        "fitness_score": 0.3166
+      }
+    },
+    "reasoning": "The current weights show trend and momentum as overweighted, while macro and volume are underweighted. Given the recent improvement in fitness score at iteration 23, it seems that increasing the weights of trend and momentum while slightly decreasing others could lead to further improvement. However, to avoid overfitting, a balanced approach is necessary. Thus, adjusting the weights to maintain a balance while slightly favoring trend and momentum could yield better results.",
+    "improved": false
+  },
+  {
+    "iteration": 33,
+    "weights": {
+      "trend": 1.5,
+      "momentum": 1.4,
+      "volume": 1.2,
+      "orderflow": 1.0,
+      "volatility": 1.1,
+      "structure": 1.5,
+      "sentiment": 1.2,
+      "macro": 1.1
+    },
+    "fitness": 0.3133,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2134,
+          "win_rate": 29.1,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.41,
+          "max_drawdown_pct": 8.05,
+          "sortino_ratio": -0.0910293384342654
+        },
+        "val": {
+          "total_trades": 1139,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.91,
+          "max_drawdown_pct": 3.45,
+          "sortino_ratio": -0.06482599980254618
+        },
+        "fitness_score": 0.3133
+      }
+    },
+    "reasoning": "The current weights have trend and momentum overweighted, while volume and macro are underweighted. The optimization history suggests that increasing trend and momentum weights has led to improved fitness scores in the past. However, the recent iterations have shown no improvement, indicating potential overfitting to these two agents. To balance the weights and potentially improve the composite fitness score, I propose reducing trend and momentum weights, and increasing volume and macro weights. The new weights will also slightly increase structure and sentiment, as they have shown consistent performance across iterations.",
+    "improved": false
+  },
+  {
+    "iteration": 34,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.1,
+      "volume": 1.4,
+      "orderflow": 1.3,
+      "volatility": 1.0,
+      "structure": 1.2,
+      "sentiment": 1.1,
+      "macro": 1.5
+    },
+    "fitness": 0.3138,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2134,
+          "win_rate": 29.1,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.41,
+          "max_drawdown_pct": 8.05,
+          "sortino_ratio": -0.0910293384342654
+        },
+        "val": {
+          "total_trades": 1138,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.82,
+          "max_drawdown_pct": 3.37,
+          "sortino_ratio": -0.06301514727089676
+        },
+        "fitness_score": 0.3138
+      }
+    },
+    "reasoning": "The trend and momentum agents are currently overweighted, while the macro agent is underweighted. The volume and orderflow agents have relatively low weights. To improve the composite fitness score, a more balanced approach is proposed, with increased weights for the volume, orderflow, and macro agents, and decreased weights for the trend and momentum agents. The volatility and structure agents will be adjusted slightly to maintain a balanced portfolio.",
+    "improved": false
+  },
+  {
+    "iteration": 35,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.1,
+      "volume": 1.3,
+      "orderflow": 1.2,
+      "volatility": 1.0,
+      "structure": 1.5,
+      "sentiment": 1.4,
+      "macro": 1.3
+    },
+    "fitness": 0.3138,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2134,
+          "win_rate": 29.1,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.41,
+          "max_drawdown_pct": 8.05,
+          "sortino_ratio": -0.0910293384342654
+        },
+        "val": {
+          "total_trades": 1138,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.82,
+          "max_drawdown_pct": 3.37,
+          "sortino_ratio": -0.06301514727089676
+        },
+        "fitness_score": 0.3138
+      }
+    },
+    "reasoning": "The current weights show trend and momentum being overweighted, while macro and volume are underweighted. The optimization history suggests that increasing the weights of trend and momentum does not necessarily lead to improvement. Instead, a more balanced approach with a slight emphasis on structure and sentiment, which have shown some positive impact in previous iterations, might be beneficial. The new weights aim to distribute the influence more evenly while slightly favoring structure and sentiment.",
+    "improved": false
+  },
+  {
+    "iteration": 36,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.3,
+      "volume": 1.1,
+      "orderflow": 1.0,
+      "volatility": 1.2,
+      "structure": 1.3,
+      "sentiment": 1.1,
+      "macro": 1.2
+    },
+    "fitness": 0.3138,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2134,
+          "win_rate": 29.1,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.41,
+          "max_drawdown_pct": 8.05,
+          "sortino_ratio": -0.0910293384342654
+        },
+        "val": {
+          "total_trades": 1138,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.82,
+          "max_drawdown_pct": 3.37,
+          "sortino_ratio": -0.06301514727089676
+        },
+        "fitness_score": 0.3138
+      }
+    },
+    "reasoning": "The current weights show trend and momentum being overweighted, while macro is underweighted. The optimization history suggests that increasing trend and momentum weights does not necessarily lead to better fitness scores. The val metrics show a slightly better win rate and profit factor compared to the train metrics, indicating potential overfitting. To address this, I propose reducing the trend and momentum weights, increasing the macro weight, and making slight adjustments to other weights to improve overall performance.",
+    "improved": false
+  },
+  {
+    "iteration": 38,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.3,
+      "volume": 1.3,
+      "orderflow": 1.0,
+      "volatility": 1.1,
+      "structure": 1.3,
+      "sentiment": 1.1,
+      "macro": 1.4
+    },
+    "fitness": 0.3138,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2134,
+          "win_rate": 29.1,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.41,
+          "max_drawdown_pct": 8.05,
+          "sortino_ratio": -0.0910293384342654
+        },
+        "val": {
+          "total_trades": 1138,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.82,
+          "max_drawdown_pct": 3.37,
+          "sortino_ratio": -0.06301514727089676
+        },
+        "fitness_score": 0.3138
+      }
+    },
+    "reasoning": "The current weights seem to be overemphasizing trend and momentum, while underemphasizing volume and macro. The optimization history suggests that decreasing trend and momentum weights, while increasing volume and macro weights, may lead to improved performance. Additionally, the sentiment and structure weights appear to be relatively stable, so minor adjustments are proposed. The goal is to find a better balance among the agents to enhance the overall fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 39,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.1,
+      "volume": 1.4,
+      "orderflow": 1.0,
+      "volatility": 1.1,
+      "structure": 1.3,
+      "sentiment": 1.0,
+      "macro": 1.5
+    },
+    "fitness": 0.3138,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2134,
+          "win_rate": 29.1,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.41,
+          "max_drawdown_pct": 8.05,
+          "sortino_ratio": -0.0910293384342654
+        },
+        "val": {
+          "total_trades": 1138,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.82,
+          "max_drawdown_pct": 3.37,
+          "sortino_ratio": -0.06301514727089676
+        },
+        "fitness_score": 0.3138
+      }
+    },
+    "reasoning": "The current weights show trend and momentum being overweighted, while volume and macro are underweighted. The optimization history suggests that increasing trend and momentum weights has not led to significant improvements. Therefore, a new set of weights will be proposed to balance the agents, increasing the weights of underweighted agents and decreasing the weights of overweighted agents.",
+    "improved": false
+  },
+  {
+    "iteration": 40,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.2,
+      "volume": 1.6,
+      "orderflow": 1.1,
+      "volatility": 1.2,
+      "structure": 1.6,
+      "sentiment": 1.4,
+      "macro": 1.8
+    },
+    "fitness": 0.3138,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2134,
+          "win_rate": 29.1,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.41,
+          "max_drawdown_pct": 8.05,
+          "sortino_ratio": -0.0910293384342654
+        },
+        "val": {
+          "total_trades": 1138,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.82,
+          "max_drawdown_pct": 3.37,
+          "sortino_ratio": -0.06301514727089676
+        },
+        "fitness_score": 0.3138
+      }
+    },
+    "reasoning": "The trend and momentum agents are currently overweighted, while the volume and macro agents are underweighted. The optimization history suggests that increasing the weights of volume and macro, while decreasing the weights of trend and momentum, may lead to improved performance. The sentiment and structure agents have shown some promise, so their weights will be increased slightly. The orderflow and volatility agents will be kept at moderate weights.",
+    "improved": false
+  },
+  {
+    "iteration": 41,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.3,
+      "volume": 1.5,
+      "orderflow": 1.0,
+      "volatility": 1.1,
+      "structure": 1.3,
+      "sentiment": 1.1,
+      "macro": 1.6
+    },
+    "fitness": 0.3138,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2134,
+          "win_rate": 29.1,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.41,
+          "max_drawdown_pct": 8.05,
+          "sortino_ratio": -0.0910293384342654
+        },
+        "val": {
+          "total_trades": 1138,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.82,
+          "max_drawdown_pct": 3.37,
+          "sortino_ratio": -0.06301514727089676
+        },
+        "fitness_score": 0.3138
+      }
+    },
+    "reasoning": "The trend and momentum agents are currently overweighted, while the macro agent is underweighted. Increasing the weight of the macro agent and decreasing the weights of trend and momentum may lead to a more balanced portfolio. Additionally, the volume agent has a relatively low weight, so increasing its weight may also be beneficial. The new set of weights aims to achieve a better balance between the agents and improve the overall fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 42,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.3,
+      "volume": 1.6,
+      "orderflow": 1.0,
+      "volatility": 1.1,
+      "structure": 1.5,
+      "sentiment": 1.2,
+      "macro": 1.7
+    },
+    "fitness": 0.3138,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2134,
+          "win_rate": 29.1,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.41,
+          "max_drawdown_pct": 8.05,
+          "sortino_ratio": -0.0910293384342654
+        },
+        "val": {
+          "total_trades": 1138,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.82,
+          "max_drawdown_pct": 3.37,
+          "sortino_ratio": -0.06301514727089676
+        },
+        "fitness_score": 0.3138
+      }
+    },
+    "reasoning": "The current weights seem to overemphasize trend and momentum, while underemphasizing volume and macro. Given the similar fitness scores across iterations, a more balanced approach may be beneficial. Increasing the weight of volume and macro, while slightly decreasing trend and momentum, could lead to a more robust performance. The new weights aim to strike a balance between these factors, with a slight emphasis on structure and sentiment, which have shown relatively stable performance across iterations.",
+    "improved": false
+  },
+  {
+    "iteration": 43,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.1,
+      "volume": 1.4,
+      "orderflow": 0.9,
+      "volatility": 1.0,
+      "structure": 1.3,
+      "sentiment": 1.1,
+      "macro": 1.6
+    },
+    "fitness": 0.3138,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2134,
+          "win_rate": 29.1,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.41,
+          "max_drawdown_pct": 8.05,
+          "sortino_ratio": -0.0910293384342654
+        },
+        "val": {
+          "total_trades": 1138,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.82,
+          "max_drawdown_pct": 3.37,
+          "sortino_ratio": -0.06301514727089676
+        },
+        "fitness_score": 0.3138
+      }
+    },
+    "reasoning": "The current weights and optimization history suggest that the trend and momentum agents are potentially overweighted, while the volume and macro agents are underweighted. The sentiment and structure agents seem to be performing neutrally. To improve the composite fitness score, I propose reducing the trend and momentum weights, increasing the volume and macro weights, and making minor adjustments to the other agents.",
+    "improved": false
+  },
+  {
+    "iteration": 44,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.3,
+      "volume": 1.6,
+      "orderflow": 1.1,
+      "volatility": 1.0,
+      "structure": 1.5,
+      "sentiment": 1.2,
+      "macro": 1.8
+    },
+    "fitness": 0.3138,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2134,
+          "win_rate": 29.1,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.41,
+          "max_drawdown_pct": 8.05,
+          "sortino_ratio": -0.0910293384342654
+        },
+        "val": {
+          "total_trades": 1138,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.82,
+          "max_drawdown_pct": 3.37,
+          "sortino_ratio": -0.06301514727089676
+        },
+        "fitness_score": 0.3138
+      }
+    },
+    "reasoning": "The current weights seem to be overemphasizing trend and momentum, while underemphasizing volume and macro. The optimization history suggests that increasing the weights of volume, orderflow, and macro, while decreasing the weights of trend and momentum, may lead to improved performance. The new weights aim to strike a balance between these factors, with a slight emphasis on structure and sentiment, which have shown relatively stable performance across iterations.",
+    "improved": false
+  },
+  {
+    "iteration": 45,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.3,
+      "volume": 1.9,
+      "orderflow": 1.0,
+      "volatility": 1.2,
+      "structure": 1.3,
+      "sentiment": 1.1,
+      "macro": 2.1
+    },
+    "fitness": 0.3138,
+    "metrics": {
+      "ALGO/USDT": {
+        "train": {
+          "total_trades": 2134,
+          "win_rate": 29.1,
+          "profit_factor": 0.87,
+          "total_return_pct": -14.41,
+          "max_drawdown_pct": 8.05,
+          "sortino_ratio": -0.0910293384342654
+        },
+        "val": {
+          "total_trades": 1138,
+          "win_rate": 30.1,
+          "profit_factor": 0.91,
+          "total_return_pct": -6.82,
+          "max_drawdown_pct": 3.37,
+          "sortino_ratio": -0.06301514727089676
+        },
+        "fitness_score": 0.3138
+      }
+    },
+    "reasoning": "The current weights show trend and momentum being overweighted, while volume and macro are underweighted. The optimization history indicates that increasing the weights of volume and macro, while decreasing the weights of trend and momentum, may lead to improved fitness scores. The proposed weights aim to balance the contributions of each agent, with a focus on increasing the impact of volume and macro, and reducing the dominance of trend and momentum.",
+    "improved": false
+  }
+]
