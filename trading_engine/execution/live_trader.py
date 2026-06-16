@@ -731,6 +731,19 @@ def sync_with_broker() -> bool:
                             
                     portfolio.positions = reconstructed_positions
                     portfolio.closed_trades = reconstructed_closed
+                    
+                    # Reconstruct consecutive losses for each symbol from closed trades history
+                    portfolio.self_healing_state = {}
+                    sorted_closed = sorted(reconstructed_closed, key=lambda x: x.closed_at or "")
+                    for t in sorted_closed:
+                        sym = t.symbol
+                        sh_state = portfolio.self_healing_state.setdefault(sym, {"consecutive_losses": 0, "last_optimized_at": None})
+                        if t.pnl_usd is not None:
+                            if t.pnl_usd >= 0:
+                                sh_state["consecutive_losses"] = 0
+                            else:
+                                sh_state["consecutive_losses"] += 1
+                                
                     portfolio.win_count = sum(1 for t in reconstructed_closed if t.status == "closed")
                     portfolio.loss_count = sum(1 for t in reconstructed_closed if t.status == "stopped")
                     portfolio.total_pnl = sum(t.pnl_usd for t in reconstructed_closed if t.pnl_usd is not None)
