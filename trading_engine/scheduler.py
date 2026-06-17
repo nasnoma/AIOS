@@ -106,6 +106,7 @@ def run_signal_cycle():
                 size_usd=size_needed,
                 stop_loss=sig.stop_loss or 0,
                 take_profit=sig.take_profit or 0,
+                atr=float((sig.risk or {}).get("atr", 0.0)),
             )
             if pos:
                 # Reload portfolio to reflect new position & cash balance in subsequent iterations
@@ -208,12 +209,20 @@ def run_bounty_hunter_cycle():
     else:
         trader = paper_trader
 
-    portfolio = trader._load_state()
+    # Guard: if state cannot be loaded, abort cleanly rather than letting a NameError
+    # propagate and crash the entire cycle (which would bypass all position guards).
+    try:
+        portfolio = trader._load_state()
+    except Exception as e:
+        logger.error(f"⚔️ Bounty Hunter aborted — could not load portfolio state: {e}")
+        return
 
     from trading_engine.bounty_hunter import run_bounty_hunt
     watchlist = settings.bounty_hunter_watchlist_assets
+    scan_mode = settings.bounty_hunter_scan_mode
+    logger.info(f"⚔️ Bounty Hunter scan mode: {scan_mode}")
     results = run_bounty_hunt(
-        mode="oversold",
+        mode=scan_mode,
         crypto_limit=15,
         stock_limit=5,
         cfd_limit=5,          # Bybit stock CFDs + metals

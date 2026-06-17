@@ -31,7 +31,7 @@ _RISK_PARAM_PATH = Path(__file__).parent / "autoresearch" / "params" / "risk_thr
 
 _RISK_DEFAULTS = {
     "kelly_fraction":       0.25,
-    "max_portfolio_heat":   0.15,
+    "max_portfolio_heat":   0.10,   # tightened from 0.15 — conservative fallback
     "atr_stop_multiplier":  2.0,
     "corr_soft_threshold":  0.75,
     "corr_hard_threshold":  0.90,
@@ -54,10 +54,22 @@ def _load_risk_params() -> dict:
 # Assets in the same group are treated as correlated.
 # Used to detect double-exposure risk.
 CORRELATION_GROUPS = [
-    {"BTC/USDT", "ETH/USDT", "BNB/USDT", "SOL/USDT"},  # Major crypto (high beta)
-    {"AAPL", "MSFT", "NVDA", "TSLA"},                    # US tech equities
-    {"SPY", "QQQ", "IWM"},                               # US broad market ETFs
+    # Major crypto (high beta to BTC)
+    {"BTC/USDT", "ETH/USDT", "BNB/USDT", "SOL/USDT"},
+    # US tech equities
+    {"AAPL", "MSFT", "NVDA", "TSLA"},
+    # US broad market ETFs
+    {"SPY", "QQQ", "IWM"},
+    # DeFi mid-caps — frequently appear together in oversold scans
+    {"NEAR/USDT", "JUP/USDT", "LIT/USDT", "CRV/USDT", "EIGEN/USDT", "AAVE/USDT", "UNI/USDT"},
+    # L2 / infrastructure alts
+    {"HYPE/USDT", "RUNE/USDT", "APEX/USDT", "OP/USDT", "ARB/USDT", "MANTA/USDT", "STRK/USDT"},
+    # L1 alternative chains
+    {"AVAX/USDT", "SUI/USDT", "APT/USDT", "SEI/USDT", "INJ/USDT", "TIA/USDT"},
+    # Meme / high-volatility tokens
+    {"DOGE/USDT", "SHIB/USDT", "PEPE/USDT", "FLOKI/USDT", "WIF/USDT", "BONK/USDT"},
 ]
+
 
 # Correlation thresholds — loaded live from param file
 # (module-level names kept for backward compatibility)

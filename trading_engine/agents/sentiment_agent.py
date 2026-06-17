@@ -123,24 +123,32 @@ def analyze(snap: MarketSnapshot) -> AgentSignal:
         else:
             reasons.append(f"Neutral sentiment ({fg}, {fg_label})")
 
-    # ── LLM News & Social Sentiment ────────────────────
+    # ── LLM News & Social Sentiment — gated on activity ─────────────
+    # Only call LLM when there is actual signal data to synthesize.
+    # On cold/quiet assets the LLM has no input and returns noisy HOLD ~50%.
     headlines = snap.news_headlines if snap.news_headlines else _get_news_headlines(snap.symbol)
-    llm_signal, llm_conf, llm_reason = _llm_sentiment(
-        headlines=headlines,
-        tweets=snap.tweets,
-        stocktwits_raw=snap.stocktwits_raw,
-        symbol=snap.symbol
-    )
-    reasons.append(f"News/Social: {llm_reason} (LLM conf={llm_conf:.0f}%)")
+    has_news = bool(headlines)
+    has_activity = getattr(snap, "rel_volume", 1.0) >= 1.3  # something is happening
 
-    if llm_signal == Signal.BUY and llm_conf > 65:
-        score += 2
-    elif llm_signal == Signal.SELL and llm_conf > 65:
-        score -= 2
-    elif llm_signal == Signal.BUY:
-        score += 1
-    elif llm_signal == Signal.SELL:
-        score -= 1
+    if has_news or has_activity:
+        llm_signal, llm_conf, llm_reason = _llm_sentiment(
+            headlines=headlines,
+            tweets=snap.tweets,
+            stocktwits_raw=snap.stocktwits_raw,
+            symbol=snap.symbol
+        )
+        reasons.append(f"News/Social: {llm_reason} (LLM conf={llm_conf:.0f}%)")
+
+        if llm_signal == Signal.BUY and llm_conf > 65:
+            score += 2
+        elif llm_signal == Signal.SELL and llm_conf > 65:
+            score -= 2
+        elif llm_signal == Signal.BUY:
+            score += 1
+        elif llm_signal == Signal.SELL:
+            score -= 1
+    else:
+        reasons.append("Skipping LLM sentiment — quiet market (low volume, no news)")
 
     # ── Map → signal ──────────────────────────────────
     normalized = (score / max_score + 1) / 2
@@ -160,8 +168,9 @@ def analyze(snap: MarketSnapshot) -> AgentSignal:
         reason=" | ".join(reasons),
         raw_data={
             "fear_greed": fg,
-            "llm_signal": str(llm_signal),
+            "llm_called": has_news or has_activity,
             "headlines": headlines,
-            "tweets_count": len(snap.tweets)
+            "tweets_count": len(snap.tweets) if snap.tweets else 0,
         },
     )
+

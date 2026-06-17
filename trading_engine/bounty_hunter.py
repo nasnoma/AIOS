@@ -649,11 +649,11 @@ def check_preflight_probability(snap: MarketSnapshot, mode: str) -> tuple[bool, 
 
     probability = max(0.0, min(100.0, probability))
     
-    # Check if passes threshold
-    is_viable = probability >= 75.0
+    # Check if passes threshold — raised to 80% for higher-quality signal filtering
+    is_viable = probability >= 80.0
     reason_str = " | ".join(reasons) if reasons else "Neutral conditions"
     if not is_viable:
-        reason_str = f"Pass probability {probability:.1f}% below 75% threshold. Details: {reason_str}"
+        reason_str = f"Pass probability {probability:.1f}% below 80% threshold. Details: {reason_str}"
         
     return is_viable, probability, reason_str
 

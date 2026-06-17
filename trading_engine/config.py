@@ -63,13 +63,13 @@ class Settings(BaseSettings):
     kelly_fraction: float = 0.25
     min_agent_agreement: int = 3
     min_avg_confidence: float = 30.0
-    atr_multiplier: float = 2.2
-    rr_ratio: float = 2.5
+    atr_multiplier: float = 2.8
+    rr_ratio: float = 3.0
     stop_loss_pct_max: float = 0.10
-    max_concurrent_positions: int = 20
+    max_concurrent_positions: int = 8
 
     # ── Self Healing ────────────────────────
-    self_healing_consecutive_losses: int = 2
+    self_healing_consecutive_losses: int = 3
     self_healing_cooldown_hours: float = 24.0
     self_healing_iterations: int = 15
 
@@ -84,6 +84,9 @@ class Settings(BaseSettings):
     bounty_hunter_interval_hours: int = 1
     bounty_hunter_interval_minutes: int = 0
     bounty_hunter_watchlist: str = ""
+    # Scan strategy: "momentum" (buy confirmed strength) | "oversold" (mean-reversion) | "volume" | "hot"
+    # momentum has stronger positive edge on 4H crypto timeframes
+    bounty_hunter_scan_mode: str = "momentum"
 
     # ── Bybit CFD Trading ────────────────────
     # US stock CFD linear perpetuals on Bybit (TICKER/USDT:USDT format)

@@ -124,53 +124,50 @@ def _get_risk_mode() -> str:
     return _MACRO_CACHE["risk_mode"]
 
 
-def _llm_macro(dxy_trend: str, risk_mode: str, symbol: str, asset_type: str, current_price: float = 0.0, ma_50: float = 0.0, ma_200: float = 0.0) -> tuple[Signal, float, str]:
-    """LLM synthesizes structured macro data."""
-    from pathlib import Path
-    prompt_path = Path(__file__).parent.parent / "prompts" / "macro_prompt.md"
-    if prompt_path.exists():
-        template = prompt_path.read_text()
-        escaped = template.replace("{", "{{").replace("}", "}}")
-        for placeholder in ["symbol", "asset_type", "dxy_trend", "risk_mode", "current_price", "ma_50", "ma_200"]:
-            escaped = escaped.replace(f"{{{{{placeholder}}}}}", f"{{{placeholder}}}")
-        prompt = escaped.format(
-            symbol=symbol, asset_type=asset_type,
-            dxy_trend=dxy_trend, risk_mode=risk_mode,
-            current_price=current_price, ma_50=ma_50, ma_200=ma_200
-        )
-    else:
-        prompt = f"""You are MacroAgent analyzing {symbol} ({asset_type}).
+def _rule_based_macro(
+    dxy_trend: str,
+    risk_mode: str,
+    asset_type: str,
+) -> tuple[Signal, float, str]:
+    """
+    Deterministic macro signal — same inputs always yield same output.
+    Encodes the rules that were previously delegated to the LLM prompt.
+    Eliminates API cost and output variance.
+    """
+    is_crypto = asset_type in ("crypto", "spot", "perpetual")
+    is_equity = asset_type in ("stock", "etf", "cfd")
 
-Macro data:
-- DXY (dollar) trend: {dxy_trend}
-- Market risk mode: {risk_mode}
-- Asset type: {asset_type}
-- Price: {current_price}
-- MA50: {ma_50}
-- MA200: {ma_200}
+    # ── Risk-off hard deterrent (highest priority) ─────────────────────
+    if risk_mode == "risk-off":
+        if is_crypto:
+            return Signal.SELL, 75.0, "Risk-off regime (VIX elevated) — avoid high-beta crypto"
+        elif is_equity:
+            return Signal.SELL, 65.0, "Risk-off regime — avoid equities"
 
-Rules:
-- Rising DXY = bearish for crypto and growth stocks
-- Falling DXY = bullish for crypto and growth stocks
-- Risk-off = avoid crypto and high-beta stocks
-- Risk-on = favorable for crypto and growth stocks
+    # ── DXY trend rules ────────────────────────────────────────────────
+    if dxy_trend == "rising":
+        if is_crypto:
+            return Signal.SELL, 65.0, "Rising DXY (dollar strength) — headwind for crypto"
+        elif is_equity:
+            return Signal.SELL, 55.0, "Rising DXY — moderate headwind for growth equities"
+        return Signal.HOLD, 50.0, "Rising DXY — neutral for this asset class"
 
-Based on this macro context, output JSON:
-{{"signal": "BUY|SELL|HOLD", "confidence": 0-100, "reason": "one sentence"}}
+    if dxy_trend == "falling":
+        if is_crypto:
+            return Signal.BUY, 65.0, "Falling DXY (dollar weakness) — tailwind for crypto"
+        elif is_equity:
+            return Signal.BUY, 55.0, "Falling DXY — moderate tailwind for growth equities"
+        return Signal.HOLD, 50.0, "Falling DXY — neutral for this asset class"
 
-Output ONLY the JSON object."""
+    # ── Risk-on positive confirmation ─────────────────────────────────
+    if risk_mode == "risk-on":
+        if is_crypto:
+            return Signal.BUY, 60.0, "Risk-on regime — favourable for crypto"
+        elif is_equity:
+            return Signal.BUY, 55.0, "Risk-on regime — favourable for equities"
 
-    try:
-        content = call_llm(prompt)
-
-        if "```" in content:
-            content = content.split("```")[1].strip().lstrip("json").strip()
-        data = json.loads(content)
-        return Signal(data["signal"].upper()), float(data.get("confidence", 50)), data.get("reason", "")
-
-    except Exception as e:
-        logger.warning(f"LLM macro failed: {e}")
-        return Signal.HOLD, 45.0, "Macro analysis unavailable"
+    # ── Neutral / unknown ─────────────────────────────────────────────
+    return Signal.HOLD, 50.0, f"Neutral macro: DXY={dxy_trend}, risk_mode={risk_mode}"
 
 
 def analyze(snap: MarketSnapshot) -> AgentSignal:
@@ -179,11 +176,11 @@ def analyze(snap: MarketSnapshot) -> AgentSignal:
     dxy_trend = _get_dxy_trend()
     risk_mode = _get_risk_mode()
 
-    # Store on snapshot for reference
+    # Store on snapshot for reference by other agents / dashboard
     snap.dxy_trend = dxy_trend
     snap.risk_mode = risk_mode
 
-    signal, confidence, reason = _llm_macro(dxy_trend, risk_mode, snap.symbol, snap.asset_type, snap.close, snap.ema50, snap.ema200)
+    signal, confidence, reason = _rule_based_macro(dxy_trend, risk_mode, snap.asset_type)
     reasons.append(f"DXY: {dxy_trend} | Risk mode: {risk_mode} | {reason}")
 
     return AgentSignal(
@@ -193,3 +190,4 @@ def analyze(snap: MarketSnapshot) -> AgentSignal:
         reason=" | ".join(reasons),
         raw_data={"dxy_trend": dxy_trend, "risk_mode": risk_mode},
     )
+

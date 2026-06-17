@@ -63,15 +63,16 @@ def analyze(snap: MarketSnapshot) -> AgentSignal:
     # ── Market regime ──────────────────────────────────
     regime = "extreme" if avoid_trade else ("choppy" if score <= 0 else "trending")
 
-    # Volatility agent: HOLD = good conditions to trade; SELL = avoid
+    # Volatility agent: BUY = good conditions; HOLD = neutral or "avoid trade" (not a directional SELL).
+    # Using Signal.SELL here would incorrectly count as a bearish directional vote in the Judge ensemble.
     normalized = (score / max_score + 1) / 2
     confidence = round(max(0, min(100, normalized * 100)), 1)
 
     if avoid_trade:
-        signal = Signal.SELL  # "SELL" here means "avoid trading"
+        signal = Signal.HOLD  # "avoid trade" — not a directional sell signal
         confidence = 85.0
     elif score >= 2:
-        signal = Signal.BUY   # "BUY" here means "conditions are good to trade"
+        signal = Signal.BUY   # "BUY" here means "volatility conditions are favourable to trade"
     else:
         signal = Signal.HOLD
 

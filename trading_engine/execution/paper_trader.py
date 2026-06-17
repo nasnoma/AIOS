@@ -42,6 +42,9 @@ class Position:
     pnl_usd: Optional[float] = None
     fee_usd: Optional[float] = None   # total fees paid on this trade (entry + exit)
     status: str = "open"   # 'open' | 'closed' | 'stopped'
+    atr: float = 0.0                  # ATR at entry, used for trailing stop ratchet
+    trailing_high: Optional[float] = None   # best price seen since entry (long)
+    trailing_low: Optional[float] = None    # best price seen since entry (short)
 
 
 @dataclass
@@ -115,7 +118,8 @@ def _save_state(portfolio: PaperPortfolio):
 
 
 def open_trade(symbol: str, direction: str, entry: float,
-               size_usd: float, stop_loss: float, take_profit: float) -> Position:
+               size_usd: float, stop_loss: float, take_profit: float,
+               **kwargs) -> Position:
     portfolio = _load_state()
 
     # Deduct entry fee + slippage from cash immediately
@@ -132,6 +136,9 @@ def open_trade(symbol: str, direction: str, entry: float,
         take_profit=take_profit,
         opened_at=datetime.now(timezone.utc).isoformat(),
         fee_usd=entry_fee,   # will be updated on close
+        atr=kwargs.get("atr", 0.0),
+        trailing_high=entry if direction == "long" else None,
+        trailing_low=entry if direction == "short" else None,
     )
     portfolio.positions.append(pos)
     portfolio.cash -= size_usd
@@ -155,13 +162,74 @@ def open_trade(symbol: str, direction: str, entry: float,
     return pos
 
 
+def _apply_trailing_stop(pos: Position, price: float) -> None:
+    """
+    ATR trailing stop ratchet — called before SL/TP check.
+
+    Ratchet levels (long example, mirrored for short):
+      • Price reaches entry + 1×ATR → stop moves to entry (breakeven)
+      • Price reaches entry + 2×ATR → stop moves to entry + 1×ATR (lock profit)
+
+    The stop only ever moves in the profitable direction — never widens.
+    """
+    if pos.atr <= 0:
+        return   # ATR not stored — trailing stop not active for this position
+
+    atr = pos.atr
+
+    if pos.direction == "long":
+        # Update trailing high
+        if pos.trailing_high is None or price > pos.trailing_high:
+            pos.trailing_high = price
+
+        profit_in_atr = (pos.trailing_high - pos.entry_price) / atr
+        if profit_in_atr >= 2.0:
+            # Lock in +1 ATR of profit
+            new_sl = pos.entry_price + atr
+            if new_sl > pos.stop_loss:
+                logger.info(
+                    f"🔒 Trailing stop ratchet (2×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → {new_sl:.4f}"
+                )
+                pos.stop_loss = new_sl
+        elif profit_in_atr >= 1.0:
+            # Move to breakeven
+            if pos.entry_price > pos.stop_loss:
+                logger.info(
+                    f"🔒 Trailing stop ratchet (1×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → breakeven {pos.entry_price:.4f}"
+                )
+                pos.stop_loss = pos.entry_price
+
+    else:  # short
+        # Update trailing low
+        if pos.trailing_low is None or price < pos.trailing_low:
+            pos.trailing_low = price
+
+        profit_in_atr = (pos.entry_price - pos.trailing_low) / atr
+        if profit_in_atr >= 2.0:
+            new_sl = pos.entry_price - atr
+            if new_sl < pos.stop_loss:
+                logger.info(
+                    f"🔒 Trailing stop ratchet (2×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → {new_sl:.4f}"
+                )
+                pos.stop_loss = new_sl
+        elif profit_in_atr >= 1.0:
+            if pos.entry_price < pos.stop_loss:
+                logger.info(
+                    f"🔒 Trailing stop ratchet (1×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → breakeven {pos.entry_price:.4f}"
+                )
+                pos.stop_loss = pos.entry_price
+
+
 def update_prices(current_prices: dict[str, float]):
-    """Check if any open positions hit SL or TP."""
+    """Check if any open positions hit SL or TP. Applies ATR trailing stop ratchet first."""
     portfolio = _load_state()
     for pos in portfolio.open_positions:
         price = current_prices.get(pos.symbol)
         if not price:
             continue
+
+        # Apply trailing stop ratchet before SL/TP check
+        _apply_trailing_stop(pos, price)
 
         if pos.direction == "long":
             if price <= pos.stop_loss:
