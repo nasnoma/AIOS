@@ -47,6 +47,8 @@ def run_signal_cycle():
     else:
         trader = paper_trader
 
+    portfolio = trader._load_state()
+
     # Get portfolio state for context
     status = trader.get_status()
     portfolio_heat = status["portfolio_heat"] / 100
@@ -197,6 +199,8 @@ def run_bounty_hunter_cycle():
         trader = live_trader
     else:
         trader = paper_trader
+
+    portfolio = trader._load_state()
 
     from trading_engine.bounty_hunter import run_bounty_hunt
     watchlist = settings.bounty_hunter_watchlist_assets
