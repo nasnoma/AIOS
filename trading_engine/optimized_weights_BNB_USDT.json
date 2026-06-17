@@ -1,0 +1,10 @@
+{
+  "trend": 1.3,
+  "momentum": 1.2,
+  "volume": 1.0,
+  "orderflow": 1.1,
+  "volatility": 1.3,
+  "structure": 1.2,
+  "sentiment": 0.9,
+  "macro": 0.9
+}
