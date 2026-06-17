@@ -241,6 +241,14 @@ def evaluate(
     max_heat = _rp.get("max_portfolio_heat", settings.max_portfolio_heat)
     kelly_frac = _rp.get("kelly_fraction", settings.kelly_fraction)
 
+    # Crypto peak session check
+    from trading_engine.market_hours import classify_symbol, AssetClass, is_crypto_peak_session
+    import datetime
+    
+    is_crypto = classify_symbol(snap.symbol) == AssetClass.CRYPTO
+    now_utc = datetime.datetime.now(tz=datetime.timezone.utc)
+    in_peak = is_crypto_peak_session(now_utc) if is_crypto else True
+
     # ── Hard Veto Conditions ───────────────────────────
     if not verdict.approved:
         return RiskDecision(
@@ -264,6 +272,41 @@ def evaluate(
     if snap.bb_width and snap.bb_width > 0.12:
         return RiskDecision(
             approved=False, reason=f"Market too volatile: BBand width={snap.bb_width:.3f} > 0.12",
+            position_size_pct=0, position_size_usd=0,
+            entry_price=entry, stop_loss=0, take_profit=0,
+            stop_loss_pct=0, take_profit_pct=0, risk_reward=0,
+            max_loss_usd=0, atr=atr,
+        )
+
+    # Volatility Check: Low Volatility Filter
+    atr_pct = (atr / entry * 100) if entry > 0 else 0
+    min_atr = getattr(settings, "min_atr_pct", 0.15)
+    if atr_pct < min_atr:
+        return RiskDecision(
+            approved=False,
+            reason=f"Volatility filter veto: ATR% ({atr_pct:.2f}%) is below minimum threshold ({min_atr:.2f}%) — market too flat/ranging.",
+            position_size_pct=0, position_size_usd=0,
+            entry_price=entry, stop_loss=0, take_profit=0,
+            stop_loss_pct=0, take_profit_pct=0, risk_reward=0,
+            max_loss_usd=0, atr=atr,
+        )
+
+    min_bb = getattr(settings, "min_bb_width", 0.015)
+    if snap.bb_width is not None and snap.bb_width < min_bb:
+        return RiskDecision(
+            approved=False,
+            reason=f"Volatility filter veto: BBand width ({snap.bb_width:.3f}) is below minimum threshold ({min_bb:.3f}) — market too flat/ranging.",
+            position_size_pct=0, position_size_usd=0,
+            entry_price=entry, stop_loss=0, take_profit=0,
+            stop_loss_pct=0, take_profit_pct=0, risk_reward=0,
+            max_loss_usd=0, atr=atr,
+        )
+
+    # Session Check: Crypto Peak Sessions Veto
+    if is_crypto and not in_peak and getattr(settings, "crypto_peak_sessions_only", False):
+        return RiskDecision(
+            approved=False,
+            reason=f"Crypto session veto: Current time ({now_utc.strftime('%H:%M')} UTC) is outside configured peak sessions.",
             position_size_pct=0, position_size_usd=0,
             entry_price=entry, stop_loss=0, take_profit=0,
             stop_loss_pct=0, take_profit_pct=0, risk_reward=0,
@@ -361,10 +404,19 @@ def evaluate(
         position_size_usd = account * position_size_pct
         max_loss_usd = position_size_usd * stop_loss_pct
 
+    # Session Sizing Check: Crypto Peak Sessions Size Reduction
+    session_multiplier = 1.0
+    if is_crypto and not in_peak and getattr(settings, "crypto_peak_sessions_reduce_size", True):
+        session_multiplier = 0.5
+        position_size_pct *= session_multiplier
+        position_size_usd *= session_multiplier
+        max_loss_usd *= session_multiplier
+
     corr_tag = f" | Corr×{corr_multiplier:.1f}" if corr_multiplier < 1.0 else ""
+    session_tag = f" | Session×{session_multiplier:.1f}" if session_multiplier < 1.0 else ""
     logger.success(
         f"Risk APPROVED | {verdict.decision.value} {snap.symbol} | "
-        f"Size={position_size_pct:.1%} (${position_size_usd:,.0f}){corr_tag} | "
+        f"Size={position_size_pct:.1%} (${position_size_usd:,.0f}){corr_tag}{session_tag} | "
         f"SL={stop_loss_pct:.1%} | TP={take_profit_pct:.1%} | R:R={rr_ratio:.1f} | "
         f"Max loss=${max_loss_usd:,.0f}"
     )

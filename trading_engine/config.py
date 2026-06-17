@@ -73,6 +73,12 @@ class Settings(BaseSettings):
     self_healing_cooldown_hours: float = 24.0
     self_healing_iterations: int = 15
 
+    # ── Session Awareness & Volatility Filters ──────
+    crypto_peak_sessions_only: bool = False
+    crypto_peak_sessions_reduce_size: bool = True
+    min_atr_pct: float = 0.15
+    min_bb_width: float = 0.015
+
     # ── Bounty Hunter ───────────────────────
     bounty_hunter_enabled: bool = True
     bounty_hunter_interval_hours: int = 1

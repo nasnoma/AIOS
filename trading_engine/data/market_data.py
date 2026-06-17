@@ -88,6 +88,9 @@ class MarketSnapshot:
     news_headlines: list[str] = field(default_factory=list)
     orderbook_imbalance: float = 0.5
     htf_snap: Optional[MarketSnapshot] = None
+    htf_1h_snap: Optional[MarketSnapshot] = None
+    htf_4h_snap: Optional[MarketSnapshot] = None
+    htf_1d_snap: Optional[MarketSnapshot] = None
 
 
 # ─────────────────────────────────────────────
@@ -663,12 +666,34 @@ def build_snapshot(symbol: str, timeframe: str = None, is_htf: bool = False) -> 
     )
 
     if not is_htf:
-        htf = get_higher_timeframe(tf)
-        if htf != tf:
+        tf_clean = tf.lower().strip()
+        if tf_clean in ("5m", "15m"):
             try:
-                snap.htf_snap = build_snapshot(symbol, htf, is_htf=True)
+                snap.htf_1h_snap = build_snapshot(symbol, "1h", is_htf=True)
             except Exception as e_htf:
-                logger.warning(f"Failed to build higher timeframe ({htf}) snapshot for {symbol}: {e_htf}")
+                logger.warning(f"Failed to build 1h HTF snapshot for {symbol}: {e_htf}")
+            try:
+                snap.htf_4h_snap = build_snapshot(symbol, "4h", is_htf=True)
+            except Exception as e_htf:
+                logger.warning(f"Failed to build 4h HTF snapshot for {symbol}: {e_htf}")
+            try:
+                snap.htf_1d_snap = build_snapshot(symbol, "1d", is_htf=True)
+            except Exception as e_htf:
+                logger.warning(f"Failed to build 1d HTF snapshot for {symbol}: {e_htf}")
+            snap.htf_snap = snap.htf_4h_snap
+        elif tf_clean in ("1h", "4h"):
+            try:
+                snap.htf_1d_snap = build_snapshot(symbol, "1d", is_htf=True)
+            except Exception as e_htf:
+                logger.warning(f"Failed to build 1d HTF snapshot for {symbol}: {e_htf}")
+            snap.htf_snap = snap.htf_1d_snap
+        else:
+            htf = get_higher_timeframe(tf)
+            if htf != tf:
+                try:
+                    snap.htf_snap = build_snapshot(symbol, htf, is_htf=True)
+                except Exception as e_htf:
+                    logger.warning(f"Failed to build higher timeframe ({htf}) snapshot for {symbol}: {e_htf}")
 
     logger.success(f"Snapshot built: {symbol} ({asset_type}) | Close={snap.close:.4f} | RSI={snap.rsi:.1f}")
     _SNAPSHOT_CACHE[cache_key] = (time.time(), snap)

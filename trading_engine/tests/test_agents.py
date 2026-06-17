@@ -97,6 +97,26 @@ class TestTrendAgent:
         assert result.signal in (Signal.HOLD, Signal.BUY)
         assert "HTF Trend Filter active" in result.reason
 
+    def test_multi_timeframe_trend_veto(self):
+        from trading_engine.agents import trend_agent
+        
+        # Lower timeframe has bullish stack (score +5, BUY signal)
+        base_snap = make_snapshot(ema20=50000, ema50=48000, ema200=45000, close=51000)
+        
+        # Mocks for 1H, 4H, and Daily HTF snaps
+        # Daily is Bearish, 4H is Bearish, 1H is Bearish -> Veto (3 bearish, 0 bullish)
+        snap_1h = make_snapshot(ema20=40000, ema50=42000, ema200=46000, close=39000, timeframe="1h")
+        snap_4h = make_snapshot(ema20=40000, ema50=42000, ema200=46000, close=39000, timeframe="4h")
+        snap_1d = make_snapshot(ema20=40000, ema50=42000, ema200=46000, close=39000, timeframe="1d")
+        
+        base_snap.htf_1h_snap = snap_1h
+        base_snap.htf_4h_snap = snap_4h
+        base_snap.htf_1d_snap = snap_1d
+        
+        result = trend_agent.analyze(base_snap)
+        assert result.signal in (Signal.HOLD, Signal.SELL)
+        assert "MTF Veto: Majority of HTFs are BEARISH" in result.reason
+
 
 # ── Momentum Agent ─────────────────────────────────────────
 
@@ -182,6 +202,83 @@ class TestRiskAgent:
         # Use a high portfolio heat (e.g. 0.20) to exceed the max_portfolio_heat threshold (currently 0.15)
         decision = evaluate(verdict, snap, current_portfolio_heat=0.20)  # above limit
         assert not decision.approved
+
+    @patch("trading_engine.data.market_data.build_snapshot", side_effect=RuntimeError("Unit test fallback"))
+    def test_low_volatility_veto(self, mock_build):
+        from trading_engine.risk_agent import evaluate
+        from trading_engine.judge import JudgeVerdict
+        from trading_engine.config import settings
+
+        # Case 1: ATR% is too low (e.g. close=50000, atr=50, which is 0.10%, below 0.15% min)
+        snap_low_atr = make_snapshot(close=50000, atr=50, bb_width=0.05)
+        verdict = JudgeVerdict(
+            decision=Signal.BUY, confidence=85, agreement=7, disagreement=1,
+            weighted_score=0.85, reasoning="Test", agent_reports=[], approved=True,
+        )
+        
+        orig_min_atr = settings.min_atr_pct
+        try:
+            settings.min_atr_pct = 0.15
+            decision = evaluate(verdict, snap_low_atr)
+            assert not decision.approved
+            assert "Volatility filter veto: ATR%" in decision.reason
+        finally:
+            settings.min_atr_pct = orig_min_atr
+
+        # Case 2: Bollinger Band width is too narrow (e.g. close=50000, atr=500, bb_width=0.01, below 0.015 min)
+        snap_low_bb = make_snapshot(close=50000, atr=500, bb_width=0.01)
+        orig_min_bb = settings.min_bb_width
+        try:
+            settings.min_bb_width = 0.015
+            decision = evaluate(verdict, snap_low_bb)
+            assert not decision.approved
+            assert "Volatility filter veto: BBand width" in decision.reason
+        finally:
+            settings.min_bb_width = orig_min_bb
+
+    @patch("trading_engine.data.market_data.build_snapshot", side_effect=RuntimeError("Unit test fallback"))
+    def test_crypto_session_awareness(self, mock_build):
+        from trading_engine.risk_agent import evaluate
+        from trading_engine.judge import JudgeVerdict
+        from trading_engine.config import settings
+
+        # Mock is_crypto_peak_session to return False (off-peak)
+        with patch("trading_engine.market_hours.is_crypto_peak_session", return_value=False):
+            # Crypto asset
+            snap = make_snapshot(symbol="BTC/USDT", asset_type="crypto", close=50000, atr=1000, bb_width=0.05)
+            verdict = JudgeVerdict(
+                decision=Signal.BUY, confidence=85, agreement=7, disagreement=1,
+                weighted_score=0.85, reasoning="Test", agent_reports=[], approved=True,
+            )
+
+            # Sub-case A: crypto_peak_sessions_only = True -> Veto
+            orig_only = settings.crypto_peak_sessions_only
+            try:
+                settings.crypto_peak_sessions_only = True
+                decision = evaluate(verdict, snap)
+                assert not decision.approved
+                assert "Crypto session veto" in decision.reason
+            finally:
+                settings.crypto_peak_sessions_only = orig_only
+
+            # Sub-case B: crypto_peak_sessions_reduce_size = True -> 50% size reduction
+            orig_only = settings.crypto_peak_sessions_only
+            orig_reduce = settings.crypto_peak_sessions_reduce_size
+            try:
+                settings.crypto_peak_sessions_only = False
+                settings.crypto_peak_sessions_reduce_size = True
+                
+                decision_normal = evaluate(verdict, snap) # size reduction active
+                
+                # Mock in-peak to compare size
+                with patch("trading_engine.market_hours.is_crypto_peak_session", return_value=True):
+                    decision_peak = evaluate(verdict, snap)
+                
+                # Off-peak size should be exactly half of peak size
+                assert decision_normal.position_size_pct == round(decision_peak.position_size_pct * 0.5, 4)
+            finally:
+                settings.crypto_peak_sessions_only = orig_only
+                settings.crypto_peak_sessions_reduce_size = orig_reduce
 
 
 # ── Judge ──────────────────────────────────────────────────

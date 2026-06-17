@@ -320,6 +320,16 @@ def _check_precious_metal(now_utc: datetime.datetime) -> MarketStatus:
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
+def is_crypto_peak_session(now_utc: datetime.datetime) -> bool:
+    """
+    Checks if current time is within high-liquidity crypto trading windows:
+    - London-NY overlap: 13:00 - 17:00 UTC
+    - Start of Asian session: 00:00 - 04:00 UTC
+    """
+    hour = now_utc.hour
+    return (13 <= hour < 17) or (0 <= hour < 4)
+
+
 def market_status(symbol: str, extended_stock_hours: bool = True) -> MarketStatus:
     """
     Return full MarketStatus for a symbol.

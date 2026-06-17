@@ -58,22 +58,48 @@ def analyze(snap: MarketSnapshot) -> AgentSignal:
     # ── Higher Timeframe Filter ────────────────────────
     htf_bearish = False
     htf_bullish = False
-    if snap.htf_snap:
-        htf = snap.htf_snap
-        # HTF is bearish if price is below EMA200 or EMAs are stacked bearishly
-        if htf.close < htf.ema200 or (htf.ema20 < htf.ema50 < htf.ema200):
-            htf_bearish = True
-        # HTF is bullish if price is above EMA200 and EMA20 > EMA50
-        elif htf.close > htf.ema200 and htf.ema20 > htf.ema50:
-            htf_bullish = True
+    
+    # ── Multi-Timeframe Trend Filter (Daily + 4H + 1H) ──
+    mtf_bearish_count = 0
+    mtf_bullish_count = 0
+    mtf_details = []
 
-    # Apply penalties to prevent counter-trend trading
-    if htf_bearish and score > 0:
-        score = min(0, score - 5)   # Apply penalty to prevent BUY signal (must result in HOLD or SELL)
-        reasons.append(f"HTF Trend Filter active: Macro trend ({snap.htf_snap.timeframe}) is BEARISH (price below EMA200). Long signals vetoed.")
-    elif htf_bullish and score < 0:
-        score = max(0, score + 5)   # Apply penalty to prevent SELL signal (must result in HOLD or BUY)
-        reasons.append(f"HTF Trend Filter active: Macro trend ({snap.htf_snap.timeframe}) is BULLISH. Short signals vetoed.")
+    for tf_name, tf_snap in [("1H", snap.htf_1h_snap), ("4H", snap.htf_4h_snap), ("Daily", snap.htf_1d_snap)]:
+        if tf_snap:
+            is_tf_bullish = tf_snap.close > tf_snap.ema200 and tf_snap.ema20 > tf_snap.ema50
+            is_tf_bearish = tf_snap.close < tf_snap.ema200 and tf_snap.ema20 < tf_snap.ema50
+            if is_tf_bullish:
+                mtf_bullish_count += 1
+                mtf_details.append(f"{tf_name}: Bullish")
+            elif is_tf_bearish:
+                mtf_bearish_count += 1
+                mtf_details.append(f"{tf_name}: Bearish")
+            else:
+                mtf_details.append(f"{tf_name}: Neutral")
+
+    if mtf_details:
+        reasons.append(f"MTF Trends ({', '.join(mtf_details)})")
+        if mtf_bearish_count >= 2 and score > 0:
+            score = min(0, score - 5)
+            reasons.append("MTF Veto: Majority of HTFs are BEARISH. Long signals vetoed.")
+        elif mtf_bullish_count >= 2 and score < 0:
+            score = max(0, score + 5)
+            reasons.append("MTF Veto: Majority of HTFs are BULLISH. Short signals vetoed.")
+    else:
+        # Fallback to single htf_snap
+        if snap.htf_snap:
+            htf = snap.htf_snap
+            if htf.close < htf.ema200 or (htf.ema20 < htf.ema50 < htf.ema200):
+                htf_bearish = True
+            elif htf.close > htf.ema200 and htf.ema20 > htf.ema50:
+                htf_bullish = True
+
+        if htf_bearish and score > 0:
+            score = min(0, score - 5)
+            reasons.append(f"HTF Trend Filter active: Macro trend ({snap.htf_snap.timeframe}) is BEARISH (price below EMA200). Long signals vetoed.")
+        elif htf_bullish and score < 0:
+            score = max(0, score + 5)
+            reasons.append(f"HTF Trend Filter active: Macro trend ({snap.htf_snap.timeframe}) is BULLISH. Short signals vetoed.")
 
     normalized = (score / max_score + 1) / 2   # 0 to 1
     if score >= 3:
