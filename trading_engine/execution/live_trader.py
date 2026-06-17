@@ -45,6 +45,10 @@ class Position:
     pnl_usd: Optional[float] = None
     fee_usd: Optional[float] = None   # total fees paid on this trade (entry + exit)
     status: str = "open"   # 'open' | 'closed' | 'stopped'
+    atr: float = 0.0                  # ATR at entry, used for trailing stop ratchet
+    trailing_high: Optional[float] = None   # best price seen since entry (long)
+    trailing_low: Optional[float] = None    # best price seen since entry (short)
+    sl_order_id: Optional[str] = None       # ID of the stop loss order on the broker/exchange
 
 
 @dataclass
@@ -397,6 +401,7 @@ def open_trade(
     size_usd: float,
     stop_loss: float,
     take_profit: float,
+    **kwargs
 ) -> Optional[Position]:
     """
     Open a live trade on the appropriate exchange.
@@ -466,6 +471,67 @@ def open_trade(
         send_message(f"⚠️ <b>LIVE execution error</b> for {symbol}: {e}")
         return None
 
+    # Calculate actual filled quantity
+    actual_qty = size_usd / fill_price
+
+    # ── Place Stop Loss order on the broker/exchange ─────────────────────────
+    sl_order_id = None
+    try:
+        if is_cfd or is_crypto:
+            exchange = get_bybit_exchange()
+            if is_cfd:
+                exchange.options["defaultType"] = "linear"
+            else:
+                exchange.options["defaultType"] = "spot"
+            exchange.load_markets()
+
+            qty_str = exchange.amount_to_precision(symbol, actual_qty)
+            qty_formatted = float(qty_str)
+
+            sl_side = "sell" if direction == "long" else "buy"
+            sl_params = {
+                "triggerPrice": exchange.price_to_precision(symbol, stop_loss),
+                "triggerBy": "LastPrice",
+            }
+            if is_cfd:
+                sl_params["reduceOnly"] = True
+
+            logger.info(f"Placing Bybit exchange Stop Loss order for {symbol} at {stop_loss:.4f}...")
+            sl_order = exchange.create_order(
+                symbol=symbol,
+                type="market",
+                side=sl_side,
+                amount=qty_formatted,
+                price=None,
+                params=sl_params
+            )
+            sl_order_id = sl_order.get("id")
+            logger.success(f"Successfully placed Bybit Stop Loss order: {sl_order_id}")
+
+        else:
+            # Alpaca stock Stop Loss
+            client = get_alpaca_client()
+            from alpaca.trading.requests import StopOrderRequest
+            from alpaca.trading.enums import OrderSide, TimeInForce
+
+            qty_rounded = round(actual_qty, 4)
+            if qty_rounded > 0:
+                sl_side = OrderSide.SELL if direction == "long" else OrderSide.BUY
+                stop_order_data = StopOrderRequest(
+                    symbol=symbol,
+                    qty=qty_rounded,
+                    side=sl_side,
+                    stop_price=stop_loss,
+                    time_in_force=TimeInForce.GTC
+                )
+                logger.info(f"Placing Alpaca Stop Loss order for {symbol} at {stop_loss:.4f}...")
+                sl_order = client.submit_order(order_data=stop_order_data)
+                sl_order_id = str(sl_order.id)
+                logger.success(f"Successfully placed Alpaca Stop Loss order: {sl_order_id}")
+
+    except Exception as e_sl:
+        logger.error(f"Failed to place broker-side Stop Loss order for {symbol}: {e_sl}. Fallback to local monitoring.")
+
     portfolio = _load_state()
 
     # Deduct transaction fee
@@ -482,6 +548,10 @@ def open_trade(
         take_profit=take_profit,
         opened_at=datetime.now(timezone.utc).isoformat(),
         fee_usd=entry_fee,
+        atr=kwargs.get("atr", 0.0),
+        trailing_high=fill_price if direction == "long" else None,
+        trailing_low=fill_price if direction == "short" else None,
+        sl_order_id=sl_order_id,
     )
     portfolio.positions.append(pos)
     portfolio.cash -= size_usd
@@ -507,22 +577,200 @@ def open_trade(
     return pos
 
 
+def _cancel_broker_stop_loss(pos: Position):
+    if not pos.sl_order_id:
+        return
+    
+    from trading_engine.market_hours import classify_symbol, AssetClass
+    ac = classify_symbol(pos.symbol)
+    
+    try:
+        if ac in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL, AssetClass.CRYPTO):
+            exchange = get_bybit_exchange()
+            if ac == AssetClass.CRYPTO:
+                exchange.options["defaultType"] = "spot"
+            else:
+                exchange.options["defaultType"] = "linear"
+            exchange.load_markets()
+            
+            logger.info(f"Cancelling Bybit Stop Loss order {pos.sl_order_id} for {pos.symbol}...")
+            exchange.cancel_order(id=pos.sl_order_id, symbol=pos.symbol)
+            logger.success(f"Successfully cancelled Bybit Stop Loss order {pos.sl_order_id}")
+        else:
+            # Alpaca
+            client = get_alpaca_client()
+            logger.info(f"Cancelling Alpaca Stop Loss order {pos.sl_order_id} for {pos.symbol}...")
+            client.cancel_order_by_id(pos.sl_order_id)
+            logger.success(f"Successfully cancelled Alpaca Stop Loss order {pos.sl_order_id}")
+    except Exception as e:
+        logger.warning(f"Failed to cancel broker-side Stop Loss order {pos.sl_order_id} for {pos.symbol}: {e}")
+
+
+def _update_broker_stop_loss(pos: Position) -> Optional[str]:
+    """
+    Cancels the existing broker stop loss order and places a new one at pos.stop_loss.
+    Returns the new sl_order_id, or None if it fails.
+    """
+    if pos.sl_order_id:
+        try:
+            _cancel_broker_stop_loss(pos)
+        except Exception as e:
+            logger.warning(f"Could not cancel old stop loss order {pos.sl_order_id}: {e}")
+            
+    from trading_engine.market_hours import classify_symbol, AssetClass
+    ac = classify_symbol(pos.symbol)
+    is_cfd = ac in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL)
+    is_crypto = ac == AssetClass.CRYPTO
+    
+    new_sl_order_id = None
+    try:
+        actual_qty = pos.size_usd / pos.entry_price
+        if is_cfd or is_crypto:
+            exchange = get_bybit_exchange()
+            if is_cfd:
+                exchange.options["defaultType"] = "linear"
+            else:
+                exchange.options["defaultType"] = "spot"
+            exchange.load_markets()
+            
+            qty_str = exchange.amount_to_precision(pos.symbol, actual_qty)
+            qty_formatted = float(qty_str)
+            
+            sl_side = "sell" if pos.direction == "long" else "buy"
+            sl_params = {
+                "triggerPrice": exchange.price_to_precision(pos.symbol, pos.stop_loss),
+                "triggerBy": "LastPrice",
+            }
+            if is_cfd:
+                sl_params["reduceOnly"] = True
+                
+            logger.info(f"Ratcheting Bybit stop loss for {pos.symbol} to {pos.stop_loss:.4f}...")
+            sl_order = exchange.create_order(
+                symbol=pos.symbol,
+                type="market",
+                side=sl_side,
+                amount=qty_formatted,
+                price=None,
+                params=sl_params
+            )
+            new_sl_order_id = sl_order.get("id")
+            logger.success(f"Placed new Bybit stop loss order: {new_sl_order_id}")
+        else:
+            # Alpaca
+            client = get_alpaca_client()
+            from alpaca.trading.requests import StopOrderRequest
+            from alpaca.trading.enums import OrderSide, TimeInForce
+            
+            qty_rounded = round(actual_qty, 4)
+            if qty_rounded > 0:
+                sl_side = OrderSide.SELL if pos.direction == "long" else OrderSide.BUY
+                stop_order_data = StopOrderRequest(
+                    symbol=pos.symbol,
+                    qty=qty_rounded,
+                    side=sl_side,
+                    stop_price=pos.stop_loss,
+                    time_in_force=TimeInForce.GTC
+                )
+                logger.info(f"Ratcheting Alpaca stop loss for {pos.symbol} to {pos.stop_loss:.4f}...")
+                sl_order = client.submit_order(order_data=stop_order_data)
+                new_sl_order_id = str(sl_order.id)
+                logger.success(f"Placed new Alpaca stop loss order: {new_sl_order_id}")
+    except Exception as e_sl:
+        logger.error(f"Failed to place new broker-side Stop Loss order for {pos.symbol} at {pos.stop_loss:.4f}: {e_sl}")
+        
+    return new_sl_order_id
+
+
+def _apply_trailing_stop(pos: Position, price: float) -> None:
+    """
+    ATR trailing stop ratchet — called before SL/TP check.
+    Updates the broker-side Stop Loss order on ratchet trigger.
+    """
+    if pos.atr <= 0:
+        return
+
+    atr = pos.atr
+    ratcheted = False
+
+    if pos.direction == "long":
+        if pos.trailing_high is None or price > pos.trailing_high:
+            pos.trailing_high = price
+
+        profit_in_atr = (pos.trailing_high - pos.entry_price) / atr
+        if profit_in_atr >= 2.0:
+            new_sl = pos.entry_price + atr
+            if new_sl > pos.stop_loss:
+                logger.info(
+                    f"🔒 Trailing stop ratchet (2×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → {new_sl:.4f}"
+                )
+                pos.stop_loss = new_sl
+                ratcheted = True
+        elif profit_in_atr >= 1.0:
+            if pos.entry_price > pos.stop_loss:
+                logger.info(
+                    f"🔒 Trailing stop ratchet (1×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → breakeven {pos.entry_price:.4f}"
+                )
+                pos.stop_loss = pos.entry_price
+                ratcheted = True
+
+    else:  # short
+        if pos.trailing_low is None or price < pos.trailing_low:
+            pos.trailing_low = price
+
+        profit_in_atr = (pos.entry_price - pos.trailing_low) / atr
+        if profit_in_atr >= 2.0:
+            new_sl = pos.entry_price - atr
+            if new_sl < pos.stop_loss:
+                logger.info(
+                    f"🔒 Trailing stop ratchet (2×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → {new_sl:.4f}"
+                )
+                pos.stop_loss = new_sl
+                ratcheted = True
+        elif profit_in_atr >= 1.0:
+            if pos.entry_price < pos.stop_loss:
+                logger.info(
+                    f"🔒 Trailing stop ratchet (1×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → breakeven {pos.entry_price:.4f}"
+                )
+                pos.stop_loss = pos.entry_price
+                ratcheted = True
+
+    if ratcheted:
+        new_id = _update_broker_stop_loss(pos)
+        if new_id:
+            pos.sl_order_id = new_id
+
+
 def update_prices(current_prices: dict[str, float]):
-    """Check if any open positions hit SL or TP."""
+    """Check if any open positions hit SL or TP. Applies trailing stop ratchet first."""
+    # Sync with broker first to handle stop-out detection
+    try:
+        sync_with_broker()
+    except Exception as e:
+        logger.warning(f"Failed to sync with broker before checking prices: {e}")
+        
     portfolio = _load_state()
     for pos in portfolio.open_positions:
         price = current_prices.get(pos.symbol)
         if not price:
             continue
 
+        # Apply trailing stop ratchet
+        _apply_trailing_stop(pos, price)
+
         if pos.direction == "long":
             if price <= pos.stop_loss:
-                _close_position(portfolio, pos, price, "stopped")
+                if not pos.sl_order_id:
+                    _close_position(portfolio, pos, price, "stopped")
+                else:
+                    logger.info(f"Stop loss level hit for {pos.symbol} but exchange-side SL order {pos.sl_order_id} is active. Relying on broker to trigger.")
             elif price >= pos.take_profit:
                 _close_position(portfolio, pos, price, "closed")
         else:  # short
             if price >= pos.stop_loss:
-                _close_position(portfolio, pos, price, "stopped")
+                if not pos.sl_order_id:
+                    _close_position(portfolio, pos, price, "stopped")
+                else:
+                    logger.info(f"Stop loss level hit for {pos.symbol} but exchange-side SL order {pos.sl_order_id} is active. Relying on broker to trigger.")
             elif price <= pos.take_profit:
                 _close_position(portfolio, pos, price, "closed")
 
@@ -554,6 +802,9 @@ def _close_position(portfolio: LivePortfolio, pos: Position, exit_price: float, 
         send_message(f"⚠️ <b>LIVE close execution error</b> for {pos.symbol}: {e}")
         # Return and do not modify state, so we retry on next monitoring tick
         return
+
+    # Cancel the stop loss order on the broker/exchange
+    _cancel_broker_stop_loss(pos)
 
     # Gross PnL
     gross_pnl = (fill_price - pos.entry_price) / pos.entry_price * pos.size_usd
@@ -656,6 +907,40 @@ def sync_with_broker() -> bool:
         if settings.trading_mode == "live" and not portfolio.positions and not portfolio.closed_trades:
             logger.info("Local live state is empty. Reconstructing from Bybit execution history...")
             try:
+                # First fetch active stop loss / conditional orders from Bybit and Alpaca
+                active_sl_orders = {}  # normalized_symbol -> (sl_order_id, stop_loss_price)
+                try:
+                    bybit_ex = get_bybit_exchange()
+                    for default_type in ("spot", "linear"):
+                        bybit_ex.options["defaultType"] = default_type
+                        try:
+                            orders = bybit_ex.fetch_open_orders(symbol=None, params={"stop": True, "orderFilter": "StopOrder"})
+                            for o in orders:
+                                sym = o.get("symbol")
+                                o_id = o.get("id")
+                                raw_trigger = o.get("triggerPrice") or o.get("stopPrice") or (o.get("info") and o["info"].get("triggerPrice"))
+                                if sym and o_id and raw_trigger:
+                                    norm_sym = sym.upper().replace("/", "").replace(":", "").replace("-", "").strip()
+                                    active_sl_orders[norm_sym] = (o_id, float(raw_trigger))
+                        except Exception as e_inner:
+                            logger.warning(f"Failed to fetch Bybit {default_type} open conditional orders: {e_inner}")
+                except Exception as e_bybit_sl:
+                    logger.warning(f"Failed to fetch Bybit conditional orders for reconstruction: {e_bybit_sl}")
+
+                try:
+                    from alpaca.trading.requests import GetOrdersRequest
+                    from alpaca.trading.enums import QueryOrderStatus
+                    alpaca_client = get_alpaca_client()
+                    orders = alpaca_client.get_orders(GetOrdersRequest(status=QueryOrderStatus.OPEN))
+                    for o in orders:
+                        if o.stop_price is not None:
+                            sym = o.symbol
+                            o_id = str(o.id)
+                            norm_sym = sym.upper().replace("/", "").replace(":", "").replace("-", "").strip()
+                            active_sl_orders[norm_sym] = (o_id, float(o.stop_price))
+                except Exception as e_alpaca_sl:
+                    logger.warning(f"Failed to fetch Alpaca open orders for reconstruction: {e_alpaca_sl}")
+
                 # Fetch Spot executions
                 spot_execs = []
                 try:
@@ -704,16 +989,33 @@ def sync_with_broker() -> bool:
                                     fee_cost = fee_cost * price
                             
                             if side == "buy":
+                                norm_sym = sym.upper().replace("/", "").replace(":", "").replace("-", "").strip()
+                                sl_order_id = None
+                                stop_loss = round(price * 0.95, 4)  # 5% default SL fallback
+                                atr_val = 0.0
+                                
+                                if norm_sym in active_sl_orders:
+                                    sl_order_id, stop_loss = active_sl_orders[norm_sym]
+                                    from trading_engine.risk_agent import _load_risk_params
+                                    _rp = _load_risk_params()
+                                    atr_mult = _rp.get("atr_stop_multiplier", 2.0)
+                                    if atr_mult > 0:
+                                        atr_val = abs(price - stop_loss) / atr_mult
+                                    logger.info(f"Reconstructed SL order {sl_order_id} and stop_loss {stop_loss:.4f} (ATR={atr_val:.4f}) for {sym}")
+                                
                                 open_runs.append(Position(
                                     symbol=sym,
                                     direction="long",
                                     entry_price=price,
                                     size_usd=cost,
-                                    stop_loss=round(price * 0.95, 4),      # 5% default SL fallback
+                                    stop_loss=stop_loss,
                                     take_profit=round(price * 1.10, 4),    # 10% default TP fallback
                                     opened_at=dt,
                                     status="open",
-                                    fee_usd=fee_cost
+                                    fee_usd=fee_cost,
+                                    atr=atr_val,
+                                    trailing_high=price,
+                                    sl_order_id=sl_order_id
                                 ))
                             elif side == "sell":
                                 if open_runs:
@@ -901,11 +1203,12 @@ def get_status() -> dict:
 def _trigger_self_healing(symbol: str):
     """Launches the self-healing optimization script in the background for a lost trade symbol."""
     import subprocess
+    import sys
     from pathlib import Path
     
-    project_root = Path(__file__).resolve().parent.parent
-    python_bin = project_root / "trading_engine" / "venv" / "bin" / "python"
-    script_path = project_root / "trading_engine" / "run_self_healing.py"
+    trading_engine_dir = Path(__file__).resolve().parent.parent
+    python_bin = sys.executable
+    script_path = trading_engine_dir / "run_self_healing.py"
     
     cmd = [
         str(python_bin),
@@ -920,7 +1223,7 @@ def _trigger_self_healing(symbol: str):
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             start_new_session=True,  # Detached from parent process group
-            cwd=str(project_root)
+            cwd=str(trading_engine_dir)
         )
     except Exception as e:
         logger.error(f"Failed to launch self-healing for {symbol}: {e}")

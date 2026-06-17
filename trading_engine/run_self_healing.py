@@ -13,7 +13,7 @@ import argparse
 from pathlib import Path
 from loguru import logger
 
-PROJECT_ROOT = Path("/Users/nasir.noma/claude_projects/AIOS")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.append(str(PROJECT_ROOT))
 from trading_engine.config import settings
 
@@ -25,7 +25,7 @@ def main():
     symbol = args.symbol.upper().strip()
     logger.info(f"❤️  Self-Healing Triggered for {symbol} due to a lost trade!")
 
-    python_bin = PROJECT_ROOT / "trading_engine" / "venv" / "bin" / "python"
+    python_bin = sys.executable
 
     # Step 1: Download latest history
     logger.info(f"1. Downloading latest historical 5m data for {symbol}...")

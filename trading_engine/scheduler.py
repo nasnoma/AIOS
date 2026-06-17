@@ -341,10 +341,10 @@ def main():
         next_run_time=datetime.now(timezone.utc),
     )
 
-    # Position monitor every 15 minutes, running immediately on startup
+    # Position monitor every 1 minute, running immediately on startup
     scheduler.add_job(
         monitor_positions,
-        trigger=IntervalTrigger(minutes=15),
+        trigger=IntervalTrigger(minutes=1),
         id="position_monitor",
         name="Position Monitor",
         next_run_time=datetime.now(timezone.utc),

@@ -366,7 +366,7 @@ def evaluate(
 
     # ── ATR-Based Stop Loss ────────────────────────────
     # Stop = 1.5x ATR below entry (long), above entry (short)
-    atr_multiplier = settings.atr_multiplier
+    atr_multiplier = _rp.get("atr_stop_multiplier", settings.atr_multiplier)
     stop_distance = atr * atr_multiplier
 
     if verdict.decision == Signal.BUY:

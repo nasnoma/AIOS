@@ -668,8 +668,9 @@ class TestRiskAgentStage3:
             weighted_score=0.8, reasoning="Test", agent_reports=[]
         )
         
-        # Patch build_snapshot to return the 5m snapshot when 5m timeframe is requested
-        with patch("trading_engine.data.market_data.build_snapshot", return_value=mock_5m_snap):
+        # Patch build_snapshot to return the 5m snapshot when 5m timeframe is requested, and patch _load_risk_params to use settings defaults
+        with patch("trading_engine.data.market_data.build_snapshot", return_value=mock_5m_snap), \
+             patch("trading_engine.risk_agent._load_risk_params", return_value={}):
             result = risk_agent.evaluate(verdict, base_snap)
             
             assert result.approved is True
@@ -702,8 +703,9 @@ class TestRiskAgentStage3:
             weighted_score=0.8, reasoning="Test", agent_reports=[]
         )
         
-        # Patch build_snapshot to raise an exception, forcing fallback to 4H
-        with patch("trading_engine.data.market_data.build_snapshot", side_effect=RuntimeError("API error")):
+        # Patch build_snapshot to raise an exception, forcing fallback to 4H, and patch _load_risk_params
+        with patch("trading_engine.data.market_data.build_snapshot", side_effect=RuntimeError("API error")), \
+             patch("trading_engine.risk_agent._load_risk_params", return_value={}):
             result = risk_agent.evaluate(verdict, base_snap)
             
             assert result.approved is True

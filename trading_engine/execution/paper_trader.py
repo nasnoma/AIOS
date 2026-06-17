@@ -356,11 +356,12 @@ def get_status() -> dict:
 def _trigger_self_healing(symbol: str):
     """Launches the self-healing optimization script in the background for a lost trade symbol."""
     import subprocess
+    import sys
     from pathlib import Path
     
-    project_root = Path(__file__).resolve().parent.parent
-    python_bin = project_root / "trading_engine" / "venv" / "bin" / "python"
-    script_path = project_root / "trading_engine" / "run_self_healing.py"
+    trading_engine_dir = Path(__file__).resolve().parent.parent
+    python_bin = sys.executable
+    script_path = trading_engine_dir / "run_self_healing.py"
     
     cmd = [
         str(python_bin),
@@ -375,7 +376,7 @@ def _trigger_self_healing(symbol: str):
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             start_new_session=True,  # Detached from parent process group
-            cwd=str(project_root)
+            cwd=str(trading_engine_dir)
         )
     except Exception as e:
         logger.error(f"Failed to launch self-healing for {symbol}: {e}")
