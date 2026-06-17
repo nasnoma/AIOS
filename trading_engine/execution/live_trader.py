@@ -687,7 +687,7 @@ def sync_with_broker() -> bool:
                     for sym, symbol_execs in by_symbol.items():
                         symbol_execs.sort(key=lambda x: x["timestamp"])
                         
-                        current_pos = None
+                        open_runs = []
                         for ex in symbol_execs:
                             side = ex["side"].lower()
                             price = float(ex["price"])
@@ -704,34 +704,32 @@ def sync_with_broker() -> bool:
                                     fee_cost = fee_cost * price
                             
                             if side == "buy":
-                                if current_pos is None:
-                                    current_pos = Position(
-                                        symbol=sym,
-                                        direction="long",
-                                        entry_price=price,
-                                        size_usd=cost,
-                                        stop_loss=round(price * 0.95, 4),      # 5% default SL fallback
-                                        take_profit=round(price * 1.10, 4),    # 10% default TP fallback
-                                        opened_at=dt,
-                                        status="open",
-                                        fee_usd=fee_cost
-                                    )
+                                open_runs.append(Position(
+                                    symbol=sym,
+                                    direction="long",
+                                    entry_price=price,
+                                    size_usd=cost,
+                                    stop_loss=round(price * 0.95, 4),      # 5% default SL fallback
+                                    take_profit=round(price * 1.10, 4),    # 10% default TP fallback
+                                    opened_at=dt,
+                                    status="open",
+                                    fee_usd=fee_cost
+                                ))
                             elif side == "sell":
-                                if current_pos is not None:
-                                    current_pos.exit_price = price
-                                    current_pos.closed_at = dt
-                                    current_pos.fee_usd = (current_pos.fee_usd or 0.0) + fee_cost
+                                if open_runs:
+                                    matched_pos = open_runs.pop(0)
+                                    matched_pos.exit_price = price
+                                    matched_pos.closed_at = dt
+                                    matched_pos.fee_usd = round((matched_pos.fee_usd or 0.0) + fee_cost, 4)
                                     
-                                    qty = current_pos.size_usd / current_pos.entry_price
-                                    pnl = (price - current_pos.entry_price) * qty
-                                    current_pos.pnl_usd = round(pnl, 4)
-                                    current_pos.status = "closed" if pnl >= 0 else "stopped"
+                                    qty = matched_pos.size_usd / matched_pos.entry_price
+                                    pnl = (price - matched_pos.entry_price) * qty
+                                    matched_pos.pnl_usd = round(pnl, 4)
+                                    matched_pos.status = "closed" if pnl >= 0 else "stopped"
                                     
-                                    reconstructed_closed.append(current_pos)
-                                    current_pos = None
+                                    reconstructed_closed.append(matched_pos)
                                     
-                        if current_pos is not None:
-                            reconstructed_positions.append(current_pos)
+                        reconstructed_positions.extend(open_runs)
                             
                     portfolio.positions = reconstructed_positions
                     portfolio.closed_trades = reconstructed_closed

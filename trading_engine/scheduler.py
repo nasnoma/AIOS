@@ -84,6 +84,11 @@ def run_signal_cycle():
         if sig.final_action in ("BUY", "SELL") and settings.trading_mode != "signal_only":
             direction = "long" if sig.final_action == "BUY" else "short"
             
+            # Prevent duplicate concurrent positions on the same asset
+            if any(p.symbol == sig.symbol for p in portfolio.open_positions):
+                logger.info(f"⏭️ Skipping execution for {sig.symbol}: position already open.")
+                continue
+            
             max_positions = settings.max_concurrent_positions
             if len(portfolio.open_positions) >= max_positions:
                 logger.warning(f"Trade execution blocked for {sig.symbol}: Max concurrent positions limit ({max_positions}) reached.")
@@ -94,7 +99,7 @@ def run_signal_cycle():
                 logger.warning(f"Trade execution blocked for {sig.symbol}: Insufficient cash (cash=${portfolio.cash:,.2f}, needed=${size_needed:,.2f})")
                 continue
 
-            trader.open_trade(
+            pos = trader.open_trade(
                 symbol=sig.symbol,
                 direction=direction,
                 entry=sig.entry_price,
@@ -102,6 +107,9 @@ def run_signal_cycle():
                 stop_loss=sig.stop_loss or 0,
                 take_profit=sig.take_profit or 0,
             )
+            if pos:
+                # Reload portfolio to reflect new position & cash balance in subsequent iterations
+                portfolio = trader._load_state()
 
         # Send Telegram alert for any actionable signal
         if sig.final_action in ("BUY", "SELL"):
@@ -224,6 +232,11 @@ def run_bounty_hunter_cycle():
     if active_buys:
         logger.info(f"Bounty Hunter: placing {len(active_buys)} BUY trade(s)...")
         for b in active_buys:
+            # Prevent duplicate concurrent positions
+            if any(p.symbol == b["symbol"] for p in portfolio.open_positions):
+                logger.info(f"Bounty Hunter: skipping BUY for {b['symbol']} (position already open).")
+                continue
+
             max_positions = settings.max_concurrent_positions
             if len(portfolio.open_positions) >= max_positions:
                 logger.warning(f"Bounty Hunter execution blocked: Max concurrent positions ({max_positions}) reached.")
@@ -233,7 +246,7 @@ def run_bounty_hunter_cycle():
                 logger.warning(f"Bounty Hunter execution blocked for {b['symbol']}: Insufficient cash (cash=${portfolio.cash:,.2f}, needed=${size_needed:,.2f})")
                 continue
 
-            trader.open_trade(
+            pos = trader.open_trade(
                 symbol=b["symbol"],
                 direction="long",
                 entry=b["entry_price"],
@@ -241,6 +254,8 @@ def run_bounty_hunter_cycle():
                 stop_loss=b["stop_loss"]    or (b["entry_price"] * 0.95),
                 take_profit=b["take_profit"] or (b["entry_price"] * 1.10),
             )
+            if pos:
+                portfolio = trader._load_state()
     else:
         logger.info("Bounty Hunter: no approved BUY candidates in this scan.")
 
@@ -248,6 +263,11 @@ def run_bounty_hunter_cycle():
     if active_sells:
         logger.info(f"Bounty Hunter: placing {len(active_sells)} SELL (short) trade(s)...")
         for s in active_sells:
+            # Prevent duplicate concurrent positions
+            if any(p.symbol == s["symbol"] for p in portfolio.open_positions):
+                logger.info(f"Bounty Hunter: skipping SELL for {s['symbol']} (position already open).")
+                continue
+
             max_positions = settings.max_concurrent_positions
             if len(portfolio.open_positions) >= max_positions:
                 logger.warning(f"Bounty Hunter execution blocked: Max concurrent positions ({max_positions}) reached.")
@@ -257,7 +277,7 @@ def run_bounty_hunter_cycle():
                 logger.warning(f"Bounty Hunter execution blocked for {s['symbol']}: Insufficient cash (cash=${portfolio.cash:,.2f}, needed=${size_needed:,.2f})")
                 continue
 
-            trader.open_trade(
+            pos = trader.open_trade(
                 symbol=s["symbol"],
                 direction="short",
                 entry=s["entry_price"],
@@ -265,6 +285,8 @@ def run_bounty_hunter_cycle():
                 stop_loss=s["stop_loss"]    or (s["entry_price"] * 1.05),
                 take_profit=s["take_profit"] or (s["entry_price"] * 0.90),
             )
+            if pos:
+                portfolio = trader._load_state()
     else:
         logger.info("Bounty Hunter: no approved SELL candidates in this scan.")
 
