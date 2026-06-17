@@ -196,6 +196,30 @@ def _kelly_fraction(win_rate: float, rr_ratio: float, kelly_fraction: float = 0.
     return kelly * kelly_fraction
 
 
+def _get_5m_atr(snap: MarketSnapshot) -> tuple[float, float]:
+    """
+    Returns (entry_price, atr) on 5m timeframe if available, 
+    otherwise falls back to (snap.close, snap.atr).
+    """
+    if snap.timeframe == "5m":
+        return snap.close, snap.atr
+        
+    try:
+        from trading_engine.data.market_data import build_snapshot
+        # Fetch the 5m snapshot for the symbol. Set is_htf=True to avoid recursive fetching.
+        snap_5m = build_snapshot(snap.symbol, timeframe="5m", is_htf=True)
+        if snap_5m and snap_5m.atr > 0:
+            logger.info(
+                f"   [Stage 3] Precise 5m entry={snap_5m.close:.4f} and ATR={snap_5m.atr:.4f} "
+                f"(original tf={snap.timeframe} entry={snap.close:.4f}, ATR={snap.atr:.4f})"
+            )
+            return snap_5m.close, snap_5m.atr
+    except Exception as e:
+        logger.warning(f"Failed to fetch precise 5m ATR for {snap.symbol}: {e}. Falling back to default timeframe.")
+        
+    return snap.close, snap.atr
+
+
 def evaluate(
     verdict: JudgeVerdict,
     snap: MarketSnapshot,
@@ -207,8 +231,8 @@ def evaluate(
     """
     Run full risk assessment. Returns RiskDecision with approved=True/False.
     """
-    entry = snap.close
-    atr = snap.atr
+    # ── Stage 3: Precise 5M Entry & ATR stop loss calculation ───────
+    entry, atr = _get_5m_atr(snap)
     account = settings.account_size
     max_risk_per_trade = settings.max_risk_per_trade
 

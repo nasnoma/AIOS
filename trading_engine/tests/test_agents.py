@@ -141,7 +141,8 @@ class TestVolatilityAgent:
 # ── Risk Agent ─────────────────────────────────────────────
 
 class TestRiskAgent:
-    def test_approved_trade(self):
+    @patch("trading_engine.data.market_data.build_snapshot", side_effect=RuntimeError("Unit test fallback"))
+    def test_approved_trade(self, mock_build):
         from trading_engine.risk_agent import evaluate, RiskDecision
         from trading_engine.judge import JudgeVerdict
         from trading_engine.agents.base import Signal
@@ -157,7 +158,8 @@ class TestRiskAgent:
         assert decision.take_profit > 50000
         assert 0 < decision.position_size_pct <= 0.10
 
-    def test_veto_extreme_atr(self):
+    @patch("trading_engine.data.market_data.build_snapshot", side_effect=RuntimeError("Unit test fallback"))
+    def test_veto_extreme_atr(self, mock_build):
         from trading_engine.risk_agent import evaluate
         from trading_engine.judge import JudgeVerdict
         snap = make_snapshot(close=50000, atr=5000, bb_width=0.20)
@@ -168,7 +170,8 @@ class TestRiskAgent:
         decision = evaluate(verdict, snap)
         assert not decision.approved
 
-    def test_veto_portfolio_heat(self):
+    @patch("trading_engine.data.market_data.build_snapshot", side_effect=RuntimeError("Unit test fallback"))
+    def test_veto_portfolio_heat(self, mock_build):
         from trading_engine.risk_agent import evaluate
         from trading_engine.judge import JudgeVerdict
         snap = make_snapshot(close=50000, atr=1000, bb_width=0.05)
@@ -535,6 +538,84 @@ class TestStructureAgent:
             # The signal should be boosted to BUY because of the proximity to HTF support
             assert result.signal == Signal.BUY
             assert "HTF Support nearby" in result.reason
+
+
+
+# ── Risk Agent ──────────────────────────────────────────────
+
+class TestRiskAgentStage3:
+    def test_risk_agent_5m_atr_calculation(self):
+        from trading_engine import risk_agent
+        from trading_engine.judge import JudgeVerdict
+        
+        # Base snapshot on 4H timeframe
+        base_df = pd.DataFrame({
+            "high": np.ones(50) * 105,
+            "low": np.ones(50) * 95,
+            "close": np.ones(50) * 100,
+        })
+        base_snap = make_snapshot(close=100.0, df=base_df, timeframe="4h")
+        base_snap.atr = 5.0
+        
+        # Mock 5m snapshot returned by build_snapshot
+        mock_5m_df = pd.DataFrame({
+            "high": np.ones(50) * 100,
+            "low": np.ones(50) * 99,
+            "close": np.ones(50) * 99.5,
+        })
+        mock_5m_snap = make_snapshot(close=99.5, df=mock_5m_df, timeframe="5m")
+        mock_5m_snap.atr = 1.0
+        
+        verdict = JudgeVerdict(
+            approved=True, decision=Signal.BUY, confidence=80.0, agreement=6, disagreement=0,
+            weighted_score=0.8, reasoning="Test", agent_reports=[]
+        )
+        
+        # Patch build_snapshot to return the 5m snapshot when 5m timeframe is requested
+        with patch("trading_engine.data.market_data.build_snapshot", return_value=mock_5m_snap):
+            result = risk_agent.evaluate(verdict, base_snap)
+            
+            assert result.approved is True
+            assert result.entry_price == 99.5
+            assert result.atr == 1.0
+            
+            # stop loss = entry - (atr * atr_multiplier)
+            expected_sl = 99.5 - (1.0 * risk_agent.settings.atr_multiplier)
+            assert abs(result.stop_loss - expected_sl) < 1e-4
+            
+            # take profit = entry + (atr * atr_multiplier * rr_ratio)
+            expected_tp = 99.5 + (1.0 * risk_agent.settings.atr_multiplier * risk_agent.settings.rr_ratio)
+            assert abs(result.take_profit - expected_tp) < 1e-4
+
+    def test_risk_agent_5m_fallback(self):
+        from trading_engine import risk_agent
+        from trading_engine.judge import JudgeVerdict
+        
+        # Base snapshot on 4H timeframe
+        base_df = pd.DataFrame({
+            "high": np.ones(50) * 110,
+            "low": np.ones(50) * 90,
+            "close": np.ones(50) * 100,
+        })
+        base_snap = make_snapshot(close=100.0, df=base_df, timeframe="4h")
+        base_snap.atr = 2.0
+        
+        verdict = JudgeVerdict(
+            approved=True, decision=Signal.BUY, confidence=80.0, agreement=6, disagreement=0,
+            weighted_score=0.8, reasoning="Test", agent_reports=[]
+        )
+        
+        # Patch build_snapshot to raise an exception, forcing fallback to 4H
+        with patch("trading_engine.data.market_data.build_snapshot", side_effect=RuntimeError("API error")):
+            result = risk_agent.evaluate(verdict, base_snap)
+            
+            assert result.approved is True
+            assert result.entry_price == 100.0
+            assert result.atr == 2.0
+            
+            # stop loss = entry - (atr * atr_multiplier)
+            expected_sl = 100.0 - (2.0 * risk_agent.settings.atr_multiplier)
+            assert abs(result.stop_loss - expected_sl) < 1e-4
 
 
 if __name__ == "__main__":
