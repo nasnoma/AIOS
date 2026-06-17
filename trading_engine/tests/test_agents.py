@@ -466,5 +466,76 @@ class TestWalkForward:
             assert 0.5 <= optimized[key] <= 2.0
 
 
+# ── Structure Agent ─────────────────────────────────────────
+
+class TestStructureAgent:
+    def test_htf_resistance_blocking(self):
+        from trading_engine.agents import structure_agent
+        # Local structure has bullish Break of Structure (score is positive)
+        base_df = pd.DataFrame({
+            "high": np.ones(50) * 100,
+            "low": np.ones(50) * 90,
+            "close": np.ones(50) * 95,
+        })
+        base_snap = make_snapshot(close=100.0, df=base_df)
+        
+        # Build synthetic higher-timeframe snap
+        # Make it have resistance level at 101.0 (just 1% above base close price of 100.0)
+        htf_df = pd.DataFrame({
+            "high": np.array([101.0] * 50),
+            "low": np.array([90.0] * 50),
+            "close": np.array([95.0] * 50),
+            "is_pivot_high": np.array([True] * 50),
+            "is_pivot_low": np.array([True] * 50),
+        })
+        htf_snap = make_snapshot(close=95.0, df=htf_df, timeframe="4h")
+        base_snap.htf_snap = htf_snap
+        
+        # Mock _find_support_resistance to return local and HTF S/R levels
+        with patch("trading_engine.agents.structure_agent._detect_bos", return_value=(True, False)), \
+             patch("trading_engine.agents.structure_agent._find_support_resistance", side_effect=[
+                 (90.0, 110.0), # local S/R
+                 (90.0, 101.0), # HTF S/R
+             ]):
+            result = structure_agent.analyze(base_snap)
+            
+            # The BUY signal should be blocked (downgraded to HOLD) because 101.0 is within 1.5% of 100.0
+            assert result.signal == Signal.HOLD
+            assert "HTF Resistance nearby" in result.reason
+
+    def test_htf_support_boost(self):
+        from trading_engine.agents import structure_agent
+        base_df = pd.DataFrame({
+            "high": np.ones(50) * 100,
+            "low": np.ones(50) * 90,
+            "close": np.ones(50) * 92,
+        })
+        base_snap = make_snapshot(close=92.0, df=base_df)
+        
+        # Build synthetic higher-timeframe snap
+        # Make it have support level at 91.0 (just 1.1% below base close price of 92.0)
+        htf_df = pd.DataFrame({
+            "high": np.array([105.0] * 50),
+            "low": np.array([91.0] * 50),
+            "close": np.array([95.0] * 50),
+            "is_pivot_high": np.array([True] * 50),
+            "is_pivot_low": np.array([True] * 50),
+        })
+        htf_snap = make_snapshot(close=95.0, df=htf_df, timeframe="4h")
+        base_snap.htf_snap = htf_snap
+        
+        # Mock _find_support_resistance to return local and HTF S/R levels
+        with patch("trading_engine.agents.structure_agent._detect_bos", return_value=(False, False)), \
+             patch("trading_engine.agents.structure_agent._find_support_resistance", side_effect=[
+                 (80.0, 110.0), # local S/R
+                 (91.0, 110.0), # HTF S/R
+             ]):
+            result = structure_agent.analyze(base_snap)
+            
+            # The signal should be boosted to BUY because of the proximity to HTF support
+            assert result.signal == Signal.BUY
+            assert "HTF Support nearby" in result.reason
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

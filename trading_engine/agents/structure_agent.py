@@ -112,6 +112,20 @@ def analyze(snap: MarketSnapshot) -> AgentSignal:
         score += 1
         reasons.append(f"Above support ({support:.2f})")
 
+    # ── Higher Timeframe S/R Filter ────────────────────
+    if snap.htf_snap:
+        htf_support, htf_resistance = _find_support_resistance(snap.htf_snap.df)
+        if htf_resistance:
+            dist_res_pct = (htf_resistance - close) / close
+            if 0 <= dist_res_pct <= 0.015:
+                score = min(0, score - 4)  # Prevent BUY signal, force HOLD/SELL
+                reasons.append(f"HTF Resistance nearby: Major HTF resistance at {htf_resistance:.2f} is within {dist_res_pct*100:.1f}%. Long signals vetoed.")
+        if htf_support:
+            dist_sup_pct = (close - htf_support) / htf_support
+            if 0 <= dist_sup_pct <= 0.02:
+                score = max(0, score + 3)  # Boost BUY signal confidence
+                reasons.append(f"HTF Support nearby: Price is resting near major HTF support at {htf_support:.2f} (within {dist_sup_pct*100:.1f}%). High-probability entry area.")
+
     # ── Break of Structure ─────────────────────────────
     bullish_bos, bearish_bos = _detect_bos(df)
     if bullish_bos:
