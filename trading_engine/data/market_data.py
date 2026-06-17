@@ -87,6 +87,7 @@ class MarketSnapshot:
     stocktwits_raw: str = ""
     news_headlines: list[str] = field(default_factory=list)
     orderbook_imbalance: float = 0.5
+    htf_snap: Optional[MarketSnapshot] = None
 
 
 # ─────────────────────────────────────────────
@@ -557,7 +558,17 @@ _SNAPSHOT_CACHE = {}  # (symbol, timeframe) -> (timestamp_float, MarketSnapshot)
 CACHE_TTL_SECONDS = 60
 
 
-def build_snapshot(symbol: str, timeframe: str = None) -> MarketSnapshot:
+def get_higher_timeframe(tf: str) -> str:
+    """Map lower timeframe to its higher-timeframe trend filter."""
+    tf_clean = tf.lower().strip()
+    if tf_clean in ("5m", "15m"):
+        return "4h"
+    elif tf_clean in ("1h", "4h"):
+        return "1d"
+    return "1d"
+
+
+def build_snapshot(symbol: str, timeframe: str = None, is_htf: bool = False) -> MarketSnapshot:
     """
     Main entry point. Fetch data, compute indicators,
     return a ready-to-use MarketSnapshot.
@@ -650,6 +661,14 @@ def build_snapshot(symbol: str, timeframe: str = None) -> MarketSnapshot:
         net_income=metrics.get("net_income"),
         revenue=metrics.get("revenue"),
     )
+
+    if not is_htf:
+        htf = get_higher_timeframe(tf)
+        if htf != tf:
+            try:
+                snap.htf_snap = build_snapshot(symbol, htf, is_htf=True)
+            except Exception as e_htf:
+                logger.warning(f"Failed to build higher timeframe ({htf}) snapshot for {symbol}: {e_htf}")
 
     logger.success(f"Snapshot built: {symbol} ({asset_type}) | Close={snap.close:.4f} | RSI={snap.rsi:.1f}")
     _SNAPSHOT_CACHE[cache_key] = (time.time(), snap)

@@ -67,6 +67,36 @@ class TestTrendAgent:
         assert result.agent == "trend"
         assert 0 <= result.confidence <= 100
 
+    def test_higher_timeframe_bearish_filter(self):
+        from trading_engine.agents import trend_agent
+        # Lower timeframe has bullish stack (score should be +5, BUY signal)
+        base_snap = make_snapshot(ema20=50000, ema50=48000, ema200=45000, close=51000)
+        
+        # But higher timeframe is strongly bearish (close is below ema200)
+        htf_snap = make_snapshot(ema20=40000, ema50=42000, ema200=46000, close=39000, timeframe="1d")
+        base_snap.htf_snap = htf_snap
+        
+        result = trend_agent.analyze(base_snap)
+        
+        # Bullish signal should be vetoed/downgraded to HOLD or SELL due to HTF bearish filter
+        assert result.signal in (Signal.HOLD, Signal.SELL)
+        assert "HTF Trend Filter active" in result.reason
+
+    def test_higher_timeframe_bullish_filter(self):
+        from trading_engine.agents import trend_agent
+        # Lower timeframe has bearish stack (SELL signal)
+        base_snap = make_snapshot(ema20=40000, ema50=42000, ema200=46000, close=39000)
+        
+        # But higher timeframe is strongly bullish (close is above ema200)
+        htf_snap = make_snapshot(ema20=50000, ema50=48000, ema200=45000, close=51000, timeframe="1d")
+        base_snap.htf_snap = htf_snap
+        
+        result = trend_agent.analyze(base_snap)
+        
+        # Bearish signal should be vetoed/downgraded to HOLD or BUY due to HTF bullish filter
+        assert result.signal in (Signal.HOLD, Signal.BUY)
+        assert "HTF Trend Filter active" in result.reason
+
 
 # ── Momentum Agent ─────────────────────────────────────────
 

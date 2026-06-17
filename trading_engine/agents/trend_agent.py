@@ -55,6 +55,26 @@ def analyze(snap: MarketSnapshot) -> AgentSignal:
         score -= 1
         reasons.append("Lower highs + lower lows (downtrend)")
 
+    # ── Higher Timeframe Filter ────────────────────────
+    htf_bearish = False
+    htf_bullish = False
+    if snap.htf_snap:
+        htf = snap.htf_snap
+        # HTF is bearish if price is below EMA200 or EMAs are stacked bearishly
+        if htf.close < htf.ema200 or (htf.ema20 < htf.ema50 < htf.ema200):
+            htf_bearish = True
+        # HTF is bullish if price is above EMA200 and EMA20 > EMA50
+        elif htf.close > htf.ema200 and htf.ema20 > htf.ema50:
+            htf_bullish = True
+
+    # Apply penalties to prevent counter-trend trading
+    if htf_bearish and score > 0:
+        score = min(0, score - 5)   # Apply penalty to prevent BUY signal (must result in HOLD or SELL)
+        reasons.append(f"HTF Trend Filter active: Macro trend ({snap.htf_snap.timeframe}) is BEARISH (price below EMA200). Long signals vetoed.")
+    elif htf_bullish and score < 0:
+        score = max(0, score + 5)   # Apply penalty to prevent SELL signal (must result in HOLD or BUY)
+        reasons.append(f"HTF Trend Filter active: Macro trend ({snap.htf_snap.timeframe}) is BULLISH. Short signals vetoed.")
+
     normalized = (score / max_score + 1) / 2   # 0 to 1
     if score >= 3:
         signal = Signal.BUY
