@@ -148,7 +148,7 @@ class TestVolatilityAgent:
         from trading_engine.agents import volatility_agent
         snap = make_snapshot(atr=5000, close=50000, bb_width=0.20, realized_vol=2.0)
         result = volatility_agent.analyze(snap)
-        assert result.signal == Signal.SELL  # SELL = "avoid trade"
+        assert result.signal == Signal.HOLD  # HOLD = "avoid trade"
         assert result.confidence >= 80
 
     def test_healthy_volatility(self):
