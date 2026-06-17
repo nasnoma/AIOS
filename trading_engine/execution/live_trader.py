@@ -698,6 +698,10 @@ def sync_with_broker() -> bool:
                             fee_cost = 0.0
                             if ex.get("fee") and isinstance(ex["fee"], dict):
                                 fee_cost = float(ex["fee"].get("cost", 0.0))
+                                fee_currency = ex["fee"].get("currency")
+                                if fee_currency and fee_currency not in ("USDT", "USD"):
+                                    # Convert base-currency fee to USDT using transaction price
+                                    fee_cost = fee_cost * price
                             
                             if side == "buy":
                                 if current_pos is None:
