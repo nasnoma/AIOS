@@ -1072,6 +1072,69 @@ class TestPhase1AndPhase2:
             assert open_pos.stop_loss == 58000.0
             assert open_pos.take_profit == 66000.0
 
+    def test_live_trader_dust_balance_filter(self):
+        """Verify that sync_with_broker ignores Spot balances valued at less than $10."""
+        from trading_engine.execution.live_trader import sync_with_broker, Position, LivePortfolio, _save_state
+        
+        portfolio = LivePortfolio(account_size=10000.0, cash=10000.0)
+        portfolio.positions = []
+        portfolio.closed_trades = []
+        _save_state(portfolio)
+
+        mock_tickers = {
+            "NEAR/USDT": {"last": 2.2},
+            "GRASS/USDT": {"last": 0.42}
+        }
+
+        # GRASS: 0.0368 * 0.42 = 0.015 USD (dust)
+        # NEAR: 10.0 * 2.2 = 22.0 USD (non-dust)
+        mock_balance = {
+            'total': {
+                'USDT': 10000.0,
+                'NEAR': 10.0,
+                'GRASS': 0.0368
+            },
+            'USDT': {'free': 10000.0}
+        }
+
+        mock_trades = [
+            {
+                "symbol": "NEAR/USDT",
+                "side": "buy",
+                "price": 2.2,
+                "cost": 22.0,
+                "timestamp": 1718600000000,
+                "fee": {"cost": 0.022, "currency": "USDT"}
+            },
+            {
+                "symbol": "GRASS/USDT",
+                "side": "buy",
+                "price": 0.42,
+                "cost": 0.015,
+                "timestamp": 1718600000000,
+                "fee": {"cost": 0.0001, "currency": "USDT"}
+            }
+        ]
+
+        with patch("trading_engine.execution.live_trader.settings.trading_mode", "live"), \
+             patch("trading_engine.execution.live_trader.get_bybit_exchange") as mock_ex_getter:
+            
+            mock_ex = mock_ex_getter.return_value
+            mock_ex.fetch_open_orders.return_value = []
+            mock_ex.fetch_balance.return_value = mock_balance
+            mock_ex.fetch_tickers.return_value = mock_tickers
+            mock_ex.fetch_my_trades.side_effect = [mock_trades, []]
+            
+            success = sync_with_broker()
+            assert success is True
+            
+            from trading_engine.execution.live_trader import _load_state
+            re_portfolio = _load_state()
+            
+            # Should only reconstruct 1 position (NEAR/USDT). GRASS/USDT should be ignored as dust.
+            assert len(re_portfolio.positions) == 1
+            assert re_portfolio.positions[0].symbol == "NEAR/USDT"
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
