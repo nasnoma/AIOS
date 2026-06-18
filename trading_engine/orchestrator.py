@@ -81,16 +81,20 @@ def _get_daily_pnl(trader) -> float:
         state = trader._load_state()
         today_utc = datetime.now(timezone.utc).date()
         total = 0.0
-        for pos in state.closed_positions:
+        closed_list = getattr(state, "closed_trades", [])
+        for pos in closed_list:
             # closed_at may be an ISO string or datetime
             closed_at = pos.closed_at
             if closed_at is None:
                 continue
             if isinstance(closed_at, str):
                 from datetime import datetime as _dt
-                closed_at = _dt.fromisoformat(closed_at.replace("Z", "+00:00"))
+                iso_str = closed_at
+                if iso_str.endswith("Z"):
+                    iso_str = iso_str[:-1] + "+00:00"
+                closed_at = _dt.fromisoformat(iso_str)
             if hasattr(closed_at, "date") and closed_at.date() == today_utc:
-                total += float(pos.pnl or 0.0)
+                total += float(getattr(pos, "pnl_usd", 0.0) or getattr(pos, "pnl", 0.0) or 0.0)
         logger.info(f"  💰 Circuit breaker: today's realized PnL = ${total:,.2f}")
         return total
     except Exception as e:
