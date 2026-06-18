@@ -45,6 +45,7 @@ class Position:
     atr: float = 0.0                  # ATR at entry, used for trailing stop ratchet
     trailing_high: Optional[float] = None   # best price seen since entry (long)
     trailing_low: Optional[float] = None    # best price seen since entry (short)
+    tp_order_id: Optional[str] = None       # ID of the take profit order on the broker/exchange
 
 
 @dataclass

@@ -950,6 +950,128 @@ class TestPhase1AndPhase2:
             assert closed_pos.status == "closed"
             assert closed_pos.pnl_usd > 0
 
+    def test_short_position_multiplier_sizing_reduction(self):
+        """Verify that when risk evaluates a SELL/short signal, it applies the short_position_multiplier setting."""
+        from trading_engine import risk_agent
+        from trading_engine.judge import JudgeVerdict
+        
+        # Base snapshot
+        base_df = pd.DataFrame({
+            "high": np.ones(50) * 110,
+            "low": np.ones(50) * 90,
+            "close": np.ones(50) * 100,
+        })
+        base_snap = make_snapshot(close=100.0, df=base_df, timeframe="4h")
+        base_snap.atr = 2.0
+        base_snap.bb_width = 0.05
+        
+        # Mock 5m snapshot
+        mock_5m_df = pd.DataFrame({
+            "high": np.ones(50) * 100,
+            "low": np.ones(50) * 99,
+            "close": np.ones(50) * 99.5,
+        })
+        mock_5m_snap = make_snapshot(close=99.5, df=mock_5m_df, timeframe="5m")
+        mock_5m_snap.atr = 1.0
+        mock_5m_snap.ema50 = 90.0
+
+        # BUY verdict
+        verdict_buy = JudgeVerdict(
+            approved=True, decision=Signal.BUY, confidence=80.0, agreement=6, disagreement=0,
+            weighted_score=0.8, reasoning="Test", agent_reports=[]
+        )
+        
+        # SELL verdict (Short)
+        verdict_sell = JudgeVerdict(
+            approved=True, decision=Signal.SELL, confidence=80.0, agreement=6, disagreement=0,
+            weighted_score=0.8, reasoning="Test", agent_reports=[]
+        )
+        
+        # We test with different short multipliers (e.g. 0.75 and 0.5)
+        with patch("trading_engine.data.market_data.build_snapshot", return_value=mock_5m_snap), \
+             patch("trading_engine.risk_agent._load_risk_params", return_value={}), \
+             patch("trading_engine.risk_agent.settings.short_position_multiplier", 0.5):
+            
+            # For buy, short multiplier shouldn't be applied
+            res_buy = risk_agent.evaluate(verdict_buy, base_snap)
+            assert res_buy.approved is True
+            size_buy = res_buy.position_size_pct
+            
+            # For sell, short multiplier (0.5) should be applied, yielding half the size
+            res_sell = risk_agent.evaluate(verdict_sell, base_snap)
+            assert res_sell.approved is True
+            size_sell = res_sell.position_size_pct
+            
+            # Verify sizing reduction
+            assert abs(size_sell - (size_buy * 0.5)) < 1e-4
+
+    def test_live_trader_reconstruction_with_take_profit_order(self):
+        """Verify that sync_with_broker correctly reconstructs both sl_order_id and tp_order_id."""
+        from trading_engine.execution.live_trader import sync_with_broker, Position, LivePortfolio, _save_state
+        
+        portfolio = LivePortfolio(account_size=10000.0, cash=10000.0)
+        # Clear positions to force reconstruction
+        portfolio.positions = []
+        portfolio.closed_trades = []
+        _save_state(portfolio)
+
+        # Mock two open conditional orders on Bybit: one Stop Loss (price < entry) and one Take Profit (price > entry)
+        # Entry price is 60000.0 (from first trade), so:
+        # SL order: triggerPrice = 58000.0
+        # TP order: triggerPrice = 66000.0
+        mock_open_orders = [
+            {
+                "id": "sl_order_123",
+                "symbol": "BTC/USDT",
+                "triggerPrice": 58000.0,
+            },
+            {
+                "id": "tp_order_456",
+                "symbol": "BTC/USDT",
+                "triggerPrice": 66000.0,
+            }
+        ]
+
+        mock_trades = [
+            {
+                "symbol": "BTC/USDT",
+                "side": "buy",
+                "price": 60000.0,
+                "cost": 600.0,
+                "timestamp": 1718600000000,
+                "fee": {"cost": 0.6, "currency": "USDT"}
+            }
+        ]
+
+        with patch("trading_engine.execution.live_trader.settings.trading_mode", "live"), \
+             patch("trading_engine.execution.live_trader.get_bybit_exchange") as mock_ex_getter:
+            
+            mock_ex = mock_ex_getter.return_value
+            # fetch_open_orders returns our mock open conditional orders
+            mock_ex.fetch_open_orders.return_value = mock_open_orders
+            # fetch_balance returns positive BTC balance to keep spot position open
+            mock_ex.fetch_balance.return_value = {'total': {'BTC': 1.0, 'USDT': 10000.0}, 'USDT': {'free': 10000.0}}
+            # fetch_my_trades returns mock_trades for spot (first call), and [] for linear (second call)
+            mock_ex.fetch_my_trades.side_effect = [mock_trades, []]
+            
+            success = sync_with_broker()
+            assert success is True
+            
+            from trading_engine.execution.live_trader import _load_state
+            re_portfolio = _load_state()
+            
+            assert len(re_portfolio.positions) == 1
+            open_pos = re_portfolio.positions[0]
+            
+            # Verify reconstructed fields
+            assert open_pos.symbol == "BTC/USDT"
+            assert open_pos.direction == "long"
+            assert open_pos.entry_price == 60000.0
+            assert open_pos.sl_order_id == "sl_order_123"
+            assert open_pos.tp_order_id == "tp_order_456"
+            assert open_pos.stop_loss == 58000.0
+            assert open_pos.take_profit == 66000.0
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

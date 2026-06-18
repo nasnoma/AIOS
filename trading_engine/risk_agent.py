@@ -489,6 +489,12 @@ def evaluate(
     # Apply correlation multiplier (1.0 = full size, 0.5 = half size due to high correlation)
     position_size_pct *= corr_multiplier
 
+    # Apply short multiplier for short positions (Signal.SELL) to protect capital against altcoin short squeezes
+    short_multiplier = 1.0
+    if verdict.decision == Signal.SELL:
+        short_multiplier = getattr(settings, "short_position_multiplier", 0.75)
+        position_size_pct *= short_multiplier
+
     position_size_usd = account * position_size_pct
     max_loss_usd = position_size_usd * stop_loss_pct
 
@@ -509,9 +515,10 @@ def evaluate(
 
     corr_tag = f" | Corr×{corr_multiplier:.1f}" if corr_multiplier < 1.0 else ""
     session_tag = f" | Session×{session_multiplier:.1f}" if session_multiplier < 1.0 else ""
+    short_tag = f" | Short×{short_multiplier:.2f}" if short_multiplier < 1.0 else ""
     logger.success(
         f"Risk APPROVED | {verdict.decision.value} {snap.symbol} | "
-        f"Size={position_size_pct:.1%} (${position_size_usd:,.0f}){corr_tag}{session_tag} | "
+        f"Size={position_size_pct:.1%} (${position_size_usd:,.0f}){corr_tag}{session_tag}{short_tag} | "
         f"SL={stop_loss_pct:.1%} | TP={take_profit_pct:.1%} | R:R={rr_ratio:.1f} | "
         f"Max loss=${max_loss_usd:,.0f}"
     )
