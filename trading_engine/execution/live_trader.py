@@ -9,6 +9,8 @@ Tracks active live positions, P&L, and saves state to live_state.json.
 from __future__ import annotations
 import json
 import os
+import sys
+import subprocess
 import time
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
@@ -511,6 +513,7 @@ def open_trade(
             sl_params = {
                 "triggerPrice": exchange.price_to_precision(symbol, stop_loss),
                 "triggerBy": "LastPrice",
+                "triggerDirection": "descending" if direction == "long" else "ascending",
             }
             if is_linear:
                 sl_params["reduceOnly"] = True
@@ -665,6 +668,7 @@ def _place_broker_take_profit(
             tp_params = {
                 "triggerPrice": exchange.price_to_precision(symbol, take_profit),
                 "triggerBy": "LastPrice",
+                "triggerDirection": "ascending" if direction == "long" else "descending",
             }
             if is_linear:
                 tp_params["reduceOnly"] = True
@@ -773,6 +777,7 @@ def _update_broker_stop_loss(pos: Position) -> Optional[str]:
             sl_params = {
                 "triggerPrice": exchange.price_to_precision(pos.symbol, pos.stop_loss),
                 "triggerBy": "LastPrice",
+                "triggerDirection": "descending" if pos.direction == "long" else "ascending",
             }
             if is_linear:
                 sl_params["reduceOnly"] = True
@@ -947,90 +952,16 @@ def _close_position(portfolio: LivePortfolio, pos: Position, exit_price: float, 
     _cancel_broker_stop_loss(pos)
     _cancel_broker_take_profit(pos)
 
-    # Gross PnL
-    if pos.direction == "long":
-        gross_pnl = (fill_price - pos.entry_price) / pos.entry_price * pos.size_usd
-    else:
-        gross_pnl = (pos.entry_price - fill_price) / pos.entry_price * pos.size_usd
-    
     # Exit fee
     exit_fee = pos.size_usd * EXIT_FEE_RATE
-    net_pnl = gross_pnl - exit_fee
 
-    portfolio.total_fees += exit_fee
-    if pos.fee_usd is not None:
-        pos.fee_usd = round(pos.fee_usd + exit_fee, 4)
-    else:
-        pos.fee_usd = round(exit_fee, 4)
-
-    pos.exit_price = fill_price
-    pos.pnl_usd = round(net_pnl, 2)
-    pos.closed_at = datetime.now(timezone.utc).isoformat()
-    pos.status = status
-    portfolio.cash += pos.size_usd + net_pnl
-    portfolio.total_pnl += net_pnl
-    if net_pnl > 0:
-        portfolio.win_count += 1
-        # Reset consecutive losses for this symbol on a win
-        sh_state = portfolio.self_healing_state.setdefault(pos.symbol, {"consecutive_losses": 0, "last_optimized_at": None})
-        sh_state["consecutive_losses"] = 0
-    else:
-        portfolio.loss_count += 1
-        
-        # Track self-healing state
-        sh_state = portfolio.self_healing_state.setdefault(pos.symbol, {"consecutive_losses": 0, "last_optimized_at": None})
-        sh_state["consecutive_losses"] += 1
-        
-        # Check consecutive loss threshold and cooldown
-        trigger_healing = False
-        consec_losses = sh_state["consecutive_losses"]
-        last_opt_str = sh_state.get("last_optimized_at")
-        
-        if consec_losses >= settings.self_healing_consecutive_losses:
-            if not last_opt_str:
-                trigger_healing = True
-            else:
-                try:
-                    last_opt_dt = datetime.fromisoformat(last_opt_str)
-                    time_elapsed = datetime.now(timezone.utc) - last_opt_dt
-                    if time_elapsed.total_seconds() >= settings.self_healing_cooldown_hours * 3600:
-                        trigger_healing = True
-                    else:
-                        logger.info(f"Self-Healing: {pos.symbol} skipped optimization — cooldown active (last optimized {time_elapsed.total_seconds()/3600:.1f}h ago).")
-                except Exception as e_dt:
-                    logger.warning(f"Error parsing last_optimized_at for {pos.symbol}: {e_dt}. Triggering anyway.")
-                    trigger_healing = True
-        else:
-            logger.info(f"Self-Healing: {pos.symbol} has {consec_losses} consecutive loss(es) (requires {settings.self_healing_consecutive_losses}). Skipping optimization.")
-                    
-        if trigger_healing:
-            try:
-                _trigger_self_healing(pos.symbol)
-                sh_state["last_optimized_at"] = datetime.now(timezone.utc).isoformat()
-            except Exception as ex_sh:
-                logger.error(f"Failed to trigger self-healing for {pos.symbol}: {ex_sh}")
-            
-    portfolio.positions.remove(pos)
-    portfolio.closed_trades.append(pos)
-
-    emoji = "✅" if net_pnl > 0 else "❌"
-    logger.info(
-        f"{emoji} LIVE {status.upper()}: {pos.symbol} | "
-        f"Gross P&L=${gross_pnl:+,.2f} | Fees=${exit_fee:.2f} | "
-        f"Net P&L=${net_pnl:+,.2f} | Total P&L=${portfolio.total_pnl:+,.2f}"
-    )
-
-    # Send Telegram notification
-    send_message(
-        f"{emoji} <b>LIVE Position Closed ({status.upper()})</b>\n"
-        f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"🪙 Symbol: {pos.symbol}\n"
-        f"💵 Size: ${pos.size_usd:,.2f}\n"
-        f"📈 Entry Price: <code>{pos.entry_price:.4f}</code>\n"
-        f"📉 Exit Price: <code>{fill_price:.4f}</code>\n"
-        f"💰 Net P&L: <b>${net_pnl:+,.2f}</b>\n"
-        f"🏷️ Fees paid: ${pos.fee_usd:.2f}\n"
-        f"📊 Total Portfolio P&L: <b>${portfolio.total_pnl:+,.2f}</b>"
+    _finalize_closed_position(
+        portfolio=portfolio,
+        pos=pos,
+        fill_price=fill_price,
+        fee_cost=exit_fee,
+        closed_at=datetime.now(timezone.utc).isoformat(),
+        local_close_cash_update=True
     )
 
 
@@ -1311,6 +1242,12 @@ def sync_with_broker() -> bool:
                             else:
                                 sh_state["consecutive_losses"] += 1
                                 
+                    # Load persistent last_optimized_at timestamps from database
+                    for sym in portfolio.self_healing_state:
+                        db_state = db.get_symbol_state(sym)
+                        if db_state and db_state.get("last_optimized_at"):
+                            portfolio.self_healing_state[sym]["last_optimized_at"] = db_state["last_optimized_at"].isoformat()
+                                
                     portfolio.win_count = sum(1 for t in portfolio.closed_trades if t.status == "closed")
                     portfolio.loss_count = sum(1 for t in portfolio.closed_trades if t.status == "stopped")
                     portfolio.total_pnl = sum(t.pnl_usd for t in portfolio.closed_trades if t.pnl_usd is not None)
@@ -1444,13 +1381,17 @@ def sync_with_broker() -> bool:
                 _cancel_broker_stop_loss(pos)
                 _cancel_broker_take_profit(pos)
 
-                pos.status = "closed"
-                pos.closed_at = datetime.now(timezone.utc).isoformat()
-                pos.exit_price = pos.exit_price or pos.entry_price
-                pos.pnl_usd = pos.pnl_usd or 0.0
-                
-                if not any(c.symbol == pos.symbol and c.opened_at == pos.opened_at for c in portfolio.closed_trades):
-                    portfolio.closed_trades.append(pos)
+                # Fetch actual exit details from broker
+                fill_price, fee_cost, closed_at = _fetch_exit_details_from_broker(pos, ac)
+
+                _finalize_closed_position(
+                    portfolio=portfolio,
+                    pos=pos,
+                    fill_price=fill_price,
+                    fee_cost=fee_cost,
+                    closed_at=closed_at,
+                    local_close_cash_update=False
+                )
                 changed = True
 
         if changed:
@@ -1498,12 +1439,28 @@ def _trigger_self_healing(symbol: str):
     """Launches the self-healing optimization script in the background for a lost trade symbol."""
     import subprocess
     import sys
+    import os
     from pathlib import Path
     
     trading_engine_dir = Path(__file__).resolve().parent.parent
     python_bin = sys.executable
     script_path = trading_engine_dir / "run_self_healing.py"
     
+    # Check for active self-healing process lock
+    lock_file = Path("/tmp/self_healing.lock")
+    if lock_file.exists():
+        try:
+            pid = int(lock_file.read_text().strip())
+            os.kill(pid, 0)  # Throws OSError if process is not running
+            logger.warning(
+                f"Self-Healing skipped for {symbol}: Another optimization process (PID {pid}) "
+                f"is currently running. Skipping to prevent CPU/RAM overload."
+            )
+            return
+        except (ValueError, OSError):
+            # Lock is stale or invalid, we can proceed
+            pass
+
     cmd = [
         str(python_bin),
         str(script_path),
@@ -1512,14 +1469,182 @@ def _trigger_self_healing(symbol: str):
     try:
         logger.info(f"❤️  Self-Healing: launching background optimization for {symbol}...")
         # Launch non-blocking background process
-        subprocess.Popen(
+        proc = subprocess.Popen(
             cmd,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             start_new_session=True,  # Detached from parent process group
             cwd=str(trading_engine_dir)
         )
+        # Record new PID to lock file
+        lock_file.write_text(str(proc.pid))
     except Exception as e:
         logger.error(f"Failed to launch self-healing for {symbol}: {e}")
+
+
+def _finalize_closed_position(portfolio: LivePortfolio, pos: Position, fill_price: float, fee_cost: float, closed_at: str, local_close_cash_update: bool):
+    # Gross PnL
+    if pos.direction == "long":
+        gross_pnl = (fill_price - pos.entry_price) / pos.entry_price * pos.size_usd
+    else:
+        gross_pnl = (pos.entry_price - fill_price) / pos.entry_price * pos.size_usd
+    
+    net_pnl = gross_pnl - fee_cost
+    status = "closed" if net_pnl >= 0 else "stopped"
+
+    portfolio.total_fees += fee_cost
+    if pos.fee_usd is not None:
+        pos.fee_usd = round(pos.fee_usd + fee_cost, 4)
+    else:
+        pos.fee_usd = round(fee_cost, 4)
+
+    pos.exit_price = fill_price
+    pos.pnl_usd = round(net_pnl, 2)
+    pos.closed_at = closed_at
+    pos.status = status
+    
+    if local_close_cash_update:
+        portfolio.cash += pos.size_usd + net_pnl
+    
+    portfolio.total_pnl += net_pnl
+    if net_pnl > 0:
+        portfolio.win_count += 1
+        # Reset consecutive losses for this symbol on a win
+        sh_state = portfolio.self_healing_state.setdefault(pos.symbol, {"consecutive_losses": 0, "last_optimized_at": None})
+        sh_state["consecutive_losses"] = 0
+    else:
+        portfolio.loss_count += 1
+        
+        # Track self-healing state
+        sh_state = portfolio.self_healing_state.setdefault(pos.symbol, {"consecutive_losses": 0, "last_optimized_at": None})
+        sh_state["consecutive_losses"] += 1
+        
+        # Check consecutive loss threshold and cooldown
+        trigger_healing = False
+        consec_losses = sh_state["consecutive_losses"]
+        last_opt_str = sh_state.get("last_optimized_at")
+        
+        if consec_losses >= settings.self_healing_consecutive_losses:
+            if not last_opt_str:
+                trigger_healing = True
+            else:
+                try:
+                    last_opt_dt = datetime.fromisoformat(last_opt_str)
+                    time_elapsed = datetime.now(timezone.utc) - last_opt_dt
+                    if time_elapsed.total_seconds() >= settings.self_healing_cooldown_hours * 3600:
+                        trigger_healing = True
+                    else:
+                        logger.info(f"Self-Healing: {pos.symbol} skipped optimization — cooldown active (last optimized {time_elapsed.total_seconds()/3600:.1f}h ago).")
+                except Exception as e_dt:
+                    logger.warning(f"Error parsing last_optimized_at for {pos.symbol}: {e_dt}. Triggering anyway.")
+                    trigger_healing = True
+        else:
+            logger.info(f"Self-Healing: {pos.symbol} has {consec_losses} consecutive loss(es) (requires {settings.self_healing_consecutive_losses}). Skipping optimization.")
+                    
+        if trigger_healing:
+            try:
+                _trigger_self_healing(pos.symbol)
+                now_dt = datetime.now(timezone.utc)
+                sh_state["last_optimized_at"] = now_dt.isoformat()
+                db.save_symbol_state(pos.symbol, last_optimized_at=now_dt)
+            except Exception as ex_sh:
+                logger.error(f"Failed to trigger self-healing for {pos.symbol}: {ex_sh}")
+
+    if pos in portfolio.positions:
+        portfolio.positions.remove(pos)
+    if not any(c.symbol == pos.symbol and c.opened_at == pos.opened_at for c in portfolio.closed_trades):
+        portfolio.closed_trades.append(pos)
+
+    emoji = "✅" if net_pnl > 0 else "❌"
+    logger.info(
+        f"{emoji} LIVE {status.upper()}: {pos.symbol} | "
+        f"Gross P&L=${gross_pnl:+,.2f} | Fees=${fee_cost:.2f} | "
+        f"Net P&L=${net_pnl:+,.2f} | Total P&L=${portfolio.total_pnl:+,.2f}"
+    )
+
+    # Send Telegram notification
+    send_message(
+        f"{emoji} <b>LIVE Position Closed ({status.upper()})</b>\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"🪙 Symbol: {pos.symbol}\n"
+        f"💵 Size: ${pos.size_usd:,.2f}\n"
+        f"📈 Entry Price: <code>{pos.entry_price:.4f}</code>\n"
+        f"📉 Exit Price: <code>{fill_price:.4f}</code>\n"
+        f"💰 Net P&L: <b>${net_pnl:+,.2f}</b>\n"
+        f"🏷️ Fees paid: ${pos.fee_usd:.2f}\n"
+        f"📊 Total Portfolio P&L: <b>${portfolio.total_pnl:+,.2f}</b>"
+    )
+
+
+def _fetch_exit_details_from_broker(pos: Position, asset_class) -> tuple[float, float, str]:
+    """
+    Queries the broker to find the actual exit price, fee, and closed timestamp.
+    Falls back to defaults if any API call fails.
+    """
+    from trading_engine.market_hours import AssetClass
+    
+    # Defaults
+    exit_price = pos.exit_price or pos.entry_price
+    fee_cost = pos.size_usd * EXIT_FEE_RATE
+    closed_at = datetime.now(timezone.utc).isoformat()
+    
+    try:
+        if asset_class == AssetClass.CRYPTO or asset_class in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL):
+            exchange = get_bybit_exchange()
+            if asset_class in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL) or ":" in pos.symbol:
+                exchange.options["defaultType"] = "linear"
+            else:
+                exchange.options["defaultType"] = "spot"
+                
+            trades = exchange.fetch_my_trades(symbol=pos.symbol, limit=20)
+            if trades:
+                trades.sort(key=lambda x: x["timestamp"], reverse=True)
+                target_side = "sell" if pos.direction == "long" else "buy"
+                opened_dt = datetime.fromisoformat(pos.opened_at)
+                for t in trades:
+                    if t["side"].lower() == target_side:
+                        t_time = datetime.fromtimestamp(t["timestamp"] / 1000, tz=timezone.utc)
+                        if t_time >= opened_dt:
+                            exit_price = float(t["price"])
+                            
+                            # Parse fee
+                            fee_val = 0.0
+                            if t.get("fee") and isinstance(t["fee"], dict):
+                                fee_val = float(t["fee"].get("cost", 0.0))
+                                fee_currency = t["fee"].get("currency")
+                                if fee_currency and fee_currency not in ("USDT", "USD"):
+                                    fee_val = fee_val * exit_price
+                            fee_cost = fee_val
+                            closed_at = t_time.isoformat()
+                            logger.info(f"Sync: Found broker execution for {pos.symbol} at {exit_price:.4f} with fee ${fee_cost:.4f}")
+                            break
+        else:
+            # Alpaca
+            from alpaca.trading.requests import GetOrdersRequest
+            from alpaca.trading.enums import QueryOrderStatus, OrderSide
+            client = get_alpaca_client()
+            req = GetOrdersRequest(
+                status=QueryOrderStatus.ALL,
+                symbols=[pos.symbol],
+                limit=20
+            )
+            orders = client.get_orders(req)
+            target_side = OrderSide.SELL if pos.direction == "long" else OrderSide.BUY
+            opened_dt = datetime.fromisoformat(pos.opened_at)
+            
+            filled_orders = [o for o in orders if o.status.value == "filled" and o.side == target_side]
+            if filled_orders:
+                filled_orders.sort(key=lambda o: o.filled_at, reverse=True)
+                for o in filled_orders:
+                    if o.filled_at >= opened_dt:
+                        exit_price = float(o.filled_avg_price)
+                        closed_at = o.filled_at.isoformat()
+                        fee_cost = 0.0
+                        logger.info(f"Sync: Found Alpaca execution for {pos.symbol} at {exit_price:.4f}")
+                        break
+    except Exception as e:
+        logger.warning(f"Failed to fetch exit details from broker for {pos.symbol}: {e}")
+        
+    return exit_price, fee_cost, closed_at
 
 

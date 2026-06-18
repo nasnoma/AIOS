@@ -147,25 +147,40 @@ def run(
         else:
             target = "crypto"
             
-        symbol_cleaned = symbol.replace("/", "_").replace(":", "_").upper()
-        opt_weights_path = Path(__file__).parent / f"optimized_weights_{symbol_cleaned}.json"
+        from trading_engine.storage import db
         
-        if opt_weights_path.exists():
-            with open(opt_weights_path) as f:
-                agent_weights = json.load(f)
-            logger.info(f"   Loaded symbol-specific optimized weights for {symbol} ({opt_weights_path.name}).")
+        # 1. Try to load symbol-specific weights from DB
+        db_state = db.get_symbol_state(symbol)
+        if db_state and db_state.get("weights"):
+            agent_weights = db_state["weights"]
+            logger.info(f"   Loaded symbol-specific optimized weights for {symbol} from database.")
         else:
-            opt_weights_path = Path(__file__).parent / f"optimized_weights_{target}.json"
-            if target == "crypto" and not opt_weights_path.exists():
-                # Fallback to general optimized_weights.json for backward compatibility
-                opt_weights_path = Path(__file__).parent / "optimized_weights.json"
-                
-            if opt_weights_path.exists():
-                with open(opt_weights_path) as f:
-                    agent_weights = json.load(f)
-                logger.info(f"   Loaded dynamic optimized weights for {target} ({opt_weights_path.name}).")
+            # 2. Try to load category/target-specific weights from DB
+            db_state = db.get_symbol_state(target)
+            if db_state and db_state.get("weights"):
+                agent_weights = db_state["weights"]
+                logger.info(f"   Loaded dynamic optimized weights for {target} from database.")
             else:
-                logger.info(f"   No optimized weights file found for {target} (searched {opt_weights_path.name}). Using static defaults.")
+                # 3. Fallback to local files
+                symbol_cleaned = symbol.replace("/", "_").replace(":", "_").upper()
+                opt_weights_path = Path(__file__).parent / f"optimized_weights_{symbol_cleaned}.json"
+                
+                if opt_weights_path.exists():
+                    with open(opt_weights_path) as f:
+                        agent_weights = json.load(f)
+                    logger.info(f"   Loaded symbol-specific optimized weights for {symbol} ({opt_weights_path.name}).")
+                else:
+                    opt_weights_path = Path(__file__).parent / f"optimized_weights_{target}.json"
+                    if target == "crypto" and not opt_weights_path.exists():
+                        # Fallback to general optimized_weights.json for backward compatibility
+                        opt_weights_path = Path(__file__).parent / "optimized_weights.json"
+                        
+                    if opt_weights_path.exists():
+                        with open(opt_weights_path) as f:
+                            agent_weights = json.load(f)
+                        logger.info(f"   Loaded dynamic optimized weights for {target} ({opt_weights_path.name}).")
+                    else:
+                        logger.info(f"   No optimized weights found in DB or files for {target}. Using static defaults.")
     except Exception as e:
         logger.warning(f"   Failed to resolve/load optimized weights for {symbol}: {e}. Using static defaults.")
             

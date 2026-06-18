@@ -69,7 +69,7 @@ class Settings(BaseSettings):
     max_concurrent_positions: int = 8
 
     # ── Self Healing ────────────────────────────────────────
-    self_healing_consecutive_losses: int = 3
+    self_healing_consecutive_losses: int = 2
     self_healing_cooldown_hours: float = 24.0
     self_healing_iterations: int = 15
 

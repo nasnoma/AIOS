@@ -171,6 +171,8 @@ def main():
         else:
             raise ValueError("Can only use --symbol-specific with a single symbol.")
 
+    db_key = symbols_list[0].upper().strip() if args.symbol_specific else target
+
     logger.info("================================================================================")
     logger.info(f"       AUTONOMOUS TRADING ENGINE OPTIMIZATION LOOP ({target.upper()})")
     logger.info("================================================================================")
@@ -257,6 +259,11 @@ def main():
                 best_fitness = proposed_fitness
                 best_weights = proposed_weights.copy()
                 logger.success(f"🎉 SUCCESS: Fitness improved from {best_fitness:.4f} to {proposed_fitness:.4f}!")
+                try:
+                    from trading_engine.storage import db
+                    db.save_symbol_state(db_key, weights=best_weights)
+                except Exception as e_db:
+                    logger.warning(f"Could not save improved weights to DB: {e_db}")
             else:
                 logger.warning(f"❌ REJECTED: Fitness ({proposed_fitness:.4f}) did not exceed best ({best_fitness:.4f})")
                 # Revert
@@ -289,6 +296,11 @@ def main():
     logger.info("================================================================================")
     logger.success(f"Final Best Fitness Score: {best_fitness:.4f}")
     logger.success(f"Optimal weights written to {weights_file}")
+    try:
+        from trading_engine.storage import db
+        db.save_symbol_state(db_key, weights=best_weights)
+    except Exception as e_db:
+        logger.warning(f"Could not save final best weights to DB: {e_db}")
 
 if __name__ == "__main__":
     main()

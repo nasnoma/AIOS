@@ -926,6 +926,7 @@ class TestPhase1AndPhase2:
         ]
 
         with patch("trading_engine.execution.live_trader.settings.trading_mode", "live"), \
+             patch("trading_engine.storage.db.get_db_closed_trades", return_value=[]), \
              patch("trading_engine.execution.live_trader.get_bybit_exchange") as mock_ex_getter:
             
             mock_ex = mock_ex_getter.return_value

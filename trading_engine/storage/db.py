@@ -60,6 +60,16 @@ class ClosedTradeLog(Base):
     exit_reason = Column(String(50))  # 'closed' | 'stopped'
 
 
+class SymbolState(Base):
+    __tablename__ = "symbol_states"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    symbol = Column(String(50), unique=True, nullable=False)
+    weights = Column(Text)  # JSON-serialized weights dict
+    last_optimized_at = Column(DateTime)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+
 # Connection setup with SQLite fallback
 _engine = None
 _SessionLocal = None
@@ -247,4 +257,57 @@ def sync_closed_trades_to_db(closed_trades: list):
             session.commit()
     except Exception as e:
         logger.warning(f"Database failed to sync closed trades: {e}")
+
+
+def save_symbol_state(symbol: str, weights: dict | None = None, last_optimized_at: datetime | None = None):
+    """Saves or updates the weights and/or last_optimized_at timestamp for a symbol in the database."""
+    try:
+        symbol_upper = symbol.upper().strip()
+        with get_session() as session:
+            state = session.query(SymbolState).filter_by(symbol=symbol_upper).first()
+            if not state:
+                state = SymbolState(symbol=symbol_upper)
+                session.add(state)
+            
+            if weights is not None:
+                state.weights = json.dumps(weights)
+            if last_optimized_at is not None:
+                # Remove timezone if naive, convert to naive UTC
+                if last_optimized_at.tzinfo is not None:
+                    last_optimized_at = last_optimized_at.astimezone(timezone.utc).replace(tzinfo=None)
+                state.last_optimized_at = last_optimized_at
+            
+            state.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+            session.commit()
+            logger.info(f"Database: Saved state for {symbol_upper} (has_weights={weights is not None}, last_optimized_at={last_optimized_at})")
+    except Exception as e:
+        logger.warning(f"Failed to save symbol state for {symbol} to DB: {e}")
+
+
+def get_symbol_state(symbol: str) -> dict | None:
+    """Retrieves the symbol state from the database. Returns a dict with 'weights' and 'last_optimized_at'."""
+    try:
+        symbol_upper = symbol.upper().strip()
+        with get_session() as session:
+            state = session.query(SymbolState).filter_by(symbol=symbol_upper).first()
+            if state:
+                weights = None
+                if state.weights:
+                    try:
+                        weights = json.loads(state.weights)
+                    except Exception:
+                        pass
+                
+                # Make last_optimized_at timezone aware (UTC) if present
+                last_opt = state.last_optimized_at
+                if last_opt:
+                    last_opt = last_opt.replace(tzinfo=timezone.utc)
+                    
+                return {
+                    "weights": weights,
+                    "last_optimized_at": last_opt
+                }
+    except Exception as e:
+        logger.warning(f"Failed to get symbol state for {symbol} from DB: {e}")
+    return None
 

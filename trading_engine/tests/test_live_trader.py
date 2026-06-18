@@ -133,10 +133,12 @@ class TestTradeLifecycle:
         mock_place_order.assert_called_once_with("AAPL/USDT:USDT", "buy", 1700.0, 169.0)
 
     def test_open_trade_short_rejected(self):
-        pos = live_trader.open_trade("BTC/USDT", "short", 65000.0, 1000.0, 66000.0, 60000.0)
-        assert pos is None
-        status = live_trader.get_status()
-        assert status["open_positions"] == 0
+        with patch.object(settings, "bybit_api_key", ""), \
+             patch.object(settings, "bybit_api_secret", ""):
+            pos = live_trader.open_trade("BTC/USDT", "short", 65000.0, 1000.0, 66000.0, 60000.0)
+            assert pos is None
+            status = live_trader.get_status()
+            assert status["open_positions"] == 0
 
     @patch("trading_engine.execution.live_trader.place_bybit_market_order")
     def test_update_prices_hits_stop_loss(self, mock_place_order, mock_bybit_keys):
@@ -221,6 +223,64 @@ class TestTradeLifecycle:
         status = live_trader.get_status()
         assert status["self_healing_state"]["BTC/USDT"]["consecutive_losses"] == 0
 
+    @patch("trading_engine.execution.live_trader._trigger_self_healing")
+    @patch("trading_engine.execution.live_trader.get_bybit_exchange")
+    @patch("trading_engine.execution.live_trader.place_bybit_market_order")
+    def test_sync_with_broker_triggers_self_healing(self, mock_place_order, mock_get_exchange, mock_trigger_healing, mock_bybit_keys):
+        # Reset state file with a LivePortfolio that has 1 open trade
+        portfolio = live_trader.LivePortfolio(account_size=10000.0, cash=10000.0)
+        # Open BTC position
+        pos = live_trader.Position(
+            symbol="BTC/USDT",
+            direction="long",
+            entry_price=65000.0,
+            size_usd=1000.0,
+            stop_loss=60000.0,
+            take_profit=75000.0,
+            opened_at="2026-06-15T10:00:00+00:00",
+            status="open"
+        )
+        portfolio.positions.append(pos)
+        # Set self-healing losses to 2 consecutive (requires 3, so next loss triggers)
+        portfolio.self_healing_state["BTC/USDT"] = {"consecutive_losses": 2, "last_optimized_at": None}
+        live_trader._save_state(portfolio)
+        
+        # Configure settings
+        settings.self_healing_consecutive_losses = 3
+        settings.trading_mode = "live"
+        
+        # Mock Bybit exchange
+        mock_ex = MagicMock()
+        mock_get_exchange.return_value = mock_ex
+        
+        # Mock active conditional orders (none left)
+        mock_ex.fetch_open_orders.return_value = []
+        
+        # Mock active positions (empty, meaning broker closed it)
+        mock_ex.fetch_positions.return_value = []
+        mock_ex.fetch_balance.return_value = {"USDT": {"free": 10000.0}}
+        
+        # Mock fetch_my_trades to return the closing trade (executed at a loss)
+        mock_ex.fetch_my_trades.return_value = [
+            {
+                "symbol": "BTC/USDT",
+                "side": "sell",
+                "price": 59000.0, # Loss!
+                "cost": 1000.0,
+                "timestamp": 1781517600000, # 2026-06-15T11:00:00Z
+                "fee": {"cost": 0.6, "currency": "USDT"}
+            }
+        ]
+        
+        # Run sync_with_broker
+        success = live_trader.sync_with_broker()
+        assert success is True
+        
+        # Verify it closed locally and triggered self-healing
+        status = live_trader.get_status()
+        assert status["self_healing_state"]["BTC/USDT"]["consecutive_losses"] == 3
+        mock_trigger_healing.assert_called_once_with("BTC/USDT")
+
 
 class TestSchedulerRouting:
     @patch("trading_engine.orchestrator.run_all_assets")
@@ -256,3 +316,150 @@ class TestSchedulerRouting:
             scheduler.run_signal_cycle()
             mock_paper_status.assert_called_once()
             mock_live_status.assert_not_called()
+
+
+class TestNextSteps:
+    @patch("trading_engine.execution.live_trader.get_bybit_exchange")
+    def test_bybit_trigger_direction_parameters(self, mock_get_exchange, mock_bybit_keys):
+        # Setup mock exchange
+        mock_ex = MagicMock()
+        mock_get_exchange.return_value = mock_ex
+        mock_ex.price_to_precision.side_effect = lambda sym, p: str(p)
+        mock_ex.amount_to_precision.side_effect = lambda sym, q: str(q)
+        mock_ex.create_order.return_value = {
+            "id": "mock_order_123",
+            "average": 65000.0,
+            "price": 65000.0,
+        }
+
+        # 1. Test Stop Loss Placement on Long crypto
+        live_trader.open_trade("BTC/USDT", "long", 65000.0, 1000.0, 60000.0, 75000.0)
+        
+        # Verify stop loss order call parameters
+        # create_order is called for: Spot order (1st), Stop Loss (2nd), Take Profit (3rd)
+        sl_call = mock_ex.create_order.call_args_list[1]
+        assert sl_call[1]["params"]["triggerDirection"] == "descending"
+        
+        tp_call = mock_ex.create_order.call_args_list[2]
+        assert tp_call[1]["params"]["triggerDirection"] == "ascending"
+
+        # 2. Test Stop Loss Ratchet Long trigger direction
+        mock_ex.reset_mock()
+        mock_ex.create_order.return_value = {
+            "id": "mock_order_123",
+            "average": 65000.0,
+            "price": 65000.0,
+        }
+        pos = live_trader.Position(
+            symbol="BTC/USDT",
+            direction="long",
+            entry_price=65000.0,
+            size_usd=1000.0,
+            stop_loss=61000.0,
+            take_profit=75000.0,
+            opened_at="2026-06-15T10:00:00+00:00",
+            status="open"
+        )
+        live_trader._update_broker_stop_loss(pos)
+        mock_ex.create_order.assert_called_once()
+        assert mock_ex.create_order.call_args[1]["params"]["triggerDirection"] == "descending"
+
+    def test_database_weights_and_timestamp_persistence(self):
+        from trading_engine.storage import db
+        from datetime import datetime, timezone
+        
+        # Test DB helper saving and loading weights
+        weights_dict = {"ema_short": 12, "ema_long": 26}
+        test_sym = "TEST/USDT"
+        now_dt = datetime.now(timezone.utc)
+        
+        db.save_symbol_state(test_sym, weights=weights_dict, last_optimized_at=now_dt)
+        
+        # Fetch back
+        state = db.get_symbol_state(test_sym)
+        assert state is not None
+        assert state["weights"] == weights_dict
+        # naive comparison
+        assert abs((state["last_optimized_at"] - now_dt).total_seconds()) < 1.0
+
+        # Verify orchestrator loads weights from database
+        from trading_engine.orchestrator import run_all_assets
+        # Mock build_snapshot and run_agents_parallel
+        with patch("trading_engine.orchestrator.build_snapshot") as mock_snap, \
+             patch("trading_engine.orchestrator._run_agents_parallel") as mock_agents, \
+             patch("trading_engine.orchestrator.judge_evaluate") as mock_judge, \
+             patch("trading_engine.orchestrator.risk_evaluate") as mock_risk:
+             
+            snap = MagicMock()
+            snap.close = 65000.0
+            snap.rsi = 50.0
+            snap.atr = 100.0
+            snap.asset_type = "crypto"
+            mock_snap.return_value = snap
+            mock_agents.return_value = []
+
+            from trading_engine.judge import JudgeVerdict
+            from trading_engine.risk_agent import RiskDecision
+            from trading_engine.agents.base import Signal
+
+            mock_judge.return_value = JudgeVerdict(
+                decision=Signal.HOLD,
+                confidence=50.0,
+                agreement=3,
+                disagreement=1,
+                weighted_score=0.0,
+                reasoning="test reasoning",
+                agent_reports=[],
+                approved=False
+            )
+            mock_risk.return_value = RiskDecision(
+                approved=False,
+                reason="test reason",
+                position_size_pct=0.0,
+                position_size_usd=0.0,
+                stop_loss_pct=0.0,
+                take_profit_pct=0.0,
+                risk_reward=0.0,
+                max_loss_usd=0.0,
+                atr=0.0,
+                entry_price=65000.0,
+                stop_loss=0.0,
+                take_profit=0.0
+            )
+            
+            from trading_engine import orchestrator
+            orchestrator.run(test_sym, "5m", 0.0)
+            
+            # Verify judge was called with DB-stored weights
+            mock_judge.assert_called_once()
+            called_weights = mock_judge.call_args[1].get("agent_weights")
+            assert called_weights == weights_dict
+
+    @patch("trading_engine.execution.live_trader.os.kill")
+    @patch("trading_engine.execution.live_trader.subprocess.Popen")
+    def test_self_healing_concurrency_locking(self, mock_popen, mock_kill):
+        # 1. Lock file has active PID (mock_kill doesn't throw)
+        lock_file = Path("/tmp/self_healing.lock")
+        lock_file.write_text("99999")
+        mock_kill.return_value = None # Process is active
+        
+        live_trader._trigger_self_healing("BTC/USDT")
+        
+        # Verify it skipped launching (Popen not called)
+        mock_popen.assert_not_called()
+        
+        # 2. Lock file has stale PID (mock_kill throws OSError)
+        mock_kill.side_effect = OSError()
+        mock_proc = MagicMock()
+        mock_proc.pid = 11111
+        mock_popen.return_value = mock_proc
+        
+        live_trader._trigger_self_healing("BTC/USDT")
+        
+        # Verify it launched and wrote new PID to lock
+        mock_popen.assert_called_once()
+        assert lock_file.read_text().strip() == "11111"
+        
+        # Cleanup
+        if lock_file.exists():
+            lock_file.unlink()
