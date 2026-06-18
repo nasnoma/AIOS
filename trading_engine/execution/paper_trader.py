@@ -120,6 +120,15 @@ def _save_state(portfolio: PaperPortfolio):
 def open_trade(symbol: str, direction: str, entry: float,
                size_usd: float, stop_loss: float, take_profit: float,
                **kwargs) -> Position:
+    from trading_engine.market_hours import classify_symbol, AssetClass
+    asset_class = classify_symbol(symbol)
+    if asset_class == AssetClass.CRYPTO:
+        use_perps = getattr(settings, "crypto_use_perpetuals", False)
+        if direction == "short" or use_perps:
+            if not symbol.endswith(":USDT"):
+                logger.info(f"Mapping paper crypto symbol {symbol} to Bybit Linear Perpetual: {symbol}:USDT")
+                symbol = f"{symbol}:USDT"
+
     portfolio = _load_state()
 
     # Deduct entry fee + slippage from cash immediately

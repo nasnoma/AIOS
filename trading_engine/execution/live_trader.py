@@ -427,6 +427,19 @@ def open_trade(
     is_cfd      = asset_class in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL)
     is_crypto   = asset_class == AssetClass.CRYPTO
 
+    # Map crypto to perpetual linear contracts if shorting OR if configured
+    use_crypto_perpetual = False
+    if is_crypto:
+        use_perps = getattr(settings, "crypto_use_perpetuals", False)
+        if direction == "short" or use_perps:
+            use_crypto_perpetual = True
+            if not symbol.endswith(":USDT"):
+                logger.info(f"Mapping crypto symbol {symbol} to Bybit Linear Perpetual: {symbol}:USDT")
+                symbol = f"{symbol}:USDT"
+            # Reclassify after mapping
+            asset_class = classify_symbol(symbol)
+            is_cfd = False
+
     # ── Market hours guard for CFDs ─────────────────────────────────────────
     if is_cfd:
         status = market_status(symbol, extended_stock_hours=settings.extended_cfd_hours)
@@ -439,16 +452,16 @@ def open_trade(
             return None
 
     # ── Short validation ─────────────────────────────────────────────────────
-    if direction == "short" and not is_cfd:
+    if direction == "short" and not is_cfd and not use_crypto_perpetual:
         logger.warning(
-            f"Short positions are only supported on Bybit linear CFDs. "
+            f"Short positions are only supported on Bybit linear CFDs and mapped crypto perpetuals. "
             f"{symbol} ({asset_class.value}) does not support shorting. Skipping."
         )
         return None
 
     # ── Execute ──────────────────────────────────────────────────────────────
     try:
-        if is_cfd:
+        if is_cfd or use_crypto_perpetual:
             # Bybit linear perpetual — supports both buy (long) and sell (short)
             side       = "buy" if direction == "long" else "sell"
             fill_price = place_bybit_linear_order(symbol, side, size_usd, entry)
@@ -479,7 +492,8 @@ def open_trade(
     try:
         if is_cfd or is_crypto:
             exchange = get_bybit_exchange()
-            if is_cfd:
+            is_linear = is_cfd or use_crypto_perpetual
+            if is_linear:
                 exchange.options["defaultType"] = "linear"
             else:
                 exchange.options["defaultType"] = "spot"
@@ -493,7 +507,7 @@ def open_trade(
                 "triggerPrice": exchange.price_to_precision(symbol, stop_loss),
                 "triggerBy": "LastPrice",
             }
-            if is_cfd:
+            if is_linear:
                 sl_params["reduceOnly"] = True
 
             logger.info(f"Placing Bybit exchange Stop Loss order for {symbol} at {stop_loss:.4f}...")
@@ -587,10 +601,11 @@ def _cancel_broker_stop_loss(pos: Position):
     try:
         if ac in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL, AssetClass.CRYPTO):
             exchange = get_bybit_exchange()
-            if ac == AssetClass.CRYPTO:
-                exchange.options["defaultType"] = "spot"
-            else:
+            is_linear = ac in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL) or (ac == AssetClass.CRYPTO and ":" in pos.symbol)
+            if is_linear:
                 exchange.options["defaultType"] = "linear"
+            else:
+                exchange.options["defaultType"] = "spot"
             exchange.load_markets()
             
             logger.info(f"Cancelling Bybit Stop Loss order {pos.sl_order_id} for {pos.symbol}...")
@@ -621,13 +636,14 @@ def _update_broker_stop_loss(pos: Position) -> Optional[str]:
     ac = classify_symbol(pos.symbol)
     is_cfd = ac in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL)
     is_crypto = ac == AssetClass.CRYPTO
+    is_linear = is_cfd or (is_crypto and ":" in pos.symbol)
     
     new_sl_order_id = None
     try:
         actual_qty = pos.size_usd / pos.entry_price
         if is_cfd or is_crypto:
             exchange = get_bybit_exchange()
-            if is_cfd:
+            if is_linear:
                 exchange.options["defaultType"] = "linear"
             else:
                 exchange.options["defaultType"] = "spot"
@@ -641,7 +657,7 @@ def _update_broker_stop_loss(pos: Position) -> Optional[str]:
                 "triggerPrice": exchange.price_to_precision(pos.symbol, pos.stop_loss),
                 "triggerBy": "LastPrice",
             }
-            if is_cfd:
+            if is_linear:
                 sl_params["reduceOnly"] = True
                 
             logger.info(f"Ratcheting Bybit stop loss for {pos.symbol} to {pos.stop_loss:.4f}...")
@@ -783,9 +799,10 @@ def _close_position(portfolio: LivePortfolio, pos: Position, exit_price: float, 
     asset_class = classify_symbol(pos.symbol)
     is_cfd      = asset_class in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL)
     is_crypto   = asset_class == AssetClass.CRYPTO
+    is_linear_crypto = is_crypto and ":" in pos.symbol
     
     try:
-        if is_cfd:
+        if is_cfd or is_linear_crypto:
             # Linear perpetual — close with reduceOnly-equivalent opposite order
             side = "sell" if pos.direction == "long" else "buy"
             fill_price = place_bybit_linear_order(pos.symbol, side, pos.size_usd, exit_price)
@@ -807,7 +824,10 @@ def _close_position(portfolio: LivePortfolio, pos: Position, exit_price: float, 
     _cancel_broker_stop_loss(pos)
 
     # Gross PnL
-    gross_pnl = (fill_price - pos.entry_price) / pos.entry_price * pos.size_usd
+    if pos.direction == "long":
+        gross_pnl = (fill_price - pos.entry_price) / pos.entry_price * pos.size_usd
+    else:
+        gross_pnl = (pos.entry_price - fill_price) / pos.entry_price * pos.size_usd
     
     # Exit fee
     exit_fee = pos.size_usd * EXIT_FEE_RATE
@@ -989,47 +1009,101 @@ def sync_with_broker() -> bool:
                                     fee_cost = fee_cost * price
                             
                             if side == "buy":
-                                norm_sym = sym.upper().replace("/", "").replace(":", "").replace("-", "").strip()
-                                sl_order_id = None
-                                stop_loss = round(price * 0.95, 4)  # 5% default SL fallback
-                                atr_val = 0.0
-                                
-                                if norm_sym in active_sl_orders:
-                                    sl_order_id, stop_loss = active_sl_orders[norm_sym]
-                                    from trading_engine.risk_agent import _load_risk_params
-                                    _rp = _load_risk_params()
-                                    atr_mult = _rp.get("atr_stop_multiplier", 2.0)
-                                    if atr_mult > 0:
-                                        atr_val = abs(price - stop_loss) / atr_mult
-                                    logger.info(f"Reconstructed SL order {sl_order_id} and stop_loss {stop_loss:.4f} (ATR={atr_val:.4f}) for {sym}")
-                                
-                                open_runs.append(Position(
-                                    symbol=sym,
-                                    direction="long",
-                                    entry_price=price,
-                                    size_usd=cost,
-                                    stop_loss=stop_loss,
-                                    take_profit=round(price * 1.10, 4),    # 10% default TP fallback
-                                    opened_at=dt,
-                                    status="open",
-                                    fee_usd=fee_cost,
-                                    atr=atr_val,
-                                    trailing_high=price,
-                                    sl_order_id=sl_order_id
-                                ))
+                                # Check if it closes an open short run
+                                short_run = None
+                                for r in open_runs:
+                                    if r.direction == "short":
+                                        short_run = r
+                                        break
+                                if short_run:
+                                    open_runs.remove(short_run)
+                                    short_run.exit_price = price
+                                    short_run.closed_at = dt
+                                    short_run.fee_usd = round((short_run.fee_usd or 0.0) + fee_cost, 4)
+                                    qty = short_run.size_usd / short_run.entry_price
+                                    # PnL for short: entry - exit
+                                    pnl = (short_run.entry_price - price) * qty
+                                    short_run.pnl_usd = round(pnl, 4)
+                                    short_run.status = "closed" if pnl >= 0 else "stopped"
+                                    reconstructed_closed.append(short_run)
+                                else:
+                                    # Opens a new long position
+                                    norm_sym = sym.upper().replace("/", "").replace(":", "").replace("-", "").strip()
+                                    sl_order_id = None
+                                    stop_loss = round(price * 0.95, 4)  # 5% default SL fallback
+                                    atr_val = 0.0
+                                    
+                                    if norm_sym in active_sl_orders:
+                                        sl_order_id, stop_loss = active_sl_orders[norm_sym]
+                                        from trading_engine.risk_agent import _load_risk_params
+                                        _rp = _load_risk_params()
+                                        atr_mult = _rp.get("atr_stop_multiplier", 2.0)
+                                        if atr_mult > 0:
+                                            atr_val = abs(price - stop_loss) / atr_mult
+                                        logger.info(f"Reconstructed SL order {sl_order_id} and stop_loss {stop_loss:.4f} (ATR={atr_val:.4f}) for {sym}")
+                                    
+                                    open_runs.append(Position(
+                                        symbol=sym,
+                                        direction="long",
+                                        entry_price=price,
+                                        size_usd=cost,
+                                        stop_loss=stop_loss,
+                                        take_profit=round(price * 1.10, 4),    # 10% default TP fallback
+                                        opened_at=dt,
+                                        status="open",
+                                        fee_usd=fee_cost,
+                                        atr=atr_val,
+                                        trailing_high=price,
+                                        sl_order_id=sl_order_id
+                                    ))
                             elif side == "sell":
-                                if open_runs:
-                                    matched_pos = open_runs.pop(0)
-                                    matched_pos.exit_price = price
-                                    matched_pos.closed_at = dt
-                                    matched_pos.fee_usd = round((matched_pos.fee_usd or 0.0) + fee_cost, 4)
+                                # Check if it closes an open long run
+                                long_run = None
+                                for r in open_runs:
+                                    if r.direction == "long":
+                                        long_run = r
+                                        break
+                                if long_run:
+                                    open_runs.remove(long_run)
+                                    long_run.exit_price = price
+                                    long_run.closed_at = dt
+                                    long_run.fee_usd = round((long_run.fee_usd or 0.0) + fee_cost, 4)
+                                    qty = long_run.size_usd / long_run.entry_price
+                                    # PnL for long: exit - entry
+                                    pnl = (price - long_run.entry_price) * qty
+                                    long_run.pnl_usd = round(pnl, 4)
+                                    long_run.status = "closed" if pnl >= 0 else "stopped"
+                                    reconstructed_closed.append(long_run)
+                                else:
+                                    # Opens a new short position (for perpetuals / CFDs)
+                                    norm_sym = sym.upper().replace("/", "").replace(":", "").replace("-", "").strip()
+                                    sl_order_id = None
+                                    stop_loss = round(price * 1.05, 4)  # 5% default SL fallback for short
+                                    atr_val = 0.0
                                     
-                                    qty = matched_pos.size_usd / matched_pos.entry_price
-                                    pnl = (price - matched_pos.entry_price) * qty
-                                    matched_pos.pnl_usd = round(pnl, 4)
-                                    matched_pos.status = "closed" if pnl >= 0 else "stopped"
+                                    if norm_sym in active_sl_orders:
+                                        sl_order_id, stop_loss = active_sl_orders[norm_sym]
+                                        from trading_engine.risk_agent import _load_risk_params
+                                        _rp = _load_risk_params()
+                                        atr_mult = _rp.get("atr_stop_multiplier", 2.0)
+                                        if atr_mult > 0:
+                                            atr_val = abs(price - stop_loss) / atr_mult
+                                        logger.info(f"Reconstructed SL order {sl_order_id} and stop_loss {stop_loss:.4f} (ATR={atr_val:.4f}) for {sym}")
                                     
-                                    reconstructed_closed.append(matched_pos)
+                                    open_runs.append(Position(
+                                        symbol=sym,
+                                        direction="short",
+                                        entry_price=price,
+                                        size_usd=cost,
+                                        stop_loss=stop_loss,
+                                        take_profit=round(price * 0.90, 4),    # 10% default TP fallback
+                                        opened_at=dt,
+                                        status="open",
+                                        fee_usd=fee_cost,
+                                        atr=atr_val,
+                                        trailing_low=price,
+                                        sl_order_id=sl_order_id
+                                    ))
                                     
                         reconstructed_positions.extend(open_runs)
                             
@@ -1120,7 +1194,12 @@ def sync_with_broker() -> bool:
                         return True
                 return False
             elif asset_class == AssetClass.CRYPTO:
+                # Check spot symbols
                 for b_sym in bybit_spot_symbols:
+                    if s == b_sym.replace("/", "").replace(":", "").replace("-", "").strip():
+                        return True
+                # Check linear symbols (in case it is a crypto perpetual short or mapped long)
+                for b_sym in bybit_linear_symbols:
                     if s == b_sym.replace("/", "").replace(":", "").replace("-", "").strip():
                         return True
                 return False

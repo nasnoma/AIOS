@@ -163,10 +163,12 @@ def monitor_positions():
             exchange       = exchange_class()
             for asset in crypto_symbols:
                 try:
-                    ticker = exchange.fetch_ticker(asset)
+                    # Strip linear perpetual suffix if present for ticker fetching
+                    fetch_asset = asset.split(":")[0] if ":" in asset else asset
+                    ticker = exchange.fetch_ticker(fetch_asset)
                     current_prices[asset] = ticker["last"]
-                except Exception:
-                    pass
+                except Exception as e_asset:
+                    logger.warning(f"Price monitor fetch error for asset {asset} (fetch_symbol={fetch_asset}): {e_asset}")
         except Exception as e:
             logger.warning(f"Price monitor fetch error for crypto: {e}")
 

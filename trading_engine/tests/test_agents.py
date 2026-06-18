@@ -9,6 +9,10 @@ import pytest
 from datetime import datetime, timezone
 from unittest.mock import patch
 
+# Patch out fallback regime check globally for unit tests to avoid live internet queries
+_fallback_patcher = patch("trading_engine.risk_agent._get_btc_regime_fallback", side_effect=RuntimeError("Unit test fallback bypass"))
+_fallback_patcher.start()
+
 from trading_engine.agents.base import Signal
 from trading_engine.data.market_data import MarketSnapshot
 
@@ -835,6 +839,116 @@ class TestRiskAgentStage3:
             # stop loss = entry - (atr * atr_multiplier)
             expected_sl = 100.0 - (2.0 * risk_agent.settings.atr_multiplier)
             assert abs(result.stop_loss - expected_sl) < 1e-4
+
+
+class TestPhase1AndPhase2:
+    """Tests for Phase 1 (Fallback regime check, dynamic correlation) and Phase 2 (FIFO reconstruction)."""
+
+    def test_regime_filter_fallback_success(self):
+        """Verify that when primary snapshot fails, the regime filter calls fallback and makes a decision."""
+        from trading_engine.risk_agent import evaluate
+        from trading_engine.judge import JudgeVerdict
+        
+        snap = make_snapshot(symbol="ETH/USDT", asset_type="crypto", close=2000, atr=40, bb_width=0.06)
+        verdict = JudgeVerdict(
+            decision=Signal.BUY, confidence=85.0, agreement=7, disagreement=1,
+            weighted_score=7.0, reasoning="mock", agent_reports=[], approved=True
+        )
+
+        # Stop the global patcher temporarily to test fallback specifically
+        _fallback_patcher.stop()
+        try:
+            # 1. Fallback returns bull market (close=70000, ma=60000)
+            with patch("trading_engine.data.market_data.build_snapshot", side_effect=RuntimeError("primary failed")), \
+                 patch("trading_engine.risk_agent._get_btc_regime_fallback", return_value=(70000.0, 60000.0)) as mock_fall:
+                decision = evaluate(verdict, snap)
+                assert "regime filter" not in (decision.reason or "").lower()
+                mock_fall.assert_called_once()
+
+            # 2. Fallback returns bear market (close=55000, ma=60000)
+            with patch("trading_engine.data.market_data.build_snapshot", side_effect=RuntimeError("primary failed")), \
+                 patch("trading_engine.risk_agent._get_btc_regime_fallback", return_value=(55000.0, 60000.0)) as mock_fall:
+                decision = evaluate(verdict, snap)
+                assert not decision.approved
+                assert "regime filter" in (decision.reason or "").lower()
+                mock_fall.assert_called_once()
+        finally:
+            _fallback_patcher.start()
+
+    def test_dynamic_correlation_calculation(self):
+        """Verify that check_correlation computes dynamic rolling correlation directly for all assets."""
+        from trading_engine.risk_agent import check_correlation
+        
+        # Synthesise two snapshots
+        snap_a = make_snapshot(symbol="BTC/USDT")
+        snap_b = make_snapshot(symbol="AAPL/USDT")  # Different class, no static group in common
+        
+        # Mock rolling correlation calculation to return 0.92 (high correlation)
+        with patch("trading_engine.risk_agent._compute_price_correlation", return_value=0.92):
+            multiplier, reason = check_correlation("BTC/USDT", snap_a, {"AAPL/USDT": snap_b})
+            assert multiplier == 0.0
+            assert "Correlation veto" in reason
+
+        # Mock rolling correlation calculation to return 0.78 (soft correlation)
+        with patch("trading_engine.risk_agent._compute_price_correlation", return_value=0.78):
+            multiplier, reason = check_correlation("BTC/USDT", snap_a, {"AAPL/USDT": snap_b})
+            assert multiplier == 0.5
+            assert "Correlation soft adjustment" in reason
+
+    def test_live_trader_fifo_reconstruction(self):
+        """Verify that sync_with_broker parses execution history symmetrically using FIFO logic."""
+        from trading_engine.execution.live_trader import sync_with_broker, Position, LivePortfolio, _save_state
+        
+        portfolio = LivePortfolio(account_size=10000.0, cash=10000.0)
+        # Clear positions to force reconstruction
+        portfolio.positions = []
+        portfolio.closed_trades = []
+        _save_state(portfolio)
+
+        # Mock trades: Sell to open short, Buy to close short
+        mock_trades = [
+            {
+                "symbol": "BTC/USDT",
+                "side": "sell",
+                "price": 60000.0,
+                "cost": 600.0,
+                "timestamp": 1718600000000,
+                "fee": {"cost": 0.6, "currency": "USDT"}
+            },
+            {
+                "symbol": "BTC/USDT",
+                "side": "buy",
+                "price": 59000.0,
+                "cost": 590.0,
+                "timestamp": 1718610000000,
+                "fee": {"cost": 0.59, "currency": "USDT"}
+            }
+        ]
+
+        with patch("trading_engine.execution.live_trader.settings.trading_mode", "live"), \
+             patch("trading_engine.execution.live_trader.get_bybit_exchange") as mock_ex_getter:
+            
+            mock_ex = mock_ex_getter.return_value
+            mock_ex.fetch_open_orders.return_value = []
+            # Mock fetch_my_trades to return [] for spot and mock_trades for linear
+            mock_ex.fetch_my_trades.side_effect = [[], mock_trades]
+            
+            success = sync_with_broker()
+            assert success is True
+            
+            from trading_engine.execution.live_trader import _load_state
+            re_portfolio = _load_state()
+            
+            # Should have reconstructed 0 open positions and 1 closed trade (short)
+            assert len(re_portfolio.positions) == 0
+            assert len(re_portfolio.closed_trades) == 1
+            
+            closed_pos = re_portfolio.closed_trades[0]
+            assert closed_pos.direction == "short"
+            assert closed_pos.entry_price == 60000.0
+            assert closed_pos.exit_price == 59000.0
+            assert closed_pos.status == "closed"
+            assert closed_pos.pnl_usd > 0
 
 
 if __name__ == "__main__":

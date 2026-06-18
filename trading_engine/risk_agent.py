@@ -133,7 +133,6 @@ def check_correlation(
     if not open_position_snaps:
         return 1.0, "No open positions — no correlation adjustment"
 
-    new_group = _get_correlation_group(new_symbol)
     max_corr = 0.0
     most_correlated_symbol = None
 
@@ -141,22 +140,14 @@ def check_correlation(
         if open_symbol == new_symbol:
             continue
 
-        # First check group membership (fast path)
-        open_group = _get_correlation_group(open_symbol)
-        if new_group and open_group and new_group == open_group:
-            # They are in the same group — compute actual rolling correlation
-            corr = _compute_price_correlation(new_snap, open_snap)
-            logger.info(
-                f"  📊 Correlation {new_symbol} ↔ {open_symbol}: {corr:.3f}"
-            )
-            if corr > max_corr:
-                max_corr = corr
-                most_correlated_symbol = open_symbol
-        else:
-            # Different groups — assume negligible correlation
-            logger.debug(
-                f"  📊 {new_symbol} ↔ {open_symbol}: different groups, skipping correlation check"
-            )
+        # Compute rolling log-returns correlation directly for all asset pairs
+        corr = _compute_price_correlation(new_snap, open_snap)
+        logger.info(
+            f"  📊 Correlation {new_symbol} ↔ {open_symbol}: {corr:.3f}"
+        )
+        if corr > max_corr:
+            max_corr = corr
+            most_correlated_symbol = open_symbol
 
     _params = _load_risk_params()
     _soft = _params.get("corr_soft_threshold", CORR_SOFT_THRESHOLD)
@@ -230,6 +221,34 @@ def _get_5m_atr(snap: MarketSnapshot) -> tuple[float, float]:
         logger.warning(f"Failed to fetch precise 5m ATR for {snap.symbol}: {e}. Falling back to default timeframe.")
         
     return snap.close, snap.atr
+
+
+def _get_btc_regime_fallback() -> tuple[float, float]:
+    """
+    Fallback to fetch BTC/USDT candles from public Binance/Bybit CCXT to check regime.
+    Returns (btc_close, btc_ma).
+    Raises Exception if both fail.
+    """
+    import ccxt
+    tf = settings.timeframe  # e.g., '4h'
+    ma_period = getattr(settings, "regime_btc_ma_period", 50)
+    
+    # Try Binance public first, then Bybit public
+    for ex_id in ["binance", "bybit"]:
+        try:
+            ex = getattr(ccxt, ex_id)()
+            # Fetch enough candles to compute MA
+            limit = ma_period + 10
+            ohlcv = ex.fetch_ohlcv("BTC/USDT", timeframe=tf, limit=limit)
+            if ohlcv and len(ohlcv) >= ma_period:
+                closes = [c[4] for c in ohlcv]
+                btc_close = closes[-1]
+                btc_ma = sum(closes[-ma_period:]) / ma_period
+                logger.info(f"  🚦 Regime filter fallback ({ex_id}): BTC close={btc_close:.2f}, MA={btc_ma:.2f}")
+                return btc_close, btc_ma
+        except Exception as e:
+            logger.warning(f"Regime filter fallback failed on {ex_id}: {e}")
+    raise RuntimeError("All public fallback exchanges failed to fetch BTC history")
 
 
 def evaluate(
@@ -373,32 +392,39 @@ def evaluate(
         try:
             from trading_engine.data.market_data import build_snapshot as _bs
             ma_period = getattr(settings, "regime_btc_ma_period", 50)
-            btc_snap = _bs("BTC/USDT")
-            btc_close = btc_snap.close
-            # Use the EMA50 already computed on the snapshot if available,
-            # otherwise fall back to computing a simple MA from the OHLCV df.
-            btc_ma = getattr(btc_snap, "ema50", None)
-            if not btc_ma or btc_ma == 0:
-                btc_ma = btc_snap.df["close"].iloc[-ma_period:].mean()
-            if btc_close < btc_ma:
-                logger.warning(
-                    f"  🚦 Regime filter: BTC/USDT {btc_close:.2f} < {ma_period}-MA {btc_ma:.2f} — blocking LONG for {snap.symbol}"
-                )
-                return RiskDecision(
-                    approved=False,
-                    reason=(
-                        f"Market regime filter: BTC ({btc_close:.2f}) is below its {ma_period}-period MA "
-                        f"({btc_ma:.2f}). Longs paused during bear trend."
-                    ),
-                    position_size_pct=0, position_size_usd=0,
-                    entry_price=entry, stop_loss=0, take_profit=0,
-                    stop_loss_pct=0, take_profit_pct=0, risk_reward=0,
-                    max_loss_usd=0, atr=atr,
-                )
-            else:
-                logger.info(
-                    f"  ✅ Regime filter: BTC {btc_close:.2f} > {ma_period}-MA {btc_ma:.2f} — bull regime OK"
-                )
+            btc_close, btc_ma = None, None
+            try:
+                btc_snap = _bs("BTC/USDT")
+                btc_close = btc_snap.close
+                # Use the EMA50 already computed on the snapshot if available,
+                # otherwise fall back to computing a simple MA from the OHLCV df.
+                btc_ma = getattr(btc_snap, "ema50", None)
+                if not btc_ma or btc_ma == 0:
+                    btc_ma = btc_snap.df["close"].iloc[-ma_period:].mean()
+            except Exception as e_bs:
+                logger.warning(f"  Regime filter primary snapshot failed ({e_bs}); attempting fallback query...")
+                btc_close, btc_ma = _get_btc_regime_fallback()
+
+            if btc_close is not None and btc_ma is not None:
+                if btc_close < btc_ma:
+                    logger.warning(
+                        f"  🚦 Regime filter: BTC/USDT {btc_close:.2f} < {ma_period}-MA {btc_ma:.2f} — blocking LONG for {snap.symbol}"
+                    )
+                    return RiskDecision(
+                        approved=False,
+                        reason=(
+                            f"Market regime filter: BTC ({btc_close:.2f}) is below its {ma_period}-period MA "
+                            f"({btc_ma:.2f}). Longs paused during bear trend."
+                        ),
+                        position_size_pct=0, position_size_usd=0,
+                        entry_price=entry, stop_loss=0, take_profit=0,
+                        stop_loss_pct=0, take_profit_pct=0, risk_reward=0,
+                        max_loss_usd=0, atr=atr,
+                    )
+                else:
+                    logger.info(
+                        f"  ✅ Regime filter: BTC {btc_close:.2f} > {ma_period}-MA {btc_ma:.2f} — bull regime OK"
+                    )
         except Exception as _re:
             logger.warning(f"  Regime filter check failed ({_re}); allowing trade to proceed.")
 
