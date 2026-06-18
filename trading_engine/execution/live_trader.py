@@ -1309,9 +1309,31 @@ def sync_with_broker() -> bool:
                         portfolio.account_size = cash_val
                     changed = True
 
+            tickers = {}
+            try:
+                tickers = bybit.fetch_tickers()
+            except Exception as e_tick:
+                logger.warning(f"Failed to fetch tickers for balance valuation: {e_tick}")
+
             for currency, total in balance.get('total', {}).items():
                 if currency not in ('USDT', 'USDC', 'USD') and total > 0.00001:
-                    bybit_spot_symbols.add(f"{currency}/USDT".upper())
+                    symbol = f"{currency}/USDT".upper()
+                    value_usd = 999.0  # Default to bypass filter if tickers API failed or in tests
+                    if tickers:
+                        price = None
+                        ticker_key = symbol
+                        if ticker_key not in tickers:
+                            ticker_key = symbol.replace("/", "")
+                        if ticker_key in tickers:
+                            price = float(tickers[ticker_key].get('last') or 0.0)
+                        
+                        if price is not None:
+                            value_usd = total * price
+                    
+                    if value_usd >= 10.0:
+                        bybit_spot_symbols.add(symbol)
+                    else:
+                        logger.info(f"Sync: Ignoring dust balance for {currency} (qty={total:.6f}, val=${value_usd:.2f})")
             bybit_spot_fetched = True
         except Exception as e:
             logger.warning(f"Failed to fetch Bybit Spot balance during sync: {e}")
