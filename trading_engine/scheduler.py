@@ -58,29 +58,7 @@ def run_signal_cycle():
     # Run full analysis
     signals = run_all_assets()
 
-    import requests
     for sig in signals:
-        # Post signal details to local dashboard server
-        try:
-            payload = {
-                "symbol": sig.symbol,
-                "asset_type": sig.asset_type,
-                "timeframe": sig.timeframe,
-                "timestamp": sig.timestamp,
-                "agent_signals": sig.agent_signals,
-                "verdict": sig.verdict,
-                "risk": sig.risk,
-                "final_action": sig.final_action,
-                "entry_price": sig.entry_price,
-                "stop_loss": sig.stop_loss,
-                "take_profit": sig.take_profit,
-                "position_size_usd": sig.position_size_usd,
-                "reasoning": sig.reasoning,
-            }
-            requests.post(f"http://localhost:{settings.api_port}/api/signals", json=payload, timeout=2)
-        except Exception as e:
-            logger.debug(f"Failed to post signal to dashboard: {e}")
-
         if sig.final_action in ("BUY", "SELL") and settings.trading_mode != "signal_only":
             direction = "long" if sig.final_action == "BUY" else "short"
             

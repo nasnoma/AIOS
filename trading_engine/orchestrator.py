@@ -299,6 +299,28 @@ def run_all_assets() -> list[TradeSignal]:
             )
             results.append(signal)
 
+            # Post signal to dashboard immediately during scan to support real-time updates
+            try:
+                import requests
+                payload = {
+                    "symbol": signal.symbol,
+                    "asset_type": signal.asset_type,
+                    "timeframe": signal.timeframe,
+                    "timestamp": signal.timestamp,
+                    "agent_signals": signal.agent_signals,
+                    "verdict": signal.verdict,
+                    "risk": signal.risk,
+                    "final_action": signal.final_action,
+                    "entry_price": signal.entry_price,
+                    "stop_loss": signal.stop_loss,
+                    "take_profit": signal.take_profit,
+                    "position_size_usd": signal.position_size_usd,
+                    "reasoning": signal.reasoning,
+                }
+                requests.post(f"http://localhost:{settings.api_port}/api/signals", json=payload, timeout=1.0)
+            except Exception as e_post:
+                logger.debug(f"Failed to post real-time signal for {symbol} to dashboard: {e_post}")
+
             # Update running stats if trade was approved
             if signal.final_action in ("BUY", "SELL"):
                 running_open_count += 1
