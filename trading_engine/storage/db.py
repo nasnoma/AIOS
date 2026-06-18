@@ -44,6 +44,22 @@ class OrderAuditLog(Base):
     error_message = Column(Text)
 
 
+class ClosedTradeLog(Base):
+    __tablename__ = "closed_trades"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    symbol = Column(String(50), nullable=False)
+    direction = Column(String(20), nullable=False)
+    entry_price = Column(Float, nullable=False)
+    exit_price = Column(Float, nullable=False)
+    size_usd = Column(Float, nullable=False)
+    pnl_usd = Column(Float)
+    fee_usd = Column(Float)
+    opened_at = Column(DateTime, nullable=False)
+    closed_at = Column(DateTime, nullable=False)
+    exit_reason = Column(String(50))  # 'closed' | 'stopped'
+
+
 # Connection setup with SQLite fallback
 _engine = None
 _SessionLocal = None
@@ -145,3 +161,90 @@ def log_order(symbol: str, side: str, qty: float, price: float,
             session.commit()
     except Exception as e:
         logger.warning(f"Database failed to log order for {symbol}: {e}")
+
+
+def _parse_iso_to_naive_utc(iso_str: str | None) -> datetime | None:
+    if not iso_str:
+        return None
+    try:
+        clean_str = iso_str.replace("Z", "+00:00")
+        dt = datetime.fromisoformat(clean_str)
+        if dt.tzinfo is not None:
+            return dt.astimezone(timezone.utc).replace(tzinfo=None)
+        return dt
+    except Exception as e:
+        logger.warning(f"Failed to parse datetime string {iso_str}: {e}")
+        return None
+
+
+def get_db_closed_trades() -> list[dict]:
+    """Retrieves all closed trades from the database as dictionaries, sorted by closed_at ascending."""
+    trades = []
+    try:
+        with get_session() as session:
+            db_trades = session.query(ClosedTradeLog).order_by(ClosedTradeLog.closed_at.asc()).all()
+            for t in db_trades:
+                opened_str = t.opened_at.isoformat()
+                if "+" not in opened_str and "Z" not in opened_str:
+                    opened_str += "+00:00"
+                closed_str = t.closed_at.isoformat()
+                if "+" not in closed_str and "Z" not in closed_str:
+                    closed_str += "+00:00"
+                
+                trades.append({
+                    "symbol": t.symbol,
+                    "direction": t.direction,
+                    "entry_price": t.entry_price,
+                    "exit_price": t.exit_price,
+                    "size_usd": t.size_usd,
+                    "pnl_usd": t.pnl_usd,
+                    "fee_usd": t.fee_usd,
+                    "opened_at": opened_str,
+                    "closed_at": closed_str,
+                    "status": t.exit_reason,
+                    "stop_loss": 0.0,
+                    "take_profit": 0.0,
+                    "atr": 0.0
+                })
+    except Exception as e:
+        logger.warning(f"Database failed to load closed trades: {e}")
+    return trades
+
+
+def sync_closed_trades_to_db(closed_trades: list):
+    """Syncs a list of closed trades (Position dataclass instances) to the database."""
+    try:
+        with get_session() as session:
+            for t in closed_trades:
+                opened_dt = _parse_iso_to_naive_utc(getattr(t, "opened_at", None))
+                closed_dt = _parse_iso_to_naive_utc(getattr(t, "closed_at", None))
+                
+                if not opened_dt or not closed_dt:
+                    continue
+                
+                # Check for existing trade in DB using symbol, direction, opened_at, and closed_at
+                existing = session.query(ClosedTradeLog).filter_by(
+                    symbol=t.symbol,
+                    direction=t.direction,
+                    opened_at=opened_dt,
+                    closed_at=closed_dt
+                ).first()
+                
+                if not existing:
+                    db_trade = ClosedTradeLog(
+                        symbol=t.symbol,
+                        direction=t.direction,
+                        entry_price=float(t.entry_price),
+                        exit_price=float(t.exit_price) if t.exit_price is not None else 0.0,
+                        size_usd=float(t.size_usd),
+                        pnl_usd=float(t.pnl_usd) if t.pnl_usd is not None else 0.0,
+                        fee_usd=float(t.fee_usd) if t.fee_usd is not None else 0.0,
+                        opened_at=opened_dt,
+                        closed_at=closed_dt,
+                        exit_reason=getattr(t, "status", "closed")
+                    )
+                    session.add(db_trade)
+            session.commit()
+    except Exception as e:
+        logger.warning(f"Database failed to sync closed trades: {e}")
+

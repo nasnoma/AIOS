@@ -120,6 +120,10 @@ def _load_state() -> LivePortfolio:
 def _save_state(portfolio: LivePortfolio):
     with open(STATE_FILE, "w") as f:
         json.dump(portfolio.to_dict(), f, indent=2)
+    try:
+        db.sync_closed_trades_to_db(portfolio.closed_trades)
+    except Exception as e:
+        logger.warning(f"Failed to sync closed trades to DB on save: {e}")
 
 
 # ── Exchange Clients Initializers ─────────────────────────────────────────
@@ -1042,10 +1046,32 @@ def sync_with_broker() -> bool:
         portfolio = _load_state()
         changed = False
 
-        # If running in live mode and the local portfolio is completely empty (e.g. after container redeployment),
-        # attempt to reconstruct positions and closed trades from Bybit execution history.
         if settings.trading_mode == "live" and not portfolio.positions and not portfolio.closed_trades:
-            logger.info("Local live state is empty. Reconstructing from Bybit execution history...")
+            logger.info("Local live state is empty. Reconstructing from DB and Bybit execution history...")
+            try:
+                # 1. Load historical closed trades from DB first
+                db_trades_dict = db.get_db_closed_trades()
+                db_closed_trades = []
+                for t in db_trades_dict:
+                    db_closed_trades.append(Position(
+                        symbol=t["symbol"],
+                        direction=t["direction"],
+                        entry_price=t["entry_price"],
+                        exit_price=t["exit_price"],
+                        size_usd=t["size_usd"],
+                        pnl_usd=t["pnl_usd"],
+                        fee_usd=t["fee_usd"],
+                        opened_at=t["opened_at"],
+                        closed_at=t["closed_at"],
+                        status=t["status"],
+                        stop_loss=0.0,
+                        take_profit=0.0,
+                        atr=0.0
+                    ))
+                portfolio.closed_trades = db_closed_trades
+            except Exception as e_db_load:
+                logger.warning(f"Failed to load closed trades from DB for reconstruction: {e_db_load}")
+
             try:
                 # First fetch active stop loss and take profit orders from Bybit and Alpaca
                 active_orders = {}  # normalized_symbol -> list of (order_id, price)
@@ -1256,11 +1282,26 @@ def sync_with_broker() -> bool:
                         reconstructed_positions.extend(open_runs)
                             
                     portfolio.positions = reconstructed_positions
-                    portfolio.closed_trades = reconstructed_closed
+                    
+                    # Merge reconstructed closed trades with DB-loaded trades to avoid duplicates
+                    merged_closed = list(portfolio.closed_trades)  # Starts with DB loaded trades
+                    for r_trade in reconstructed_closed:
+                        exists = False
+                        for m_trade in merged_closed:
+                            if (m_trade.symbol == r_trade.symbol and
+                                m_trade.direction == r_trade.direction and
+                                m_trade.opened_at == r_trade.opened_at and
+                                m_trade.closed_at == r_trade.closed_at):
+                                exists = True
+                                break
+                        if not exists:
+                            merged_closed.append(r_trade)
+                            
+                    portfolio.closed_trades = merged_closed
                     
                     # Reconstruct consecutive losses for each symbol from closed trades history
                     portfolio.self_healing_state = {}
-                    sorted_closed = sorted(reconstructed_closed, key=lambda x: x.closed_at or "")
+                    sorted_closed = sorted(portfolio.closed_trades, key=lambda x: x.closed_at or "")
                     for t in sorted_closed:
                         sym = t.symbol
                         sh_state = portfolio.self_healing_state.setdefault(sym, {"consecutive_losses": 0, "last_optimized_at": None})
@@ -1270,13 +1311,13 @@ def sync_with_broker() -> bool:
                             else:
                                 sh_state["consecutive_losses"] += 1
                                 
-                    portfolio.win_count = sum(1 for t in reconstructed_closed if t.status == "closed")
-                    portfolio.loss_count = sum(1 for t in reconstructed_closed if t.status == "stopped")
-                    portfolio.total_pnl = sum(t.pnl_usd for t in reconstructed_closed if t.pnl_usd is not None)
-                    portfolio.total_fees = sum(t.fee_usd for t in reconstructed_closed if t.fee_usd is not None) + \
+                    portfolio.win_count = sum(1 for t in portfolio.closed_trades if t.status == "closed")
+                    portfolio.loss_count = sum(1 for t in portfolio.closed_trades if t.status == "stopped")
+                    portfolio.total_pnl = sum(t.pnl_usd for t in portfolio.closed_trades if t.pnl_usd is not None)
+                    portfolio.total_fees = sum(t.fee_usd for t in portfolio.closed_trades if t.fee_usd is not None) + \
                                            sum(p.fee_usd for p in reconstructed_positions if p.fee_usd is not None)
                     changed = True
-                    logger.success(f"Reconstructed {len(portfolio.positions)} open positions and {len(portfolio.closed_trades)} closed trades from Bybit.")
+                    logger.success(f"Reconstructed {len(portfolio.positions)} open positions and {len(portfolio.closed_trades)} closed trades from DB and Bybit.")
             except Exception as e:
                 logger.error(f"Failed to reconstruct portfolio from Bybit: {e}")
 
