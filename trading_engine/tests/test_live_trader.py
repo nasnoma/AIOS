@@ -463,3 +463,41 @@ class TestNextSteps:
         # Cleanup
         if lock_file.exists():
             lock_file.unlink()
+
+    @patch("trading_engine.execution.live_trader.os.kill")
+    @patch("trading_engine.execution.live_trader.subprocess.Popen")
+    @patch("trading_engine.execution.live_trader._save_state")
+    def test_self_healing_queue_sequential_execution(self, mock_save_state, mock_popen, mock_kill):
+        from trading_engine.execution.live_trader import LivePortfolio, process_self_healing_queue
+        
+        # Setup portfolio with pending symbols
+        portfolio = LivePortfolio()
+        portfolio.pending_self_healing = ["BTC/USDT", "ETH/USDT"]
+        
+        # 1. Lock file has active PID (mock_kill doesn't throw)
+        lock_file = Path("/tmp/self_healing.lock")
+        lock_file.write_text("99999")
+        mock_kill.return_value = None # Active process
+        
+        process_self_healing_queue(portfolio)
+        
+        # Verify it skipped launching (Popen not called) and queue remains unchanged
+        mock_popen.assert_not_called()
+        assert portfolio.pending_self_healing == ["BTC/USDT", "ETH/USDT"]
+        
+        # 2. Lock file is stale (mock_kill throws OSError)
+        mock_kill.side_effect = OSError()
+        mock_proc = MagicMock()
+        mock_proc.pid = 11111
+        mock_popen.return_value = mock_proc
+        
+        process_self_healing_queue(portfolio)
+        
+        # Verify it launched for first symbol and popped it
+        mock_popen.assert_called_once()
+        assert portfolio.pending_self_healing == ["ETH/USDT"]
+        assert lock_file.read_text().strip() == "11111"
+        
+        # Cleanup
+        if lock_file.exists():
+            lock_file.unlink()

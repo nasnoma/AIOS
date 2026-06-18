@@ -65,6 +65,7 @@ class LivePortfolio:
     win_count: int = 0
     loss_count: int = 0
     self_healing_state: dict[str, dict] = field(default_factory=dict)
+    pending_self_healing: list[str] = field(default_factory=list)
 
     @property
     def open_positions(self) -> list[Position]:
@@ -95,6 +96,7 @@ class LivePortfolio:
             "win_count": self.win_count,
             "loss_count": self.loss_count,
             "self_healing_state": self.self_healing_state,
+            "pending_self_healing": self.pending_self_healing,
         }
 
     @classmethod
@@ -103,7 +105,8 @@ class LivePortfolio:
                 total_pnl=d["total_pnl"], win_count=d["win_count"],
                 loss_count=d["loss_count"],
                 total_fees=d.get("total_fees", 0.0),
-                self_healing_state=d.get("self_healing_state", {}))
+                self_healing_state=d.get("self_healing_state", {}),
+                pending_self_healing=d.get("pending_self_healing", []))
         p.positions = [Position(**pos) for pos in d.get("positions", [])]
         p.closed_trades = [Position(**pos) for pos in d.get("closed_trades", [])]
         return p
@@ -1398,7 +1401,10 @@ def sync_with_broker() -> bool:
             portfolio.positions = [p for p in portfolio.positions if p.status == "open"]
             _save_state(portfolio)
             logger.info("Sync complete. State updated.")
-            return True
+            
+        # Process the self-healing queue
+        process_self_healing_queue(portfolio)
+        return True
 
     except Exception as e:
         logger.error(f"Error in sync_with_broker: {e}")
@@ -1435,8 +1441,8 @@ def get_status() -> dict:
     }
 
 
-def _trigger_self_healing(symbol: str):
-    """Launches the self-healing optimization script in the background for a lost trade symbol."""
+def _trigger_self_healing(symbol: str) -> bool:
+    """Launches the self-healing optimization script in the background for a lost trade symbol. Returns True if successfully launched, False otherwise."""
     import subprocess
     import sys
     import os
@@ -1456,7 +1462,7 @@ def _trigger_self_healing(symbol: str):
                 f"Self-Healing skipped for {symbol}: Another optimization process (PID {pid}) "
                 f"is currently running. Skipping to prevent CPU/RAM overload."
             )
-            return
+            return False
         except (ValueError, OSError):
             # Lock is stale or invalid, we can proceed
             pass
@@ -1478,8 +1484,59 @@ def _trigger_self_healing(symbol: str):
         )
         # Record new PID to lock file
         lock_file.write_text(str(proc.pid))
+        return True
     except Exception as e:
         logger.error(f"Failed to launch self-healing for {symbol}: {e}")
+        return False
+
+
+
+def process_self_healing_queue(portfolio: LivePortfolio):
+    """
+    Checks if the self-healing process lock is free and launches the next pending optimization if any.
+    Runs one-by-one to avoid CPU/RAM overload.
+    """
+    if not portfolio.pending_self_healing:
+        return
+    
+    # 1. Check if lock file exists and has an active PID running
+    lock_file = Path("/tmp/self_healing.lock")
+    if lock_file.exists():
+        try:
+            pid = int(lock_file.read_text().strip())
+            os.kill(pid, 0)  # Throws OSError if process is not running
+            # Still running, do not start another one
+            logger.info(f"Self-Healing Queue: skipping processing because another optimization (PID {pid}) is running.")
+            return
+        except (ValueError, OSError):
+            # Stale or invalid lock file
+            pass
+            
+    # 2. Lock is free. Try to launch the first pending symbol.
+    symbol = portfolio.pending_self_healing[0]
+    try:
+        # Actually launch the background process
+        launched = _trigger_self_healing(symbol)
+        if launched:
+            # Remove from pending queue since it successfully launched
+            portfolio.pending_self_healing.pop(0)
+            
+            # Update timestamp and database
+            sh_state = portfolio.self_healing_state.setdefault(symbol, {"consecutive_losses": 0, "last_optimized_at": None})
+            now_dt = datetime.now(timezone.utc)
+            sh_state["last_optimized_at"] = now_dt.isoformat()
+            db.save_symbol_state(symbol, last_optimized_at=now_dt)
+            _save_state(portfolio)
+        else:
+            # Failed to launch (execution exception, not PID check)
+            logger.error(f"Self-Healing: Failed to launch for {symbol}. Removing from queue to prevent blocking.")
+            portfolio.pending_self_healing.pop(0)
+            _save_state(portfolio)
+    except Exception as e:
+        logger.error(f"Self-Healing: Error processing queue for {symbol}: {e}. Removing from queue.")
+        if portfolio.pending_self_healing:
+            portfolio.pending_self_healing.pop(0)
+            _save_state(portfolio)
 
 
 def _finalize_closed_position(portfolio: LivePortfolio, pos: Position, fill_price: float, fee_cost: float, closed_at: str, local_close_cash_update: bool):
@@ -1542,13 +1599,10 @@ def _finalize_closed_position(portfolio: LivePortfolio, pos: Position, fill_pric
             logger.info(f"Self-Healing: {pos.symbol} has {consec_losses} consecutive loss(es) (requires {settings.self_healing_consecutive_losses}). Skipping optimization.")
                     
         if trigger_healing:
-            try:
-                _trigger_self_healing(pos.symbol)
-                now_dt = datetime.now(timezone.utc)
-                sh_state["last_optimized_at"] = now_dt.isoformat()
-                db.save_symbol_state(pos.symbol, last_optimized_at=now_dt)
-            except Exception as ex_sh:
-                logger.error(f"Failed to trigger self-healing for {pos.symbol}: {ex_sh}")
+            if pos.symbol not in portfolio.pending_self_healing:
+                portfolio.pending_self_healing.append(pos.symbol)
+                logger.info(f"Self-Healing: Added {pos.symbol} to the pending optimization queue.")
+            process_self_healing_queue(portfolio)
 
     if pos in portfolio.positions:
         portfolio.positions.remove(pos)
