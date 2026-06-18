@@ -380,8 +380,12 @@ class TestCorrelationFilter:
         snap_eth = make_snapshot()
         snap_eth.symbol = "ETH/USDT"
 
-        # Force a high correlation return of 0.95 by patching _compute_price_correlation
-        with patch("trading_engine.risk_agent._compute_price_correlation", return_value=0.95):
+        # Force a high correlation return of 0.95 by patching _compute_price_correlation.
+        # Also patch build_snapshot used by the regime filter to avoid a live API call;
+        # RuntimeError causes the regime filter to fall through (allow) so the correlation
+        # check is the final veto as intended.
+        with patch("trading_engine.risk_agent._compute_price_correlation", return_value=0.95), \
+             patch("trading_engine.data.market_data.build_snapshot", side_effect=RuntimeError("unit-test regime bypass")):
             verdict = JudgeVerdict(
                 decision=Signal.BUY,
                 confidence=80.0,
@@ -415,8 +419,11 @@ class TestCorrelationFilter:
         snap_eth = make_snapshot()
         snap_eth.symbol = "ETH/USDT"
 
-        # Force soft correlation of 0.80 (between 0.75 and 0.90)
-        with patch("trading_engine.risk_agent._compute_price_correlation", return_value=0.80):
+        # Force soft correlation of 0.80 (between 0.75 and 0.90).
+        # Patch build_snapshot to avoid a live API call inside the regime filter;
+        # the RuntimeError causes the filter to fall through.
+        with patch("trading_engine.risk_agent._compute_price_correlation", return_value=0.80), \
+             patch("trading_engine.data.market_data.build_snapshot", side_effect=RuntimeError("unit-test regime bypass")):
             verdict = JudgeVerdict(
                 decision=Signal.BUY,
                 confidence=80.0,
@@ -439,6 +446,116 @@ class TestCorrelationFilter:
             assert decision.approved
             # Check reason mentions soft adjustment
             assert "Correlation soft adjustment" in decision.reason or "Kelly sizing" in decision.reason
+
+
+class TestCircuitBreakerAndRegimeFilter:
+    """Tests for the daily circuit breaker and market regime filter."""
+
+    def _make_buy_verdict(self):
+        from trading_engine.judge import JudgeVerdict
+        from trading_engine.agents.base import Signal
+        return JudgeVerdict(
+            decision=Signal.BUY, confidence=85.0, agreement=7, disagreement=1,
+            weighted_score=7.0, reasoning="mock", agent_reports=[], approved=True,
+        )
+
+    @patch("trading_engine.data.market_data.build_snapshot", side_effect=RuntimeError("unit-test"))
+    def test_circuit_breaker_halts_on_daily_loss(self, mock_build):
+        """When daily realized PnL is below the limit, all new trades must be blocked."""
+        from trading_engine.risk_agent import evaluate
+        from trading_engine.config import settings
+
+        snap = make_snapshot(symbol="BTC/USDT", asset_type="crypto", close=50000, atr=1000, bb_width=0.06)
+        verdict = self._make_buy_verdict()
+
+        orig_limit = settings.daily_loss_limit_usd
+        try:
+            settings.daily_loss_limit_usd = 300.0
+            # daily loss of -350 exceeds the 300 limit
+            decision = evaluate(verdict, snap, daily_pnl_usd=-350.0)
+            assert not decision.approved
+            assert "Circuit breaker" in decision.reason
+        finally:
+            settings.daily_loss_limit_usd = orig_limit
+
+    @patch("trading_engine.data.market_data.build_snapshot", side_effect=RuntimeError("unit-test"))
+    def test_circuit_breaker_allows_below_limit(self, mock_build):
+        """When daily loss is within the limit, the circuit breaker must NOT fire."""
+        from trading_engine.risk_agent import evaluate
+        from trading_engine.config import settings
+
+        snap = make_snapshot(symbol="BTC/USDT", asset_type="crypto", close=50000, atr=1000, bb_width=0.06)
+        verdict = self._make_buy_verdict()
+
+        orig_limit = settings.daily_loss_limit_usd
+        try:
+            settings.daily_loss_limit_usd = 300.0
+            # daily loss of -100 is within the limit
+            decision = evaluate(verdict, snap, daily_pnl_usd=-100.0)
+            # Should not veto for circuit breaker reason (may still fail other checks)
+            assert "Circuit breaker" not in (decision.reason or "")
+        finally:
+            settings.daily_loss_limit_usd = orig_limit
+
+    def test_regime_filter_blocks_long_in_bear_market(self):
+        """When BTC is below its 50-period MA, LONG crypto trades must be blocked."""
+        from trading_engine.risk_agent import evaluate
+        from trading_engine.config import settings
+
+        snap = make_snapshot(symbol="ETH/USDT", asset_type="crypto", close=2000, atr=40, bb_width=0.06)
+        verdict = self._make_buy_verdict()
+
+        # Synthesise a BTC snapshot where close < ema50 (bear regime)
+        btc_bear = make_snapshot(symbol="BTC/USDT", close=60000, ema50=65000)
+
+        orig_enabled = settings.regime_filter_enabled
+        try:
+            settings.regime_filter_enabled = True
+            with patch("trading_engine.data.market_data.build_snapshot", return_value=btc_bear):
+                decision = evaluate(verdict, snap)
+                assert not decision.approved
+                assert "regime filter" in decision.reason.lower()
+        finally:
+            settings.regime_filter_enabled = orig_enabled
+
+    def test_regime_filter_allows_long_in_bull_market(self):
+        """When BTC is above its 50-period MA, LONG crypto trades may proceed."""
+        from trading_engine.risk_agent import evaluate
+        from trading_engine.config import settings
+
+        snap = make_snapshot(symbol="ETH/USDT", asset_type="crypto", close=2000, atr=40, bb_width=0.06)
+        verdict = self._make_buy_verdict()
+
+        # Synthesise a BTC snapshot where close > ema50 (bull regime)
+        btc_bull = make_snapshot(symbol="BTC/USDT", close=70000, ema50=65000)
+
+        orig_enabled = settings.regime_filter_enabled
+        try:
+            settings.regime_filter_enabled = True
+            with patch("trading_engine.data.market_data.build_snapshot", return_value=btc_bull):
+                decision = evaluate(verdict, snap)
+                # regime filter should NOT veto; other checks may still fire but not regime
+                assert "regime filter" not in (decision.reason or "").lower()
+        finally:
+            settings.regime_filter_enabled = orig_enabled
+
+    @patch("trading_engine.data.market_data.build_snapshot", side_effect=RuntimeError("unit-test"))
+    def test_regime_filter_disabled_bypasses_check(self, mock_build):
+        """When regime_filter_enabled=False, BTC trend is ignored entirely."""
+        from trading_engine.risk_agent import evaluate
+        from trading_engine.config import settings
+
+        snap = make_snapshot(symbol="ETH/USDT", asset_type="crypto", close=2000, atr=40, bb_width=0.06)
+        verdict = self._make_buy_verdict()
+
+        orig_enabled = settings.regime_filter_enabled
+        try:
+            settings.regime_filter_enabled = False
+            decision = evaluate(verdict, snap)
+            # Regime filter is disabled, so it must not be the veto reason
+            assert "regime filter" not in (decision.reason or "").lower()
+        finally:
+            settings.regime_filter_enabled = orig_enabled
 
 
 class TestPaperTraderFees:
@@ -662,6 +779,9 @@ class TestRiskAgentStage3:
         })
         mock_5m_snap = make_snapshot(close=99.5, df=mock_5m_df, timeframe="5m")
         mock_5m_snap.atr = 1.0
+        # Ensure ema50 < close so the regime filter (which also calls build_snapshot for
+        # BTC) sees a "bull regime" and does not veto the trade.
+        mock_5m_snap.ema50 = 90.0
         
         verdict = JudgeVerdict(
             approved=True, decision=Signal.BUY, confidence=80.0, agreement=6, disagreement=0,

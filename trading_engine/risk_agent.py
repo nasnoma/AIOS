@@ -239,6 +239,7 @@ def evaluate(
     historical_win_rate: float = 0.50,      # default until we have real track record
     open_positions: int = 0,
     open_position_snaps: dict[str, MarketSnapshot] = None,  # symbol → snapshot for correlation check
+    daily_pnl_usd: float = 0.0,            # today's realized PnL (negative = loss)
 ) -> RiskDecision:
     """
     Run full risk assessment. Returns RiskDecision with approved=True/False.
@@ -344,6 +345,62 @@ def evaluate(
             stop_loss_pct=0, take_profit_pct=0, risk_reward=0,
             max_loss_usd=0, atr=atr,
         )
+
+    # ── Circuit Breaker ─────────────────────────────────────
+    # Halt all new entries once today's realized loss breaches the limit.
+    daily_loss_limit = getattr(settings, "daily_loss_limit_usd", 300.0)
+    if daily_loss_limit > 0 and daily_pnl_usd < -abs(daily_loss_limit):
+        return RiskDecision(
+            approved=False,
+            reason=(
+                f"Circuit breaker: daily realized loss ${daily_pnl_usd:,.2f} ≤ -${daily_loss_limit:,.0f} limit. "
+                "No new entries until tomorrow."
+            ),
+            position_size_pct=0, position_size_usd=0,
+            entry_price=entry, stop_loss=0, take_profit=0,
+            stop_loss_pct=0, take_profit_pct=0, risk_reward=0,
+            max_loss_usd=0, atr=atr,
+        )
+
+    # ── Market Regime Filter ─────────────────────────────────
+    # Block LONG crypto trades when BTC is below its 50-period MA.
+    # This prevents blindly buying into a bear-market downtrend.
+    if (
+        is_crypto
+        and verdict.decision == Signal.BUY
+        and getattr(settings, "regime_filter_enabled", True)
+    ):
+        try:
+            from trading_engine.data.market_data import build_snapshot as _bs
+            ma_period = getattr(settings, "regime_btc_ma_period", 50)
+            btc_snap = _bs("BTC/USDT")
+            btc_close = btc_snap.close
+            # Use the EMA50 already computed on the snapshot if available,
+            # otherwise fall back to computing a simple MA from the OHLCV df.
+            btc_ma = getattr(btc_snap, "ema50", None)
+            if not btc_ma or btc_ma == 0:
+                btc_ma = btc_snap.df["close"].iloc[-ma_period:].mean()
+            if btc_close < btc_ma:
+                logger.warning(
+                    f"  🚦 Regime filter: BTC/USDT {btc_close:.2f} < {ma_period}-MA {btc_ma:.2f} — blocking LONG for {snap.symbol}"
+                )
+                return RiskDecision(
+                    approved=False,
+                    reason=(
+                        f"Market regime filter: BTC ({btc_close:.2f}) is below its {ma_period}-period MA "
+                        f"({btc_ma:.2f}). Longs paused during bear trend."
+                    ),
+                    position_size_pct=0, position_size_usd=0,
+                    entry_price=entry, stop_loss=0, take_profit=0,
+                    stop_loss_pct=0, take_profit_pct=0, risk_reward=0,
+                    max_loss_usd=0, atr=atr,
+                )
+            else:
+                logger.info(
+                    f"  ✅ Regime filter: BTC {btc_close:.2f} > {ma_period}-MA {btc_ma:.2f} — bull regime OK"
+                )
+        except Exception as _re:
+            logger.warning(f"  Regime filter check failed ({_re}); allowing trade to proceed.")
 
     # ── Asset Correlation Filter ───────────────────────
     corr_multiplier = 1.0

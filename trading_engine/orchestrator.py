@@ -71,6 +71,33 @@ def _run_agents_parallel(snap: MarketSnapshot) -> list[AgentSignal]:
     return signals
 
 
+def _get_daily_pnl(trader) -> float:
+    """
+    Return today's total realized PnL (USD) from closed positions.
+    A negative value means losses; used by the circuit-breaker in risk_agent.
+    Returns 0.0 if the state cannot be read.
+    """
+    try:
+        state = trader._load_state()
+        today_utc = datetime.now(timezone.utc).date()
+        total = 0.0
+        for pos in state.closed_positions:
+            # closed_at may be an ISO string or datetime
+            closed_at = pos.closed_at
+            if closed_at is None:
+                continue
+            if isinstance(closed_at, str):
+                from datetime import datetime as _dt
+                closed_at = _dt.fromisoformat(closed_at.replace("Z", "+00:00"))
+            if hasattr(closed_at, "date") and closed_at.date() == today_utc:
+                total += float(pos.pnl or 0.0)
+        logger.info(f"  💰 Circuit breaker: today's realized PnL = ${total:,.2f}")
+        return total
+    except Exception as e:
+        logger.warning(f"  Could not compute daily PnL for circuit breaker: {e}")
+        return 0.0
+
+
 def run(
     symbol: str,
     timeframe: str = None,
@@ -78,6 +105,7 @@ def run(
     open_positions: int = 0,
     win_rate: float = 0.50,
     open_position_snaps: dict = None,   # symbol -> MarketSnapshot for correlation check
+    daily_pnl_usd: float = 0.0,         # today's realized PnL for circuit-breaker check
 ) -> TradeSignal:
     """
     Full pipeline execution for one symbol.
@@ -153,6 +181,7 @@ def run(
         historical_win_rate=win_rate,
         open_positions=open_positions,
         open_position_snaps=open_position_snaps or {},
+        daily_pnl_usd=daily_pnl_usd,
     )
 
     # Step 5: Final decision
@@ -209,6 +238,7 @@ def run(
 def run_all_assets() -> list[TradeSignal]:
     """Scan all configured assets and return signals.
     Passes a shared snapshot cache to enable the correlation filter.
+    Also computes today's realized PnL to feed the circuit breaker.
     """
     if settings.trading_mode == "live":
         from trading_engine.execution import live_trader as trader
@@ -231,6 +261,9 @@ def run_all_assets() -> list[TradeSignal]:
     open_pos_count = status["open_positions"]
     win_rate = status.get("win_rate", 50) / 100
 
+    # Compute today's realized PnL for the circuit breaker
+    daily_pnl = _get_daily_pnl(trader)
+
     running_heat = portfolio_heat
     running_open_count = open_pos_count
 
@@ -243,6 +276,7 @@ def run_all_assets() -> list[TradeSignal]:
                 open_positions=running_open_count,
                 win_rate=win_rate,
                 open_position_snaps=snap_cache,
+                daily_pnl_usd=daily_pnl,
             )
             results.append(signal)
 

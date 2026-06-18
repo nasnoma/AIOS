@@ -237,7 +237,22 @@ def run_bounty_hunter_cycle():
         logger.info(f"Bounty Hunter [signal_only]: {len(active_buys)} BUY + {len(active_sells)} SELL signals — not executing.")
         return
 
-    # Execute BUY signals
+    # ── Circuit Breaker check ─────────────────────────────────────────────
+    # Compute today's realized PnL and halt if the daily loss limit is breached.
+    try:
+        from trading_engine.orchestrator import _get_daily_pnl
+        daily_pnl = _get_daily_pnl(trader)
+        daily_loss_limit = getattr(settings, "daily_loss_limit_usd", 300.0)
+        if daily_loss_limit > 0 and daily_pnl < -abs(daily_loss_limit):
+            logger.warning(
+                f"⚔️ Bounty Hunter HALTED — circuit breaker triggered: "
+                f"daily PnL ${daily_pnl:,.2f} ≤ -${daily_loss_limit:,.0f}. "
+                "No new trades until tomorrow."
+            )
+            return
+    except Exception as _cbe:
+        logger.warning(f"⚔️ Bounty Hunter circuit-breaker check failed ({_cbe}); proceeding with caution.")
+
     if active_buys:
         logger.info(f"Bounty Hunter: placing {len(active_buys)} BUY trade(s)...")
         for b in active_buys:

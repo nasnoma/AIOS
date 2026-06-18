@@ -68,10 +68,21 @@ class Settings(BaseSettings):
     stop_loss_pct_max: float = 0.10
     max_concurrent_positions: int = 8
 
-    # ── Self Healing ────────────────────────
+    # ── Self Healing ────────────────────────────────────────
     self_healing_consecutive_losses: int = 3
     self_healing_cooldown_hours: float = 24.0
     self_healing_iterations: int = 15
+
+    # ── Circuit Breaker ─────────────────────────────────────
+    # Halt ALL new entries once daily realized losses exceed this amount (USD).
+    # Set to 0 to disable.
+    daily_loss_limit_usd: float = 300.0
+
+    # ── Market Regime Filter ─────────────────────────────────
+    # Only allow LONG crypto entries when BTC is above its N-period MA on the
+    # configured timeframe.  Set regime_filter_enabled=False to bypass.
+    regime_filter_enabled: bool = True
+    regime_btc_ma_period: int = 50
 
     # ── Session Awareness & Volatility Filters ──────
     crypto_peak_sessions_only: bool = False
