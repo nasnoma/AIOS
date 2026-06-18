@@ -1135,6 +1135,100 @@ class TestPhase1AndPhase2:
             assert len(re_portfolio.positions) == 1
             assert re_portfolio.positions[0].symbol == "NEAR/USDT"
 
+    def test_live_trader_database_reconstruction_and_sync(self):
+        """Verify that sync_with_broker correctly loads closed trades from DB and merges with Bybit trades."""
+        from trading_engine.execution.live_trader import sync_with_broker, Position, LivePortfolio, _save_state
+        
+        portfolio = LivePortfolio(account_size=10000.0, cash=10000.0)
+        portfolio.positions = []
+        portfolio.closed_trades = []
+        _save_state(portfolio)
+
+        # 1. Mock DB returning 1 closed trade (LIT/USDT)
+        mock_db_trades = [{
+            "symbol": "LIT/USDT",
+            "direction": "long",
+            "entry_price": 1.70,
+            "exit_price": 1.80,
+            "size_usd": 599.0,
+            "pnl_usd": 35.0,
+            "fee_usd": 0.6,
+            "opened_at": "2026-06-15T10:00:00+00:00",
+            "closed_at": "2026-06-15T11:00:00+00:00",
+            "status": "closed"
+        }]
+
+        # 2. Mock Bybit trade history returning 2 closed trades:
+        # One is a duplicate of the DB trade (LIT/USDT)
+        # The other is a new trade (NEAR/USDT)
+        mock_bybit_trades = [
+            {
+                "symbol": "LIT/USDT",
+                "side": "buy",
+                "price": 1.70,
+                "cost": 599.0,
+                "timestamp": 1781517600000, # 2026-06-15T10:00:00 in ms
+                "fee": {"cost": 0.3, "currency": "USDT"}
+            },
+            {
+                "symbol": "LIT/USDT",
+                "side": "sell",
+                "price": 1.80,
+                "cost": 599.0,
+                "timestamp": 1781521200000, # 2026-06-15T11:00:00 in ms
+                "fee": {"cost": 0.3, "currency": "USDT"}
+            },
+            {
+                "symbol": "NEAR/USDT",
+                "side": "buy",
+                "price": 2.2,
+                "cost": 220.0,
+                "timestamp": 1781604000000, # 2026-06-16T10:00:00 in ms
+                "fee": {"cost": 0.22, "currency": "USDT"}
+            },
+            {
+                "symbol": "NEAR/USDT",
+                "side": "sell",
+                "price": 2.0,
+                "cost": 200.0,
+                "timestamp": 1781607600000, # 2026-06-16T11:00:00 in ms
+                "fee": {"cost": 0.20, "currency": "USDT"}
+            }
+        ]
+
+        with patch("trading_engine.execution.live_trader.settings.trading_mode", "live"), \
+             patch("trading_engine.storage.db.get_db_closed_trades", return_value=mock_db_trades), \
+             patch("trading_engine.storage.db.sync_closed_trades_to_db") as mock_sync, \
+             patch("trading_engine.execution.live_trader.get_bybit_exchange") as mock_ex_getter:
+            
+            mock_ex = mock_ex_getter.return_value
+            mock_ex.fetch_open_orders.return_value = []
+            mock_ex.fetch_balance.return_value = {'total': {'USDT': 10000.0}, 'USDT': {'free': 10000.0}}
+            mock_ex.fetch_my_trades.side_effect = [mock_bybit_trades, []]
+            
+            success = sync_with_broker()
+            assert success is True
+            
+            from trading_engine.execution.live_trader import _load_state
+            re_portfolio = _load_state()
+            
+            # Reconstructed portfolio should have exactly 2 closed trades (LIT/USDT and NEAR/USDT)
+            # The duplicate LIT/USDT should have been merged/deduplicated.
+            assert len(re_portfolio.closed_trades) == 2
+            
+            symbols = [t.symbol for t in re_portfolio.closed_trades]
+            assert "LIT/USDT" in symbols
+            assert "NEAR/USDT" in symbols
+            
+            # Verify stats are correctly calculated over the merged list
+            assert re_portfolio.win_count == 1
+            assert re_portfolio.loss_count == 1
+            
+            # Save state is triggered inside sync_with_broker, which should call db.sync_closed_trades_to_db
+            mock_sync.assert_called_once()
+            called_trades = mock_sync.call_args[0][0]
+            assert len(called_trades) == 2
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
