@@ -77,28 +77,6 @@ async def scheduler_heartbeat():
     return {"status": "ok"}
 
 
-@app.post("/api/cleanup_mock_trades")
-async def cleanup_mock_trades():
-    from trading_engine.storage import db
-    session = db.get_session()
-    deleted = session.query(db.ClosedTradeLog).filter(db.ClosedTradeLog.entry_price == 65000.0).delete()
-    session.commit()
-    
-    if settings.trading_mode == "live":
-        try:
-            portfolio = live_trader._load_state()
-            portfolio.closed_trades = [t for t in portfolio.closed_trades if t.entry_price != 65000.0]
-            portfolio.win_count = sum(1 for t in portfolio.closed_trades if (t.pnl_usd or 0) > 0)
-            portfolio.loss_count = sum(1 for t in portfolio.closed_trades if (t.pnl_usd or 0) <= 0)
-            portfolio.total_pnl = sum(t.pnl_usd or 0.0 for t in portfolio.closed_trades)
-            portfolio.total_fees = sum(t.fee_usd or 0.0 for t in portfolio.closed_trades)
-            live_trader._save_state(portfolio)
-        except Exception as e_live:
-            logger.warning(f"Failed to reset live portfolio memory state: {e_live}")
-            
-    return {"status": "ok", "deleted_from_db": deleted}
-
-
 
 @app.get("/api/evolution")
 async def get_evolution():
