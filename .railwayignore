@@ -1,0 +1,26 @@
+# Only ignore root-level folders by prefixing with /
+/trading_engine/venv/
+/AIS-OS/
+/markitdown/
+/Scrapegraph-ai/
+/data/
+/scratch_autohedge/
+/graphify-out/
+/autoresearch/
+/rtk/
+
+# Ignore caches and local state
+.DS_Store
+.git/
+.agents/
+.playwright-mcp/
+.pytest_cache/
+trading_engine/.pytest_cache/
+trading_engine/backtest_results/
+trading_engine/live_state.json
+trading_engine/paper_state.json
+trading_engine/trading_engine.db
+trading_engine.db
+trading_engine/.env
+railway_status.json
+trading_engine/scratch/
