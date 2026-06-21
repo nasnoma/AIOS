@@ -8,7 +8,7 @@ Also handles position monitoring between signal cycles.
 from __future__ import annotations
 import signal as os_signal
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import requests
 from loguru import logger
 from apscheduler.schedulers.blocking import BlockingScheduler
@@ -431,23 +431,23 @@ def main():
     if settings.bounty_hunter_enabled:
         if settings.bounty_hunter_interval_minutes > 0:
             interval_val = settings.bounty_hunter_interval_minutes
-            logger.info(f"   Bounty Hunter: scheduled every {interval_val} minutes")
+            logger.info(f"   Bounty Hunter: scheduled every {interval_val} minutes (staggered by 30s)")
             scheduler.add_job(
                 run_bounty_hunter_cycle,
                 trigger=IntervalTrigger(minutes=interval_val),
                 id="bounty_hunter_cycle",
                 name="Bounty Hunter Cycle",
-                next_run_time=datetime.now(timezone.utc),
+                next_run_time=datetime.now(timezone.utc) + timedelta(seconds=30),
             )
         else:
             interval_hours = settings.bounty_hunter_interval_hours
-            logger.info(f"   Bounty Hunter: scheduled every {interval_hours} hours")
+            logger.info(f"   Bounty Hunter: scheduled every {interval_hours} hours (staggered by 30s)")
             scheduler.add_job(
                 run_bounty_hunter_cycle,
                 trigger=IntervalTrigger(hours=interval_hours),
                 id="bounty_hunter_cycle",
                 name="Bounty Hunter Cycle",
-                next_run_time=datetime.now(timezone.utc),
+                next_run_time=datetime.now(timezone.utc) + timedelta(seconds=30),
             )
 
     scheduler.start()
