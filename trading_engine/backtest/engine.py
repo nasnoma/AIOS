@@ -280,7 +280,7 @@ def _run_multi_agent_simulation(
             ]
             
             # Evaluate verdict
-            verdict = judge.evaluate(signals, agent_weights)
+            verdict = judge.evaluate(signals, agent_weights, symbol=symbol)
             
             if verdict.approved:
                 # Apply current backtester capital as simulated account size for RiskAgent
@@ -357,6 +357,952 @@ def _run_multi_agent_simulation(
     }
 
 
+# ══════════════════════════════════════════════════════════════════
+# NGX NATIVE STRATEGY ENGINE
+# Purpose-built for Nigerian Stock Exchange daily equity backtesting.
+# Bypasses the crypto-tuned multi-agent system entirely.
+# ══════════════════════════════════════════════════════════════════
+
+_NGX_STRATEGY_MAP_PATH = Path(__file__).parent.parent / "data" / "ngx" / "strategy_map.json"
+
+
+def _ngx_load_strategy_map() -> dict:
+    """Load persisted per-ticker best-strategy assignments."""
+    if _NGX_STRATEGY_MAP_PATH.exists():
+        try:
+            return json.loads(_NGX_STRATEGY_MAP_PATH.read_text())
+        except Exception:
+            pass
+    return {}
+
+
+def _ngx_save_strategy_map(strategy_map: dict):
+    """Persist per-ticker best-strategy assignments."""
+    _NGX_STRATEGY_MAP_PATH.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        _NGX_STRATEGY_MAP_PATH.write_text(json.dumps(strategy_map, indent=2))
+    except Exception as e:
+        logger.warning(f"Could not save NGX strategy map: {e}")
+
+
+def _ngx_signals_ema_cross(df: pd.DataFrame) -> tuple[pd.Series, pd.Series]:
+    """EMA10/30 crossover with RSI and volume filter."""
+    try:
+        import pandas_ta as ta
+    except ImportError:
+        raise RuntimeError("pandas_ta required for NGX native strategies — pip install pandas_ta")
+    close = df["close"]
+    vol = df["volume"]
+    avg_vol = vol.rolling(20).mean()
+    ema10 = ta.ema(close, length=10)
+    ema30 = ta.ema(close, length=30)
+    rsi = ta.rsi(close, length=14)
+    cross_up = (ema10 > ema30) & (ema10.shift(1) <= ema30.shift(1))
+    rsi_ok = (rsi >= 35) & (rsi <= 68)
+    vol_ok = vol >= avg_vol * 0.8
+    buy = (cross_up & rsi_ok & vol_ok).fillna(False)
+    cross_down = (ema10 < ema30) & (ema10.shift(1) >= ema30.shift(1))
+    sell = (cross_down | (rsi > 75)).fillna(False)
+    return buy, sell
+
+
+def _ngx_signals_mom_breakout(df: pd.DataFrame) -> tuple[pd.Series, pd.Series]:
+    """20-day high breakout with volume surge."""
+    try:
+        import pandas_ta as ta
+    except ImportError:
+        raise RuntimeError("pandas_ta required")
+    close = df["close"]
+    vol = df["volume"]
+    avg_vol = vol.rolling(20).mean()
+    high_20 = close.rolling(20).max().shift(1)
+    buy = ((close > high_20) & (vol > avg_vol * 1.5)).fillna(False)
+    ema30 = ta.ema(close, length=30)
+    sell = (close < ema30).fillna(False)
+    return buy, sell
+
+
+def _ngx_signals_rsi_reversion(df: pd.DataFrame) -> tuple[pd.Series, pd.Series]:
+    """RSI oversold bounce with trend confirmation."""
+    try:
+        import pandas_ta as ta
+    except ImportError:
+        raise RuntimeError("pandas_ta required")
+    close = df["close"]
+    rsi = ta.rsi(close, length=14)
+    ema50 = ta.ema(close, length=50)
+    buy = ((rsi < 35) & (close > ema50) & (rsi > rsi.shift(1))).fillna(False)
+    sell = (rsi > 65).fillna(False)
+    return buy, sell
+
+
+_NGX_STRATEGY_FNS: dict = {
+    "EMA_Cross":     _ngx_signals_ema_cross,
+    "MomBreakout":   _ngx_signals_mom_breakout,
+    "RSI_Reversion": _ngx_signals_rsi_reversion,
+}
+
+
+def _ngx_run_signals(
+    df: pd.DataFrame,
+    buy_sig: pd.Series,
+    sell_sig: pd.Series,
+    initial_capital: float = 10_000,
+    stop_loss_pct: float = 0.08,
+    take_profit_pct: float = 0.20,
+    risk_pct: float = 0.02,
+) -> dict:
+    """
+    Event-driven backtester for NGX native strategies.
+    Uses a trailing stop that ratchets up with the price.
+    """
+    capital = initial_capital
+    trades = []
+    in_trade = False
+    entry_price = 0.0
+    trailing_stop = 0.0
+
+    closes = df["close"].values
+    highs  = df["high"].values
+    lows   = df["low"].values
+    buys   = buy_sig.values
+    sells  = sell_sig.values
+
+    for i in range(1, len(df)):
+        price = closes[i]
+        if in_trade:
+            trailing_stop = max(trailing_stop, price * (1 - stop_loss_pct))
+            hit_stop = lows[i] <= trailing_stop
+            hit_tp   = highs[i] >= entry_price * (1 + take_profit_pct)
+            hit_sell = sells[i]
+            if hit_stop or hit_tp or hit_sell:
+                exit_price = (trailing_stop if hit_stop
+                              else entry_price * (1 + take_profit_pct) if hit_tp
+                              else price)
+                pnl_pct  = (exit_price - entry_price) / entry_price
+                size_usd = capital * risk_pct / stop_loss_pct
+                pnl      = size_usd * pnl_pct
+                capital += pnl
+                trades.append({
+                    "entry": entry_price, "exit": exit_price,
+                    "pnl": pnl, "pnl_pct": pnl_pct,
+                    "result": "win" if pnl > 0 else "loss",
+                    "exit_reason": "stop" if hit_stop else ("tp" if hit_tp else "signal"),
+                    "opened_at": df.index[i - 1].isoformat() if hasattr(df.index[i - 1], "isoformat") else str(df.index[i - 1]),
+                    "closed_at": df.index[i].isoformat() if hasattr(df.index[i], "isoformat") else str(df.index[i]),
+                })
+                in_trade = False
+        else:
+            if buys[i]:
+                in_trade      = True
+                entry_price   = price
+                trailing_stop = price * (1 - stop_loss_pct)
+
+    if not trades:
+        return {
+            "total_trades": 0, "wins": 0, "losses": 0,
+            "win_rate": 0.0, "profit_factor": 0.0,
+            "total_pnl": 0.0, "total_return_pct": 0.0,
+            "max_drawdown_pct": 0.0,
+            "initial_capital": initial_capital, "final_capital": capital, "trades": []
+        }
+
+    df_t  = pd.DataFrame(trades)
+    wins   = df_t[df_t["result"] == "win"]
+    losses = df_t[df_t["result"] == "loss"]
+    total_pnl = df_t["pnl"].sum()
+    win_rate  = len(wins) / len(df_t) * 100
+    gross_w   = wins["pnl"].sum() if len(wins) else 0.0
+    gross_l   = abs(losses["pnl"].sum()) if len(losses) else 1e-9
+    pf        = gross_w / gross_l if gross_l > 0 else float("inf")
+
+    # Max drawdown on capital curve
+    curve = [initial_capital]
+    for t in trades:
+        curve.append(curve[-1] + t["pnl"])
+    peak, max_dd = initial_capital, 0.0
+    for c in curve:
+        if c > peak:
+            peak = c
+        dd = (peak - c) / peak if peak > 0 else 0
+        if dd > max_dd:
+            max_dd = dd
+
+    return {
+        "total_trades": len(df_t),
+        "wins": len(wins),
+        "losses": len(losses),
+        "win_rate": round(win_rate, 1),
+        "profit_factor": round(min(pf, 99.9), 2),
+        "total_pnl": round(total_pnl, 2),
+        "total_return_pct": round((capital - initial_capital) / initial_capital * 100, 2),
+        "max_drawdown_pct": round(max_dd * 100, 2),
+        "initial_capital": initial_capital,
+        "final_capital": round(capital, 2),
+        "trades": trades,
+    }
+
+
+def _ngx_composite_score(r: dict) -> float:
+    """Higher is better. Blends profit factor, win rate, return, drawdown."""
+    if r.get("total_trades", 0) < 2:
+        return -999.0
+    pf  = min(r.get("profit_factor", 0), 5.0)
+    wr  = r.get("win_rate", 0) / 100
+    ret = r.get("total_return_pct", 0)
+    dd  = r.get("max_drawdown_pct", 100)
+    n   = max(r.get("total_trades", 1), 1)
+    return (
+        0.35 * pf
+        + 0.25 * wr
+        + 0.25 * (ret / 100)
+        - 0.15 * (dd / 100)
+        + 0.01 * float(np.log1p(n))
+    )
+
+
+def run_ngx_native_backtest(
+    symbol: str,
+    days: int = 400,
+    initial_capital: float = 10_000,
+    strategy: str = "auto",
+    stop_loss_pct: float = 0.08,
+    take_profit_pct: float = 0.20,
+    output_dir: str = None,
+) -> dict:
+    """
+    NGX-native backtest entry point.
+
+    strategy: "auto"         — try all 3, pick best (updates strategy_map.json)
+              "EMA_Cross"    — force EMA crossover
+              "MomBreakout"  — force momentum breakout
+              "RSI_Reversion"— force RSI mean-reversion
+              "map"          — load from saved strategy_map.json (default if available)
+    """
+    from trading_engine.data.market_data import load_historical_data
+
+    ticker = symbol.split("/")[0].upper()
+    logger.info(f"🇳🇬 NGX Native Backtest: {symbol} | {days}d | strategy={strategy}")
+
+    # Load data
+    try:
+        df = load_historical_data(symbol, timeframe="1d", limit=days)
+        df = df.dropna(subset=["close", "high", "low", "volume"])
+    except Exception as e:
+        logger.error(f"Data load failed: {e}")
+        return {"error": str(e)}
+
+    if len(df) < 30:
+        return {"error": f"Insufficient data: only {len(df)} rows"}
+
+    # Resolve strategy
+    resolved_strategy = strategy
+    if strategy in ("auto", "map"):
+        smap = _ngx_load_strategy_map()
+        if ticker in smap and strategy == "map":
+            resolved_strategy = smap[ticker].get("strategy", "auto")
+        else:
+            resolved_strategy = "auto"
+
+    # Run strategies
+    if resolved_strategy == "auto":
+        # Try all, pick best, update strategy map
+        best_result, best_name, best_score = None, None, -999.0
+        all_results = {}
+        for name, fn in _NGX_STRATEGY_FNS.items():
+            try:
+                buy_sig, sell_sig = fn(df)
+                res = _ngx_run_signals(df, buy_sig, sell_sig,
+                                       initial_capital, stop_loss_pct, take_profit_pct)
+                all_results[name] = res
+                sc = _ngx_composite_score(res)
+                if sc > best_score:
+                    best_score, best_result, best_name = sc, res, name
+            except Exception as e:
+                logger.warning(f"Strategy {name} failed for {ticker}: {e}")
+                all_results[name] = {"error": str(e), "total_trades": 0}
+
+        if best_result is None:
+            best_name, best_result = "EMA_Cross", all_results.get("EMA_Cross", {"total_trades": 0})
+
+        # Persist best strategy
+        smap = _ngx_load_strategy_map()
+        smap[ticker] = {
+            "strategy": best_name,
+            "score": round(best_score, 4),
+            "return_pct": best_result.get("total_return_pct", 0),
+            "win_rate": best_result.get("win_rate", 0),
+            "profit_factor": best_result.get("profit_factor", 0),
+            "max_drawdown_pct": best_result.get("max_drawdown_pct", 0),
+            "total_trades": best_result.get("total_trades", 0),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+        _ngx_save_strategy_map(smap)
+
+        result = {**best_result, "strategy_used": best_name, "all_strategies": all_results}
+    else:
+        fn = _NGX_STRATEGY_FNS.get(resolved_strategy)
+        if fn is None:
+            return {"error": f"Unknown strategy: {resolved_strategy}"}
+        try:
+            buy_sig, sell_sig = fn(df)
+            result = _ngx_run_signals(df, buy_sig, sell_sig,
+                                      initial_capital, stop_loss_pct, take_profit_pct)
+            result["strategy_used"] = resolved_strategy
+        except Exception as e:
+            return {"error": str(e)}
+
+    logger.success(
+        f"NGX {symbol}: {result.get('strategy_used')} | "
+        f"trades={result.get('total_trades',0)} | "
+        f"WR={result.get('win_rate',0):.1f}% | "
+        f"ret={result.get('total_return_pct',0):+.2f}% | "
+        f"PF={result.get('profit_factor',0):.2f}"
+    )
+
+    if output_dir:
+        out = Path(output_dir)
+        out.mkdir(parents=True, exist_ok=True)
+        out_file = out / f"backtest_{ticker}_NGX_1d.json"
+        with open(out_file, "w") as f:
+            json.dump({k: v for k, v in result.items() if k != "trades"}, f, indent=2)
+
+    return result
+
+
+def run_ngx_wfo(
+    symbol: str,
+    days: int = 400,
+    lookback_days: int = 60,
+    forward_days: int = 14,
+    initial_capital: float = 10_000,
+    stop_loss_pct: float = 0.08,
+    take_profit_pct: float = 0.20,
+) -> dict:
+    """
+    Walk-Forward Optimisation for NGX native strategies.
+
+    Each window:
+      1. Train (lookback_days): try all 3 strategies, pick best by composite score
+      2. Test  (forward_days):  apply picked strategy out-of-sample
+
+    Returns OOS performance vs static buy-and-hold and static best strategy.
+    """
+    from trading_engine.data.market_data import load_historical_data
+
+    ticker = symbol.split("/")[0].upper()
+    logger.info(f"🎯 NGX WFO: {symbol} | lookback={lookback_days}d | forward={forward_days}d")
+
+    try:
+        df = load_historical_data(symbol, timeframe="1d", limit=days)
+        df = df.dropna(subset=["close", "high", "low", "volume"])
+    except Exception as e:
+        return {"error": str(e)}
+
+    if len(df) < lookback_days + forward_days * 2:
+        return {"error": f"Insufficient data ({len(df)} rows) for WFO"}
+
+    wfo_capital = initial_capital
+    all_oos_trades = []
+    weights_history = []
+
+    idx = 0
+    while idx + lookback_days + forward_days <= len(df):
+        train_df = df.iloc[idx: idx + lookback_days]
+        test_df  = df.iloc[idx + lookback_days: idx + lookback_days + forward_days]
+
+        # ── Train: pick best strategy on train window ──
+        best_name, best_score = "EMA_Cross", -999.0
+        for name, fn in _NGX_STRATEGY_FNS.items():
+            try:
+                buy_sig, sell_sig = fn(train_df)
+                res = _ngx_run_signals(train_df, buy_sig, sell_sig,
+                                       initial_capital, stop_loss_pct, take_profit_pct)
+                sc = _ngx_composite_score(res)
+                if sc > best_score:
+                    best_score, best_name = sc, name
+            except Exception:
+                pass
+
+        weights_history.append({
+            "window_start": df.index[idx].isoformat() if hasattr(df.index[idx], "isoformat") else str(df.index[idx]),
+            "train_end":    df.index[idx + lookback_days - 1].isoformat() if hasattr(df.index[idx + lookback_days - 1], "isoformat") else str(df.index[idx + lookback_days - 1]),
+            "best_strategy": best_name,
+            "train_score":   round(best_score, 4),
+        })
+
+        # ── Test: apply best strategy on forward window ──
+        try:
+            fn = _NGX_STRATEGY_FNS[best_name]
+            # Compute signals on full df up to test_end to avoid look-ahead in indicators,
+            # then slice to the test window
+            full_up_to_test = df.iloc[:idx + lookback_days + forward_days]
+            buy_full, sell_full = fn(full_up_to_test)
+            test_buy  = buy_full.iloc[idx + lookback_days:]
+            test_sell = sell_full.iloc[idx + lookback_days:]
+            test_res  = _ngx_run_signals(test_df, test_buy, test_sell,
+                                          wfo_capital, stop_loss_pct, take_profit_pct)
+        except Exception as e:
+            logger.warning(f"WFO test window failed at idx={idx}: {e}")
+            test_res = {"final_capital": wfo_capital, "trades": []}
+
+        for t in test_res.get("trades", []):
+            all_oos_trades.append({**t, "window": idx, "strategy": best_name})
+        wfo_capital = test_res.get("final_capital", wfo_capital)
+        idx += forward_days  # slide by forward window
+
+    # ── Compile OOS stats ──
+    if not all_oos_trades:
+        return {
+            "symbol": symbol, "total_trades": 0, "win_rate": 0.0,
+            "profit_factor": 0.0, "total_return_pct": 0.0,
+            "final_capital": wfo_capital, "weights_progression": weights_history,
+            "error": "No out-of-sample trades generated",
+        }
+
+    df_t  = pd.DataFrame(all_oos_trades)
+    wins   = df_t[df_t["result"] == "win"]
+    losses = df_t[df_t["result"] == "loss"]
+    total_pnl = df_t["pnl"].sum()
+    win_rate  = len(wins) / len(df_t) * 100
+    gross_w   = wins["pnl"].sum() if len(wins) else 0.0
+    gross_l   = abs(losses["pnl"].sum()) if len(losses) else 1e-9
+    pf        = gross_w / gross_l if gross_l > 0 else float("inf")
+
+    # Baseline: static best strategy over the full OOS period
+    oos_start = lookback_days
+    oos_df    = df.iloc[oos_start:]
+    baseline_results = {"total_return_pct": 0.0, "total_trades": 0}
+    try:
+        # Use the strategy that won the most training windows
+        strategy_counts = {}
+        for w in weights_history:
+            s = w["best_strategy"]
+            strategy_counts[s] = strategy_counts.get(s, 0) + 1
+        dominant = max(strategy_counts, key=strategy_counts.get)
+        fn = _NGX_STRATEGY_FNS[dominant]
+        buy_sig, sell_sig = fn(oos_df)
+        baseline_results = _ngx_run_signals(oos_df, buy_sig, sell_sig,
+                                             initial_capital, stop_loss_pct, take_profit_pct)
+        baseline_results["strategy"] = dominant
+    except Exception as e:
+        logger.warning(f"Baseline calculation failed: {e}")
+
+    wfo_return = (wfo_capital - initial_capital) / initial_capital * 100
+
+    result = {
+        "symbol": symbol,
+        "total_trades": len(df_t),
+        "wins": len(wins),
+        "losses": len(losses),
+        "win_rate": round(win_rate, 1),
+        "profit_factor": round(min(pf, 99.9), 2),
+        "total_pnl": round(total_pnl, 2),
+        "total_return_pct": round(wfo_return, 2),
+        "final_capital": round(wfo_capital, 2),
+        "baseline_return_pct": baseline_results.get("total_return_pct", 0),
+        "baseline_trades": baseline_results.get("total_trades", 0),
+        "baseline_strategy": baseline_results.get("strategy", "unknown"),
+        "wfo_edge_pct": round(wfo_return - baseline_results.get("total_return_pct", 0), 2),
+        "windows_tested": len(weights_history),
+        "weights_progression": weights_history,
+    }
+
+    logger.success(
+        f"NGX WFO {symbol}: OOS ret={result['total_return_pct']:+.2f}% | "
+        f"baseline={result['baseline_return_pct']:+.2f}% | "
+        f"edge={result['wfo_edge_pct']:+.2f}% | trades={result['total_trades']}"
+    )
+    return result
+
+
+def run_ngx_portfolio_wfo(
+    tickers: list[str] | None = None,
+    days: int = 400,
+    lookback_days: int = 90,
+    forward_days: int = 45,
+    initial_capital: float = 10_000,
+    stop_loss_pct: float = 0.08,
+    risk_pct: float = 0.02,
+    output_dir: str | None = None,
+) -> dict:
+    """
+    Portfolio-level Walk-Forward Optimisation for NGX native strategies.
+
+    Solves the sparse-signal problem: individual NGX stocks rarely generate
+    a trade in a 45-day window, but testing all tickers simultaneously
+    produces enough out-of-sample trades for meaningful statistics.
+
+    Per window:
+      Train: For each stock, pick best strategy by composite score.
+      Test:  Apply each stock's best strategy on its forward window.
+             Accumulate trades across the whole portfolio.
+
+    Default tickers: the 19 original NGX stocks (or pass a custom list).
+    """
+    from trading_engine.data.market_data import load_historical_data
+    from collections import Counter
+
+    if tickers is None:
+        tickers = [
+            "ARADEL", "AIRTELAFRI", "BUACEMENT", "BUAFOODS", "CAP",
+            "DANGCEM", "JAIZBANK", "WAPCO", "MTNN", "OANDO",
+            "SEPLAT", "PRESCO", "OKOMUOIL", "UNILEVER", "CADBURY",
+            "NASCON", "FLOURMILL", "NB", "MEYER",
+        ]
+
+    logger.info(
+        f"🇳🇬 NGX Portfolio WFO: {len(tickers)} stocks | "
+        f"lookback={lookback_days}d | forward={forward_days}d"
+    )
+
+    # Load all data
+    stock_data: dict[str, pd.DataFrame] = {}
+    for ticker in tickers:
+        try:
+            df = load_historical_data(f"{ticker}/NGX", timeframe="1d", limit=days)
+            df = df.dropna(subset=["close", "high", "low", "volume"])
+            if len(df) >= lookback_days + forward_days:
+                stock_data[ticker] = df
+        except Exception as e:
+            logger.warning(f"Skipping {ticker}: {e}")
+
+    if not stock_data:
+        return {"error": "No stocks loaded"}
+
+    # Use the stock with the most data as reference timeline
+    ref_ticker = max(stock_data, key=lambda t: len(stock_data[t]))
+    ref_df = stock_data[ref_ticker]
+
+    portfolio_capital = initial_capital
+    allocation_per_stock = initial_capital / len(stock_data)
+    all_oos_trades: list[dict] = []
+    window_log: list[dict] = []
+
+    idx = 0
+    while idx + lookback_days + forward_days <= len(ref_df):
+        train_start = ref_df.index[idx].date()
+        train_end   = ref_df.index[idx + lookback_days - 1].date()
+        test_end    = ref_df.index[min(idx + lookback_days + forward_days - 1, len(ref_df) - 1)].date()
+
+        window_strategies: dict[str, str] = {}
+        window_trades = 0
+
+        for ticker, df in stock_data.items():
+            train_mask = (df.index.date >= train_start) & (df.index.date <= train_end)
+            test_mask  = (df.index.date > train_end) & (df.index.date <= test_end)
+            train_df   = df[train_mask]
+            test_df    = df[test_mask]
+
+            if len(train_df) < 20 or len(test_df) < 5:
+                continue
+
+            # Train: pick best strategy
+            best_name, best_score = "EMA_Cross", -999.0
+            for name, fn in _NGX_STRATEGY_FNS.items():
+                try:
+                    b, s = fn(train_df)
+                    res  = _ngx_run_signals(train_df, b, s, allocation_per_stock, stop_loss_pct, risk_pct=risk_pct)
+                    sc   = _ngx_composite_score(res)
+                    if sc > best_score:
+                        best_score, best_name = sc, name
+                except Exception:
+                    pass
+            window_strategies[ticker] = best_name
+
+            # Test: apply on forward window with look-ahead-safe context
+            ctx_df = df[df.index.date <= test_end].tail(lookback_days + forward_days)
+            try:
+                fn = _NGX_STRATEGY_FNS[best_name]
+                buy_full, sell_full = fn(ctx_df)
+                test_buy  = buy_full[buy_full.index.isin(test_df.index)]
+                test_sell = sell_full[sell_full.index.isin(test_df.index)]
+                res = _ngx_run_signals(
+                    test_df, test_buy, test_sell,
+                    allocation_per_stock, stop_loss_pct,
+                    risk_pct=risk_pct
+                )
+                for t in res.get("trades", []):
+                    all_oos_trades.append({**t, "ticker": ticker, "window": idx, "strategy": best_name})
+                    portfolio_capital += t["pnl"]
+                    window_trades += 1
+            except Exception as e:
+                logger.debug(f"WFO test failed for {ticker} window {idx}: {e}")
+
+        strat_counts = Counter(window_strategies.values())
+        window_log.append({
+            "window": idx,
+            "train_start": str(train_start), "train_end": str(train_end), "test_end": str(test_end),
+            "oos_trades": window_trades,
+            "dominant_strategy": strat_counts.most_common(1)[0][0] if strat_counts else "?",
+            "strategy_breakdown": dict(strat_counts),
+        })
+        logger.info(
+            f"  Window {idx:3d} ({train_start}→{test_end})  "
+            f"trades={window_trades}  dominant={strat_counts.most_common(1)[0][0] if strat_counts else '?'}"
+        )
+        idx += forward_days
+
+    # Compile results
+    if not all_oos_trades:
+        return {
+            "total_trades": 0, "win_rate": 0.0, "profit_factor": 0.0,
+            "total_return_pct": 0.0, "final_capital": portfolio_capital,
+            "windows": window_log, "error": "No OOS trades generated",
+        }
+
+    df_t   = pd.DataFrame(all_oos_trades)
+    wins   = df_t[df_t["result"] == "win"]
+    losses = df_t[df_t["result"] == "loss"]
+    total_pnl = df_t["pnl"].sum()
+    win_rate  = len(wins) / len(df_t) * 100
+    gross_w   = wins["pnl"].sum() if len(wins) else 0.0
+    gross_l   = abs(losses["pnl"].sum()) if len(losses) else 1e-9
+    pf        = gross_w / gross_l if gross_l > 0 else float("inf")
+    wfo_ret   = (portfolio_capital - initial_capital) / initial_capital * 100
+
+    result = {
+        "tickers_tested": len(stock_data),
+        "total_trades": len(df_t),
+        "wins": len(wins),
+        "losses": len(losses),
+        "win_rate": round(win_rate, 1),
+        "profit_factor": round(min(pf, 99.9), 2),
+        "total_pnl": round(total_pnl, 2),
+        "total_return_pct": round(wfo_ret, 2),
+        "final_capital": round(portfolio_capital, 2),
+        "windows_tested": len(window_log),
+        "windows": window_log,
+        "per_ticker": {
+            tkr: {
+                "trades": len(sub := df_t[df_t["ticker"] == tkr]),
+                "wins": int((sub["result"] == "win").sum()),
+                "pnl": round(sub["pnl"].sum(), 2),
+            }
+            for tkr in df_t["ticker"].unique()
+        },
+    }
+
+    logger.success(
+        f"NGX Portfolio WFO: OOS ret={wfo_ret:+.2f}% | "
+        f"trades={result['total_trades']} | WR={win_rate:.1f}% | PF={pf:.2f}"
+    )
+
+    if output_dir:
+        out = Path(output_dir)
+        out.mkdir(parents=True, exist_ok=True)
+        with open(out / "ngx_portfolio_wfo.json", "w") as f:
+            json.dump(result, f, indent=2, default=str)
+
+    return result
+
+
+def run_ngx_dynamic_portfolio_wfo(
+    tickers: list[str] | None = None,
+    days: int = 400,
+    lookback_days: int = 90,
+    forward_days: int = 45,
+    initial_capital: float = 10_000,
+    stop_loss_pct: float = 0.08,
+    take_profit_pct: float = 0.20,
+    position_fraction: float = 0.15,
+    volatility_sizing: bool = True,
+    output_dir: str | None = None,
+) -> dict:
+    """
+    Chronological Portfolio-level Walk-Forward Optimisation for NGX native strategies.
+    Uses a shared cash pool (Dynamic Cash Sharing) and concentrates capital.
+    Supports Volatility-based Regime-Aware Position Sizing.
+    """
+    from trading_engine.data.market_data import load_historical_data
+    from collections import Counter
+    import pandas as pd
+    import pandas_ta as ta
+
+    if tickers is None:
+        # Concentrate: Top 10 scoring stocks + original 19
+        top_10 = [
+            "TRANSEXPR", "WEMABANK", "VFDGROUP", "CHAMS", "FIRSTHOLDCO",
+            "NGXGROUP", "GUINEAINS", "GTCO", "CONHALLPLC", "INTENEGINS"
+        ]
+        original_19 = [
+            "ARADEL", "AIRTELAFRI", "BUACEMENT", "BUAFOODS", "CAP",
+            "DANGCEM", "JAIZBANK", "WAPCO", "MTNN", "OANDO",
+            "SEPLAT", "PRESCO", "OKOMUOIL", "UNILEVER", "CADBURY",
+            "NASCON", "FLOURMILL", "NB", "MEYER",
+        ]
+        tickers = list(sorted(list(set(top_10 + original_19))))
+
+    logger.info(
+        f"🇳🇬 NGX Dynamic Portfolio WFO: {len(tickers)} stocks | "
+        f"lookback={lookback_days}d | forward={forward_days}d | "
+        f"pos_pct={position_fraction*100:.1f}% | vol_size={volatility_sizing}"
+    )
+
+    # Load all data
+    stock_data: dict[str, pd.DataFrame] = {}
+    for ticker in tickers:
+        try:
+            df = load_historical_data(f"{ticker}/NGX", timeframe="1d", limit=days)
+            df = df.dropna(subset=["close", "high", "low", "volume"])
+            if df.index.tz is not None:
+                df.index = df.index.tz_localize(None)
+            df.index = df.index.normalize()
+            
+            # Pre-compute Average True Range % for Volatility Sizing
+            atr = ta.atr(df["high"], df["low"], df["close"], length=14)
+            df["atr_pct"] = (atr / df["close"]).fillna(0.03) # 3% daily volatility default
+            
+            if len(df) >= lookback_days + forward_days:
+                stock_data[ticker] = df
+        except Exception as e:
+            logger.warning(f"Skipping {ticker}: {e}")
+
+    if not stock_data:
+        return {"error": "No stocks loaded"}
+
+    # Use the stock with the most data as reference timeline
+    ref_ticker = max(stock_data, key=lambda t: len(stock_data[t]))
+    ref_df = stock_data[ref_ticker]
+
+    portfolio_capital = initial_capital
+    all_oos_trades: list[dict] = []
+    window_log: list[dict] = []
+
+    idx = 0
+    while idx + lookback_days + forward_days <= len(ref_df):
+        train_start = ref_df.index[idx].date()
+        train_end   = ref_df.index[idx + lookback_days - 1].date()
+        test_end    = ref_df.index[min(idx + lookback_days + forward_days - 1, len(ref_df) - 1)].date()
+
+        window_strategies: dict[str, str] = {}
+        window_trades = 0
+
+        # Train Phase
+        for ticker, df in stock_data.items():
+            train_mask = (df.index.date >= train_start) & (df.index.date <= train_end)
+            train_df   = df[train_mask]
+
+            if len(train_df) < 20:
+                continue
+
+            # Train: pick best strategy
+            best_name, best_score = "EMA_Cross", -999.0
+            # Temp capital sizing for scoring
+            temp_capital = portfolio_capital / len(stock_data)
+            for name, fn in _NGX_STRATEGY_FNS.items():
+                try:
+                    b, s = fn(train_df)
+                    res  = _ngx_run_signals(train_df, b, s, temp_capital, stop_loss_pct)
+                    sc   = _ngx_composite_score(res)
+                    if sc > best_score:
+                        best_score, best_name = sc, name
+                except Exception:
+                    pass
+            window_strategies[ticker] = best_name
+
+        # Test Phase (Daily Chronological Loop)
+        test_dates = sorted(list(set().union(*(
+            df[(df.index.date > train_end) & (df.index.date <= test_end)].index
+            for df in stock_data.values()
+        ))))
+
+        # Pre-generate signals
+        stock_signals = {}
+        for ticker, df in stock_data.items():
+            best_strat = window_strategies.get(ticker)
+            if not best_strat:
+                continue
+            ctx_df = df[df.index.date <= test_end].tail(lookback_days + forward_days)
+            test_mask = (df.index.date > train_end) & (df.index.date <= test_end)
+            fn = _NGX_STRATEGY_FNS[best_strat]
+            try:
+                buy_full, sell_full = fn(ctx_df)
+                stock_signals[ticker] = {
+                    "df": df[test_mask],
+                    "buy": buy_full[buy_full.index.isin(df[test_mask].index)],
+                    "sell": sell_full[sell_full.index.isin(df[test_mask].index)]
+                }
+            except Exception:
+                pass
+
+        open_positions = {}
+        free_cash = portfolio_capital
+
+        for current_date in test_dates:
+            # 1. Update existing positions
+            closed_tickers = []
+            for ticker, pos in open_positions.items():
+                sig_data = stock_signals.get(ticker)
+                if sig_data is None:
+                    continue
+                df_test = sig_data["df"]
+                if current_date not in df_test.index:
+                    continue
+                row = df_test.loc[current_date]
+                close = row["close"]
+                high = row["high"]
+                low = row["low"]
+                
+                sell_triggered = sig_data["sell"].get(current_date, False)
+                pos["trailing_stop"] = max(pos["trailing_stop"], close * (1 - stop_loss_pct))
+                
+                hit_stop = low <= pos["trailing_stop"]
+                hit_tp = high >= pos["entry_price"] * (1 + take_profit_pct)
+                
+                if hit_stop or hit_tp or sell_triggered:
+                    exit_price = (pos["trailing_stop"] if hit_stop 
+                                  else pos["entry_price"] * (1 + take_profit_pct) if hit_tp 
+                                  else close)
+                    pnl_pct = (exit_price - pos["entry_price"]) / pos["entry_price"]
+                    pnl = pos["size_usd"] * pnl_pct
+                    
+                    portfolio_capital += pnl
+                    free_cash += pos["size_usd"] + pnl
+                    
+                    all_oos_trades.append({
+                        "ticker": ticker,
+                        "entry": pos["entry_price"],
+                        "exit": exit_price,
+                        "pnl": pnl,
+                        "pnl_pct": pnl_pct,
+                        "result": "win" if pnl > 0 else "loss",
+                        "exit_reason": "stop" if hit_stop else ("tp" if hit_tp else "signal"),
+                        "opened_at": str(pos["entry_date"].date()),
+                        "closed_at": str(current_date.date()),
+                        "strategy": pos["strategy"],
+                        "window": idx
+                    })
+                    closed_tickers.append(ticker)
+                    window_trades += 1
+            
+            for tkr in closed_tickers:
+                del open_positions[tkr]
+                
+            # 2. Check new entries
+            for ticker, best_strat in window_strategies.items():
+                if ticker in open_positions:
+                    continue
+                sig_data = stock_signals.get(ticker)
+                if sig_data is None:
+                    continue
+                df_test = sig_data["df"]
+                if current_date not in df_test.index:
+                    continue
+                
+                buy_triggered = sig_data["buy"].get(current_date, False)
+                if buy_triggered:
+                    if volatility_sizing:
+                        atr_val = df_test.loc[current_date, "atr_pct"]
+                        # Target 1.2% risk of total capital per trade, capped between 5% and 25%
+                        pos_frac = max(0.05, min(0.25, 0.012 / atr_val)) if atr_val > 0 else position_fraction
+                    else:
+                        pos_frac = position_fraction
+                    
+                    pos_size = portfolio_capital * pos_frac
+                    if free_cash >= pos_size and pos_size > 0:
+                        close_price = df_test.loc[current_date, "close"]
+                        open_positions[ticker] = {
+                            "entry_price": close_price,
+                            "size_usd": pos_size,
+                            "trailing_stop": close_price * (1 - stop_loss_pct),
+                            "entry_date": current_date,
+                            "strategy": best_strat
+                        }
+                        free_cash -= pos_size
+
+        # Close any remaining open positions at the end of the window to count capital
+        for ticker, pos in open_positions.items():
+            sig_data = stock_signals.get(ticker)
+            if sig_data is not None:
+                df_test = sig_data["df"]
+                close_price = df_test["close"].iloc[-1]
+                pnl_pct = (close_price - pos["entry_price"]) / pos["entry_price"]
+                pnl = pos["size_usd"] * pnl_pct
+                portfolio_capital += pnl
+                all_oos_trades.append({
+                    "ticker": ticker,
+                    "entry": pos["entry_price"],
+                    "exit": close_price,
+                    "pnl": pnl,
+                    "pnl_pct": pnl_pct,
+                    "result": "win" if pnl > 0 else "loss",
+                    "exit_reason": "end_of_window",
+                    "opened_at": str(pos["entry_date"].date()),
+                    "closed_at": str(df_test.index[-1].date()),
+                    "strategy": pos["strategy"],
+                    "window": idx
+                })
+                window_trades += 1
+
+        strat_counts = Counter(window_strategies.values())
+        window_log.append({
+            "window": idx,
+            "train_start": str(train_start), "train_end": str(train_end), "test_end": str(test_end),
+            "oos_trades": window_trades,
+            "dominant_strategy": strat_counts.most_common(1)[0][0] if strat_counts else "?",
+            "strategy_breakdown": dict(strat_counts),
+        })
+        logger.info(
+            f"  Window {idx:3d} ({train_start}→{test_end})  "
+            f"trades={window_trades}  dominant={strat_counts.most_common(1)[0][0] if strat_counts else '?'}"
+        )
+        idx += forward_days
+
+    # Compile results
+    if not all_oos_trades:
+        return {
+            "total_trades": 0, "win_rate": 0.0, "profit_factor": 0.0,
+            "total_return_pct": 0.0, "final_capital": portfolio_capital,
+            "windows": window_log, "error": "No OOS trades generated",
+        }
+
+    df_t   = pd.DataFrame(all_oos_trades)
+    wins   = df_t[df_t["result"] == "win"]
+    losses = df_t[df_t["result"] == "loss"]
+    total_pnl = df_t["pnl"].sum()
+    win_rate  = len(wins) / len(df_t) * 100
+    gross_w   = wins["pnl"].sum() if len(wins) else 0.0
+    gross_l   = abs(losses["pnl"].sum()) if len(losses) else 1e-9
+    pf        = gross_w / gross_l if gross_l > 0 else float("inf")
+    wfo_ret   = (portfolio_capital - initial_capital) / initial_capital * 100
+
+    result = {
+        "tickers_tested": len(stock_data),
+        "total_trades": len(df_t),
+        "wins": len(wins),
+        "losses": len(losses),
+        "win_rate": round(win_rate, 1),
+        "profit_factor": round(min(pf, 99.9), 2),
+        "total_pnl": round(total_pnl, 2),
+        "total_return_pct": round(wfo_ret, 2),
+        "final_capital": round(portfolio_capital, 2),
+        "windows_tested": len(window_log),
+        "windows": window_log,
+        "per_ticker": {
+            tkr: {
+                "trades": len(sub := df_t[df_t["ticker"] == tkr]),
+                "wins": int((sub["result"] == "win").sum()),
+                "pnl": round(sub["pnl"].sum(), 2),
+            }
+            for tkr in df_t["ticker"].unique()
+        },
+    }
+
+    logger.success(
+        f"NGX Dynamic Portfolio WFO: OOS ret={wfo_ret:+.2f}% | "
+        f"trades={result['total_trades']} | WR={win_rate:.1f}% | PF={pf:.2f}"
+    )
+
+    if output_dir:
+        out = Path(output_dir)
+        out.mkdir(parents=True, exist_ok=True)
+        with open(out / "ngx_dynamic_portfolio_wfo.json", "w") as f:
+            json.dump(result, f, indent=2, default=str)
+
+    return result
+
+
 def optimize_weights_for_window(
     df: pd.DataFrame,
     symbol: str,
@@ -425,15 +1371,26 @@ def run_walk_forward_optimization(
     initial_capital: float = 10000,
 ) -> dict:
     """
-    Performs rolling walk-forward optimization of agent weights.
-    Optimizes weights on a rolling lookback window, then tests out-of-sample.
+    Performs rolling walk-forward optimization of agent weights (crypto/CFD)
+    or strategy selection (NGX equities).
+    NGX symbols are automatically routed to run_ngx_wfo().
     """
+    # ── Auto-route NGX symbols ────────────────────────────────────────────
+    from trading_engine.market_hours import classify_symbol, AssetClass
+    ac = classify_symbol(symbol)
+    if ac == AssetClass.NGX_STOCK:
+        return run_ngx_wfo(
+            symbol=symbol, days=days,
+            lookback_days=lookback_days, forward_days=forward_days,
+            initial_capital=initial_capital,
+        )
+    # ─────────────────────────────────────────────────────────────────────
     from trading_engine.data.market_data import compute_indicators
     import ccxt
     
-    logger.info(f"🔄 Starting Walk-Forward Optimization for {symbol} ({days}d)")
-    is_crypto = "/" in symbol or symbol.endswith("USDT")
-    asset_type = "crypto" if is_crypto else "stock"
+    from trading_engine.market_hours import classify_symbol, AssetClass
+    ac = classify_symbol(symbol)
+    asset_type = "crypto" if ac == AssetClass.CRYPTO else "cfd" if ac in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL) else "stock"
     
     # Timeframe to candles per day mapping
     tf_mapping = {
@@ -449,11 +1406,8 @@ def run_walk_forward_optimization(
     # 1. Fetch data
     limit = min(days * candles_per_day, 20000)
     try:
-        exchange = ccxt.binance()
-        raw = exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
-        df = pd.DataFrame(raw, columns=["timestamp", "open", "high", "low", "close", "volume"])
-        df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
-        df.set_index("timestamp", inplace=True)
+        from trading_engine.data.market_data import load_historical_data
+        df = load_historical_data(symbol, timeframe=timeframe, limit=limit)
     except Exception as e:
         logger.error(f"WFO Data fetch failed: {e}")
         return {"error": str(e)}
@@ -575,28 +1529,31 @@ def run_backtest(
     """
     Main backtest entry point.
     Fetches historical data, runs the specified backtest simulation, and reports results.
+    NGX symbols (*/NGX) are automatically routed to the NGX native strategy engine.
     """
     from trading_engine.data.market_data import compute_indicators
-    import ccxt
 
     logger.info(f"📊 Running backtest: {symbol} | {timeframe} | {days} days")
 
+    # ── Auto-route NGX symbols to native engine ──────────────────────────
+    from trading_engine.market_hours import classify_symbol, AssetClass
+    ac = classify_symbol(symbol)
+    if ac == AssetClass.NGX_STOCK:
+        logger.info(f"Routing {symbol} to NGX native strategy engine")
+        return run_ngx_native_backtest(
+            symbol=symbol, days=days, initial_capital=initial_capital,
+            strategy="map", output_dir=output_dir,
+        )
+    # ─────────────────────────────────────────────────────────────────────
+
     tf_mapping = {
-        "5m": 288,
-        "15m": 96,
-        "30m": 48,
-        "1h": 24,
-        "4h": 6,
-        "1d": 1,
+        "5m": 288, "15m": 96, "30m": 48, "1h": 24, "4h": 6, "1d": 1,
     }
     candles_per_day = tf_mapping.get(timeframe, 6)
     limit = min(days * candles_per_day, 20000)
     try:
-        exchange = ccxt.binance()
-        raw = exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
-        df = pd.DataFrame(raw, columns=["timestamp", "open", "high", "low", "close", "volume"])
-        df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
-        df.set_index("timestamp", inplace=True)
+        from trading_engine.data.market_data import load_historical_data
+        df = load_historical_data(symbol, timeframe=timeframe, limit=limit)
     except Exception as e:
         logger.error(f"Data fetch failed: {e}")
         return {"error": str(e)}
@@ -604,8 +1561,7 @@ def run_backtest(
     df = compute_indicators(df)
     df = df.dropna()
 
-    is_crypto = "/" in symbol or symbol.endswith("USDT")
-    asset_type = "crypto" if is_crypto else "stock"
+    asset_type = "crypto" if ac == AssetClass.CRYPTO else "cfd" if ac in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL) else "stock"
 
     if use_multi_agent:
         results = _run_multi_agent_simulation(
@@ -613,7 +1569,6 @@ def run_backtest(
             judge.DEFAULT_WEIGHTS, initial_capital
         )
     else:
-        # Simplified condition-based fallback
         df["signal"] = 0
         buy_cond = (
             (df.get("EMA_20", df["close"]) > df.get("EMA_50", df["close"])) &

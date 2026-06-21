@@ -1358,6 +1358,7 @@ function updateEvo(history) {
 
 const CFD_MARKETS = [
   { name: '⚡ Crypto (BTC/ETH/SOL…)', type: 'crypto',  symbol: 'BTC/USDT' },
+  { name: '🇳🇬 Nigerian Stocks (NGX)', type: 'stock',   symbol: 'ZENITHBANK/NGX' },
   { name: '⚜️ Gold (XAU)',            type: 'metal',   symbol: 'XAU/USDT:USDT' },
   { name: '⚜️ Silver (XAG)',          type: 'metal',   symbol: 'XAG/USDT:USDT' },
   { name: '🛢️ Crude Oil (CL)',         type: 'metal',   symbol: 'CL/USDT:USDT' },
@@ -1378,6 +1379,16 @@ function computeMarketOpenClient(symbol) {
   const utcMin = utcH * 60 + utcM;
 
   const sym = (symbol || '').toUpperCase();
+
+  // NGX Stock
+  if (sym.endsWith('/NGX') || sym.endsWith(':NGX')) {
+    if (dow === 0 || dow === 6) return { open: false, reason: 'NGX closed weekends' };
+    const openMin = 8 * 60; // 08:00 UTC
+    const closeMin = 15 * 60; // 15:00 UTC
+    if (utcMin < openMin) return { open: false, reason: 'Opens 09:00 WAT (08:00 UTC)' };
+    if (utcMin >= closeMin) return { open: false, reason: 'Closed at 16:00 WAT (15:00 UTC)' };
+    return { open: true, reason: 'NGX hours (09:00–16:00 WAT)' };
+  }
 
   // Crypto — always open
   if (!sym.includes(':')) return { open: true, reason: '24/7' };

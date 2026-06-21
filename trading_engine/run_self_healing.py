@@ -25,6 +25,31 @@ def main():
     symbol = args.symbol.upper().strip()
     logger.info(f"❤️  Self-Healing Triggered for {symbol} due to a lost trade!")
 
+    # ── NGX Stock Self-Healing Route ──────────────────────────────────────
+    from trading_engine.market_hours import classify_symbol, AssetClass
+    ac = classify_symbol(symbol)
+    if ac == AssetClass.NGX_STOCK:
+        logger.info(f"🇳🇬 Self-Healing: Re-optimizing strategy selection for NGX stock {symbol}...")
+        try:
+            from trading_engine.backtest.engine import run_ngx_native_backtest
+            res = run_ngx_native_backtest(
+                symbol=symbol,
+                days=400,
+                strategy="auto",
+            )
+            if "error" in res:
+                logger.error(f"NGX Self-Healing failed: {res['error']}")
+            else:
+                logger.success(
+                    f"🎉 NGX Self-Healing completed for {symbol}! "
+                    f"Re-mapped to strategy: {res.get('strategy_used')} | "
+                    f"Return: {res.get('total_return_pct'):+.2f}%"
+                )
+        except Exception as e:
+            logger.error(f"Error during NGX Self-Healing: {e}")
+        return
+    # ─────────────────────────────────────────────────────────────────────
+
     python_bin = sys.executable
 
     # Step 1: Download latest history

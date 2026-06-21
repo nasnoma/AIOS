@@ -27,6 +27,8 @@ class AssetClass(str, Enum):
     STOCK          = "stock"
     STOCK_CFD      = "stock_cfd"
     PRECIOUS_METAL = "precious_metal"
+    NGX_STOCK      = "ngx_stock"
+    BAMBOO_US_STOCK = "bamboo_us_stock"
 
 
 # ── Symbol classification ─────────────────────────────────────────────────────
@@ -60,8 +62,17 @@ def classify_symbol(symbol: str) -> AssetClass:
         'TSLA/USDT:USDT'    → STOCK_CFD
         'ETH/USDT:USDT'     → CRYPTO  (ETH is a known crypto ticker)
         'AAPL'              → STOCK
+        'ZENITHBANK/NGX'    → NGX_STOCK
     """
     s = symbol.upper()
+
+    # Nigerian stocks check
+    if s.endswith("/NGX") or s.endswith(":NGX"):
+        return AssetClass.NGX_STOCK
+
+    # Bamboo US stocks check
+    if s.endswith("/BAMBOO") or s.endswith(":BAMBOO") or s.endswith("/BAMBOO_US") or s.endswith(":BAMBOO_US"):
+        return AssetClass.BAMBOO_US_STOCK
 
     # Gold / Silver / Platinum / Palladium first (highest priority)
     for prefix in _PRECIOUS_METAL_PREFIXES:
@@ -318,6 +329,45 @@ def _check_precious_metal(now_utc: datetime.datetime) -> MarketStatus:
     return MarketStatus(True, f"Precious metals {day_name} session open (24 h)")
 
 
+def _check_ngx_stock(now_utc: datetime.datetime) -> MarketStatus:
+    """
+    NGX (Nigerian Exchange) market hours check.
+    Trading hours: Monday to Friday, 9:00 a.m. to 4:00 p.m. WAT (08:00 to 15:00 UTC).
+    No extended hours.
+    """
+    weekday = now_utc.weekday()   # 0=Mon … 6=Sun
+    now_date = now_utc.date()
+
+    # Weekend
+    if weekday >= 5:
+        days_to_mon = 7 - weekday
+        next_mon    = now_date + datetime.timedelta(days=days_to_mon)
+        next_open   = datetime.datetime.combine(next_mon, datetime.time(8, 0),
+                                                tzinfo=datetime.timezone.utc)
+        return MarketStatus(False, "Weekend — NGX closed Sat & Sun", next_open)
+
+    open_utc  = datetime.time(8, 0)
+    close_utc = datetime.time(15, 0)
+    now_time  = now_utc.time()
+
+    # Before open
+    if now_time < open_utc:
+        next_open = datetime.datetime.combine(now_date, open_utc,
+                                              tzinfo=datetime.timezone.utc)
+        return MarketStatus(False, "Before NGX market opens (09:00 WAT / 08:00 UTC)", next_open)
+
+    # After close
+    if now_time >= close_utc:
+        next_day = now_date + datetime.timedelta(days=1)
+        while next_day.weekday() >= 5:
+            next_day += datetime.timedelta(days=1)
+        next_open = datetime.datetime.combine(next_day, open_utc,
+                                              tzinfo=datetime.timezone.utc)
+        return MarketStatus(False, "NGX market closed (16:00 WAT / 15:00 UTC)", next_open)
+
+    return MarketStatus(True, "NGX market open (09:00–16:00 WAT)")
+
+
 # ── Public API ────────────────────────────────────────────────────────────────
 
 def is_crypto_peak_session(now_utc: datetime.datetime) -> bool:
@@ -347,7 +397,10 @@ def market_status(symbol: str, extended_stock_hours: bool = True) -> MarketStatu
     if asset_class == AssetClass.PRECIOUS_METAL:
         return _check_precious_metal(now_utc)
 
-    if asset_class in (AssetClass.STOCK_CFD, AssetClass.STOCK):
+    if asset_class == AssetClass.NGX_STOCK:
+        return _check_ngx_stock(now_utc)
+
+    if asset_class in (AssetClass.STOCK_CFD, AssetClass.STOCK, AssetClass.BAMBOO_US_STOCK):
         return _check_stock_cfd(now_utc, extended=extended_stock_hours)
 
     return MarketStatus(True, f"Unknown asset class for {symbol} — defaulting open")

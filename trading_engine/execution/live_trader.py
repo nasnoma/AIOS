@@ -26,6 +26,7 @@ from alpaca.trading.enums import OrderSide, TimeInForce
 from trading_engine.config import settings
 from trading_engine.storage import db
 from trading_engine.alerts.telegram_bot import send_message
+from trading_engine.utils.bamboo_client import bamboo_client
 
 STATE_FILE = Path(__file__).parent.parent / "live_state.json"
 
@@ -434,8 +435,11 @@ def open_trade(
         symbol = f"{symbol}/USDT:USDT"
         asset_class = AssetClass.STOCK_CFD
 
-    is_cfd      = asset_class in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL)
-    is_crypto   = asset_class == AssetClass.CRYPTO
+    is_cfd       = asset_class in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL)
+    is_crypto    = asset_class == AssetClass.CRYPTO
+    is_ngx       = asset_class == AssetClass.NGX_STOCK
+    is_bamboo_us = asset_class == AssetClass.BAMBOO_US_STOCK
+    is_bamboo    = is_ngx or is_bamboo_us
 
     # Map crypto to perpetual linear contracts if shorting OR if configured
     use_crypto_perpetual = False
@@ -450,8 +454,8 @@ def open_trade(
             asset_class = classify_symbol(symbol)
             is_cfd = False
 
-    # ── Market hours guard for CFDs ─────────────────────────────────────────
-    if is_cfd:
+    # ── Market hours guard for CFDs & NGX ───────────────────────────────────
+    if is_cfd or is_bamboo:
         status = market_status(symbol, extended_stock_hours=settings.extended_cfd_hours)
         if not status.is_open:
             status.log(symbol)
@@ -470,15 +474,51 @@ def open_trade(
         return None
 
     # ── Execute ──────────────────────────────────────────────────────────────
+    calc = None
     try:
-        if is_cfd or use_crypto_perpetual:
+        if is_bamboo:
+            if is_ngx:
+                qty = int(round(size_usd / entry))
+                if qty <= 0:
+                    logger.warning(f"NGX stock quantity too small for {symbol} ({qty}). Skipping.")
+                    return None
+            else:
+                qty = float(size_usd / entry)
+                if qty <= 0.0001:
+                    logger.warning(f"US stock quantity too small for {symbol} ({qty}). Skipping.")
+                    return None
+            logger.info(f"Calculating Bamboo {'NGX' if is_ngx else 'US'} order for {symbol}: qty={qty}...")
+            calc = bamboo_client.calculate_order(symbol, "BUY", qty, entry)
+            
+            clean_symbol = symbol.split("/")[0].split(":")[0].upper()
+            order_payload = {
+                "fee": float(calc["fee"]),
+                "order_type": "MARKET",
+                "order_value": float(calc["total_price"]),
+                "price": float(calc["price_per_share"]),
+                "price_per_share": float(calc["price_per_share"]),
+                "quantity": float(calc["quantity"]),
+                "side": "BUY",
+                "source_wallet_id": 0,
+                "symbol": clean_symbol,
+                "total_price": float(calc["order_price"])
+            }
+            logger.info(f"Placing Bamboo {'NGX' if is_ngx else 'US'} BUY order for {symbol}...")
+            order_resp = bamboo_client.place_order(order_payload, symbol=symbol)
+            fill_price = float(calc["price_per_share"])
+            actual_qty = float(calc["quantity"])
+            size_usd = float(calc["total_price"])
+
+        elif is_cfd or use_crypto_perpetual:
             # Bybit linear perpetual — supports both buy (long) and sell (short)
             side       = "buy" if direction == "long" else "sell"
             fill_price = place_bybit_linear_order(symbol, side, size_usd, entry)
+            actual_qty = size_usd / fill_price
 
         elif is_crypto:
             # Bybit spot — long only
             fill_price = place_bybit_market_order(symbol, "buy", size_usd, entry)
+            actual_qty = size_usd / fill_price
 
         else:
             # Plain stock via Alpaca — long only
@@ -488,91 +528,94 @@ def open_trade(
                 logger.warning(f"Stock quantity too small for {symbol} ({qty}). Skipping.")
                 return None
             fill_price = place_alpaca_market_order(symbol, "buy", qty_rounded, entry)
+            actual_qty = size_usd / fill_price
 
     except Exception as e:
         logger.error(f"Failed to execute live open trade for {symbol}: {e}")
         send_message(f"⚠️ <b>LIVE execution error</b> for {symbol}: {e}")
         return None
 
-    # Calculate actual filled quantity
-    actual_qty = size_usd / fill_price
-
     # ── Place Stop Loss order on the broker/exchange ─────────────────────────
     sl_order_id = None
-    try:
-        if is_cfd or is_crypto:
-            exchange = get_bybit_exchange()
-            is_linear = is_cfd or use_crypto_perpetual
-            if is_linear:
-                exchange.options["defaultType"] = "linear"
-            else:
-                exchange.options["defaultType"] = "spot"
-            exchange.load_markets()
+    if not is_bamboo:
+        try:
+            if is_cfd or is_crypto:
+                exchange = get_bybit_exchange()
+                is_linear = is_cfd or use_crypto_perpetual
+                if is_linear:
+                    exchange.options["defaultType"] = "linear"
+                else:
+                    exchange.options["defaultType"] = "spot"
+                exchange.load_markets()
 
-            qty_str = exchange.amount_to_precision(symbol, actual_qty)
-            qty_formatted = float(qty_str)
+                qty_str = exchange.amount_to_precision(symbol, actual_qty)
+                qty_formatted = float(qty_str)
 
-            sl_side = "sell" if direction == "long" else "buy"
-            sl_params = {
-                "triggerPrice": exchange.price_to_precision(symbol, stop_loss),
-                "triggerBy": "LastPrice",
-                "triggerDirection": "descending" if direction == "long" else "ascending",
-            }
-            if is_linear:
-                sl_params["reduceOnly"] = True
+                sl_side = "sell" if direction == "long" else "buy"
+                sl_params = {
+                    "triggerPrice": exchange.price_to_precision(symbol, stop_loss),
+                    "triggerBy": "LastPrice",
+                    "triggerDirection": "descending" if direction == "long" else "ascending",
+                }
+                if is_linear:
+                    sl_params["reduceOnly"] = True
 
-            logger.info(f"Placing Bybit exchange Stop Loss order for {symbol} at {stop_loss:.4f}...")
-            sl_order = exchange.create_order(
-                symbol=symbol,
-                type="market",
-                side=sl_side,
-                amount=qty_formatted,
-                price=None,
-                params=sl_params
-            )
-            sl_order_id = sl_order.get("id")
-            logger.success(f"Successfully placed Bybit Stop Loss order: {sl_order_id}")
-
-        else:
-            # Alpaca stock Stop Loss
-            client = get_alpaca_client()
-            from alpaca.trading.requests import StopOrderRequest
-            from alpaca.trading.enums import OrderSide, TimeInForce
-
-            qty_rounded = round(actual_qty, 4)
-            if qty_rounded > 0:
-                sl_side = OrderSide.SELL if direction == "long" else OrderSide.BUY
-                stop_order_data = StopOrderRequest(
+                logger.info(f"Placing Bybit exchange Stop Loss order for {symbol} at {stop_loss:.4f}...")
+                sl_order = exchange.create_order(
                     symbol=symbol,
-                    qty=qty_rounded,
+                    type="market",
                     side=sl_side,
-                    stop_price=stop_loss,
-                    time_in_force=TimeInForce.GTC
+                    amount=qty_formatted,
+                    price=None,
+                    params=sl_params
                 )
-                logger.info(f"Placing Alpaca Stop Loss order for {symbol} at {stop_loss:.4f}...")
-                sl_order = client.submit_order(order_data=stop_order_data)
-                sl_order_id = str(sl_order.id)
-                logger.success(f"Successfully placed Alpaca Stop Loss order: {sl_order_id}")
+                sl_order_id = sl_order.get("id")
+                logger.success(f"Successfully placed Bybit Stop Loss order: {sl_order_id}")
 
-    except Exception as e_sl:
-        logger.error(f"Failed to place broker-side Stop Loss order for {symbol}: {e_sl}. Fallback to local monitoring.")
+            else:
+                # Alpaca stock Stop Loss
+                client = get_alpaca_client()
+                from alpaca.trading.requests import StopOrderRequest
+                from alpaca.trading.enums import OrderSide, TimeInForce
+
+                qty_rounded = round(actual_qty, 4)
+                if qty_rounded > 0:
+                    sl_side = OrderSide.SELL if direction == "long" else OrderSide.BUY
+                    stop_order_data = StopOrderRequest(
+                        symbol=symbol,
+                        qty=qty_rounded,
+                        side=sl_side,
+                        stop_price=stop_loss,
+                        time_in_force=TimeInForce.GTC
+                    )
+                    logger.info(f"Placing Alpaca Stop Loss order for {symbol} at {stop_loss:.4f}...")
+                    sl_order = client.submit_order(order_data=stop_order_data)
+                    sl_order_id = str(sl_order.id)
+                    logger.success(f"Successfully placed Alpaca Stop Loss order: {sl_order_id}")
+
+        except Exception as e_sl:
+            logger.error(f"Failed to place broker-side Stop Loss order for {symbol}: {e_sl}. Fallback to local monitoring.")
 
     # ── Place Take Profit order on the broker/exchange ─────────────────────────
     tp_order_id = None
-    try:
-        tp_order_id = _place_broker_take_profit(
-            symbol=symbol,
-            direction=direction,
-            take_profit=take_profit,
-            qty=actual_qty,
-        )
-    except Exception as e_tp:
-        logger.error(f"Failed to place broker-side Take Profit order for {symbol}: {e_tp}. Fallback to local monitoring.")
+    if not is_bamboo:
+        try:
+            tp_order_id = _place_broker_take_profit(
+                symbol=symbol,
+                direction=direction,
+                take_profit=take_profit,
+                qty=actual_qty,
+            )
+        except Exception as e_tp:
+            logger.error(f"Failed to place broker-side Take Profit order for {symbol}: {e_tp}. Fallback to local monitoring.")
 
     portfolio = _load_state()
 
     # Deduct transaction fee
-    entry_fee = size_usd * ENTRY_FEE_RATE
+    if is_bamboo and calc:
+        entry_fee = float(calc["fee"])
+    else:
+        entry_fee = size_usd * ENTRY_FEE_RATE
     portfolio.cash       -= entry_fee
     portfolio.total_fees += entry_fee
 
@@ -928,12 +971,45 @@ def _close_position(portfolio: LivePortfolio, pos: Position, exit_price: float, 
     from trading_engine.market_hours import classify_symbol, AssetClass
     
     asset_class = classify_symbol(pos.symbol)
-    is_cfd      = asset_class in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL)
-    is_crypto   = asset_class == AssetClass.CRYPTO
+    is_cfd       = asset_class in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL)
+    is_crypto    = asset_class == AssetClass.CRYPTO
     is_linear_crypto = is_crypto and ":" in pos.symbol
+    is_ngx       = asset_class == AssetClass.NGX_STOCK
+    is_bamboo_us = asset_class == AssetClass.BAMBOO_US_STOCK
+    is_bamboo    = is_ngx or is_bamboo_us
     
+    exit_fee = None
     try:
-        if is_cfd or is_linear_crypto:
+        if is_bamboo:
+            if is_ngx:
+                qty = int(round(pos.size_usd / pos.entry_price))
+                if qty <= 0:
+                    qty = 1
+            else:
+                qty = float(pos.size_usd / pos.entry_price)
+                if qty <= 0.0001:
+                    qty = 0.0001
+            logger.info(f"Calculating Bamboo {'NGX' if is_ngx else 'US'} order close for {pos.symbol}: qty={qty}...")
+            calc = bamboo_client.calculate_order(pos.symbol, "SELL", qty, exit_price)
+            
+            clean_symbol = pos.symbol.split("/")[0].split(":")[0].upper()
+            order_payload = {
+                "fee": float(calc["fee"]),
+                "order_type": "MARKET",
+                "order_value": float(calc["total_price"]),
+                "price": float(calc["price_per_share"]),
+                "price_per_share": float(calc["price_per_share"]),
+                "quantity": float(calc["quantity"]),
+                "side": "SELL",
+                "source_wallet_id": 0,
+                "symbol": clean_symbol,
+                "total_price": float(calc["order_price"])
+            }
+            logger.info(f"Placing Bamboo {'NGX' if is_ngx else 'US'} SELL order close for {pos.symbol}...")
+            order_resp = bamboo_client.place_order(order_payload, symbol=pos.symbol)
+            fill_price = float(calc["price_per_share"])
+            exit_fee = float(calc["fee"])
+        elif is_cfd or is_linear_crypto:
             # Linear perpetual — close with reduceOnly-equivalent opposite order
             side = "sell" if pos.direction == "long" else "buy"
             fill_price = place_bybit_linear_order(pos.symbol, side, pos.size_usd, exit_price)
@@ -951,9 +1027,10 @@ def _close_position(portfolio: LivePortfolio, pos: Position, exit_price: float, 
         # Return and do not modify state, so we retry on next monitoring tick
         return
 
-    # Cancel the stop loss order on the broker/exchange
-    _cancel_broker_stop_loss(pos)
-    _cancel_broker_take_profit(pos)
+    # Cancel the stop loss order on the broker/exchange (skip for NGX)
+    if not is_bamboo:
+        _cancel_broker_stop_loss(pos)
+        _cancel_broker_take_profit(pos)
 
     # Exit fee
     exit_fee = pos.size_usd * EXIT_FEE_RATE
@@ -1264,31 +1341,32 @@ def sync_with_broker() -> bool:
         # 1. Fetch Alpaca positions
         alpaca_fetched = False
         alpaca_symbols = set()
+        alpaca_cash = 0.0
+        alpaca_equity = 0.0
         try:
             alpaca = get_alpaca_client()
             for pos in alpaca.get_all_positions():
                 alpaca_symbols.add(pos.symbol.upper())
             alpaca_fetched = True
+            
+            acct = alpaca.get_account()
+            alpaca_cash = float(acct.cash)
+            alpaca_equity = float(acct.portfolio_value)
         except Exception as e:
-            logger.warning(f"Failed to fetch Alpaca positions during sync: {e}")
+            logger.warning(f"Failed to fetch Alpaca positions/account during sync: {e}")
 
         # 2. Fetch Bybit Spot balances
         bybit_spot_fetched = False
         bybit_spot_symbols = set()
+        usdt_free = 0.0
         try:
             bybit = get_bybit_exchange()
             balance = bybit.fetch_balance()
             
             # Sync USDT cash balance from exchange
-            usdt_free = balance.get('USDT', {}).get('free')
-            if usdt_free is not None:
-                cash_val = float(usdt_free)
-                if abs(portfolio.cash - cash_val) > 0.01:
-                    portfolio.cash = cash_val
-                    # Scale initial account_size to match current balance if it is at default
-                    if portfolio.account_size == settings.account_size or portfolio.account_size == 10000.0:
-                        portfolio.account_size = cash_val
-                    changed = True
+            usdt_free_val = balance.get('USDT', {}).get('free')
+            if usdt_free_val is not None:
+                usdt_free = float(usdt_free_val)
 
             tickers = {}
             try:
@@ -1334,12 +1412,86 @@ def sync_with_broker() -> bool:
         except Exception as e:
             logger.warning(f"Failed to fetch Bybit Linear positions during sync: {e}")
 
+        # 4. Fetch Bamboo balance & holdings (both NGX and US Stocks)
+        from trading_engine.market_hours import AssetClass
+        bamboo_fetched = False
+        bamboo_symbols = set()
+        bamboo_cash = 0.0
+        bamboo_equity = 0.0
+        try:
+            if settings.bamboo_username and settings.bamboo_password:
+                # A. Fetch NGX Breakdown
+                try:
+                    breakdown_ng = bamboo_client.get_portfolio_breakdown(asset_class=AssetClass.NGX_STOCK)
+                    cash_ng = float(breakdown_ng.get("cash") or breakdown_ng.get("cash_balance") or breakdown_ng.get("withdrawable_cash") or 0.0)
+                    equity_ng = float(breakdown_ng.get("equity") or breakdown_ng.get("portfolio_value") or breakdown_ng.get("total_portfolio_value") or 0.0)
+                except Exception as e_ng:
+                    logger.warning(f"Failed to fetch Bamboo NGX breakdown during sync: {e_ng}")
+                    cash_ng, equity_ng = 0.0, 0.0
+                
+                # B. Fetch US Breakdown
+                try:
+                    breakdown_us = bamboo_client.get_portfolio_breakdown(asset_class=AssetClass.BAMBOO_US_STOCK)
+                    cash_us = float(breakdown_us.get("cash") or breakdown_us.get("cash_balance") or breakdown_us.get("withdrawable_cash") or 0.0)
+                    equity_us = float(breakdown_us.get("equity") or breakdown_us.get("portfolio_value") or breakdown_us.get("total_portfolio_value") or 0.0)
+                except Exception as e_us:
+                    logger.warning(f"Failed to fetch Bamboo US breakdown during sync: {e_us}")
+                    cash_us, equity_us = 0.0, 0.0
+                    
+                bamboo_cash = cash_ng + cash_us
+                bamboo_equity = equity_ng + equity_us
+                
+                # C. Fetch NGX active holdings
+                try:
+                    my_stocks_ng = bamboo_client.get_my_stocks(asset_class=AssetClass.NGX_STOCK)
+                    holdings_ng = my_stocks_ng if isinstance(my_stocks_ng, list) else (my_stocks_ng.get("holdings") or my_stocks_ng.get("results") or my_stocks_ng.get("stocks") or [])
+                    for holding in holdings_ng:
+                        sym = holding.get("symbol")
+                        if sym:
+                            bamboo_symbols.add(f"{sym}/NGX".upper())
+                except Exception as e_my_ng:
+                    logger.warning(f"Failed to fetch Bamboo NGX holdings: {e_my_ng}")
+                    
+                # D. Fetch US active holdings
+                try:
+                    my_stocks_us = bamboo_client.get_my_stocks(asset_class=AssetClass.BAMBOO_US_STOCK)
+                    holdings_us = my_stocks_us if isinstance(my_stocks_us, list) else (my_stocks_us.get("holdings") or my_stocks_us.get("results") or my_stocks_us.get("stocks") or [])
+                    for holding in holdings_us:
+                        sym = holding.get("symbol")
+                        if sym:
+                            bamboo_symbols.add(f"{sym}/BAMBOO".upper())
+                except Exception as e_my_us:
+                    logger.warning(f"Failed to fetch Bamboo US holdings: {e_my_us}")
+                
+                bamboo_fetched = True
+        except Exception as e:
+            logger.warning(f"Failed to fetch Bamboo portfolio during sync: {e}")
+
+        # Aggregate and combine portfolio cash and account size
+        if alpaca_fetched or bybit_spot_fetched or bamboo_fetched:
+            bybit_cash = float(usdt_free) if bybit_spot_fetched else 0.0
+            combined_cash = alpaca_cash + bybit_cash + bamboo_cash
+            combined_equity = alpaca_equity + bybit_cash + bamboo_equity
+            
+            if abs(portfolio.cash - combined_cash) > 0.01:
+                portfolio.cash = combined_cash
+                changed = True
+                
+            if abs(portfolio.account_size - combined_equity) > 0.01:
+                portfolio.account_size = combined_equity
+                changed = True
+
         # Helper to check if symbol is active on the broker
         def is_symbol_open(symbol: str, asset_class) -> bool:
             from trading_engine.market_hours import AssetClass
             s = symbol.upper().replace("/", "").replace(":", "").replace("-", "").strip()
             
-            if asset_class in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL):
+            if asset_class == AssetClass.NGX_STOCK:
+                for b_sym in bamboo_symbols:
+                    if s == b_sym.replace("/", "").replace(":", "").replace("-", "").strip():
+                        return True
+                return False
+            elif asset_class in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL):
                 for b_sym in bybit_linear_symbols:
                     if s == b_sym.replace("/", "").replace(":", "").replace("-", "").strip():
                         return True
@@ -1360,7 +1512,7 @@ def sync_with_broker() -> bool:
                         return True
                 return False
 
-        # 4. Check all open local positions
+        # 5. Check all open local positions
         from trading_engine.market_hours import classify_symbol, AssetClass
         open_local_positions = [p for p in portfolio.positions if p.status == "open"]
         
@@ -1373,6 +1525,9 @@ def sync_with_broker() -> bool:
                     continue
             elif ac == AssetClass.CRYPTO:
                 if not bybit_spot_fetched:
+                    continue
+            elif ac == AssetClass.NGX_STOCK:
+                if not bamboo_fetched:
                     continue
             else:
                 if not alpaca_fetched:
@@ -1672,6 +1827,8 @@ def _fetch_exit_details_from_broker(pos: Position, asset_class) -> tuple[float, 
                             closed_at = t_time.isoformat()
                             logger.info(f"Sync: Found broker execution for {pos.symbol} at {exit_price:.4f} with fee ${fee_cost:.4f}")
                             break
+        elif asset_class == AssetClass.NGX_STOCK:
+            logger.info(f"Sync: Using local defaults for NGX stock {pos.symbol}")
         else:
             # Alpaca
             from alpaca.trading.requests import GetOrdersRequest

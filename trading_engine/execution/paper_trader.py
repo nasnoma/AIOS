@@ -129,6 +129,15 @@ def open_trade(symbol: str, direction: str, entry: float,
             if not symbol.endswith(":USDT"):
                 logger.info(f"Mapping paper crypto symbol {symbol} to Bybit Linear Perpetual: {symbol}:USDT")
                 symbol = f"{symbol}:USDT"
+    elif asset_class == AssetClass.NGX_STOCK:
+        if direction == "short":
+            logger.warning(f"Short positions are not supported on NGX stocks ({symbol}). Skipping.")
+            return None
+        qty = int(round(size_usd / entry))
+        if qty < 1:
+            logger.warning(f"Calculated NGX quantity is less than 1 share for {symbol}. Skipping.")
+            return None
+        size_usd = qty * entry
 
     portfolio = _load_state()
 

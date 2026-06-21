@@ -111,7 +111,7 @@ Be specific about indicator values where mentioned."""
             f"Weighted confidence: {confidence:.0f}%.")
 
 
-def evaluate(agents: list[AgentSignal], agent_weights: dict[str, float] = None) -> JudgeVerdict:
+def evaluate(agents: list[AgentSignal], agent_weights: dict[str, float] = None, symbol: str = None) -> JudgeVerdict:
     """
     Run the weighted ensemble vote.
     Returns JudgeVerdict with approved=True only if thresholds are met.
@@ -180,9 +180,17 @@ def evaluate(agents: list[AgentSignal], agent_weights: dict[str, float] = None) 
         disagreement = len(agents) - agreement
 
     # ── Threshold check ───────────────────────────────────
-    # Load live from param file so optimizer changes take effect immediately
-    min_agreement = live_params.get("min_agreement", settings.min_agent_agreement)
-    min_confidence = live_params.get("min_avg_confidence", settings.min_avg_confidence)
+    from trading_engine.market_hours import classify_symbol, AssetClass
+    ac = classify_symbol(symbol) if symbol else None
+    
+    if ac in (AssetClass.STOCK, AssetClass.STOCK_CFD, AssetClass.NGX_STOCK, AssetClass.BAMBOO_US_STOCK):
+        # Relaxed judge for equities to fire on daily momentum
+        min_agreement = 3
+        min_confidence = 48
+    else:
+        # Load live from param file so optimizer changes take effect immediately
+        min_agreement = live_params.get("min_agreement", settings.min_agent_agreement)
+        min_confidence = live_params.get("min_avg_confidence", settings.min_avg_confidence)
 
     # Only average confidence of agents that agree with the winning direction
     # (excluding HOLD voters — their 60% confidence dilutes directional signals)

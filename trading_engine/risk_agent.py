@@ -277,9 +277,35 @@ def evaluate(
     from trading_engine.market_hours import classify_symbol, AssetClass, is_crypto_peak_session
     import datetime
     
-    is_crypto = classify_symbol(snap.symbol) == AssetClass.CRYPTO
+    asset_class = classify_symbol(snap.symbol)
+    is_crypto = asset_class == AssetClass.CRYPTO
     now_utc = datetime.datetime.now(tz=datetime.timezone.utc)
     in_peak = is_crypto_peak_session(now_utc) if is_crypto else True
+
+    # ── NGX Stock Specific Checks ──────────────────────────────────────────
+    if asset_class == AssetClass.NGX_STOCK:
+        # 1. Long-only constraint
+        if verdict.decision == Signal.SELL:
+            return RiskDecision(
+                approved=False, reason="NGX Veto: Short positions are not supported on NGX stocks",
+                position_size_pct=0, position_size_usd=0,
+                entry_price=entry, stop_loss=0, take_profit=0,
+                stop_loss_pct=0, take_profit_pct=0, risk_reward=0,
+                max_loss_usd=0, atr=atr,
+            )
+        # 2. Volatility daily movement +/-10% limit check
+        prev_close = getattr(snap, "prev_close", None)
+        if prev_close and prev_close > 0:
+            price_move_pct = abs(entry - prev_close) / prev_close
+            if price_move_pct >= 0.095:
+                return RiskDecision(
+                    approved=False,
+                    reason=f"NGX Volatility Veto: Stock price has moved by {price_move_pct:.1%} from previous close ({prev_close:.2f}), approaching daily 10% limit.",
+                    position_size_pct=0, position_size_usd=0,
+                    entry_price=entry, stop_loss=0, take_profit=0,
+                    stop_loss_pct=0, take_profit_pct=0, risk_reward=0,
+                    max_loss_usd=0, atr=atr,
+                )
 
     # ── Hard Veto Conditions ───────────────────────────
     if not verdict.approved:
@@ -428,6 +454,57 @@ def evaluate(
         except Exception as _re:
             logger.warning(f"  Regime filter check failed ({_re}); allowing trade to proceed.")
 
+    # ── Equities Market Regime Filter ─────────────────────────
+    # Block LONG equity trades when the broad index is in a bear trend.
+    is_equity = asset_class in (AssetClass.STOCK, AssetClass.STOCK_CFD, AssetClass.BAMBOO_US_STOCK, AssetClass.NGX_STOCK)
+    if (
+        is_equity
+        and verdict.decision == Signal.BUY
+        and getattr(settings, "regime_filter_equities_enabled", True)
+    ):
+        try:
+            from trading_engine.data.market_data import load_historical_data
+            ma_period = getattr(settings, "regime_equities_ma_period", 200)
+            
+            # Determine index symbol based on asset class
+            if asset_class == AssetClass.NGX_STOCK:
+                index_symbol = getattr(settings, "regime_ngx_proxy", "DANGCEM/NGX")
+            else:
+                index_symbol = getattr(settings, "regime_us_index", "SPY")
+                
+            logger.info(f"  🚦 Checking equities regime trend via index/proxy {index_symbol}...")
+            
+            # Fetch daily historical data (limit to at least ma_period + 20)
+            df_index = load_historical_data(index_symbol, timeframe="1d", limit=ma_period + 20)
+            if df_index is not None and len(df_index) >= ma_period:
+                idx_close = float(df_index["close"].iloc[-1])
+                # Simple Moving Average
+                idx_ma = float(df_index["close"].rolling(ma_period).mean().iloc[-1])
+                
+                if idx_close < idx_ma:
+                    logger.warning(
+                        f"  🚦 Regime filter: Equities index {index_symbol} close {idx_close:.2f} < {ma_period}-MA {idx_ma:.2f} — blocking LONG for {snap.symbol}"
+                    )
+                    return RiskDecision(
+                        approved=False,
+                        reason=(
+                            f"Market regime filter: Equities index {index_symbol} ({idx_close:.2f}) is below its {ma_period}-period MA "
+                            f"({idx_ma:.2f}). Longs paused during bear trend."
+                        ),
+                        position_size_pct=0, position_size_usd=0,
+                        entry_price=entry, stop_loss=0, take_profit=0,
+                        stop_loss_pct=0, take_profit_pct=0, risk_reward=0,
+                        max_loss_usd=0, atr=atr,
+                    )
+                else:
+                    logger.info(
+                        f"  ✅ Regime filter: Equities index {index_symbol} {idx_close:.2f} > {ma_period}-MA {idx_ma:.2f} — bull regime OK"
+                    )
+            else:
+                logger.warning(f"  Regime filter: Insufficient history for equities index {index_symbol} (len={len(df_index) if df_index is not None else 0}); skipping check.")
+        except Exception as _re:
+            logger.warning(f"  Regime filter check failed for equities ({_re}); allowing trade to proceed.")
+
     # ── Asset Correlation Filter ───────────────────────
     corr_multiplier = 1.0
     corr_reason = "No correlation check (no existing positions)"
@@ -476,17 +553,62 @@ def evaluate(
             risk_reward=rr_ratio, max_loss_usd=0, atr=atr,
         )
 
-    # ── Kelly Position Sizing ─────────────────────────
-    kelly = _kelly_fraction(historical_win_rate, rr_ratio, kelly_frac)
+    # ── Kelly / Volatility Position Sizing ────────────
+    if asset_class == AssetClass.NGX_STOCK:
+        # Volatility-based Regime-Aware Position Sizing
+        atr_pct_val = atr / entry if entry > 0 else 0
+        if atr_pct_val > 0:
+            # Target 1.2% risk of total capital per trade, capped between 5% and 25%
+            position_size_pct = max(0.05, min(0.25, 0.012 / atr_pct_val))
+        else:
+            position_size_pct = 0.15
+    else:
+        kelly = _kelly_fraction(historical_win_rate, rr_ratio, kelly_frac)
+        # Risk-based position size: never risk more than max_risk_per_trade
+        risk_based_size = max_risk_per_trade / stop_loss_pct
+        kelly_size = kelly
+        # Take the minimum of kelly and risk-based cap
+        position_size_pct = min(kelly_size, risk_based_size, 0.10)  # hard cap 10% of account
 
-    # Risk-based position size: never risk more than max_risk_per_trade
-    risk_based_size = max_risk_per_trade / stop_loss_pct
-    kelly_size = kelly
+    # ── Confidence-Weighted Position Sizing ────────────────
+    # Scale size by judge confidence: high conviction → larger, borderline → smaller.
+    confidence_weight = 1.0
+    if getattr(settings, "confidence_sizing_enabled", True):
+        conf = float(verdict.confidence)  # range [0, 100]
+        min_c = float(getattr(settings, "min_avg_confidence", 48.0))
+        max_c = 100.0
+        min_w = float(getattr(settings, "position_size_min_weight", 0.6))
+        max_w = float(getattr(settings, "position_size_max_weight", 1.4))
+        # Linear interpolation: min_w at min_c, max_w at max_c
+        span = max_c - min_c
+        if span > 0:
+            confidence_weight = min_w + (max_w - min_w) * (conf - min_c) / span
+        confidence_weight = max(min_w, min(max_w, confidence_weight))
+        logger.info(
+            f"  💡 Confidence-weight: conf={conf:.0f} → size×{confidence_weight:.3f}"
+            f" (range [{min_w}×–{max_w}×])"
+        )
 
-    # Take the minimum of kelly and risk-based cap
-    position_size_pct = min(kelly_size, risk_based_size, 0.10)  # hard cap 10% of account
+    # ── Low-Trade-Count Discount (thin NGX stocks) ───────────
+    # NGX stocks with fewer than `low_trade_count_threshold` backtest trades
+    # get an extra conservative multiplier to guard against overfitting on sparse data.
+    low_trade_discount = 1.0
+    _NGX_THIN_STOCKS = {
+        "TRANSEXPR", "WEMABANK", "VFDGROUP", "CHAMS", "GUINEAINS",
+        "GTCO", "CONHALLPLC", "INTENEGINS", "ZICHIS", "NEIMETH",
+        "UPDCREIT", "VERITASKAP", "AIICO", "WAPIC", "JAPAULGOLD",
+    }
+    if asset_class == AssetClass.NGX_STOCK:
+        ticker = snap.symbol.split("/")[0].split(":")[0].upper()
+        if ticker in _NGX_THIN_STOCKS:
+            low_trade_discount = float(getattr(settings, "low_trade_count_discount", 0.75))
+            logger.info(
+                f"  📉 Low-trade-count discount: {ticker} has <10 backtest trades → size×{low_trade_discount:.2f}"
+            )
 
-    # Apply correlation multiplier (1.0 = full size, 0.5 = half size due to high correlation)
+    # Apply all sizing multipliers in order: confidence → low-trade-discount → correlation
+    position_size_pct *= confidence_weight
+    position_size_pct *= low_trade_discount
     position_size_pct *= corr_multiplier
 
     # Apply short multiplier for short positions (Signal.SELL) to protect capital against altcoin short squeezes
@@ -500,8 +622,9 @@ def evaluate(
 
     # Remaining heat check
     remaining_heat = max_heat - current_portfolio_heat
-    if max_risk_per_trade > remaining_heat:
-        position_size_pct = min(position_size_pct, remaining_heat / stop_loss_pct)
+    risk_per_trade = position_size_pct * stop_loss_pct
+    if risk_per_trade > remaining_heat:
+        position_size_pct = min(position_size_pct, max(0.0, remaining_heat) / stop_loss_pct)
         position_size_usd = account * position_size_pct
         max_loss_usd = position_size_usd * stop_loss_pct
 
@@ -513,12 +636,30 @@ def evaluate(
         position_size_usd *= session_multiplier
         max_loss_usd *= session_multiplier
 
+    # ── NGX Stock Sizing Validation ──────────────────
+    if asset_class == AssetClass.NGX_STOCK:
+        quantity = int(round(position_size_usd / entry))
+        if quantity < 1:
+            return RiskDecision(
+                approved=False,
+                reason=f"NGX Liquidity Veto: Calculated size (${position_size_usd:,.2f}) results in less than 1 share at entry price {entry:.2f}.",
+                position_size_pct=0, position_size_usd=0,
+                entry_price=entry, stop_loss=0, take_profit=0,
+                stop_loss_pct=0, take_profit_pct=0, risk_reward=rr_ratio,
+                max_loss_usd=0, atr=atr,
+            )
+        position_size_usd = quantity * entry
+        position_size_pct = position_size_usd / account
+        max_loss_usd = position_size_usd * stop_loss_pct
+
     corr_tag = f" | Corr×{corr_multiplier:.1f}" if corr_multiplier < 1.0 else ""
+    conf_tag = f" | Conf×{confidence_weight:.2f}" if abs(confidence_weight - 1.0) > 0.01 else ""
+    ltc_tag  = f" | LowTrade×{low_trade_discount:.2f}" if low_trade_discount < 1.0 else ""
     session_tag = f" | Session×{session_multiplier:.1f}" if session_multiplier < 1.0 else ""
     short_tag = f" | Short×{short_multiplier:.2f}" if short_multiplier < 1.0 else ""
     logger.success(
         f"Risk APPROVED | {verdict.decision.value} {snap.symbol} | "
-        f"Size={position_size_pct:.1%} (${position_size_usd:,.0f}){corr_tag}{session_tag}{short_tag} | "
+        f"Size={position_size_pct:.1%} (${position_size_usd:,.0f}){conf_tag}{ltc_tag}{corr_tag}{session_tag}{short_tag} | "
         f"SL={stop_loss_pct:.1%} | TP={take_profit_pct:.1%} | R:R={rr_ratio:.1f} | "
         f"Max loss=${max_loss_usd:,.0f}"
     )

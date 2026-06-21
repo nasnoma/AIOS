@@ -327,6 +327,34 @@ class TestJudge:
             settings.min_agent_agreement = original_agreement
             settings.min_avg_confidence = original_confidence
 
+    def test_judge_threshold_by_asset_class(self):
+        from trading_engine.judge import evaluate
+        from trading_engine.agents.base import AgentSignal, Signal
+        
+        # 3 agreeing agents, average confidence 49
+        agents = [
+            AgentSignal(agent="trend", signal=Signal.BUY, confidence=49, reason="test"),
+            AgentSignal(agent="momentum", signal=Signal.BUY, confidence=49, reason="test"),
+            AgentSignal(agent="volume", signal=Signal.BUY, confidence=49, reason="test"),
+        ] + [
+            AgentSignal(agent=f"agent{i}", signal=Signal.SELL, confidence=10, reason="test")
+            for i in range(5)
+        ]
+
+        # 1. Crypto Symbol -> should use strict thresholds (5 and 52) -> should NOT be approved
+        verdict_crypto = evaluate(agents, symbol="BTC/USDT")
+        assert not verdict_crypto.approved
+
+        # 2. Equity Symbols (US Stock, stock CFD, NGX Stock) -> should use relaxed thresholds (3 and 48) -> should be approved
+        verdict_stock = evaluate(agents, symbol="AAPL")
+        assert verdict_stock.approved
+
+        verdict_cfd = evaluate(agents, symbol="AAPL/USDT:USDT")
+        assert verdict_cfd.approved
+
+        verdict_ngx = evaluate(agents, symbol="GTCO/NGX")
+        assert verdict_ngx.approved
+
 
 # ── Sentiment and Macro Agents (with Mock LLM) ──────────────
 

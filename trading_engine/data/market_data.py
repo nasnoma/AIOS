@@ -81,6 +81,7 @@ class MarketSnapshot:
     shares_outstanding: Optional[float] = None
     net_income: Optional[float] = None
     revenue: Optional[float] = None
+    prev_close: Optional[float] = None
 
     # Scraped / Enriched fields
     tweets: list[str] = field(default_factory=list)
@@ -597,9 +598,81 @@ def build_snapshot(symbol: str, timeframe: str = None, is_htf: bool = False) -> 
 
     # Classify the symbol to select the right fetcher
     asset_class = classify_symbol(symbol)
+    prev_close_val = None
+
+    # Nigerian stocks via Bamboo / Local CSV / APIs
+    if asset_class == AssetClass.NGX_STOCK:
+        df = load_historical_data(symbol, tf, limit=300)
+        market_cap = 0.0
+        from trading_engine.utils.bamboo_client import bamboo_client
+        try:
+            stock_data = bamboo_client.get_stock(symbol)
+            close_price = float(stock_data.get("close_price") or stock_data.get("market_price") or 1.0)
+            market_price = float(stock_data.get("market_price") or close_price)
+            open_price = float(stock_data.get("open_price") or close_price)
+            volume = float(stock_data.get("volume") or 1000.0)
+            market_cap = float(stock_data.get("market_cap") or 0.0)
+            
+            # Enrich the last row with real-time Bamboo details
+            if len(df) > 0:
+                df.iloc[-1, df.columns.get_loc("close")] = market_price
+                df.iloc[-1, df.columns.get_loc("open")] = open_price
+                df.iloc[-1, df.columns.get_loc("volume")] = volume
+                df.iloc[-1, df.columns.get_loc("high")] = max(df.iloc[-1]["high"], market_price, open_price)
+                df.iloc[-1, df.columns.get_loc("low")] = min(df.iloc[-1]["low"], market_price, open_price)
+            prev_close_val = close_price
+        except Exception as e:
+            logger.warning(f"Failed to fetch Bamboo quote for {symbol} enrichment: {e}")
+            if len(df) > 0:
+                prev_close_val = float(df["close"].iloc[-2]) if len(df) > 1 else float(df["close"].iloc[-1])
+            else:
+                prev_close_val = 1.0
+
+        asset_type = "stock"
+        metrics = {
+            "market_cap": market_cap,
+            "shares_outstanding": None,
+            "net_income": None,
+            "revenue": None
+        }
+        order_flow = {}
+        fg_value, fg_label = None, None
+
+    # Bamboo US stocks via StockDataFetcher + Bamboo quote enrichment
+    elif asset_class == AssetClass.BAMBOO_US_STOCK:
+        clean_symbol = symbol.split("/")[0].split(":")[0].upper()
+        fetcher = StockDataFetcher()
+        df = fetcher.fetch_ohlcv(clean_symbol, tf)
+        metrics = fetcher.fetch_metrics(clean_symbol)
+        order_flow = {}
+        fg_value, fg_label = None, None
+        
+        # Enrich the last row with real-time Bamboo details
+        from trading_engine.utils.bamboo_client import bamboo_client
+        try:
+            stock_data = bamboo_client.get_stock(symbol)
+            close_price = float(stock_data.get("close_price") or stock_data.get("market_price") or 1.0)
+            market_price = float(stock_data.get("market_price") or close_price)
+            open_price = float(stock_data.get("open_price") or close_price)
+            volume = float(stock_data.get("volume") or 1000.0)
+            
+            if len(df) > 0:
+                df.iloc[-1, df.columns.get_loc("close")] = market_price
+                df.iloc[-1, df.columns.get_loc("open")] = open_price
+                df.iloc[-1, df.columns.get_loc("volume")] = volume
+                df.iloc[-1, df.columns.get_loc("high")] = max(df.iloc[-1]["high"], market_price, open_price)
+                df.iloc[-1, df.columns.get_loc("low")] = min(df.iloc[-1]["low"], market_price, open_price)
+            prev_close_val = close_price
+        except Exception as e:
+            logger.warning(f"Failed to fetch Bamboo US quote for {symbol} enrichment: {e}")
+            if len(df) > 0:
+                prev_close_val = float(df["close"].iloc[-2]) if len(df) > 1 else float(df["close"].iloc[-1])
+            else:
+                prev_close_val = 1.0
+        asset_type = "stock"
 
     # Bybit linear CFDs (stock CFDs + precious metals)
-    if asset_class in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL):
+    elif asset_class in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL):
         asset_type = "cfd"
         fetcher = BybitCFDFetcher()
         df = fetcher.fetch_ohlcv(symbol, tf)
@@ -632,6 +705,9 @@ def build_snapshot(symbol: str, timeframe: str = None, is_htf: bool = False) -> 
     bb_lower = latest.get("BBL_20_2.0", latest["close"] * 0.98)
     bb_width = (bb_upper - bb_lower) / latest["close"] if latest["close"] > 0 else 0
 
+    if prev_close_val is None:
+        prev_close_val = float(df["close"].iloc[-2]) if len(df) > 1 else float(latest["close"])
+
     snap = MarketSnapshot(
         symbol=symbol,
         asset_type=asset_type,
@@ -663,6 +739,7 @@ def build_snapshot(symbol: str, timeframe: str = None, is_htf: bool = False) -> 
         shares_outstanding=metrics.get("shares_outstanding"),
         net_income=metrics.get("net_income"),
         revenue=metrics.get("revenue"),
+        prev_close=prev_close_val,
     )
 
     if not is_htf:
@@ -698,3 +775,217 @@ def build_snapshot(symbol: str, timeframe: str = None, is_htf: bool = False) -> 
     logger.success(f"Snapshot built: {symbol} ({asset_type}) | Close={snap.close:.4f} | RSI={snap.rsi:.1f}")
     _SNAPSHOT_CACHE[cache_key] = (time.time(), snap)
     return snap
+
+
+class NGXHistoricalFetcher:
+    def fetch_ohlcv(self, symbol: str, timeframe: str = "1d", limit: int = 300) -> pd.DataFrame:
+        """Fetch actual historical daily candles for Nigerian stocks.
+        Checks:
+        1. Local CSV Database Dump in data/ngx/{ticker}.csv or data/historical_{timeframe}_{ticker}.csv
+        2. EODHD API if eodhd_api_key is configured
+        3. NGX Pulse API if ngx_pulse_api_key is configured
+        4. Fallback: Synthetic candle generator using current live quotes from Bamboo
+        """
+        from pathlib import Path
+        import numpy as np
+        
+        ticker = symbol.split("/")[0].split(":")[0].upper()
+        logger.info(f"Fetching NGX historical OHLCV: {symbol} (ticker={ticker}) {timeframe} (limit={limit})")
+        
+        # 1. Local CSV Database Dumps
+        project_root = Path("/Users/nasir.noma/claude_projects/AIOS")
+        for cache_dir in [project_root / "data", project_root / "data" / "ngx"]:
+            patterns = [
+                cache_dir / f"{ticker}.csv",
+                cache_dir / f"historical_{timeframe}_{ticker}.csv",
+                cache_dir / f"historical_{timeframe}_{ticker}_NGX.csv",
+                cache_dir / f"historical_{timeframe}_{ticker}_XNSA.csv"
+            ]
+            for path in patterns:
+                if path.exists():
+                    try:
+                        logger.info(f"Loading NGX historical data from local dump: {path}")
+                        df = pd.read_csv(path, index_col=0, parse_dates=True)
+                        df.columns = [c.lower() for c in df.columns]
+                        df = df[["open", "high", "low", "close", "volume"]].tail(limit)
+                        return df.astype(float)
+                    except Exception as e:
+                        logger.warning(f"Failed to load local dump {path}: {e}")
+                        
+        # 2. EODHD API
+        if settings.eodhd_api_key:
+            try:
+                logger.info(f"Fetching NGX historical data from EODHD API for {ticker}.XNSA...")
+                url = f"https://eodhd.com/api/eod/{ticker}.XNSA"
+                params = {
+                    "api_token": settings.eodhd_api_key,
+                    "fmt": "json",
+                    "limit": limit
+                }
+                resp = get_with_retry(url, params=params, timeout=10)
+                if resp.ok:
+                    data = resp.json()
+                    if isinstance(data, list) and len(data) > 0:
+                        df = pd.DataFrame(data)
+                        df.rename(columns={"date": "timestamp"}, inplace=True)
+                        df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
+                        df.set_index("timestamp", inplace=True)
+                        df.columns = [c.lower() for c in df.columns]
+                        df = df[["open", "high", "low", "close", "volume"]].sort_index().tail(limit)
+                        logger.info(f"Successfully fetched {len(df)} candles from EODHD for {ticker}")
+                        return df.astype(float)
+            except Exception as e:
+                logger.error(f"EODHD API fetch failed for {ticker}: {e}")
+                
+        # 3. Check NGX Pulse API
+        if settings.ngx_pulse_api_key:
+            try:
+                logger.info(f"Fetching NGX historical data from NGX Pulse API for {ticker}...")
+                from datetime import timedelta
+                start_date = (datetime.now(timezone.utc) - timedelta(days=int(limit * 1.5))).strftime("%Y-%m-%d")
+                url = f"https://ngxpulse.ng/api/ngxdata/prices/{ticker}"
+                params = {"from": start_date}
+                headers = {
+                    "X-API-Key": settings.ngx_pulse_api_key,
+                    "Accept": "application/json"
+                }
+                resp = get_with_retry(url, headers=headers, params=params, timeout=10)
+                if resp.ok:
+                    data = resp.json()
+                    # NGX Pulse response: {"success": true, "prices": [...], "count": N}
+                    records = data.get("prices") if isinstance(data, dict) else (data if isinstance(data, list) else [])
+                    if isinstance(records, list) and len(records) > 0:
+                        df = pd.DataFrame(records)
+                        df.columns = [c.lower() for c in df.columns]
+                        # Map NGX Pulse field names → standard OHLCV
+                        df.rename(columns={"trade_date": "timestamp", "open_price": "open", "close_price": "close"}, inplace=True)
+                        df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
+                        df.set_index("timestamp", inplace=True)
+                        df["open"] = pd.to_numeric(df.get("open", df["close"]), errors="coerce")
+                        df["close"] = pd.to_numeric(df["close"], errors="coerce")
+                        df["volume"] = pd.to_numeric(df.get("volume", 0), errors="coerce").fillna(0)
+                        # NGX Pulse omits high/low — synthesize using a data-driven ATR proxy.
+                        # We compute the rolling 14-period average of |close-to-close| returns,
+                        # which gives a realistic per-stock range estimate based on its actual
+                        # volatility. This replaces the previous fixed random noise approach.
+                        close_s = pd.to_numeric(df["close"], errors="coerce").ffill()
+                        cc_move = close_s.diff().abs()
+                        # Use 14-period rolling mean of absolute moves as ATR proxy
+                        atr_proxy = cc_move.rolling(14, min_periods=1).mean().fillna(cc_move.mean())
+                        # Clamp to 0.2% – 5.0% of price to avoid extremes on sparse data
+                        price_pct = (atr_proxy / close_s.clip(lower=1e-9)).clip(0.002, 0.05)
+                        # Deterministic: high is always max(open,close) + half ATR proxy
+                        # Low is always min(open,close) - half ATR proxy
+                        half = price_pct * close_s * 0.5
+                        df["high"] = np.maximum(df["open"].fillna(df["close"]), df["close"]) + half.values
+                        df["low"]  = np.minimum(df["open"].fillna(df["close"]), df["close"]) - half.values
+                        # Safety: ensure high >= close >= low > 0
+                        df["high"] = df[["high", "close"]].max(axis=1)
+                        df["low"]  = df[["low",  "close"]].min(axis=1).clip(lower=1e-9)
+                        df = df.dropna(subset=["close"])
+                        df = df[df["close"] > 0]
+                        df = df[["open", "high", "low", "close", "volume"]].sort_index().tail(limit)
+                        logger.info(f"Successfully fetched {len(df)} candles from NGX Pulse for {ticker} (ATR-proxy high/low)")
+                        return df.astype(float)
+
+            except Exception as e:
+                logger.error(f"NGX Pulse API fetch failed for {ticker}: {e}")
+                
+        # 4. Fallback to synthetic candle generator from Bamboo
+        logger.warning(f"No actual historical data sources configured/available for NGX stock {ticker}. Using synthetic generator.")
+        from trading_engine.utils.bamboo_client import bamboo_client
+        try:
+            stock_data = bamboo_client.get_stock(symbol)
+            close_price = float(stock_data.get("close_price") or stock_data.get("market_price") or 1.0)
+            market_price = float(stock_data.get("market_price") or close_price)
+            open_price = float(stock_data.get("open_price") or close_price)
+            volume = float(stock_data.get("volume") or 1000.0)
+            
+            end_dt = datetime.now(timezone.utc)
+            freq = "D" if timeframe == "1d" else "4H"
+            timestamps = pd.date_range(end=end_dt, periods=limit, freq=freq)
+
+            np.random.seed(42)
+            prices = [close_price]
+            for _ in range(limit - 2):
+                next_price = prices[-1] * (1.0 + np.random.normal(0.0, 0.001))
+                prices.append(next_price)
+            prices.append(market_price)
+
+            open_prices = [p * (1.0 + np.random.normal(0.0, 0.0005)) for p in prices]
+            open_prices[-1] = open_price
+
+            high_prices = []
+            low_prices = []
+            for o, c in zip(open_prices, prices):
+                high_prices.append(max(o, c) * (1.0 + abs(np.random.normal(0.0, 0.001))))
+                low_prices.append(min(o, c) * (1.0 - abs(np.random.normal(0.0, 0.001))))
+
+            volumes = [volume * (1.0 + np.random.uniform(-0.5, 0.5)) for _ in range(limit)]
+            volumes[-1] = volume
+
+            df = pd.DataFrame({
+                "open": open_prices,
+                "high": high_prices,
+                "low": low_prices,
+                "close": prices,
+                "volume": volumes
+            }, index=timestamps)
+            df.index.name = "timestamp"
+            return df.astype(float)
+        except Exception as bamboo_err:
+            logger.error(f"Failed to generate synthetic fallback for {ticker}: {bamboo_err}")
+            raise RuntimeError(f"All historical data sources and synthetic generator exhausted for {symbol}")
+
+
+def load_historical_data(symbol: str, timeframe: str = "4h", limit: int = 300) -> pd.DataFrame:
+    """Unified historical OHLCV data loader:
+    1. Checks local cache: data/historical_{timeframe}_{symbol_clean}.csv
+    2. If missing/insufficient, routes to the appropriate fetcher
+    3. Saves fetched data to local cache
+    """
+    from pathlib import Path
+    from trading_engine.market_hours import classify_symbol, AssetClass
+    
+    symbol_clean = symbol.replace("/", "_").replace(":", "_")
+    cache_path = Path("/Users/nasir.noma/claude_projects/AIOS/data") / f"historical_{timeframe}_{symbol_clean}.csv"
+    
+    df = None
+    if cache_path.exists():
+        try:
+            df = pd.read_csv(cache_path, index_col=0, parse_dates=True)
+            if len(df) >= limit:
+                logger.info(f"Loaded {len(df)} rows from local cache for {symbol} ({cache_path})")
+                df = df.tail(limit)
+                return df.astype(float)
+            else:
+                logger.info(f"Local cache for {symbol} has insufficient rows ({len(df)} < {limit}). Refetching...")
+                df = None
+        except Exception as e:
+            logger.warning(f"Failed to read cache for {symbol}: {e}")
+            df = None
+            
+    # Route to correct fetcher
+    ac = classify_symbol(symbol)
+    if ac == AssetClass.NGX_STOCK:
+        fetcher = NGXHistoricalFetcher()
+    elif ac in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL):
+        from trading_engine.data.cfd_data import BybitCFDFetcher
+        fetcher = BybitCFDFetcher()
+    elif ac == AssetClass.CRYPTO:
+        fetcher = CryptoDataFetcher()
+    else:
+        fetcher = StockDataFetcher()
+        
+    clean_symbol = symbol.split("/")[0].split(":")[0].upper() if ac == AssetClass.BAMBOO_US_STOCK else symbol
+    df = fetcher.fetch_ohlcv(clean_symbol, timeframe, limit)
+    
+    # Save to cache
+    try:
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        df.to_csv(cache_path)
+        logger.info(f"Cached {len(df)} rows to {cache_path}")
+    except Exception as e:
+        logger.warning(f"Failed to write cache for {symbol}: {e}")
+        
+    return df.astype(float)

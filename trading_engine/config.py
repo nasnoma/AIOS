@@ -52,7 +52,11 @@ class Settings(BaseSettings):
     trading_mode: str = "paper"          # paper | live | signal_only
     default_assets: str = "BTC/USDT,ETH/USDT"
     default_stock_assets: str = "AAPL/USDT:USDT,TSLA/USDT:USDT,NVDA/USDT:USDT"
-    default_watchlist: str = "BTC/USDT,ETH/USDT,SOL/USDT,AAPL/USDT:USDT,TSLA/USDT:USDT,NVDA/USDT:USDT,MSFT/USDT:USDT,AMZN/USDT:USDT"
+    default_watchlist: str = (
+        "BTC/USDT,ETH/USDT,SOL/USDT,AAPL/USDT:USDT,TSLA/USDT:USDT,NVDA/USDT:USDT,MSFT/USDT:USDT,AMZN/USDT:USDT,"
+        "TRANSEXPR/NGX,WEMABANK/NGX,VFDGROUP/NGX,NEIMETH/NGX,NPFMCRFBK/NGX,VERITASKAP/NGX,AIICO/NGX,UNIVINSURE/NGX,ZICHIS/NGX,"
+        "NVDA/BAMBOO,META/BAMBOO,TSLA/BAMBOO,JPM/BAMBOO,NFLX/BAMBOO"
+    )
     timeframe: str = "4h"
     signal_interval_minutes: int = 240
 
@@ -66,7 +70,7 @@ class Settings(BaseSettings):
     atr_multiplier: float = 2.8
     rr_ratio: float = 3.0
     stop_loss_pct_max: float = 0.10
-    max_concurrent_positions: int = 8
+    max_concurrent_positions: int = 12
 
     # ── Self Healing ────────────────────────────────────────
     self_healing_consecutive_losses: int = 2
@@ -83,6 +87,10 @@ class Settings(BaseSettings):
     # configured timeframe.  Set regime_filter_enabled=False to bypass.
     regime_filter_enabled: bool = True
     regime_btc_ma_period: int = 50
+    regime_filter_equities_enabled: bool = True
+    regime_us_index: str = "SPY"
+    regime_ngx_proxy: str = "DANGCEM/NGX"
+    regime_equities_ma_period: int = 200
     crypto_use_perpetuals: bool = False
     short_position_multiplier: float = 0.75
 
@@ -91,6 +99,23 @@ class Settings(BaseSettings):
     crypto_peak_sessions_reduce_size: bool = True
     min_atr_pct: float = 0.15
     min_bb_width: float = 0.015
+
+    # ── Confidence-Weighted Position Sizing ──────────
+    # Scales position size proportionally to judge confidence score.
+    # confidence=neutral (75) → 1.0× baseline size
+    # confidence=min (48) → position_size_min_weight (0.6×) — undersized, cautious
+    # confidence=max (100) → position_size_max_weight (1.4×) — oversized, high conviction
+    # Formula: weight = min_w + (max_w - min_w) * (conf - min_conf) / (max_conf - min_conf)
+    # Clamped to [min_w, max_w].
+    confidence_sizing_enabled: bool = True
+    position_size_min_weight: float = 0.6    # at minimum confidence threshold
+    position_size_max_weight: float = 1.4    # at maximum confidence (100)
+    confidence_sizing_neutral: float = 75.0  # pivot: no adjustment at this confidence
+    # NGX stocks with fewer than N live/backtest trades get an extra conservative discount.
+    # Covers thin-data stocks like TRANSEXPR (7 trades), CHAMS (3), etc.
+    low_trade_count_discount: float = 0.75   # multiply size by this for thin NGX stocks
+    low_trade_count_threshold: int = 10      # trades below this → apply discount
+
 
     # ── Bounty Hunter ───────────────────────
     bounty_hunter_enabled: bool = True
@@ -110,6 +135,28 @@ class Settings(BaseSettings):
     cfd_enabled: bool = True
     # If True: scan pre-market (13:00 UTC EDT) and after-hours (21:00 UTC EDT)
     extended_cfd_hours: bool = True
+
+    # ── Bamboo API (Nigerian Stocks) ────────
+    bamboo_api_key: str = ""
+    bamboo_username: str = ""
+    bamboo_password: str = ""
+    bamboo_user_id: str = ""
+    bamboo_base_url: str = "https://powered-by-bamboo-sandbox.investbamboo.com"
+    bamboo_subject_type: str = "tenant"
+    bamboo_webhook_auth_hash: str = ""
+    # 20-stock NGX universe — filtered by WFO (passing OOS quality filter)
+    default_ngx_assets: str = (
+        "CHAMS/NGX,NGXGROUP/NGX,GUINEAINS/NGX,GTCO/NGX,CONHALLPLC/NGX,"
+        "INTENEGINS/NGX,MBENEFIT/NGX,DEAPCAP/NGX,UPDCREIT/NGX,WAPIC/NGX,JAPAULGOLD/NGX"
+    )
+    # Bamboo US assets — filtered by WFO (passing OOS quality filter)
+    default_bamboo_us_assets: str = (
+        "AAPL/BAMBOO,MSFT/BAMBOO,AMZN/BAMBOO,GOOGL/BAMBOO,AMD/BAMBOO"
+    )
+
+    # ── Historical NGX Data Providers ────────
+    eodhd_api_key: str = ""
+    ngx_pulse_api_key: str = ""
 
     # ── API ─────────────────────────────────
     api_host: str = "0.0.0.0"
@@ -148,6 +195,14 @@ class Settings(BaseSettings):
     @property
     def get_massive_api_key(self) -> str:
         return self.massive_api_key or self.polygon_api_key
+
+    @property
+    def ngx_assets(self) -> list[str]:
+        return [a.strip() for a in self.default_ngx_assets.split(",") if a.strip()]
+
+    @property
+    def bamboo_us_assets(self) -> list[str]:
+        return [a.strip() for a in self.default_bamboo_us_assets.split(",") if a.strip()]
 
 
 settings = Settings()

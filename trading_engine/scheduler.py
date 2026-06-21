@@ -38,6 +38,59 @@ def send_heartbeat():
                 logger.debug(f"Heartbeat failed: {e}")
 
 
+def _allocate_cash_proportionally(signals: list, available_cash: float) -> list[tuple[any, float]]:
+    """
+    Given a list of approved signals (either TradeSignal objects or dicts), allocate the available cash.
+    If the total requested cash exceeds available cash, scale down proportionally.
+    Skips any trade whose allocated size is below the minimum threshold ($10 USD).
+    """
+    approved_sigs = []
+    for s in signals:
+        # Check if s is a dict or TradeSignal object
+        if isinstance(s, dict):
+            if s.get("final_action") in ("BUY", "SELL"):
+                approved_sigs.append(s)
+        else:
+            if s.final_action in ("BUY", "SELL"):
+                approved_sigs.append(s)
+
+    if not approved_sigs:
+        return []
+
+    # Get the requested sizes
+    requested_sizes = []
+    for sig in approved_sigs:
+        if isinstance(sig, dict):
+            size = sig.get("position_size_usd") or 0.0
+        else:
+            size = sig.position_size_usd or 0.0
+        if size <= 0:
+            size = 20.0
+        requested_sizes.append(size)
+
+    total_requested = sum(requested_sizes)
+    if total_requested <= 0:
+        return []
+
+    scale_factor = 1.0
+    if total_requested > available_cash:
+        scale_factor = available_cash / total_requested
+        logger.info(f"⚖️ Proportional allocator: Total requested (${total_requested:,.2f}) exceeds available cash (${available_cash:,.2f}). Scaling factor: {scale_factor:.4f}")
+
+    allocations = []
+    min_trade_size = 10.0  # USD hard cap to avoid dust trades
+    
+    for sig, req_size in zip(approved_sigs, requested_sizes):
+        allocated_size = req_size * scale_factor
+        if allocated_size < min_trade_size:
+            sym = sig.get("symbol") if isinstance(sig, dict) else sig.symbol
+            logger.warning(f"Proportional allocator: Skipping {sym} - allocated size (${allocated_size:,.2f}) is below minimum limit (${min_trade_size:.2f})")
+            continue
+        allocations.append((sig, allocated_size))
+
+    return allocations
+
+
 def run_signal_cycle():
     """Main cycle: analyze all assets and execute if signal found."""
     logger.info(f"\n🔄 Signal cycle started: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}")
@@ -58,8 +111,28 @@ def run_signal_cycle():
     # Run full analysis
     signals = run_all_assets()
 
+    # Filter for actionable trade signals
+    actionable_signals = [s for s in signals if s.final_action in ("BUY", "SELL") and settings.trading_mode != "signal_only"]
+    
+    # Run allocator to scale sizes based on available cash
+    allocations = _allocate_cash_proportionally(actionable_signals, portfolio.cash)
+    allocated_sizes = {sig.symbol: size for sig, size in allocations}
+
     for sig in signals:
+        # Send Telegram alert for any actionable signal (original behavior)
+        if sig.final_action in ("BUY", "SELL"):
+            try:
+                send_signal_alert(sig)
+            except Exception as e:
+                logger.warning(f"Telegram alert failed: {e}")
+
+        # Execute trade if it was approved and allocated
         if sig.final_action in ("BUY", "SELL") and settings.trading_mode != "signal_only":
+            if sig.symbol not in allocated_sizes:
+                logger.info(f"⏭️ Skipping execution for {sig.symbol}: not allocated/scaled below minimum.")
+                continue
+                
+            size_needed = allocated_sizes[sig.symbol]
             direction = "long" if sig.final_action == "BUY" else "short"
             
             # Prevent duplicate concurrent positions on the same asset
@@ -72,7 +145,6 @@ def run_signal_cycle():
                 logger.warning(f"Trade execution blocked for {sig.symbol}: Max concurrent positions limit ({max_positions}) reached.")
                 continue
             
-            size_needed = sig.position_size_usd or 0
             if portfolio.cash < size_needed:
                 logger.warning(f"Trade execution blocked for {sig.symbol}: Insufficient cash (cash=${portfolio.cash:,.2f}, needed=${size_needed:,.2f})")
                 continue
@@ -89,13 +161,6 @@ def run_signal_cycle():
             if pos:
                 # Reload portfolio to reflect new position & cash balance in subsequent iterations
                 portfolio = trader._load_state()
-
-        # Send Telegram alert for any actionable signal
-        if sig.final_action in ("BUY", "SELL"):
-            try:
-                send_signal_alert(sig)
-            except Exception as e:
-                logger.warning(f"Telegram alert failed: {e}")
 
     logger.info(f"✅ Cycle complete. {sum(1 for s in signals if s.final_action != 'NO_TRADE')} actionable signals.")
 
@@ -233,25 +298,36 @@ def run_bounty_hunter_cycle():
     except Exception as _cbe:
         logger.warning(f"⚔️ Bounty Hunter circuit-breaker check failed ({_cbe}); proceeding with caution.")
 
+    # Run allocator across all active buys and sells
+    all_candidates = active_buys + active_sells
+    allocations = _allocate_cash_proportionally(all_candidates, portfolio.cash)
+    allocated_sizes = {c.get("symbol") if isinstance(c, dict) else c.symbol: size for c, size in allocations}
+
     if active_buys:
         logger.info(f"Bounty Hunter: placing {len(active_buys)} BUY trade(s)...")
         for b in active_buys:
+            symbol = b.get("symbol")
+            if symbol not in allocated_sizes:
+                logger.info(f"Bounty Hunter: skipping BUY for {symbol} (not allocated/scaled below minimum).")
+                continue
+
             # Prevent duplicate concurrent positions
-            if any(p.symbol == b["symbol"] for p in portfolio.open_positions):
-                logger.info(f"Bounty Hunter: skipping BUY for {b['symbol']} (position already open).")
+            if any(p.symbol == symbol for p in portfolio.open_positions):
+                logger.info(f"Bounty Hunter: skipping BUY for {symbol} (position already open).")
                 continue
 
             max_positions = settings.max_concurrent_positions
             if len(portfolio.open_positions) >= max_positions:
                 logger.warning(f"Bounty Hunter execution blocked: Max concurrent positions ({max_positions}) reached.")
                 break
-            size_needed = b["position_size_usd"] or 20.0
+                
+            size_needed = allocated_sizes[symbol]
             if portfolio.cash < size_needed:
-                logger.warning(f"Bounty Hunter execution blocked for {b['symbol']}: Insufficient cash (cash=${portfolio.cash:,.2f}, needed=${size_needed:,.2f})")
+                logger.warning(f"Bounty Hunter execution blocked for {symbol}: Insufficient cash (cash=${portfolio.cash:,.2f}, needed=${size_needed:,.2f})")
                 continue
 
             pos = trader.open_trade(
-                symbol=b["symbol"],
+                symbol=symbol,
                 direction="long",
                 entry=b["entry_price"],
                 size_usd=size_needed,
@@ -267,22 +343,28 @@ def run_bounty_hunter_cycle():
     if active_sells:
         logger.info(f"Bounty Hunter: placing {len(active_sells)} SELL (short) trade(s)...")
         for s in active_sells:
+            symbol = s.get("symbol")
+            if symbol not in allocated_sizes:
+                logger.info(f"Bounty Hunter: skipping SELL for {symbol} (not allocated/scaled below minimum).")
+                continue
+
             # Prevent duplicate concurrent positions
-            if any(p.symbol == s["symbol"] for p in portfolio.open_positions):
-                logger.info(f"Bounty Hunter: skipping SELL for {s['symbol']} (position already open).")
+            if any(p.symbol == symbol for p in portfolio.open_positions):
+                logger.info(f"Bounty Hunter: skipping SELL for {symbol} (position already open).")
                 continue
 
             max_positions = settings.max_concurrent_positions
             if len(portfolio.open_positions) >= max_positions:
                 logger.warning(f"Bounty Hunter execution blocked: Max concurrent positions ({max_positions}) reached.")
                 break
-            size_needed = s["position_size_usd"] or 20.0
+                
+            size_needed = allocated_sizes[symbol]
             if portfolio.cash < size_needed:
-                logger.warning(f"Bounty Hunter execution blocked for {s['symbol']}: Insufficient cash (cash=${portfolio.cash:,.2f}, needed=${size_needed:,.2f})")
+                logger.warning(f"Bounty Hunter execution blocked for {symbol}: Insufficient cash (cash=${portfolio.cash:,.2f}, needed=${size_needed:,.2f})")
                 continue
 
             pos = trader.open_trade(
-                symbol=s["symbol"],
+                symbol=symbol,
                 direction="short",
                 entry=s["entry_price"],
                 size_usd=size_needed,
