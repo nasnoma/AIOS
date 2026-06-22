@@ -1476,7 +1476,9 @@ def sync_with_broker() -> bool:
             bybit_linear.options["defaultType"] = "linear"
             bybit_linear.load_markets()
             for pos in bybit_linear.fetch_positions():
-                if float(pos.get('size', 0)) > 0:
+                # CCXT unified position structure uses 'contracts' for size, but check 'size' and 'info' as fallbacks.
+                pos_size = float(pos.get('contracts') or pos.get('size') or (pos.get('info') and pos['info'].get('size')) or 0)
+                if pos_size > 0:
                     symbol = pos.get('symbol', '').upper()
                     bybit_linear_symbols.add(symbol)
             bybit_linear_fetched = True
