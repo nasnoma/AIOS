@@ -13,11 +13,60 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 from loguru import logger
+import threading
+from contextlib import contextmanager
+
+try:
+    import fcntl
+    HAS_FCNTL = True
+except ImportError:
+    HAS_FCNTL = False
 
 from trading_engine.config import settings
 from trading_engine.alerts.telegram_bot import send_message
 
 STATE_FILE = Path(__file__).parent.parent / "paper_state.json"
+LOCK_FILE = Path(__file__).parent.parent / "paper_state.lock"
+_lock_state = threading.local()
+
+@contextmanager
+def state_lock():
+    """
+    Acquires an exclusive file lock on paper_state.lock.
+    Re-entrant within the same thread.
+    """
+    if not hasattr(_lock_state, "depth"):
+        _lock_state.depth = 0
+        _lock_state.fd = None
+
+    if _lock_state.depth == 0:
+        if HAS_FCNTL:
+            if not LOCK_FILE.exists():
+                LOCK_FILE.touch()
+            _lock_state.fd = open(LOCK_FILE, "r+")
+            fcntl.flock(_lock_state.fd.fileno(), fcntl.LOCK_EX)
+            
+    _lock_state.depth += 1
+    try:
+        yield
+    finally:
+        _lock_state.depth -= 1
+        if _lock_state.depth == 0:
+            if HAS_FCNTL and _lock_state.fd:
+                fcntl.flock(_lock_state.fd.fileno(), fcntl.LOCK_UN)
+                _lock_state.fd.close()
+                _lock_state.fd = None
+
+def locked(func):
+    """
+    Decorator to wrap a function call with state_lock().
+    """
+    from functools import wraps
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        with state_lock():
+            return func(*args, **kwargs)
+    return wrapper
 
 # ── Transaction Cost Model ───────────────────────────────────────────────
 # Entry fee (taker order): 0.04% (Binance market order)
@@ -104,18 +153,21 @@ class PaperPortfolio:
 
 
 def _load_state() -> PaperPortfolio:
-    if STATE_FILE.exists():
-        try:
-            with open(STATE_FILE) as f:
-                return PaperPortfolio.from_dict(json.load(f))
-        except Exception as e:
-            logger.warning(f"Could not load paper state: {e}")
-    return PaperPortfolio()
+    with state_lock():
+        if STATE_FILE.exists() and STATE_FILE.stat().st_size > 0:
+            try:
+                with open(STATE_FILE) as f:
+                    return PaperPortfolio.from_dict(json.load(f))
+            except Exception as e:
+                logger.error(f"CRITICAL: Could not parse paper state file: {e}")
+                raise RuntimeError(f"Failed to load portfolio state: {e}") from e
+        return PaperPortfolio()
 
 
 def _save_state(portfolio: PaperPortfolio):
-    with open(STATE_FILE, "w") as f:
-        json.dump(portfolio.to_dict(), f, indent=2)
+    with state_lock():
+        with open(STATE_FILE, "w") as f:
+            json.dump(portfolio.to_dict(), f, indent=2)
 
 
 def open_trade(symbol: str, direction: str, entry: float,
@@ -139,46 +191,64 @@ def open_trade(symbol: str, direction: str, entry: float,
             return None
         size_usd = qty * entry
 
-    portfolio = _load_state()
+    with state_lock():
+        portfolio = _load_state()
 
-    # Deduct entry fee + slippage from cash immediately
-    entry_fee = size_usd * ENTRY_FEE_RATE
-    portfolio.cash -= entry_fee
-    portfolio.total_fees += entry_fee
+        # Prevent duplicate positions on the same asset
+        if any(p.symbol == symbol for p in portfolio.open_positions):
+            logger.info(f"⏭️ [Lock Guard] Skipping paper execution for {symbol}: position already open.")
+            return None
 
-    pos = Position(
-        symbol=symbol,
-        direction=direction,
-        entry_price=entry,
-        size_usd=size_usd,
-        stop_loss=stop_loss,
-        take_profit=take_profit,
-        opened_at=datetime.now(timezone.utc).isoformat(),
-        fee_usd=entry_fee,   # will be updated on close
-        atr=kwargs.get("atr", 0.0),
-        trailing_high=entry if direction == "long" else None,
-        trailing_low=entry if direction == "short" else None,
-    )
-    portfolio.positions.append(pos)
-    portfolio.cash -= size_usd
-    _save_state(portfolio)
-    logger.success(
-        f"📝 PAPER {direction.upper()} opened: {symbol} | "
-        f"Size=${size_usd:,.0f} | SL={stop_loss:.4f} | TP={take_profit:.4f} | "
-        f"Entry fee=${entry_fee:.2f} ({ENTRY_FEE_RATE:.2%})"
-    )
-    
-    # Send Telegram notification
-    send_message(
-        f"🟢 <b>PAPER {direction.upper()} Opened</b>\n"
-        f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"🪙 Symbol: {symbol}\n"
-        f"💵 Size: ${size_usd:,.2f}\n"
-        f"📈 Entry Price: <code>{entry:.4f}</code>\n"
-        f"🛑 Stop Loss: <code>{stop_loss:.4f}</code>\n"
-        f"🎯 Take Profit: <code>{take_profit:.4f}</code>"
-    )
-    return pos
+        # Check max positions under lock
+        max_positions = settings.max_concurrent_positions
+        if len(portfolio.open_positions) >= max_positions:
+            logger.warning(f"Paper execution blocked for {symbol}: Max concurrent positions ({max_positions}) reached.")
+            return None
+
+        # Deduct entry fee + slippage from cash immediately
+        entry_fee = size_usd * ENTRY_FEE_RATE
+        total_needed = size_usd + entry_fee
+
+        if portfolio.cash < total_needed:
+            logger.warning(f"Paper execution blocked for {symbol}: Insufficient cash (cash=${portfolio.cash:,.2f}, needed=${total_needed:,.2f})")
+            return None
+
+        portfolio.cash -= entry_fee
+        portfolio.total_fees += entry_fee
+
+        pos = Position(
+            symbol=symbol,
+            direction=direction,
+            entry_price=entry,
+            size_usd=size_usd,
+            stop_loss=stop_loss,
+            take_profit=take_profit,
+            opened_at=datetime.now(timezone.utc).isoformat(),
+            fee_usd=entry_fee,   # will be updated on close
+            atr=kwargs.get("atr", 0.0),
+            trailing_high=entry if direction == "long" else None,
+            trailing_low=entry if direction == "short" else None,
+        )
+        portfolio.positions.append(pos)
+        portfolio.cash -= size_usd
+        _save_state(portfolio)
+        logger.success(
+            f"📝 PAPER {direction.upper()} opened: {symbol} | "
+            f"Size=${size_usd:,.0f} | SL={stop_loss:.4f} | TP={take_profit:.4f} | "
+            f"Entry fee=${entry_fee:.2f} ({ENTRY_FEE_RATE:.2%})"
+        )
+        
+        # Send Telegram notification
+        send_message(
+            f"🟢 <b>PAPER {direction.upper()} Opened</b>\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n"
+            f"🪙 Symbol: {symbol}\n"
+            f"💵 Size: ${size_usd:,.2f}\n"
+            f"📈 Entry Price: <code>{entry:.4f}</code>\n"
+            f"🛑 Stop Loss: <code>{stop_loss:.4f}</code>\n"
+            f"🎯 Take Profit: <code>{take_profit:.4f}</code>"
+        )
+        return pos
 
 
 def _apply_trailing_stop(pos: Position, price: float) -> None:
@@ -239,6 +309,7 @@ def _apply_trailing_stop(pos: Position, price: float) -> None:
                 pos.stop_loss = pos.entry_price
 
 
+@locked
 def update_prices(current_prices: dict[str, float]):
     """Check if any open positions hit SL or TP. Applies ATR trailing stop ratchet first."""
     portfolio = _load_state()
@@ -351,6 +422,7 @@ def _close_position(portfolio: PaperPortfolio, pos: Position, exit_price: float,
     )
 
 
+@locked
 def get_status() -> dict:
     portfolio = _load_state()
     open_trades = [asdict(p) for p in portfolio.open_positions]

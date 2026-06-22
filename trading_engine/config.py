@@ -141,6 +141,8 @@ class Settings(BaseSettings):
     bamboo_username: str = ""
     bamboo_password: str = ""
     bamboo_user_id: str = ""
+    bamboo_cscs: str = ""
+    bamboo_chn: str = ""
     bamboo_base_url: str = "https://powered-by-bamboo-sandbox.investbamboo.com"
     bamboo_subject_type: str = "tenant"
     bamboo_webhook_auth_hash: str = ""

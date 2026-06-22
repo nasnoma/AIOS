@@ -383,3 +383,61 @@ def test_confidence_weighted_sizing():
         if dec_thin.approved and dec_thick.approved:
             assert dec_thin.position_size_usd <= dec_thick.position_size_usd, (
                 "Thin stock (TRANSEXPR) should not exceed thick stock (MBENEFIT) sizing")
+
+
+def test_concurrency_lock(tmp_path):
+    """Asserts that concurrent calls to open_trade for the same symbol are serialized and only one position is opened."""
+    import json
+    import concurrent.futures
+    from trading_engine.execution import paper_trader
+    
+    # Isolate state and lock files
+    temp_state = tmp_path / "paper_state_concurrency_test.json"
+    temp_lock = tmp_path / "paper_state_concurrency_test.lock"
+    
+    # Setup initial state
+    initial_portfolio = paper_trader.PaperPortfolio(
+        account_size=10000.0,
+        cash=10000.0,
+        positions=[],
+        closed_trades=[]
+    )
+    
+    with open(temp_state, "w") as f:
+        json.dump(initial_portfolio.to_dict(), f, indent=2)
+        
+    with patch("trading_engine.execution.paper_trader.STATE_FILE", temp_state), \
+         patch("trading_engine.execution.paper_trader.LOCK_FILE", temp_lock), \
+         patch("trading_engine.execution.paper_trader.send_message") as mock_send_message:
+         
+        # We want to run multiple threads calling open_trade concurrently
+        num_threads = 5
+        symbol = "BTC/USDT"
+        
+        # Helper function to call open_trade
+        def run_open():
+            # Add a tiny sleep to simulate concurrency overlap
+            time.sleep(0.01)
+            return paper_trader.open_trade(
+                symbol=symbol,
+                direction="long",
+                entry=60000.0,
+                size_usd=1000.0,
+                stop_loss=55000.0,
+                take_profit=70000.0,
+                atr=1000.0
+            )
+            
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
+            futures = [executor.submit(run_open) for _ in range(num_threads)]
+            results = [f.result() for f in concurrent.futures.as_completed(futures)]
+            
+        # Verify that only one call succeeded (returned a Position) and others returned None
+        succeeded_trades = [r for r in results if r is not None]
+        assert len(succeeded_trades) == 1, f"Expected exactly 1 trade to succeed, got {len(succeeded_trades)}"
+        
+        # Verify state file has exactly 1 position
+        final_portfolio = paper_trader._load_state()
+        assert len(final_portfolio.open_positions) == 1
+        assert final_portfolio.open_positions[0].symbol == symbol
+

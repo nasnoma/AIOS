@@ -17,6 +17,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 from loguru import logger
+import threading
+from contextlib import contextmanager
+
+try:
+    import fcntl
+    HAS_FCNTL = True
+except ImportError:
+    HAS_FCNTL = False
 
 import ccxt
 from alpaca.trading.client import TradingClient
@@ -29,6 +37,47 @@ from trading_engine.alerts.telegram_bot import send_message
 from trading_engine.utils.bamboo_client import bamboo_client
 
 STATE_FILE = Path(__file__).parent.parent / "live_state.json"
+LOCK_FILE = Path(__file__).parent.parent / "live_state.lock"
+_lock_state = threading.local()
+
+@contextmanager
+def state_lock():
+    """
+    Acquires an exclusive file lock on live_state.lock.
+    Re-entrant within the same thread.
+    """
+    if not hasattr(_lock_state, "depth"):
+        _lock_state.depth = 0
+        _lock_state.fd = None
+
+    if _lock_state.depth == 0:
+        if HAS_FCNTL:
+            if not LOCK_FILE.exists():
+                LOCK_FILE.touch()
+            _lock_state.fd = open(LOCK_FILE, "r+")
+            fcntl.flock(_lock_state.fd.fileno(), fcntl.LOCK_EX)
+            
+    _lock_state.depth += 1
+    try:
+        yield
+    finally:
+        _lock_state.depth -= 1
+        if _lock_state.depth == 0:
+            if HAS_FCNTL and _lock_state.fd:
+                fcntl.flock(_lock_state.fd.fileno(), fcntl.LOCK_UN)
+                _lock_state.fd.close()
+                _lock_state.fd = None
+
+def locked(func):
+    """
+    Decorator to wrap a function call with state_lock().
+    """
+    from functools import wraps
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        with state_lock():
+            return func(*args, **kwargs)
+    return wrapper
 
 ENTRY_FEE_RATE = 0.0006   # 0.06% entry (fee + slippage estimate)
 EXIT_FEE_RATE  = 0.0006   # 0.06% exit  (fee + slippage estimate)
@@ -114,22 +163,25 @@ class LivePortfolio:
 
 
 def _load_state() -> LivePortfolio:
-    if STATE_FILE.exists():
-        try:
-            with open(STATE_FILE) as f:
-                return LivePortfolio.from_dict(json.load(f))
-        except Exception as e:
-            logger.warning(f"Could not load live state: {e}")
-    return LivePortfolio()
+    with state_lock():
+        if STATE_FILE.exists() and STATE_FILE.stat().st_size > 0:
+            try:
+                with open(STATE_FILE) as f:
+                    return LivePortfolio.from_dict(json.load(f))
+            except Exception as e:
+                logger.error(f"CRITICAL: Could not parse live state file: {e}")
+                raise RuntimeError(f"Failed to load portfolio state: {e}") from e
+        return LivePortfolio()
 
 
 def _save_state(portfolio: LivePortfolio):
-    with open(STATE_FILE, "w") as f:
-        json.dump(portfolio.to_dict(), f, indent=2)
-    try:
-        db.sync_closed_trades_to_db(portfolio.closed_trades)
-    except Exception as e:
-        logger.warning(f"Failed to sync closed trades to DB on save: {e}")
+    with state_lock():
+        with open(STATE_FILE, "w") as f:
+            json.dump(portfolio.to_dict(), f, indent=2)
+        try:
+            db.sync_closed_trades_to_db(portfolio.closed_trades)
+        except Exception as e:
+            logger.warning(f"Failed to sync closed trades to DB on save: {e}")
 
 
 # ── Exchange Clients Initializers ─────────────────────────────────────────
@@ -474,188 +526,205 @@ def open_trade(
         return None
 
     # ── Execute ──────────────────────────────────────────────────────────────
-    calc = None
-    try:
-        if is_bamboo:
-            if is_ngx:
-                qty = int(round(size_usd / entry))
-                if qty <= 0:
-                    logger.warning(f"NGX stock quantity too small for {symbol} ({qty}). Skipping.")
-                    return None
-            else:
-                qty = float(size_usd / entry)
-                if qty <= 0.0001:
-                    logger.warning(f"US stock quantity too small for {symbol} ({qty}). Skipping.")
-                    return None
-            logger.info(f"Calculating Bamboo {'NGX' if is_ngx else 'US'} order for {symbol}: qty={qty}...")
-            calc = bamboo_client.calculate_order(symbol, "BUY", qty, entry)
-            
-            clean_symbol = symbol.split("/")[0].split(":")[0].upper()
-            order_payload = {
-                "fee": float(calc["fee"]),
-                "order_type": "MARKET",
-                "order_value": float(calc["total_price"]),
-                "price": float(calc["price_per_share"]),
-                "price_per_share": float(calc["price_per_share"]),
-                "quantity": float(calc["quantity"]),
-                "side": "BUY",
-                "source_wallet_id": 0,
-                "symbol": clean_symbol,
-                "total_price": float(calc["order_price"])
-            }
-            logger.info(f"Placing Bamboo {'NGX' if is_ngx else 'US'} BUY order for {symbol}...")
-            order_resp = bamboo_client.place_order(order_payload, symbol=symbol)
-            fill_price = float(calc["price_per_share"])
-            actual_qty = float(calc["quantity"])
-            size_usd = float(calc["total_price"])
+    with state_lock():
+        portfolio = _load_state()
+        if any(p.symbol == symbol for p in portfolio.open_positions):
+            logger.info(f"⏭️ [Lock Guard] Skipping live execution for {symbol}: position already open.")
+            return None
 
-        elif is_cfd or use_crypto_perpetual:
-            # Bybit linear perpetual — supports both buy (long) and sell (short)
-            side       = "buy" if direction == "long" else "sell"
-            fill_price = place_bybit_linear_order(symbol, side, size_usd, entry)
-            actual_qty = size_usd / fill_price
+        max_positions = settings.max_concurrent_positions
+        if len(portfolio.open_positions) >= max_positions:
+            logger.warning(f"Live execution blocked for {symbol}: Max concurrent positions ({max_positions}) reached.")
+            return None
 
-        elif is_crypto:
-            # Bybit spot — long only
-            fill_price = place_bybit_market_order(symbol, "buy", size_usd, entry)
-            actual_qty = size_usd / fill_price
+        # Check cash under lock (estimate fee to be safe)
+        est_fee = size_usd * ENTRY_FEE_RATE
+        if portfolio.cash < (size_usd + est_fee):
+            logger.warning(f"Live execution blocked for {symbol}: Insufficient cash (cash=${portfolio.cash:,.2f}, needed=${(size_usd + est_fee):,.2f})")
+            return None
 
-        else:
-            # Plain stock via Alpaca — long only
-            qty         = size_usd / entry
-            qty_rounded = round(qty, 4)
-            if qty_rounded <= 0:
-                logger.warning(f"Stock quantity too small for {symbol} ({qty}). Skipping.")
-                return None
-            fill_price = place_alpaca_market_order(symbol, "buy", qty_rounded, entry)
-            actual_qty = size_usd / fill_price
-
-    except Exception as e:
-        logger.error(f"Failed to execute live open trade for {symbol}: {e}")
-        send_message(f"⚠️ <b>LIVE execution error</b> for {symbol}: {e}")
-        return None
-
-    # ── Place Stop Loss order on the broker/exchange ─────────────────────────
-    sl_order_id = None
-    if not is_bamboo:
+        calc = None
         try:
-            if is_cfd or is_crypto:
-                exchange = get_bybit_exchange()
-                is_linear = is_cfd or use_crypto_perpetual
-                if is_linear:
-                    exchange.options["defaultType"] = "linear"
+            if is_bamboo:
+                if is_ngx:
+                    qty = int(round(size_usd / entry))
+                    if qty <= 0:
+                        logger.warning(f"NGX stock quantity too small for {symbol} ({qty}). Skipping.")
+                        return None
                 else:
-                    exchange.options["defaultType"] = "spot"
-                exchange.load_markets()
-
-                qty_str = exchange.amount_to_precision(symbol, actual_qty)
-                qty_formatted = float(qty_str)
-
-                sl_side = "sell" if direction == "long" else "buy"
-                sl_params = {
-                    "triggerPrice": exchange.price_to_precision(symbol, stop_loss),
-                    "triggerBy": "LastPrice",
-                    "triggerDirection": "descending" if direction == "long" else "ascending",
+                    qty = float(size_usd / entry)
+                    if qty <= 0.0001:
+                        logger.warning(f"US stock quantity too small for {symbol} ({qty}). Skipping.")
+                        return None
+                logger.info(f"Calculating Bamboo {'NGX' if is_ngx else 'US'} order for {symbol}: qty={qty}...")
+                calc = bamboo_client.calculate_order(symbol, "BUY", qty, entry)
+                
+                clean_symbol = symbol.split("/")[0].split(":")[0].upper()
+                order_payload = {
+                    "fee": float(calc["fee"]),
+                    "order_type": "MARKET",
+                    "order_value": float(calc["total_price"]),
+                    "price": float(calc["price_per_share"]),
+                    "price_per_share": float(calc["price_per_share"]),
+                    "quantity": float(calc["quantity"]),
+                    "side": "BUY",
+                    "source_wallet_id": 0,
+                    "symbol": clean_symbol,
+                    "total_price": float(calc["order_price"])
                 }
-                if is_linear:
-                    sl_params["reduceOnly"] = True
+                logger.info(f"Placing Bamboo {'NGX' if is_ngx else 'US'} BUY order for {symbol}...")
+                order_resp = bamboo_client.place_order(order_payload, symbol=symbol)
+                fill_price = float(calc["price_per_share"])
+                actual_qty = float(calc["quantity"])
+                size_usd = float(calc["total_price"])
 
-                logger.info(f"Placing Bybit exchange Stop Loss order for {symbol} at {stop_loss:.4f}...")
-                sl_order = exchange.create_order(
-                    symbol=symbol,
-                    type="market",
-                    side=sl_side,
-                    amount=qty_formatted,
-                    price=None,
-                    params=sl_params
-                )
-                sl_order_id = sl_order.get("id")
-                logger.success(f"Successfully placed Bybit Stop Loss order: {sl_order_id}")
+            elif is_cfd or use_crypto_perpetual:
+                # Bybit linear perpetual — supports both buy (long) and sell (short)
+                side       = "buy" if direction == "long" else "sell"
+                fill_price = place_bybit_linear_order(symbol, side, size_usd, entry)
+                actual_qty = size_usd / fill_price
+
+            elif is_crypto:
+                # Bybit spot — long only
+                fill_price = place_bybit_market_order(symbol, "buy", size_usd, entry)
+                actual_qty = size_usd / fill_price
 
             else:
-                # Alpaca stock Stop Loss
-                client = get_alpaca_client()
-                from alpaca.trading.requests import StopOrderRequest
-                from alpaca.trading.enums import OrderSide, TimeInForce
+                # Plain stock via Alpaca — long only
+                qty         = size_usd / entry
+                qty_rounded = round(qty, 4)
+                if qty_rounded <= 0:
+                    logger.warning(f"Stock quantity too small for {symbol} ({qty}). Skipping.")
+                    return None
+                fill_price = place_alpaca_market_order(symbol, "buy", qty_rounded, entry)
+                actual_qty = size_usd / fill_price
 
-                qty_rounded = round(actual_qty, 4)
-                if qty_rounded > 0:
-                    sl_side = OrderSide.SELL if direction == "long" else OrderSide.BUY
-                    stop_order_data = StopOrderRequest(
+        except Exception as e:
+            logger.error(f"Failed to execute live open trade for {symbol}: {e}")
+            send_message(f"⚠️ <b>LIVE execution error</b> for {symbol}: {e}")
+            return None
+
+        # ── Place Stop Loss order on the broker/exchange ─────────────────────────
+        sl_order_id = None
+        if not is_bamboo:
+            try:
+                if is_cfd or is_crypto:
+                    exchange = get_bybit_exchange()
+                    is_linear = is_cfd or use_crypto_perpetual
+                    if is_linear:
+                        exchange.options["defaultType"] = "linear"
+                    else:
+                        exchange.options["defaultType"] = "spot"
+                    exchange.load_markets()
+
+                    qty_str = exchange.amount_to_precision(symbol, actual_qty)
+                    qty_formatted = float(qty_str)
+
+                    sl_side = "sell" if direction == "long" else "buy"
+                    sl_params = {
+                        "triggerPrice": exchange.price_to_precision(symbol, stop_loss),
+                        "triggerBy": "LastPrice",
+                        "triggerDirection": "descending" if direction == "long" else "ascending",
+                    }
+                    if is_linear:
+                        sl_params["reduceOnly"] = True
+
+                    logger.info(f"Placing Bybit exchange Stop Loss order for {symbol} at {stop_loss:.4f}...")
+                    sl_order = exchange.create_order(
                         symbol=symbol,
-                        qty=qty_rounded,
+                        type="market",
                         side=sl_side,
-                        stop_price=stop_loss,
-                        time_in_force=TimeInForce.GTC
+                        amount=qty_formatted,
+                        price=None,
+                        params=sl_params
                     )
-                    logger.info(f"Placing Alpaca Stop Loss order for {symbol} at {stop_loss:.4f}...")
-                    sl_order = client.submit_order(order_data=stop_order_data)
-                    sl_order_id = str(sl_order.id)
-                    logger.success(f"Successfully placed Alpaca Stop Loss order: {sl_order_id}")
+                    sl_order_id = sl_order.get("id")
+                    logger.success(f"Successfully placed Bybit Stop Loss order: {sl_order_id}")
 
-        except Exception as e_sl:
-            logger.error(f"Failed to place broker-side Stop Loss order for {symbol}: {e_sl}. Fallback to local monitoring.")
+                else:
+                    # Alpaca stock Stop Loss
+                    client = get_alpaca_client()
+                    from alpaca.trading.requests import StopOrderRequest
+                    from alpaca.trading.enums import OrderSide, TimeInForce
 
-    # ── Place Take Profit order on the broker/exchange ─────────────────────────
-    tp_order_id = None
-    if not is_bamboo:
-        try:
-            tp_order_id = _place_broker_take_profit(
-                symbol=symbol,
-                direction=direction,
-                take_profit=take_profit,
-                qty=actual_qty,
-            )
-        except Exception as e_tp:
-            logger.error(f"Failed to place broker-side Take Profit order for {symbol}: {e_tp}. Fallback to local monitoring.")
+                    qty_rounded = round(actual_qty, 4)
+                    if qty_rounded > 0:
+                        sl_side = OrderSide.SELL if direction == "long" else OrderSide.BUY
+                        stop_order_data = StopOrderRequest(
+                            symbol=symbol,
+                            qty=qty_rounded,
+                            side=sl_side,
+                            stop_price=stop_loss,
+                            time_in_force=TimeInForce.GTC
+                        )
+                        logger.info(f"Placing Alpaca Stop Loss order for {symbol} at {stop_loss:.4f}...")
+                        sl_order = client.submit_order(order_data=stop_order_data)
+                        sl_order_id = str(sl_order.id)
+                        logger.success(f"Successfully placed Alpaca Stop Loss order: {sl_order_id}")
 
-    portfolio = _load_state()
+            except Exception as e_sl:
+                logger.error(f"Failed to place broker-side Stop Loss order for {symbol}: {e_sl}. Fallback to local monitoring.")
 
-    # Deduct transaction fee
-    if is_bamboo and calc:
-        entry_fee = float(calc["fee"])
-    else:
-        entry_fee = size_usd * ENTRY_FEE_RATE
-    portfolio.cash       -= entry_fee
-    portfolio.total_fees += entry_fee
+        # ── Place Take Profit order on the broker/exchange ─────────────────────────
+        tp_order_id = None
+        if not is_bamboo:
+            try:
+                tp_order_id = _place_broker_take_profit(
+                    symbol=symbol,
+                    direction=direction,
+                    take_profit=take_profit,
+                    qty=actual_qty,
+                )
+            except Exception as e_tp:
+                logger.error(f"Failed to place broker-side Take Profit order for {symbol}: {e_tp}. Fallback to local monitoring.")
 
-    pos = Position(
-        symbol=symbol,
-        direction=direction,
-        entry_price=fill_price,
-        size_usd=size_usd,
-        stop_loss=stop_loss,
-        take_profit=take_profit,
-        opened_at=datetime.now(timezone.utc).isoformat(),
-        fee_usd=entry_fee,
-        atr=kwargs.get("atr", 0.0),
-        trailing_high=fill_price if direction == "long" else None,
-        trailing_low=fill_price if direction == "short" else None,
-        sl_order_id=sl_order_id,
-        tp_order_id=tp_order_id,
-    )
-    portfolio.positions.append(pos)
-    portfolio.cash -= size_usd
-    _save_state(portfolio)
+        portfolio = _load_state()
 
-    direction_icon = "📈" if direction == "long" else "📉"
-    logger.success(
-        f"📝 LIVE {direction.upper()} opened: {symbol} ({asset_class.value}) | "
-        f"Size=${size_usd:,.0f} | SL={stop_loss:.4f} | TP={take_profit:.4f} | "
-        f"Entry={fill_price:.4f}"
-    )
+        # Deduct transaction fee
+        if is_bamboo and calc:
+            entry_fee = float(calc["fee"])
+        else:
+            entry_fee = size_usd * ENTRY_FEE_RATE
+        portfolio.cash       -= entry_fee
+        portfolio.total_fees += entry_fee
 
-    send_message(
-        f"{direction_icon} <b>LIVE {direction.upper()} Opened</b>\n"
-        f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"🪙 Symbol: {symbol}\n"
-        f"📂 Asset: {asset_class.value}\n"
-        f"💵 Size: ${size_usd:,.2f}\n"
-        f"📈 Entry: <code>{fill_price:.4f}</code>\n"
-        f"🛑 Stop Loss: <code>{stop_loss:.4f}</code>\n"
-        f"🎯 Take Profit: <code>{take_profit:.4f}</code>"
-    )
-    return pos
+        pos = Position(
+            symbol=symbol,
+            direction=direction,
+            entry_price=fill_price,
+            size_usd=size_usd,
+            stop_loss=stop_loss,
+            take_profit=take_profit,
+            opened_at=datetime.now(timezone.utc).isoformat(),
+            fee_usd=entry_fee,
+            atr=kwargs.get("atr", 0.0),
+            trailing_high=fill_price if direction == "long" else None,
+            trailing_low=fill_price if direction == "short" else None,
+            sl_order_id=sl_order_id,
+            tp_order_id=tp_order_id,
+        )
+        portfolio.positions.append(pos)
+        portfolio.cash -= size_usd
+        _save_state(portfolio)
+
+        direction_icon = "📈" if direction == "long" else "📉"
+        logger.success(
+            f"📝 LIVE {direction.upper()} opened: {symbol} ({asset_class.value}) | "
+            f"Size=${size_usd:,.0f} | SL={stop_loss:.4f} | TP={take_profit:.4f} | "
+            f"Entry={fill_price:.4f}"
+        )
+
+        send_message(
+            f"{direction_icon} <b>LIVE {direction.upper()} Opened</b>\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n"
+            f"🪙 Symbol: {symbol}\n"
+            f"📂 Asset: {asset_class.value}\n"
+            f"💵 Size: ${size_usd:,.2f}\n"
+            f"📈 Entry: <code>{fill_price:.4f}</code>\n"
+            f"🛑 Stop Loss: <code>{stop_loss:.4f}</code>\n"
+            f"🎯 Take Profit: <code>{take_profit:.4f}</code>"
+        )
+        return pos
 
 
 def _cancel_broker_stop_loss(pos: Position):
@@ -926,45 +995,46 @@ def _apply_trailing_stop(pos: Position, price: float) -> None:
 
 def update_prices(current_prices: dict[str, float]):
     """Check if any open positions hit SL or TP. Applies trailing stop ratchet first."""
-    # Sync with broker first to handle stop-out detection
-    try:
-        sync_with_broker()
-    except Exception as e:
-        logger.warning(f"Failed to sync with broker before checking prices: {e}")
-        
-    portfolio = _load_state()
-    for pos in portfolio.open_positions:
-        price = current_prices.get(pos.symbol)
-        if not price:
-            continue
+    with state_lock():
+        # Sync with broker first to handle stop-out detection
+        try:
+            sync_with_broker()
+        except Exception as e:
+            logger.warning(f"Failed to sync with broker before checking prices: {e}")
+            
+        portfolio = _load_state()
+        for pos in portfolio.open_positions:
+            price = current_prices.get(pos.symbol)
+            if not price:
+                continue
 
-        # Apply trailing stop ratchet
-        _apply_trailing_stop(pos, price)
+            # Apply trailing stop ratchet
+            _apply_trailing_stop(pos, price)
 
-        if pos.direction == "long":
-            if price <= pos.stop_loss:
-                if not pos.sl_order_id:
-                    _close_position(portfolio, pos, price, "stopped")
-                else:
-                    logger.info(f"Stop loss level hit for {pos.symbol} but exchange-side SL order {pos.sl_order_id} is active. Relying on broker to trigger.")
-            elif price >= pos.take_profit:
-                if not pos.tp_order_id:
-                    _close_position(portfolio, pos, price, "closed")
-                else:
-                    logger.info(f"Take profit level hit for {pos.symbol} but exchange-side TP order {pos.tp_order_id} is active. Relying on broker to trigger.")
-        else:  # short
-            if price >= pos.stop_loss:
-                if not pos.sl_order_id:
-                    _close_position(portfolio, pos, price, "stopped")
-                else:
-                    logger.info(f"Stop loss level hit for {pos.symbol} but exchange-side SL order {pos.sl_order_id} is active. Relying on broker to trigger.")
-            elif price <= pos.take_profit:
-                if not pos.tp_order_id:
-                    _close_position(portfolio, pos, price, "closed")
-                else:
-                    logger.info(f"Take profit level hit for {pos.symbol} but exchange-side TP order {pos.tp_order_id} is active. Relying on broker to trigger.")
+            if pos.direction == "long":
+                if price <= pos.stop_loss:
+                    if not pos.sl_order_id:
+                        _close_position(portfolio, pos, price, "stopped")
+                    else:
+                        logger.info(f"Stop loss level hit for {pos.symbol} but exchange-side SL order {pos.sl_order_id} is active. Relying on broker to trigger.")
+                elif price >= pos.take_profit:
+                    if not pos.tp_order_id:
+                        _close_position(portfolio, pos, price, "closed")
+                    else:
+                        logger.info(f"Take profit level hit for {pos.symbol} but exchange-side TP order {pos.tp_order_id} is active. Relying on broker to trigger.")
+            else:  # short
+                if price >= pos.stop_loss:
+                    if not pos.sl_order_id:
+                        _close_position(portfolio, pos, price, "stopped")
+                    else:
+                        logger.info(f"Stop loss level hit for {pos.symbol} but exchange-side SL order {pos.sl_order_id} is active. Relying on broker to trigger.")
+                elif price <= pos.take_profit:
+                    if not pos.tp_order_id:
+                        _close_position(portfolio, pos, price, "closed")
+                    else:
+                        logger.info(f"Take profit level hit for {pos.symbol} but exchange-side TP order {pos.tp_order_id} is active. Relying on broker to trigger.")
 
-    _save_state(portfolio)
+        _save_state(portfolio)
 
 
 def _close_position(portfolio: LivePortfolio, pos: Position, exit_price: float, status: str):
@@ -1048,6 +1118,7 @@ def _close_position(portfolio: LivePortfolio, pos: Position, exit_price: float, 
 _last_sync_time = 0.0
 
 
+@locked
 def sync_with_broker() -> bool:
     """
     Synchronizes the local live_state.json with actual positions on the broker/exchange.
@@ -1566,6 +1637,7 @@ def sync_with_broker() -> bool:
     return False
 
 
+@locked
 def get_status() -> dict:
     global _last_sync_time
     now = time.time()

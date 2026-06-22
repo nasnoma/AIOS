@@ -86,50 +86,14 @@ def evaluate_asset(symbol: str, timeframe: str, train_days: int, val_days: int, 
     # Add a padding of 250 candles to account for technical indicator burn-in (e.g. EMA_200)
     limit = min(total_days * candles_per_day + 250, 100000)
     
-    # Try to load from local cache first to speed up optimization loop iterations
-    symbol_clean = symbol.replace("/", "_").replace(":", "_")
-    cache_path = Path("/Users/nasir.noma/claude_projects/AIOS/data") / f"historical_{timeframe}_{symbol_clean}.csv"
-    
-    df = None
-    if cache_path.exists():
-        try:
-            df = pd.read_csv(cache_path, index_col=0, parse_dates=True)
-            if len(df) >= limit:
-                logger.info(f"Loaded {len(df)} rows from local cache for {symbol} ({cache_path})")
-                df = df.tail(limit)
-            else:
-                logger.info(f"Local cache for {symbol} has insufficient rows ({len(df)} < {limit}). Refetching...")
-                df = None
-        except Exception as e:
-            logger.warning(f"Failed to read cache for {symbol}: {e}")
-            df = None
-
-    if df is None:
-        # Fetch data using our standard data layer fetchers
-        try:
-            if ac in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL):
-                from trading_engine.data.cfd_data import BybitCFDFetcher
-                fetcher = BybitCFDFetcher()
-            elif ac == AssetClass.CRYPTO:
-                from trading_engine.data.market_data import CryptoDataFetcher
-                fetcher = CryptoDataFetcher()
-            else:
-                from trading_engine.data.market_data import StockDataFetcher
-                fetcher = StockDataFetcher()
-                
-            df = fetcher.fetch_ohlcv(symbol, timeframe, limit)
-            
-            # Save to cache
-            cache_path.parent.mkdir(parents=True, exist_ok=True)
-            df.to_csv(cache_path)
-            logger.info(f"Cached {len(df)} rows to {cache_path}")
-        except Exception as e:
-            logger.error(f"Failed to fetch data for {symbol}: {e}")
-            return {"error": str(e)}
-        
-    from trading_engine.data.market_data import compute_indicators
-    df = compute_indicators(df)
-    df = df.dropna()
+    from trading_engine.data.market_data import load_historical_data, compute_indicators
+    try:
+        df = load_historical_data(symbol, timeframe=timeframe, limit=limit)
+        df = compute_indicators(df)
+        df = df.dropna()
+    except Exception as e:
+        logger.error(f"Failed to fetch/load data for {symbol}: {e}")
+        return {"error": str(e)}
     
     N = len(df)
     if N < 50:

@@ -194,94 +194,95 @@ async def bamboo_webhook(request: Request):
 
     event_type = payload.get("event_type") or payload.get("event")
     
-    if event_type == "deposit_status_update":
-        status = payload.get("status")
-        reference = payload.get("reference")
-        amount = float(payload.get("amount") or 0.0)
-        
-        logger.info(f"Bamboo deposit status update: ref={reference}, status={status}, amount={amount}")
-        
-        # On "Settlemented", credit the cash to live portfolio
-        if status == "Settlemented":
+    with live_trader.state_lock():
+        if event_type == "deposit_status_update":
+            status = payload.get("status")
+            reference = payload.get("reference")
+            amount = float(payload.get("amount") or 0.0)
+            
+            logger.info(f"Bamboo deposit status update: ref={reference}, status={status}, amount={amount}")
+            
+            # On "Settlemented", credit the cash to live portfolio
+            if status == "Settlemented":
+                portfolio = live_trader._load_state()
+                portfolio.cash += amount
+                portfolio.account_size += amount
+                live_trader._save_state(portfolio)
+                logger.success(f"Credited deposit of ${amount:,.2f} (ref: {reference}) to live portfolio.")
+                
+                # Send Telegram alert
+                send_message(
+                    f"💰 <b>BAMBOO DEPOSIT SETTLED</b>\n"
+                    f"━━━━━━━━━━━━━━━━━━━━\n"
+                    f"📂 Reference: <code>{reference}</code>\n"
+                    f"💵 Amount: <b>${amount:,.2f}</b>\n"
+                    f"📊 New Portfolio Cash: <b>${portfolio.cash:,.2f}</b>"
+                )
+                
+        elif event_type == "trade_status_update":
+            status = payload.get("status")
+            side = payload.get("side", "").upper()
+            symbol = payload.get("symbol", "").upper()
+            order_id = payload.get("order_id")
+            
+            logger.info(f"Bamboo trade status update: symbol={symbol}, side={side}, status={status}, order_id={order_id}")
+            
+            # Load state
             portfolio = live_trader._load_state()
-            portfolio.cash += amount
-            portfolio.account_size += amount
-            live_trader._save_state(portfolio)
-            logger.success(f"Credited deposit of ${amount:,.2f} (ref: {reference}) to live portfolio.")
             
-            # Send Telegram alert
-            send_message(
-                f"💰 <b>BAMBOO DEPOSIT SETTLED</b>\n"
-                f"━━━━━━━━━━━━━━━━━━━━\n"
-                f"📂 Reference: <code>{reference}</code>\n"
-                f"💵 Amount: <b>${amount:,.2f}</b>\n"
-                f"📊 New Portfolio Cash: <b>${portfolio.cash:,.2f}</b>"
-            )
-            
-    elif event_type == "trade_status_update":
-        status = payload.get("status")
-        side = payload.get("side", "").upper()
-        symbol = payload.get("symbol", "").upper()
-        order_id = payload.get("order_id")
-        
-        logger.info(f"Bamboo trade status update: symbol={symbol}, side={side}, status={status}, order_id={order_id}")
-        
-        # Load state
-        portfolio = live_trader._load_state()
-        
-        if status in ("cancelled", "rejected"):
-            # If buy order is rejected/cancelled, revert the reserved cash
-            if side == "BUY":
-                for pos in list(portfolio.positions):
-                    pos_sym_clean = pos.symbol.split("/")[0].split(":")[0].upper()
-                    pay_sym_clean = symbol.split("/")[0].split(":")[0].upper()
-                    if pos_sym_clean == pay_sym_clean and pos.status == "open":
-                        portfolio.cash += pos.size_usd + pos.fee_usd
-                        portfolio.positions.remove(pos)
-                        live_trader._save_state(portfolio)
-                        logger.warning(f"Reverted buy position for {pos.symbol} due to order rejection/cancellation.")
-                        send_message(
-                            f"❌ <b>BAMBOO ORDER REJECTED/CANCELLED</b>\n"
-                            f"━━━━━━━━━━━━━━━━━━━━\n"
-                            f"🪙 Symbol: {pos.symbol}\n"
-                            f"💵 Refunded: ${pos.size_usd + pos.fee_usd:,.2f}"
-                        )
-                        break
-        elif status == "filled":
-            if side == "BUY":
-                # Buy order filled: send Telegram notification of fill confirmation
-                for pos in portfolio.positions:
-                    pos_sym_clean = pos.symbol.split("/")[0].split(":")[0].upper()
-                    pay_sym_clean = symbol.split("/")[0].split(":")[0].upper()
-                    if pos_sym_clean == pay_sym_clean and pos.status == "open":
-                        send_message(
-                            f"✅ <b>BAMBOO BUY ORDER FILLED</b>\n"
-                            f"━━━━━━━━━━━━━━━━━━━━\n"
-                            f"🪙 Symbol: {pos.symbol}\n"
-                            f"📈 Entry Price: <code>{pos.entry_price:.4f}</code>\n"
-                            f"💵 Size: ${pos.size_usd:,.2f}"
-                        )
-                        break
-            elif side == "SELL":
-                # Sell order filled: close the position and finalize P&L
-                for pos in list(portfolio.positions):
-                    pos_sym_clean = pos.symbol.split("/")[0].split(":")[0].upper()
-                    pay_sym_clean = symbol.split("/")[0].split(":")[0].upper()
-                    if pos_sym_clean == pay_sym_clean and pos.status == "open":
-                        fill_price = float(payload.get("price") or payload.get("price_per_share") or pos.entry_price)
-                        fee_cost = float(payload.get("fee") or (pos.size_usd * live_trader.EXIT_FEE_RATE))
-                        
-                        live_trader._finalize_closed_position(
-                            portfolio=portfolio,
-                            pos=pos,
-                            fill_price=fill_price,
-                            fee_cost=fee_cost,
-                            closed_at=datetime.utcnow().isoformat(),
-                            local_close_cash_update=True
-                        )
-                        live_trader._save_state(portfolio)
-                        break
-                        
+            if status in ("cancelled", "rejected"):
+                # If buy order is rejected/cancelled, revert the reserved cash
+                if side == "BUY":
+                    for pos in list(portfolio.positions):
+                        pos_sym_clean = pos.symbol.split("/")[0].split(":")[0].upper()
+                        pay_sym_clean = symbol.split("/")[0].split(":")[0].upper()
+                        if pos_sym_clean == pay_sym_clean and pos.status == "open":
+                            portfolio.cash += pos.size_usd + pos.fee_usd
+                            portfolio.positions.remove(pos)
+                            live_trader._save_state(portfolio)
+                            logger.warning(f"Reverted buy position for {pos.symbol} due to order rejection/cancellation.")
+                            send_message(
+                                f"❌ <b>BAMBOO ORDER REJECTED/CANCELLED</b>\n"
+                                f"━━━━━━━━━━━━━━━━━━━━\n"
+                                f"🪙 Symbol: {pos.symbol}\n"
+                                f"💵 Refunded: ${pos.size_usd + pos.fee_usd:,.2f}"
+                            )
+                            break
+            elif status == "filled":
+                if side == "BUY":
+                    # Buy order filled: send Telegram notification of fill confirmation
+                    for pos in portfolio.positions:
+                        pos_sym_clean = pos.symbol.split("/")[0].split(":")[0].upper()
+                        pay_sym_clean = symbol.split("/")[0].split(":")[0].upper()
+                        if pos_sym_clean == pay_sym_clean and pos.status == "open":
+                            send_message(
+                                f"✅ <b>BAMBOO BUY ORDER FILLED</b>\n"
+                                f"━━━━━━━━━━━━━━━━━━━━\n"
+                                f"🪙 Symbol: {pos.symbol}\n"
+                                f"📈 Entry Price: <code>{pos.entry_price:.4f}</code>\n"
+                                f"💵 Size: ${pos.size_usd:,.2f}"
+                            )
+                            break
+                elif side == "SELL":
+                    # Sell order filled: close the position and finalize P&L
+                    for pos in list(portfolio.positions):
+                        pos_sym_clean = pos.symbol.split("/")[0].split(":")[0].upper()
+                        pay_sym_clean = symbol.split("/")[0].split(":")[0].upper()
+                        if pos_sym_clean == pay_sym_clean and pos.status == "open":
+                            fill_price = float(payload.get("price") or payload.get("price_per_share") or pos.entry_price)
+                            fee_cost = float(payload.get("fee") or (pos.size_usd * live_trader.EXIT_FEE_RATE))
+                            
+                            live_trader._finalize_closed_position(
+                                portfolio=portfolio,
+                                pos=pos,
+                                fill_price=fill_price,
+                                fee_cost=fee_cost,
+                                closed_at=datetime.utcnow().isoformat(),
+                                local_close_cash_update=True
+                            )
+                            live_trader._save_state(portfolio)
+                            break
+                            
     return {"status": "processed"}
 
 

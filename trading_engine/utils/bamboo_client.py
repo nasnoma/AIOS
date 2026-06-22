@@ -32,6 +32,10 @@ class BambooClient:
                 "x-subject-type": settings.bamboo_subject_type,
                 "x-request-source": settings.bamboo_username,
             })
+            if settings.bamboo_cscs:
+                headers["x-cscs-no"] = settings.bamboo_cscs
+            if settings.bamboo_chn:
+                headers["x-chn-ngx"] = settings.bamboo_chn
         return headers
 
     def get_client_token(self) -> str:
