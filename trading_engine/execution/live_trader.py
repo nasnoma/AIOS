@@ -1238,6 +1238,14 @@ def sync_with_broker() -> bool:
                                     # Convert base-currency fee to USDT using transaction price
                                     fee_cost = fee_cost * price
                             
+                            # Check if this order is a reduce/close of an existing position
+                            closed_size = 0.0
+                            if ex.get("info") and isinstance(ex["info"], dict):
+                                try:
+                                    closed_size = float(ex["info"].get("closedSize") or 0.0)
+                                except (ValueError, TypeError):
+                                    closed_size = 0.0
+
                             if side == "buy":
                                 # Check if it closes an open short run
                                 short_run = None
@@ -1257,7 +1265,10 @@ def sync_with_broker() -> bool:
                                     short_run.status = "closed" if pnl >= 0 else "stopped"
                                     reconstructed_closed.append(short_run)
                                 else:
-                                    # Opens a new long position
+                                    # Opens a new long position - ONLY if it's not a short cover
+                                    if closed_size > 0:
+                                        logger.info(f"Sync: Skipping ghost long reconstruction for {sym} as the BUY order was a short cover (closedSize={closed_size})")
+                                        continue
                                     norm_sym = sym.upper().replace("/", "").replace(":", "").replace("-", "").strip()
                                     sl_order_id = None
                                     tp_order_id = None
@@ -1318,7 +1329,10 @@ def sync_with_broker() -> bool:
                                     long_run.status = "closed" if pnl >= 0 else "stopped"
                                     reconstructed_closed.append(long_run)
                                 else:
-                                    # Opens a new short position (for perpetuals / CFDs)
+                                    # Opens a new short position (for perpetuals / CFDs) - ONLY if it's not a long close
+                                    if closed_size > 0:
+                                        logger.info(f"Sync: Skipping ghost short reconstruction for {sym} as the SELL order was a long close (closedSize={closed_size})")
+                                        continue
                                     norm_sym = sym.upper().replace("/", "").replace(":", "").replace("-", "").strip()
                                     sl_order_id = None
                                     tp_order_id = None

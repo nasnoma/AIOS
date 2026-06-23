@@ -40,6 +40,7 @@ class TestBambooClient:
         # Clear token first
         bamboo_client.client_token = None
         bamboo_client.token_expiry = 0.0
+        bamboo_client.last_login_fail = 0.0
 
         token = bamboo_client.get_client_token()
         assert token == "mock_jwt_token"
