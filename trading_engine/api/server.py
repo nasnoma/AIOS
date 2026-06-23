@@ -97,6 +97,66 @@ async def get_evolution():
     return {"history": history, "count": len(history)}
 
 
+@app.get("/api/diagnostics/trades")
+async def get_diagnostics_trades():
+    from trading_engine.storage import db
+    try:
+        with db.get_session() as session:
+            trades = session.query(db.ClosedTradeLog).order_by(db.ClosedTradeLog.opened_at.desc()).limit(50).all()
+            return {
+                "status": "ok",
+                "trades": [
+                    {
+                        "id": t.id,
+                        "symbol": t.symbol,
+                        "direction": t.direction,
+                        "entry_price": t.entry_price,
+                        "exit_price": t.exit_price,
+                        "size_usd": t.size_usd,
+                        "pnl_usd": t.pnl_usd,
+                        "fee_usd": t.fee_usd,
+                        "opened_at": t.opened_at.isoformat() if t.opened_at else None,
+                        "closed_at": t.closed_at.isoformat() if t.closed_at else None,
+                        "exit_reason": t.exit_reason
+                    }
+                    for t in trades
+                ]
+            }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/api/diagnostics/orders")
+async def get_diagnostics_orders():
+    from trading_engine.storage import db
+    try:
+        with db.get_session() as session:
+            orders = session.query(db.OrderAuditLog).order_by(db.OrderAuditLog.timestamp.desc()).limit(100).all()
+            return {
+                "status": "ok",
+                "orders": [
+                    {
+                        "id": o.id,
+                        "timestamp": o.timestamp.isoformat() if o.timestamp else None,
+                        "symbol": o.symbol,
+                        "side": o.side,
+                        "qty": o.qty,
+                        "price": o.price,
+                        "order_type": o.order_type,
+                        "payload": o.payload,
+                        "response": o.response,
+                        "status": o.status,
+                        "error_message": o.error_message
+                    }
+                    for o in orders
+                ]
+            }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+
+
 @app.get("/api/market_status")
 async def get_market_status():
     """
