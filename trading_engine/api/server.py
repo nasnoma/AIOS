@@ -131,7 +131,7 @@ async def get_diagnostics_orders():
     from trading_engine.storage import db
     try:
         with db.get_session() as session:
-            orders = session.query(db.OrderAuditLog).order_by(db.OrderAuditLog.timestamp.desc()).limit(100).all()
+            orders = session.query(db.OrderAuditLog).order_by(db.OrderAuditLog.id.desc()).limit(100).all()
             return {
                 "status": "ok",
                 "orders": [
