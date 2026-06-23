@@ -9,6 +9,7 @@ class BambooClient:
         self.base_url = settings.bamboo_base_url.rstrip("/")
         self.client_token = None
         self.token_expiry = 0.0
+        self.last_login_fail = 0.0
 
     def _get_api_prefix(self, symbol: str = None, asset_class = None) -> str:
         from trading_engine.market_hours import classify_symbol, AssetClass
@@ -40,6 +41,9 @@ class BambooClient:
 
     def get_client_token(self) -> str:
         now = time.time()
+        # Cooldown check: if login failed recently, don't try again immediately
+        if now - self.last_login_fail < 300:
+            raise Exception(f"Bamboo login is on cooldown. Last failed {now - self.last_login_fail:.1f}s ago.")
         # Refresh 5 minutes before expiry
         if not self.client_token or now >= self.token_expiry - 300:
             self._login()
@@ -81,6 +85,7 @@ class BambooClient:
             self.token_expiry = time.time() + expires_in
             logger.success("Successfully authenticated with Bamboo API.")
         except Exception as e:
+            self.last_login_fail = time.time()
             logger.error(f"Failed to authenticate with Bamboo API: {e}")
             raise
 
