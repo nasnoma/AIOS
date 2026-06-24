@@ -178,28 +178,12 @@ def monitor_positions():
     if not open_positions:
         return
 
-    # Fetch current prices for all open symbols
-    from trading_engine.market_hours import classify_symbol, AssetClass
-    from trading_engine.data.market_data import CryptoDataFetcher, StockDataFetcher
-    from trading_engine.data.cfd_data import BybitCFDFetcher
+    # Fetch current prices for all open symbols (all assumed to be crypto)
     import ccxt
 
     current_prices: dict[str, float] = {}
+    crypto_symbols = [pos.symbol for pos in open_positions]
 
-    # Classify all open positions
-    crypto_symbols = []
-    cfd_symbols    = []
-    stock_symbols  = []
-    for pos in open_positions:
-        ac = classify_symbol(pos.symbol)
-        if ac in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL):
-            cfd_symbols.append(pos.symbol)
-        elif ac == AssetClass.CRYPTO:
-            crypto_symbols.append(pos.symbol)
-        else:
-            stock_symbols.append(pos.symbol)
-
-    # 1. Crypto — Bybit spot
     if crypto_symbols:
         try:
             exchange_class = getattr(ccxt, settings.crypto_exchange)
@@ -214,32 +198,6 @@ def monitor_positions():
                     logger.warning(f"Price monitor fetch error for asset {asset} (fetch_symbol={fetch_asset}): {e_asset}")
         except Exception as e:
             logger.warning(f"Price monitor fetch error for crypto: {e}")
-
-    # 2. Bybit linear CFDs (stocks + metals)
-    if cfd_symbols:
-        cfd_fetcher = BybitCFDFetcher()
-        for asset in cfd_symbols:
-            try:
-                price = cfd_fetcher.fetch_latest_price(asset)
-                if price > 0:
-                    current_prices[asset] = price
-            except Exception as e:
-                logger.warning(f"Price monitor fetch error for CFD {asset}: {e}")
-
-    # 3. Plain stocks via Massive/Polygon
-    unfetched_stocks = [s for s in stock_symbols if s not in current_prices]
-    if unfetched_stocks and settings.get_massive_api_key:
-        try:
-            fetcher = StockDataFetcher()
-            for asset in unfetched_stocks:
-                try:
-                    price = fetcher.fetch_latest_price(asset)
-                    if price > 0:
-                        current_prices[asset] = price
-                except Exception as e:
-                    logger.warning(f"Price monitor fetch error for stock {asset}: {e}")
-        except Exception as e:
-            logger.warning(f"Price monitor fetch error for stocks: {e}")
 
     if current_prices:
         trader.update_prices(current_prices)
@@ -269,9 +227,6 @@ def run_bounty_hunter_cycle():
     results = run_bounty_hunt(
         mode=scan_mode,
         crypto_limit=15,
-        stock_limit=5,
-        cfd_limit=5,          # Bybit stock CFDs + metals
-        scan_cfds=True,
         watchlist=watchlist,
     )
 

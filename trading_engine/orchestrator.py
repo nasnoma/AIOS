@@ -123,110 +123,6 @@ def run(
     from trading_engine.market_hours import classify_symbol, AssetClass
     ac = classify_symbol(symbol)
     
-    if ac == AssetClass.NGX_STOCK:
-        # Step 1: Fetch market data
-        logger.info("📊 Fetching NGX market data...")
-        snap = build_snapshot(symbol, tf)
-        logger.info(f"   Close={snap.close:.4f} | RSI={snap.rsi:.1f} | ATR={snap.atr:.4f}")
-        
-        # Step 2: Auto-select or load best strategy from strategy_map.json
-        from trading_engine.backtest.engine import _ngx_load_strategy_map, _NGX_STRATEGY_FNS
-        strategy_map = _ngx_load_strategy_map()
-        ticker = symbol.split("/")[0].split(":")[0].upper()
-        # Default to MomBreakout if not mapped
-        strategy_name = strategy_map.get(ticker, {}).get("strategy", "MomBreakout")
-        logger.info(f"   Using mapped strategy for {symbol}: {strategy_name}")
-        
-        # Step 3: Compute signals
-        strategy_fn = _NGX_STRATEGY_FNS.get(strategy_name)
-        if not strategy_fn:
-            logger.warning(f"Strategy {strategy_name} not found, falling back to MomBreakout")
-            strategy_name = "MomBreakout"
-            strategy_fn = _NGX_STRATEGY_FNS[strategy_name]
-            
-        buy_sig, sell_sig = strategy_fn(snap.df)
-        buy_active = bool(buy_sig.iloc[-1]) if len(buy_sig) > 0 else False
-        sell_active = bool(sell_sig.iloc[-1]) if len(sell_sig) > 0 else False
-        
-        decision = Signal.HOLD
-        if buy_active:
-            decision = Signal.BUY
-        elif sell_active:
-            decision = Signal.SELL
-            
-        verdict = JudgeVerdict(
-            decision=decision,
-            confidence=100.0 if decision != Signal.HOLD else 0.0,
-            agreement=8,
-            disagreement=0,
-            weighted_score=1.0 if decision != Signal.HOLD else 0.0,
-            reasoning=f"NGX native strategy {strategy_name} generated {decision.value} signal.",
-            agent_reports=[],
-            approved=(decision != Signal.HOLD),
-        )
-        
-        agent_signals = [{
-            "agent": "ngx_native",
-            "signal": decision.value,
-            "confidence": 100.0,
-            "reason": f"Strategy {strategy_name} Buy={buy_active}, Sell={sell_active}",
-        }]
-        
-        # Step 4: Risk Agent evaluation
-        logger.info("🛡️  Risk Agent evaluating...")
-        risk: RiskDecision = risk_evaluate(
-            verdict, snap,
-            current_portfolio_heat=portfolio_heat,
-            historical_win_rate=win_rate,
-            open_positions=open_positions,
-            open_position_snaps=open_position_snaps or {},
-            daily_pnl_usd=daily_pnl_usd,
-        )
-        
-        # Step 5: Final decision
-        if risk.approved:
-            final_action = verdict.decision.value
-            logger.success(f"✅ TRADE APPROVED: {final_action} {symbol}")
-            logger.success(f"   Entry: {risk.entry_price:.4f} | SL: {risk.stop_loss:.4f} | "
-                           f"TP: {risk.take_profit:.4f} | Size: ${risk.position_size_usd:,.0f}")
-        else:
-            final_action = "NO_TRADE"
-            logger.warning(f"❌ TRADE REJECTED ({symbol}): {risk.reason}")
-            
-        signal = TradeSignal(
-            symbol=symbol,
-            asset_type=snap.asset_type,
-            timeframe=tf,
-            timestamp=datetime.now(timezone.utc).isoformat(),
-            agent_signals=agent_signals,
-            verdict={
-                "decision": verdict.decision.value,
-                "confidence": verdict.confidence,
-                "agreement": verdict.agreement,
-                "disagreement": verdict.disagreement,
-                "approved": verdict.approved,
-            },
-            risk={
-                "approved": risk.approved,
-                "reason": risk.reason,
-                "position_size_pct": risk.position_size_pct,
-                "position_size_usd": risk.position_size_usd,
-                "stop_loss_pct": risk.stop_loss_pct,
-                "take_profit_pct": risk.take_profit_pct,
-                "risk_reward": risk.risk_reward,
-                "max_loss_usd": risk.max_loss_usd,
-                "atr": risk.atr,
-            },
-            final_action=final_action,
-            entry_price=risk.entry_price,
-            stop_loss=risk.stop_loss if risk.approved else None,
-            take_profit=risk.take_profit if risk.approved else None,
-            position_size_usd=risk.position_size_usd if risk.approved else None,
-            reasoning=verdict.reasoning,
-        )
-        logger.info(f"{'='*60}\n")
-        return signal
-
     # Step 1: Fetch market data + indicators
     logger.info("📊 Fetching market data...")
     snap = build_snapshot(symbol, tf)
@@ -248,13 +144,6 @@ def run(
         # Map symbol to optimization target category
         if ac == AssetClass.CRYPTO:
             target = "crypto"
-        elif ac in (AssetClass.STOCK, AssetClass.STOCK_CFD, AssetClass.BAMBOO_US_STOCK):
-            target = "stock"
-        elif ac == AssetClass.PRECIOUS_METAL:
-            if symbol.upper().startswith("CL") or symbol.upper().startswith("USOIL"):
-                target = "oil"
-            else:
-                target = "metal"
         else:
             target = "crypto"
             
@@ -374,14 +263,10 @@ def run_all_assets() -> list[TradeSignal]:
     results = []
     snap_cache: dict = {}   # symbol -> MarketSnapshot, built as we scan
     all_assets = settings.crypto_assets
-    if settings.get_massive_api_key:
-        all_assets += settings.stock_assets
-    all_assets += settings.ngx_assets
-    all_assets += settings.bamboo_us_assets
 
     # Filter out any closed assets to prevent pipeline errors / API requests on closed markets
     from trading_engine.market_hours import filter_open_symbols
-    all_assets = filter_open_symbols(all_assets, extended_stock_hours=settings.extended_cfd_hours)
+    all_assets = filter_open_symbols(all_assets)
 
     # Pre-populate snap_cache with currently-held open positions
     status = trader.get_status()

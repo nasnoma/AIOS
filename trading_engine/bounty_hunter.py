@@ -179,161 +179,6 @@ def scan_bybit_crypto(mode: str = "oversold", limit: int = 5, watchlist: Optiona
     return selected
 
 
-def scan_bybit_cfds(
-    mode: str = "oversold",
-    limit: int = 5,
-    include_stocks: bool = True,
-    include_metals: bool = True,
-    watchlist: Optional[list[str]] = None,
-) -> list[str]:
-    """
-    Scan Bybit linear perpetual CFDs (US stock CFDs + precious metals).
-
-    Applies a market hours guard per symbol — any symbol whose market is closed
-    is silently skipped (not counted against `limit`).
-
-    Args:
-        mode:            Scan mode — 'oversold' | 'momentum' | 'volume' | 'hot'
-        limit:           Max symbols to return (after market hours filtering)
-        include_stocks:  Include US stock CFDs (AAPL/USDT:USDT etc.)
-        include_metals:  Include precious metals (XAU/USDT:USDT, XAG/USDT:USDT)
-        watchlist:       If set, restrict to these symbols only
-
-    Returns:
-        list of symbol strings whose market is currently open.
-    """
-    from trading_engine.market_hours import is_market_open, filter_open_symbols
-    from trading_engine.data.cfd_data import fetch_cfd_ticker
-
-    pool: list[str] = []
-    if include_stocks:
-        pool.extend(settings.cfd_stock_assets)
-    if include_metals:
-        pool.extend(settings.cfd_metal_assets)
-
-    # Watchlist override
-    if watchlist:
-        wl_upper = {w.upper() for w in watchlist}
-        pool = [s for s in pool if s.upper() in wl_upper or s.split("/")[0].upper() in wl_upper]
-
-    logger.info(f"🏦 Bybit CFD scan: {len(pool)} candidate(s) — mode={mode}")
-
-    # Market hours guard: drop closed symbols immediately
-    open_pool = filter_open_symbols(pool, extended_stock_hours=settings.extended_cfd_hours)
-    if not open_pool:
-        logger.info("⏸️  All CFD markets are currently closed — skipping CFD scan.")
-        return []
-
-    # Fetch tickers for sorting
-    exchange = ccxt.bybit({"options": {"defaultType": "linear"}})
-    ranked: list[dict] = []
-
-    for symbol in open_pool:
-        try:
-            ticker = exchange.fetch_ticker(symbol)
-            quote_volume = ticker.get("quoteVolume") or (
-                (ticker.get("baseVolume") or 0) * (ticker.get("close") or 0)
-            )
-            percentage = ticker.get("percentage") or 0.0
-            ranked.append({
-                "symbol":  symbol,
-                "volume":  float(quote_volume),
-                "change":  float(percentage),
-                "close":   float(ticker.get("close") or 0),
-            })
-        except Exception as e:
-            logger.warning(f"CFD ticker fetch failed for {symbol}: {e}")
-
-    if not ranked:
-        return []
-
-    # Sort by mode
-    if mode == "oversold":
-        ranked.sort(key=lambda x: x["change"])
-    elif mode == "momentum":
-        ranked.sort(key=lambda x: x["change"], reverse=True)
-    elif mode in ("volume", "hot"):
-        ranked.sort(key=lambda x: x["volume"], reverse=True)
-
-    selected = [r["symbol"] for r in ranked[:limit]]
-    logger.info(f"Selected Bybit CFD candidates: {selected}")
-    return selected
-
-
-
-def scan_massive_stocks(mode: str = "oversold", limit: int = 5, watchlist: Optional[list[str]] = None) -> list[str]:
-    """
-    Scans US stocks using Massive Grouped Daily aggregates.
-    Filters by price (> $5) and volume (> 500,000) and sorts based on mode.
-    Returns the top 'limit' candidates.
-    """
-    api_key = settings.get_massive_api_key
-    if not api_key:
-        logger.warning("No Massive API key found. Skipping Stock scan.")
-        return []
-        
-    try:
-        date_str = get_latest_trading_date()
-    except Exception as e:
-        logger.error(f"Failed to resolve latest stock trading date: {e}")
-        return []
-        
-    logger.info(f"🔍 Starting Massive Grouped Stocks scan for {date_str} (mode={mode}, limit={limit})...")
-    url = f"https://api.massive.com/v2/aggs/grouped/locale/us/market/stocks/{date_str}"
-    
-    try:
-        resp = get_with_retry(url, params={"adjusted": "true", "apiKey": api_key}, timeout=8)
-        resp.raise_for_status()
-        results = resp.json().get("results", [])
-    except Exception as e:
-        logger.error(f"Failed to fetch Grouped aggregates from Massive: {e}")
-        return []
-        
-    candidates = []
-    for r in results:
-        ticker = r.get("T")
-        open_p = r.get("o")
-        close_p = r.get("c")
-        vol = r.get("v")
-        
-        if not ticker or not open_p or not close_p or not vol:
-            continue
-            
-        # Clean ticker format filtering (length 1 to 5, alphanumeric, avoids preferred shares/warrants)
-        if len(ticker) > 5 or not ticker.isalnum():
-            continue
-            
-        # Filter by watchlist/favourites
-        if watchlist is not None and ticker.upper() not in [w.upper() for w in watchlist]:
-            continue
-
-        # Filter: Price > $5, Volume > 500,000
-        if close_p < 5.0 or vol < 500_000:
-            continue
-            
-        # Daily return percentage change
-        pct_change = (close_p - open_p) / open_p * 100
-        
-        candidates.append({
-            "ticker": ticker,
-            "volume": vol * close_p,  # Traded dollar volume
-            "change": pct_change,
-        })
-        
-    logger.info(f"Found {len(candidates)} liquid stocks.")
-    
-    # Sort based on mode
-    if mode == "oversold":
-        candidates.sort(key=lambda x: x["change"])
-    elif mode == "momentum":
-        candidates.sort(key=lambda x: x["change"], reverse=True)
-    elif mode in ("volume", "hot"):
-        candidates.sort(key=lambda x: x["volume"], reverse=True)
-        
-    selected = [c["ticker"] for c in candidates[:limit]]
-    logger.info(f"Selected stock candidates: {selected}")
-    return selected
-
 
 def fetch_orderbook_imbalance(symbol: str) -> float:
     """Calculates order book buy pressure imbalance (bids vs asks volume)."""
@@ -661,9 +506,6 @@ def check_preflight_probability(snap: MarketSnapshot, mode: str) -> tuple[bool, 
 def run_bounty_hunt(
     mode: str = "oversold",
     crypto_limit: int = 5,
-    stock_limit: int = 5,
-    cfd_limit: int = 4,
-    scan_cfds: bool = True,
     watchlist: Optional[list[str]] = None,
 ) -> list[dict]:
     """
@@ -673,9 +515,6 @@ def run_bounty_hunt(
     Args:
         mode:         Scan mode — 'oversold' | 'momentum' | 'volume' | 'hot'
         crypto_limit: Max crypto candidates to deep-analyse
-        stock_limit:  Max Polygon/Massive stock candidates to deep-analyse
-        cfd_limit:    Max Bybit CFD candidates (stocks + metals) to deep-analyse
-        scan_cfds:    If True and settings.cfd_enabled, scan Bybit CFD linear perps
         watchlist:    Optional symbol allow-list
     """
     logger.info("⚔️ Bounty Hunter Scan Cycle Triggered ⚔️")
@@ -687,23 +526,11 @@ def run_bounty_hunt(
     # ── Crypto ──────────────────────────────────────────────────────────────
     raw_crypto = scan_bybit_crypto(mode=mode, limit=crypto_limit * 3, watchlist=watchlist)
 
-    # ── Legacy stocks (Polygon/Massive) ────────────────────────────────────
-    raw_stocks = scan_massive_stocks(mode=mode, limit=stock_limit * 3, watchlist=watchlist)
-
-    # ── Bybit CFD stocks + precious metals ──────────────────────────────────
-    raw_cfds: list[str] = []
-    if scan_cfds and settings.cfd_enabled:
-        raw_cfds = scan_bybit_cfds(mode=mode, limit=cfd_limit * 2, watchlist=watchlist)
-    elif not settings.cfd_enabled:
-        logger.debug("CFD trading disabled in config (cfd_enabled=False) — skipping CFD scan")
-
     logger.info("📐 Verifying anomalies and ranking candidates...")
     crypto_candidates, crypto_snaps = rank_and_enrich_candidates(raw_crypto, mode, limit=crypto_limit)
-    stock_candidates,  stock_snaps  = rank_and_enrich_candidates(raw_stocks, mode, limit=stock_limit)
-    cfd_candidates,    cfd_snaps    = rank_and_enrich_candidates(raw_cfds,   mode, limit=cfd_limit) if raw_cfds else ([], {})
 
-    all_candidates = crypto_candidates + stock_candidates + cfd_candidates
-    snap_cache = {**crypto_snaps, **stock_snaps, **cfd_snaps}
+    all_candidates = crypto_candidates
+    snap_cache = {**crypto_snaps}
     portfolio_heat, open_count = _load_live_portfolio_state()
     running_heat = portfolio_heat
     running_open_count = open_count
