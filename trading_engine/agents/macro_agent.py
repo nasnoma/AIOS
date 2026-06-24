@@ -28,7 +28,7 @@ _MACRO_CACHE = {
     "risk_mode": "unknown",
     "last_fetched": 0.0
 }
-CACHE_DURATION_SEC = 300  # Cache for 5 minutes
+CACHE_DURATION_SEC = 600  # Cache for 10 minutes
 
 def _fetch_dxy_trend() -> str:
     """Approximate DXY trend via UUP ETF (USD bull ETF) from Massive."""

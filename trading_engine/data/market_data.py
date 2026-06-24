@@ -542,13 +542,31 @@ def compute_indicators(df: pd.DataFrame, overrides: dict | None = None) -> pd.Da
 #  Fear & Greed Index
 # ─────────────────────────────────────────────
 
+_FG_CACHE = {
+    "value": None,
+    "label": None,
+    "last_fetched": 0.0
+}
+FG_CACHE_TTL = 3600  # Cache for 1 hour
+
 def fetch_fear_greed() -> tuple[Optional[int], Optional[str]]:
+    import time
+    now = time.time()
+    if _FG_CACHE["last_fetched"] > 0 and (now - _FG_CACHE["last_fetched"] < FG_CACHE_TTL):
+        return _FG_CACHE["value"], _FG_CACHE["label"]
+
     try:
         resp = get_with_retry("https://api.alternative.me/fng/?limit=1", timeout=5)
         data = resp.json()["data"][0]
-        return int(data["value"]), data["value_classification"]
+        val, label = int(data["value"]), data["value_classification"]
+        _FG_CACHE["value"] = val
+        _FG_CACHE["label"] = label
+        _FG_CACHE["last_fetched"] = now
+        return val, label
     except Exception as e:
         logger.warning(f"Fear & Greed fetch failed: {e}")
+        if _FG_CACHE["value"] is not None:
+            return _FG_CACHE["value"], _FG_CACHE["label"]
         return None, None
 
 
@@ -559,7 +577,7 @@ def fetch_fear_greed() -> tuple[Optional[int], Optional[str]]:
 import time
 
 _SNAPSHOT_CACHE = {}  # (symbol, timeframe) -> (timestamp_float, MarketSnapshot)
-CACHE_TTL_SECONDS = 60
+CACHE_TTL_SECONDS = 300
 
 
 def get_higher_timeframe(tf: str) -> str:

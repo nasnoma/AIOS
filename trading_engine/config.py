@@ -73,7 +73,7 @@ class Settings(BaseSettings):
     max_concurrent_positions: int = 12
 
     # ── Self Healing ────────────────────────────────────────
-    self_healing_consecutive_losses: int = 2
+    self_healing_consecutive_losses: int = Field(default=4, ge=2, le=4)
     self_healing_cooldown_hours: float = 24.0
     self_healing_iterations: int = 15
 
@@ -166,11 +166,11 @@ class Settings(BaseSettings):
 
     @property
     def crypto_assets(self) -> list[str]:
-        return [a.strip() for a in self.default_assets.split(",")]
+        return [a.strip() for a in self.default_assets.split(",") if a.strip()]
 
     @property
     def stock_assets(self) -> list[str]:
-        return [a.strip() for a in self.default_stock_assets.split(",")]
+        return [a.strip() for a in self.default_stock_assets.split(",") if a.strip()]
 
     @property
     def watchlist_assets(self) -> list[str]:

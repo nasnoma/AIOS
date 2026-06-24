@@ -17,12 +17,29 @@ from trading_engine.utils.llm import call_llm
 from trading_engine.utils.http import get_with_retry
 
 
+import threading
+import time
+
+_NEWS_CACHE = {}  # ticker -> (timestamp, headlines_list)
+_NEWS_CACHE_LOCK = threading.Lock()
+NEWS_CACHE_TTL = 900  # Cache for 15 minutes
+
+
 def _get_news_headlines(symbol: str) -> list[str]:
-    """Fetch latest news headlines for the symbol."""
+    """Fetch latest news headlines for the symbol, cached to avoid redundant API calls."""
+    ticker = symbol.split(":")[0].split("/")[0].upper()
+    now = time.time()
+    
+    with _NEWS_CACHE_LOCK:
+        if ticker in _NEWS_CACHE:
+            cached_time, cached_headlines = _NEWS_CACHE[ticker]
+            if now - cached_time < NEWS_CACHE_TTL:
+                logger.debug(f"Using cached news headlines for {ticker}")
+                return cached_headlines
+
     headlines = []
     api_key = settings.get_massive_api_key
     if api_key:
-        ticker = symbol.split(":")[0].split("/")[0]
         url = f"{settings.massive_api_base}/v2/reference/news"
         params = {"ticker": ticker, "limit": 5, "apiKey": api_key}
         try:
@@ -36,6 +53,11 @@ def _get_news_headlines(symbol: str) -> list[str]:
                     headlines.append(item.get("title", ""))
         except Exception as e:
             logger.warning(f"News fetch error: {e}")
+            
+    # Cache the result (even if empty to prevent spamming failed requests)
+    with _NEWS_CACHE_LOCK:
+        _NEWS_CACHE[ticker] = (now, headlines[:5])
+        
     return headlines[:5]
 
 

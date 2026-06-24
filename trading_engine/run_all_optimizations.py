@@ -17,10 +17,7 @@ PROJECT_ROOT = Path("/Users/nasir.noma/claude_projects/AIOS")
 sys.path.append(str(PROJECT_ROOT))
 
 SYMBOLS = [
-    "XRP/USDT", "ADA/USDT", "ALGO/USDT", "LINK/USDT", "AVAX/USDT",
-    "LTC/USDT", "XLM/USDT", "POL/USDT", "UNI/USDT", "DOT/USDT",
-    "HBAR/USDT", "BNB/USDT", "IOTA/USDT", "XTZ/USDT", "ATOM/USDT",
-    "ETC/USDT"
+    "BTC/USDT", "SOL/USDT", "ETH/USDT"
 ]
 
 def main():
@@ -59,7 +56,7 @@ def main():
             str(python_bin),
             "-m", "trading_engine.run_autoresearch_loop",
             "--symbols", symbol,
-            "--timeframe", "5m",
+            "--timeframe", "15m",
             "--train-days", "180",
             "--val-days", "90",
             "--iterations", "45",
