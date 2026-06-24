@@ -109,6 +109,36 @@ class Settings(BaseSettings):
     # momentum has stronger positive edge on 4H crypto timeframes
     bounty_hunter_scan_mode: str = "momentum"
 
+    # ── Deprecated/Compatibility Fields ──────────────────
+    alpaca_api_key: str = ""
+    alpaca_secret_key: str = ""
+    alpaca_base_url: str = "https://paper-api.alpaca.markets"
+    default_stock_assets: str = "AAPL/USDT:USDT,TSLA/USDT:USDT,NVDA/USDT:USDT"
+    is_backtesting: bool = False
+    regime_filter_equities_enabled: bool = True
+    regime_us_index: str = "SPY"
+    regime_ngx_proxy: str = "DANGCEM/NGX"
+    regime_equities_ma_period: int = 200
+    low_trade_count_discount: float = 0.75
+    low_trade_count_threshold: int = 10
+    bybit_cfd_stocks: str = "AAPL/USDT:USDT,TSLA/USDT:USDT,NVDA/USDT:USDT,MSFT/USDT:USDT,AMZN/USDT:USDT,GOOGL/USDT:USDT"
+    bybit_cfd_metals: str = "XAU/USDT:USDT,XAG/USDT:USDT"
+    cfd_enabled: bool = True
+    extended_cfd_hours: bool = True
+    bamboo_api_key: str = ""
+    bamboo_username: str = ""
+    bamboo_password: str = ""
+    bamboo_user_id: str = ""
+    bamboo_cscs: str = ""
+    bamboo_chn: str = ""
+    bamboo_base_url: str = "https://powered-by-bamboo-sandbox.investbamboo.com"
+    bamboo_subject_type: str = "tenant"
+    bamboo_webhook_auth_hash: str = ""
+    default_ngx_assets: str = "CHAMS/NGX,NGXGROUP/NGX,GUINEAINS/NGX,GTCO/NGX,CONHALLPLC/NGX,INTENEGINS/NGX,MBENEFIT/NGX,DEAPCAP/NGX,UPDCREIT/NGX,WAPIC/NGX,JAPAULGOLD/NGX"
+    default_bamboo_us_assets: str = "AAPL/BAMBOO,MSFT/BAMBOO,AMZN/BAMBOO,GOOGL/BAMBOO,AMD/BAMBOO"
+    eodhd_api_key: str = ""
+    ngx_pulse_api_key: str = ""
+
     # ── API ─────────────────────────────────
     api_host: str = "0.0.0.0"
     api_port: int = 8000

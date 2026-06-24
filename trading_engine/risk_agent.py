@@ -483,12 +483,12 @@ def evaluate(
         )
 
     # ── Kelly / Volatility Position Sizing ────────────
-        kelly = _kelly_fraction(historical_win_rate, rr_ratio, kelly_frac)
-        # Risk-based position size: never risk more than max_risk_per_trade
-        risk_based_size = max_risk_per_trade / stop_loss_pct
-        kelly_size = kelly
-        # Take the minimum of kelly and risk-based cap
-        position_size_pct = min(kelly_size, risk_based_size, 0.10)  # hard cap 10% of account
+    kelly = _kelly_fraction(historical_win_rate, rr_ratio, kelly_frac)
+    # Risk-based position size: never risk more than max_risk_per_trade
+    risk_based_size = max_risk_per_trade / stop_loss_pct
+    kelly_size = kelly
+    # Take the minimum of kelly and risk-based cap
+    position_size_pct = min(kelly_size, risk_based_size, 0.10)  # hard cap 10% of account
 
     # ── Confidence-Weighted Position Sizing ────────────────
     # Scale size by judge confidence: high conviction → larger, borderline → smaller.
