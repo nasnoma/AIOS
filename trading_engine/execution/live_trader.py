@@ -164,9 +164,27 @@ class LivePortfolio:
 
 def _load_state() -> LivePortfolio:
     with state_lock():
+        # 1. Try loading from PostgreSQL database first
+        try:
+            db_state = db.get_portfolio_state("live")
+            if db_state:
+                logger.info("Loaded live state from PostgreSQL database.")
+                portfolio = LivePortfolio.from_dict(db_state)
+                # Keep local state file in sync
+                try:
+                    with open(STATE_FILE, "w") as f:
+                        json.dump(db_state, f, indent=2)
+                except Exception as e_file:
+                    logger.warning(f"Failed to write live_state.json locally: {e_file}")
+                return portfolio
+        except Exception as e_db:
+            logger.warning(f"Failed to load live state from PostgreSQL database: {e_db}")
+
+        # 2. Fall back to local live_state.json
         if STATE_FILE.exists() and STATE_FILE.stat().st_size > 0:
             try:
                 with open(STATE_FILE) as f:
+                    logger.info("Loaded live state from local file.")
                     return LivePortfolio.from_dict(json.load(f))
             except Exception as e:
                 logger.error(f"CRITICAL: Could not parse live state file: {e}")
@@ -176,8 +194,21 @@ def _load_state() -> LivePortfolio:
 
 def _save_state(portfolio: LivePortfolio):
     with state_lock():
-        with open(STATE_FILE, "w") as f:
-            json.dump(portfolio.to_dict(), f, indent=2)
+        state_dict = portfolio.to_dict()
+        # 1. Save to local live_state.json
+        try:
+            with open(STATE_FILE, "w") as f:
+                json.dump(state_dict, f, indent=2)
+        except Exception as e_file:
+            logger.warning(f"Failed to write live_state.json locally: {e_file}")
+
+        # 2. Save to PostgreSQL database
+        try:
+            db.save_portfolio_state("live", state_dict)
+        except Exception as e_db:
+            logger.warning(f"Failed to save live state to PostgreSQL database: {e_db}")
+
+        # 3. Sync closed trades to database
         try:
             db.sync_closed_trades_to_db(portfolio.closed_trades)
         except Exception as e:

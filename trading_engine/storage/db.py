@@ -70,6 +70,14 @@ class SymbolState(Base):
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
 
+class PortfolioState(Base):
+    __tablename__ = "portfolio_states"
+
+    key = Column(String(50), primary_key=True)
+    state_json = Column(Text, nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+
 # Connection setup with SQLite fallback
 _engine = None
 _SessionLocal = None
@@ -309,5 +317,33 @@ def get_symbol_state(symbol: str) -> dict | None:
                 }
     except Exception as e:
         logger.warning(f"Failed to get symbol state for {symbol} from DB: {e}")
+    return None
+
+
+def save_portfolio_state(key: str, state: dict):
+    """Saves or updates the serialized portfolio state in the database."""
+    try:
+        with get_session() as session:
+            db_state = session.query(PortfolioState).filter_by(key=key).first()
+            if not db_state:
+                db_state = PortfolioState(key=key)
+                session.add(db_state)
+            db_state.state_json = json.dumps(state)
+            db_state.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+            session.commit()
+            logger.info(f"Database: Saved portfolio state for key '{key}'")
+    except Exception as e:
+        logger.warning(f"Failed to save portfolio state for {key} to DB: {e}")
+
+
+def get_portfolio_state(key: str) -> dict | None:
+    """Retrieves the serialized portfolio state from the database."""
+    try:
+        with get_session() as session:
+            db_state = session.query(PortfolioState).filter_by(key=key).first()
+            if db_state and db_state.state_json:
+                return json.loads(db_state.state_json)
+    except Exception as e:
+        logger.warning(f"Failed to get portfolio state for {key} from DB: {e}")
     return None
 
