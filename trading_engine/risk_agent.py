@@ -235,7 +235,7 @@ def _get_btc_regime_fallback() -> tuple[float, float]:
     Raises Exception if both fail.
     """
     import ccxt
-    tf = settings.timeframe  # e.g., '4h'
+    tf = getattr(settings, "regime_btc_timeframe", "1d")
     ma_period = getattr(settings, "regime_btc_ma_period", 50)
     
     # Try Binance public first, then Bybit public
@@ -400,7 +400,8 @@ def evaluate(
             ma_period = getattr(settings, "regime_btc_ma_period", 50)
             btc_close, btc_ma = None, None
             try:
-                btc_snap = _bs("BTC/USDT")
+                tf = getattr(settings, "regime_btc_timeframe", "1d")
+                btc_snap = _bs("BTC/USDT", timeframe=tf)
                 btc_close = btc_snap.close
                 # Use the EMA50 already computed on the snapshot if available,
                 # otherwise fall back to computing a simple MA from the OHLCV df.

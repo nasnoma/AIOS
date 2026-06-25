@@ -79,6 +79,7 @@ class Settings(BaseSettings):
     # configured timeframe.  Set regime_filter_enabled=False to bypass.
     regime_filter_enabled: bool = True
     regime_btc_ma_period: int = 50
+    regime_btc_timeframe: str = "1d"
     crypto_use_perpetuals: bool = False
     short_position_multiplier: float = 0.75
 
