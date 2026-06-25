@@ -47,7 +47,7 @@ class Settings(BaseSettings):
 
     # ── Trading ─────────────────────────────
     trading_mode: str = "paper"          # paper | live | signal_only
-    default_assets: str = "BTC/USDT,ETH/USDT"
+    default_assets: str = "BTC/USDT,ETH/USDT,SOL/USDT"
     default_watchlist: str = "BTC/USDT,ETH/USDT,SOL/USDT"
     timeframe: str = "4h"
     signal_interval_minutes: int = 240
