@@ -776,7 +776,21 @@ def build_snapshot(symbol: str, timeframe: str = None, is_htf: bool = False) -> 
             except Exception as e_htf:
                 logger.warning(f"Failed to build 1d HTF snapshot for {symbol}: {e_htf}")
             snap.htf_snap = snap.htf_4h_snap
-        elif tf_clean in ("1h", "4h"):
+        elif tf_clean == "4h":
+            try:
+                snap.htf_1h_snap = build_snapshot(symbol, "1h", is_htf=True)
+            except Exception as e_htf:
+                logger.warning(f"Failed to build 1h HTF snapshot for {symbol}: {e_htf}")
+            try:
+                snap.htf_1d_snap = build_snapshot(symbol, "1d", is_htf=True)
+            except Exception as e_htf:
+                logger.warning(f"Failed to build 1d HTF snapshot for {symbol}: {e_htf}")
+            snap.htf_snap = snap.htf_1d_snap
+        elif tf_clean == "1h":
+            try:
+                snap.htf_4h_snap = build_snapshot(symbol, "4h", is_htf=True)
+            except Exception as e_htf:
+                logger.warning(f"Failed to build 4h HTF snapshot for {symbol}: {e_htf}")
             try:
                 snap.htf_1d_snap = build_snapshot(symbol, "1d", is_htf=True)
             except Exception as e_htf:

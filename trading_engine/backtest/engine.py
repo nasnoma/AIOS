@@ -30,7 +30,62 @@ except ImportError:
     logger.warning("vectorbt not installed — using simple backtester fallback")
 
 
-def make_historical_snapshot(symbol: str, asset_type: str, timeframe: str, df: pd.DataFrame, i: int) -> MarketSnapshot:
+def get_timeframe_timedelta(timeframe: str) -> pd.Timedelta:
+    tf_clean = timeframe.lower().strip()
+    if tf_clean.endswith("m"):
+        return pd.Timedelta(minutes=int(tf_clean[:-1]))
+    elif tf_clean.endswith("h"):
+        return pd.Timedelta(hours=int(tf_clean[:-1]))
+    elif tf_clean.endswith("d"):
+        return pd.Timedelta(days=int(tf_clean[:-1]))
+    else:
+        return pd.Timedelta(days=1)
+
+
+def prepare_htf_dfs(symbol: str, timeframe: str) -> dict[str, pd.DataFrame]:
+    """Pre-loads and computes indicators for all required HTF timeframes."""
+    from trading_engine.data.market_data import load_historical_data, compute_indicators, get_higher_timeframe
+    tf_clean = timeframe.lower().strip()
+    
+    # Determine which HTFs are needed
+    htf_tfs = []
+    if tf_clean in ("5m", "15m"):
+        htf_tfs = ["1h", "4h", "1d"]
+    elif tf_clean == "4h":
+        htf_tfs = ["1h", "1d"]
+    elif tf_clean == "1h":
+        htf_tfs = ["4h", "1d"]
+    else:
+        htf_tfs = [get_higher_timeframe(timeframe)]
+        
+    htf_dfs = {}
+    for htf in htf_tfs:
+        try:
+            limit_map = {
+                "1h": 12000,
+                "4h": 4000,
+                "1d": 1000
+            }
+            limit = limit_map.get(htf, 1000)
+            logger.info(f"Pre-loading HTF {htf} data for {symbol} (limit={limit})")
+            df_htf = load_historical_data(symbol, timeframe=htf, limit=limit)
+            df_htf = compute_indicators(df_htf)
+            df_htf = df_htf.dropna()
+            htf_dfs[htf] = df_htf
+        except Exception as e:
+            logger.warning(f"Could not pre-load HTF {htf} for backtest: {e}")
+            
+    return htf_dfs
+
+
+def make_historical_snapshot(
+    symbol: str,
+    asset_type: str,
+    timeframe: str,
+    df: pd.DataFrame,
+    i: int,
+    htf_dfs: dict[str, pd.DataFrame] | None = None
+) -> MarketSnapshot:
     """
     Constructs a MarketSnapshot at index `i` of the DataFrame.
     Slices the inner df up to index `i` to prevent future data leakage during analysis.
@@ -43,7 +98,7 @@ def make_historical_snapshot(symbol: str, asset_type: str, timeframe: str, df: p
     bb_lower = latest.get("BBL_20_2.0", latest["close"] * 0.98)
     bb_width = (bb_upper - bb_lower) / latest["close"] if latest["close"] > 0 else 0
     
-    return MarketSnapshot(
+    snap = MarketSnapshot(
         symbol=symbol,
         asset_type=asset_type,
         timeframe=timeframe,
@@ -71,6 +126,55 @@ def make_historical_snapshot(symbol: str, asset_type: str, timeframe: str, df: p
         fear_greed_index=int(latest.get("fear_greed_index", 50)) if "fear_greed_index" in latest else None,
         fear_greed_label=latest.get("fear_greed_label", "Neutral") if "fear_greed_label" in latest else None,
     )
+    
+    if htf_dfs:
+        base_duration = get_timeframe_timedelta(timeframe)
+        current_time = df.index[i] + base_duration
+        tf_clean = timeframe.lower().strip()
+        
+        # 1H HTF
+        if "1h" in htf_dfs:
+            df_htf = htf_dfs["1h"]
+            htf_dur = get_timeframe_timedelta("1h")
+            df_sliced = df_htf[df_htf.index + htf_dur <= current_time]
+            if not df_sliced.empty:
+                snap.htf_1h_snap = make_historical_snapshot(
+                    symbol, asset_type, "1h", df_sliced, len(df_sliced) - 1, htf_dfs=None
+                )
+        # 4H HTF
+        if "4h" in htf_dfs:
+            df_htf = htf_dfs["4h"]
+            htf_dur = get_timeframe_timedelta("4h")
+            df_sliced = df_htf[df_htf.index + htf_dur <= current_time]
+            if not df_sliced.empty:
+                snap.htf_4h_snap = make_historical_snapshot(
+                    symbol, asset_type, "4h", df_sliced, len(df_sliced) - 1, htf_dfs=None
+                )
+        # 1D HTF
+        if "1d" in htf_dfs:
+            df_htf = htf_dfs["1d"]
+            htf_dur = get_timeframe_timedelta("1d")
+            df_sliced = df_htf[df_htf.index + htf_dur <= current_time]
+            if not df_sliced.empty:
+                snap.htf_1d_snap = make_historical_snapshot(
+                    symbol, asset_type, "1d", df_sliced, len(df_sliced) - 1, htf_dfs=None
+                )
+                
+        # Also set htf_snap fallback
+        if tf_clean in ("5m", "15m"):
+            snap.htf_snap = snap.htf_4h_snap
+        elif tf_clean in ("1h", "4h"):
+            snap.htf_snap = snap.htf_1d_snap
+        else:
+            for htf_tf, df_htf in htf_dfs.items():
+                htf_dur = get_timeframe_timedelta(htf_tf)
+                df_sliced = df_htf[df_htf.index + htf_dur <= current_time]
+                if not df_sliced.empty:
+                    snap.htf_snap = make_historical_snapshot(
+                        symbol, asset_type, htf_tf, df_sliced, len(df_sliced) - 1, htf_dfs=None
+                    )
+                    break
+    return snap
 
 
 def _simple_backtest(df: pd.DataFrame, signals: pd.Series, initial_capital: float = 10000,
@@ -162,6 +266,7 @@ def _run_multi_agent_simulation(
     initial_capital: float = 10000,
     start_idx: int = 20,
     end_idx: int = None,
+    htf_dfs: dict[str, pd.DataFrame] | None = None,
 ) -> dict:
     """
     Runs row-by-row simulation of the actual quant agents,
@@ -251,7 +356,7 @@ def _run_multi_agent_simulation(
                 
         # Look for entry signals
         if not open_position:
-            snap = make_historical_snapshot(symbol, asset_type, timeframe, df, i)
+            snap = make_historical_snapshot(symbol, asset_type, timeframe, df, i, htf_dfs)
             
             # Run 6 quant agents
             quant_signals = [
@@ -1312,6 +1417,7 @@ def optimize_weights_for_window(
     end_idx: int,
     base_weights: dict[str, float],
     forward_candles: int = 12,
+    htf_dfs: dict[str, pd.DataFrame] | None = None,
 ) -> dict[str, float]:
     """
     Evaluates individual agent signal accuracy over a training window
@@ -1324,7 +1430,7 @@ def optimize_weights_for_window(
     
     start_idx = max(20, start_idx)
     for i in range(start_idx, min(end_idx, len(df) - forward_candles)):
-        snap = make_historical_snapshot(symbol, asset_type, timeframe, df, i)
+        snap = make_historical_snapshot(symbol, asset_type, timeframe, df, i, htf_dfs)
         
         agents_signals = {
             "trend": trend_agent.analyze(snap),
@@ -1415,6 +1521,12 @@ def run_walk_forward_optimization(
     df = compute_indicators(df)
     df = df.dropna()
         
+    try:
+        htf_dfs = prepare_htf_dfs(symbol, timeframe)
+    except Exception as e:
+        logger.warning(f"Failed to prepare HTF dfs for WFO: {e}")
+        htf_dfs = None
+
     train_size = lookback_days * candles_per_day
     test_size = forward_days * candles_per_day
     
@@ -1433,7 +1545,8 @@ def run_walk_forward_optimization(
         # Optimize weights on train window
         optimized_w = optimize_weights_for_window(
             df, symbol, asset_type, timeframe,
-            start_idx, train_end, current_weights
+            start_idx, train_end, current_weights,
+            htf_dfs=htf_dfs
         )
         
         # Record weights
@@ -1447,7 +1560,8 @@ def run_walk_forward_optimization(
             df, symbol, asset_type, timeframe,
             optimized_w, wfo_capital,
             start_idx=train_end,
-            end_idx=test_end
+            end_idx=test_end,
+            htf_dfs=htf_dfs
         )
         
         # Accumulate out-of-sample trades
@@ -1479,7 +1593,8 @@ def run_walk_forward_optimization(
     baseline_results = _run_multi_agent_simulation(
         df, symbol, asset_type, timeframe,
         judge.DEFAULT_WEIGHTS, initial_capital,
-        start_idx=oos_start_idx
+        start_idx=oos_start_idx,
+        htf_dfs=htf_dfs
     )
     
     wfo_results = {
@@ -1561,12 +1676,19 @@ def run_backtest(
     df = compute_indicators(df)
     df = df.dropna()
 
+    try:
+        htf_dfs = prepare_htf_dfs(symbol, timeframe)
+    except Exception as e:
+        logger.warning(f"Failed to prepare HTF dfs for backtest: {e}")
+        htf_dfs = None
+
     asset_type = "crypto" if ac == AssetClass.CRYPTO else "cfd" if ac in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL) else "stock"
 
     if use_multi_agent:
         results = _run_multi_agent_simulation(
             df, symbol, asset_type, timeframe,
-            judge.DEFAULT_WEIGHTS, initial_capital
+            judge.DEFAULT_WEIGHTS, initial_capital,
+            htf_dfs=htf_dfs
         )
     else:
         df["signal"] = 0

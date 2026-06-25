@@ -34,29 +34,25 @@ def main():
         logger.info("==================================================")
         
         symbol_clean = symbol.replace("/", "_").replace(":", "_")
-        cache_path = PROJECT_ROOT / "data" / f"historical_5m_{symbol_clean}.csv"
+        cache_path = PROJECT_ROOT / "data" / f"historical_4h_{symbol_clean}.csv"
         
-        # 1. Wait for data cache to be fully downloaded and written
+        # 1. Check data cache, wait if it is being written, but proceed if missing (harness will fetch)
         logger.info(f"Checking data cache at {cache_path}...")
         wait_cycles = 0
-        while not cache_path.exists() or cache_path.stat().st_size < 1_000_000:
-            if wait_cycles >= 120:  # wait max 20 minutes (120 * 10 seconds)
-                logger.error(f"Timed out waiting for data cache for {symbol}. Skipping.")
+        while cache_path.exists() and cache_path.stat().st_size < 50_000:
+            if wait_cycles >= 30:  # wait max 5 minutes (30 * 10 seconds)
+                logger.warning(f"Data file exists but is small. Proceeding anyway.")
                 break
-            logger.info(f"Data file not found or too small. Waiting (10s)...")
+            logger.info(f"Data file is being updated. Waiting (10s)...")
             time.sleep(10)
             wait_cycles += 1
             
-        if not cache_path.exists() or cache_path.stat().st_size < 1_000_000:
-            results[symbol] = "Failed: Data not found"
-            continue
-            
-        # 2. Run the 45-iteration optimization loop for this symbol
+        # 2. Run the 45-iteration optimization loop for this symbol on 4h timeframe
         cmd = [
             str(python_bin),
             "-m", "trading_engine.run_autoresearch_loop",
             "--symbols", symbol,
-            "--timeframe", "15m",
+            "--timeframe", "4h",
             "--train-days", "180",
             "--val-days", "90",
             "--iterations", "45",

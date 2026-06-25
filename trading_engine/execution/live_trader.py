@@ -347,7 +347,7 @@ def retry_and_log_order(symbol: str, side: str, qty: float, price: float, order_
     raise last_error
 
 
-def place_bybit_market_order(symbol: str, side: str, amount_usd: float, current_price: float) -> float:
+def place_bybit_market_order(symbol: str, side: str, amount_usd: float, current_price: float, qty: Optional[float] = None) -> float:
     """
     Submits a market order on Bybit Spot.
     Returns the actual average fill price.
@@ -355,7 +355,8 @@ def place_bybit_market_order(symbol: str, side: str, amount_usd: float, current_
     exchange = get_bybit_exchange()
     exchange.load_markets()
 
-    qty         = amount_usd / current_price
+    if qty is None:
+        qty = amount_usd / current_price
     qty_str     = exchange.amount_to_precision(symbol, qty)
     qty_formatted = float(qty_str)
 
@@ -377,7 +378,7 @@ def place_bybit_market_order(symbol: str, side: str, amount_usd: float, current_
     return float(fill_price) if fill_price else current_price
 
 
-def place_bybit_linear_order(symbol: str, side: str, amount_usd: float, current_price: float) -> float:
+def place_bybit_linear_order(symbol: str, side: str, amount_usd: float, current_price: float, qty: Optional[float] = None) -> float:
     """
     Submits a market order on Bybit Linear perpetuals (CFD stocks + precious metals).
     Supports both 'buy' (long) and 'sell' (short) sides.
@@ -398,7 +399,8 @@ def place_bybit_linear_order(symbol: str, side: str, amount_usd: float, current_
             exchange.set_sandbox_mode(True)
     exchange.load_markets()
 
-    qty           = amount_usd / current_price
+    if qty is None:
+        qty = amount_usd / current_price
     qty_str       = exchange.amount_to_precision(symbol, qty)
     qty_formatted = float(qty_str)
 
@@ -1113,10 +1115,40 @@ def _close_position(portfolio: LivePortfolio, pos: Position, exit_price: float, 
         elif is_cfd or is_linear_crypto:
             # Linear perpetual — close with reduceOnly-equivalent opposite order
             side = "sell" if pos.direction == "long" else "buy"
-            fill_price = place_bybit_linear_order(pos.symbol, side, pos.size_usd, exit_price)
+            qty = pos.size_usd / pos.entry_price
+            # Query actual open linear position size from Bybit to close it fully
+            try:
+                exchange = get_bybit_exchange()
+                exchange.options["defaultType"] = "linear"
+                exchange.load_markets()
+                positions = exchange.fetch_positions()
+                for p in positions:
+                    p_sym = p.get("symbol", "").upper()
+                    p_sym_clean = p_sym.replace("/", "").replace(":", "").replace("-", "").strip()
+                    pos_sym_clean = pos.symbol.upper().replace("/", "").replace(":", "").replace("-", "").strip()
+                    if p_sym == pos.symbol.upper() or p_sym_clean == pos_sym_clean or pos_sym_clean.startswith(p_sym_clean) or p_sym_clean.startswith(pos_sym_clean):
+                        contracts = float(p.get("contracts") or p.get("size") or 0)
+                        if contracts > 0:
+                            qty = contracts
+                            break
+            except Exception as e_pos:
+                logger.warning(f"Failed to fetch linear position size for {pos.symbol}: {e_pos}")
+            fill_price = place_bybit_linear_order(pos.symbol, side, pos.size_usd, exit_price, qty=qty)
         elif is_crypto:
             # Crypto Spot — close long with sell order
-            fill_price = place_bybit_market_order(pos.symbol, "sell", pos.size_usd, exit_price)
+            qty = pos.size_usd / pos.entry_price
+            # Query actual free balance to prevent Insufficient balance errors (due to entry fees)
+            try:
+                exchange = get_bybit_exchange()
+                exchange.options["defaultType"] = "spot"
+                bal = exchange.fetch_balance()
+                currency = pos.symbol.split("/")[0].upper()
+                free_bal = float(bal.get(currency, {}).get("free", 0))
+                if free_bal > 0:
+                    qty = min(qty, free_bal)
+            except Exception as e_bal:
+                logger.warning(f"Failed to fetch spot balance during close for {pos.symbol}: {e_bal}")
+            fill_price = place_bybit_market_order(pos.symbol, "sell", pos.size_usd, exit_price, qty=qty)
         else:
             # Alpaca Spot — close long with sell order
             qty = pos.size_usd / pos.entry_price
@@ -1159,8 +1191,13 @@ def sync_with_broker() -> bool:
         portfolio = _load_state()
         changed = False
 
-        if settings.trading_mode == "live" and not portfolio.positions and not portfolio.closed_trades:
-            logger.info("Local live state is empty. Reconstructing from DB and Bybit execution history...")
+        is_testing = os.environ.get("IS_TESTING") == "true"
+
+        if settings.trading_mode == "live" and not portfolio.positions and not portfolio.closed_trades and not is_testing:
+            logger.info("Local live state is empty. Database state persistence is active. Skipping legacy execution-based reconstruction to prevent ghost positions.")
+            changed = True
+
+        if settings.trading_mode == "live" and not portfolio.positions and not portfolio.closed_trades and (is_testing or False):
             try:
                 # 1. Load historical closed trades from DB first
                 db_trades_dict = db.get_db_closed_trades()
