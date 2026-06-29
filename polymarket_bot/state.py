@@ -74,9 +74,9 @@ class ArbTradeCycle:
 class PortfolioState:
     account_size: float = 500.0
     cex_cash: float = 250.0
-    cex_asset: float = 0.0
+    cex_asset: float = 1.5
     dex_cash: float = 250.0
-    dex_asset: float = 0.0
+    dex_asset: float = 1.5
     closed_trades: list = field(default_factory=list)      # list of ArbTradeCycle dicts
     total_pnl: float = 0.0
     daily_pnl: float = 0.0
@@ -135,7 +135,9 @@ def load_state() -> PortfolioState:
         return PortfolioState(
             account_size=settings.account_size,
             cex_cash=settings.account_size / 2.0,
-            dex_cash=settings.account_size / 2.0
+            cex_asset=1.5,
+            dex_cash=settings.account_size / 2.0,
+            dex_asset=1.5
         )
 
 
