@@ -66,12 +66,18 @@ class ArbTradeCycle:
     leg2_price: float = 0.0
     leg3_price: float = 0.0
 
+    def to_dict(self) -> dict:
+        return asdict(self)
+
 
 @dataclass
 class PortfolioState:
     account_size: float = 500.0
     cash: float = 500.0
-    closed_trades: list = field(default_factory=list)    # list of ArbTradeCycle dicts
+    asset_balance: float = 0.0
+    avg_buy_price: float = 0.0
+    open_grid_orders: list = field(default_factory=list)  # list of active resting orders
+    closed_trades: list = field(default_factory=list)      # list of ArbTradeCycle dicts
     total_pnl: float = 0.0
     daily_pnl: float = 0.0
     daily_reset_date: str = ""
@@ -81,6 +87,7 @@ class PortfolioState:
     avg_loss_usd: float = 0.0
     cycle_count: int = 0
     route_stats: dict = field(default_factory=dict)
+    grid_center_price: float = 0.0
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -90,6 +97,9 @@ class PortfolioState:
         obj = cls(
             account_size=d.get("account_size", 500.0),
             cash=d.get("cash", 500.0),
+            asset_balance=d.get("asset_balance", 0.0),
+            avg_buy_price=d.get("avg_buy_price", 0.0),
+            open_grid_orders=d.get("open_grid_orders", []),
             total_pnl=d.get("total_pnl", 0.0),
             daily_pnl=d.get("daily_pnl", 0.0),
             daily_reset_date=d.get("daily_reset_date", ""),
@@ -99,14 +109,13 @@ class PortfolioState:
             avg_loss_usd=d.get("avg_loss_usd", 0.0),
             cycle_count=d.get("cycle_count", 0),
             route_stats=d.get("route_stats", {}),
+            grid_center_price=d.get("grid_center_price", 0.0),
         )
         obj.closed_trades = d.get("closed_trades", [])
         if not obj.route_stats:
             obj.route_stats = {
-                "BTC-ETH-FORWARD": {"win_count": 0, "loss_count": 0, "total_pnl": 0.0},
-                "BTC-ETH-REVERSE": {"win_count": 0, "loss_count": 0, "total_pnl": 0.0},
-                "BTC-SOL-FORWARD": {"win_count": 0, "loss_count": 0, "total_pnl": 0.0},
-                "BTC-SOL-REVERSE": {"win_count": 0, "loss_count": 0, "total_pnl": 0.0},
+                "SOL-BUY": {"win_count": 0, "loss_count": 0, "total_pnl": 0.0},
+                "SOL-SELL": {"win_count": 0, "loss_count": 0, "total_pnl": 0.0},
             }
         return obj
 

@@ -1,8 +1,8 @@
 """
 polymarket_bot/execution.py
 
-Execution engine for Bybit Spot Triangular Arbitrage.
-Supports both simulated (paper) and live execution for generic routes.
+Execution engine for SOL/USDT Spot Grid Market Making.
+Handles resting limit order simulation in Paper Mode and live post-only limit orders in Live Mode.
 """
 from __future__ import annotations
 import asyncio
@@ -45,191 +45,207 @@ async def close_bybit_client() -> None:
         _exchange = None
 
 
-async def execute_arbitrage(opportunity: dict) -> None:
+async def check_paper_fills(ticker_price: float) -> None:
     """
-    Executes a triangular arbitrage cycle.
-    Handles paper or live modes dynamically based on the opportunity config.
+    Checks active resting paper grid orders against the current price to simulate fills.
     """
-    cycle_id = uuid.uuid4().hex[:8]
-    route_name = opportunity.get("route_name", "BTC-ETH")
-    direction = opportunity["direction"]
-    net_edge = opportunity["net_edge"]
-    prices = opportunity["prices"]
-
-    logger.info(f"⚡ [{route_name}] Starting Arbitrage Cycle {cycle_id} ({direction}) | Net Edge: {net_edge:.4%}")
-
     state = load_state()
     state = reset_daily_pnl_if_new_day(state)
 
-    if settings.trading_mode == "paper":
-        # ── PAPER TRADING MODE ──
-        # Apply absolute size cap and simulated paper slippage
-        size_usdt = min(state.cash * settings.position_size_pct, settings.max_trade_size_usdt)
-        realized_net_edge = net_edge - settings.paper_slippage_pct
-        pnl = size_usdt * realized_net_edge
+    filled_any = False
+    retaining_orders = []
 
-        # Update state fields
-        state.cash += pnl
-        state.account_size = state.cash
-        state.total_pnl += pnl
-        state.daily_pnl += pnl
-        state.cycle_count += 1
+    for order in state.open_grid_orders:
+        price = float(order["price"])
+        size = float(order["size"])
+        side = order["side"]
+        order_id = order["id"]
 
-        is_win = pnl >= 0
-        if is_win:
-            state.win_count += 1
-            state.avg_win_usd = (
-                (state.avg_win_usd * (state.win_count - 1) + pnl) / state.win_count
-                if state.win_count > 0 else pnl
+        is_filled = False
+        if side == "buy" and ticker_price <= price:
+            is_filled = True
+        elif side == "sell" and ticker_price >= price:
+            is_filled = True
+
+        if is_filled:
+            filled_any = True
+            now_iso = datetime.now(timezone.utc).isoformat()
+            
+            if side == "buy":
+                cost = price * size
+                state.cash -= cost
+                old_balance = state.asset_balance
+                state.asset_balance += size
+                # Recalculate average entry price
+                if state.asset_balance > 0:
+                    state.avg_buy_price = ((old_balance * state.avg_buy_price) + cost) / state.asset_balance
+                pnl = 0.0
+                route_key = "SOL-BUY"
+                logger.success(f"🎉 [Paper Fill] BUY {size:.4f} SOL at {price:.4f} USDT (Avg Entry: {state.avg_buy_price:.2f})")
+            else:
+                proceeds = price * size
+                state.cash += proceeds
+                state.asset_balance -= size
+                # P&L relative to average buy price
+                pnl = (price - state.avg_buy_price) * size
+                route_key = "SOL-SELL"
+                logger.success(f"🎉 [Paper Fill] SELL {size:.4f} SOL at {price:.4f} USDT | Realized PnL: ${pnl:+.4f} USDT")
+
+                # Update Win/Loss Stats
+                state.total_pnl += pnl
+                state.daily_pnl += pnl
+                state.cycle_count += 1
+                is_win = pnl >= 0
+                if is_win:
+                    state.win_count += 1
+                    state.avg_win_usd = (
+                        (state.avg_win_usd * (state.win_count - 1) + pnl) / state.win_count
+                        if state.win_count > 0 else pnl
+                    )
+                else:
+                    state.loss_count += 1
+                    state.avg_loss_usd = (
+                        (state.avg_loss_usd * (state.loss_count - 1) + pnl) / state.loss_count
+                        if state.loss_count > 0 else pnl
+                    )
+
+                if route_key not in state.route_stats:
+                    state.route_stats[route_key] = {"win_count": 0, "loss_count": 0, "total_pnl": 0.0}
+                state.route_stats[route_key]["total_pnl"] += pnl
+                if is_win:
+                    state.route_stats[route_key]["win_count"] += 1
+                else:
+                    state.route_stats[route_key]["loss_count"] += 1
+
+            # Log to closed_trades history
+            cycle_record = ArbTradeCycle(
+                cycle_id=order_id,
+                direction=side.upper(),
+                started_at=order.get("timestamp", now_iso),
+                completed_at=now_iso,
+                est_edge_pct=price,
+                actual_edge_pct=size,
+                size_usdt=price * size,
+                pnl_usdt=pnl,
+                status="completed",
+                leg1_price=price,
             )
+            state.closed_trades.append(cycle_record.to_dict())
+            arbitrage_executed(order_id, side.upper(), price * size, pnl, price, mode="PAPER")
         else:
-            state.loss_count += 1
-            state.avg_loss_usd = (
-                (state.avg_loss_usd * (state.loss_count - 1) + pnl) / state.loss_count
-                if state.loss_count > 0 else pnl
-            )
+            retaining_orders.append(order)
 
-        # Update route stats
-        route_key = f"{route_name}-{direction}"
-        if route_key not in state.route_stats:
-            state.route_stats[route_key] = {"win_count": 0, "loss_count": 0, "total_pnl": 0.0}
-        state.route_stats[route_key]["total_pnl"] += pnl
-        if is_win:
-            state.route_stats[route_key]["win_count"] += 1
-        else:
-            state.route_stats[route_key]["loss_count"] += 1
-
-        # Retrieve prices generically
-        price_keys = list(prices.keys())
-        leg1_p = prices.get(price_keys[0], 0.0) if len(price_keys) > 0 else 0.0
-        leg2_p = prices.get(price_keys[1], 0.0) if len(price_keys) > 1 else 0.0
-        leg3_p = prices.get(price_keys[2], 0.0) if len(price_keys) > 2 else 0.0
-
-        cycle_record = ArbTradeCycle(
-            cycle_id=cycle_id,
-            direction=f"{route_name}-{direction}",
-            started_at=datetime.now(timezone.utc).isoformat(),
-            completed_at=datetime.now(timezone.utc).isoformat(),
-            est_edge_pct=net_edge,
-            actual_edge_pct=realized_net_edge,
-            size_usdt=size_usdt,
-            pnl_usdt=pnl,
-            status="completed",
-            leg1_price=leg1_p,
-            leg2_price=leg2_p,
-            leg3_price=leg3_p,
-        )
-
-        state.closed_trades.append(cycle_record.to_dict())
+    if filled_any:
+        # Calculate new total equity
+        state.open_grid_orders = retaining_orders
+        state.account_size = state.cash + (state.asset_balance * ticker_price)
         save_state(state)
 
-        logger.success(f"🎉 [{route_name}] Simulated Arb Cycle {cycle_id} Completed! PnL: ${pnl:+.4f} (Simulated Slippage: {settings.paper_slippage_pct:.3%})")
-        arbitrage_executed(cycle_id, f"{route_name}-{direction}", size_usdt, pnl, net_edge, mode="PAPER")
+
+async def update_resting_grid(target_grid: dict) -> None:
+    """
+    Cancels existing resting limit orders and places new ones at the target prices.
+    Supports both simulated (paper) and live execution.
+    """
+    state = load_state()
+    now_iso = datetime.now(timezone.utc).isoformat()
+    grid_center = target_grid["reservation_price"]
+
+    if settings.trading_mode == "paper":
+        logger.info(f"🔄 Replacing PAPER Grid center at {grid_center:.4f} USDT...")
+        
+        # In Paper mode, reset resting list
+        state.open_grid_orders = []
+        state.grid_center_price = grid_center
+        
+        # Load new buy levels
+        for level in target_grid["buy_orders"]:
+            state.open_grid_orders.append({
+                "id": uuid.uuid4().hex[:8],
+                "side": "buy",
+                "price": level["price"],
+                "size": level["size"],
+                "timestamp": now_iso
+            })
+            
+        # Load new sell levels
+        for level in target_grid["sell_orders"]:
+            state.open_grid_orders.append({
+                "id": uuid.uuid4().hex[:8],
+                "side": "sell",
+                "price": level["price"],
+                "size": level["size"],
+                "timestamp": now_iso
+            })
+        
+        # Enforce equity valuation updates
+        state.account_size = state.cash + (state.asset_balance * target_grid["mid_price"])
+        save_state(state)
+        logger.info(f"🟢 Placed {len(target_grid['buy_orders'])} BUY & {len(target_grid['sell_orders'])} SELL paper grid levels.")
 
     else:
         # ── LIVE TRADING MODE ──
         exchange = get_bybit_client()
-        cycle_record = ArbTradeCycle(
-            cycle_id=cycle_id,
-            direction=f"{route_name}-{direction}",
-            started_at=datetime.now(timezone.utc).isoformat(),
-            completed_at="",
-            est_edge_pct=net_edge,
-            actual_edge_pct=0.0,
-            size_usdt=0.0,
-            pnl_usdt=0.0,
-            status="failed",
-        )
-
+        logger.info(f"🔄 Cancelling & replacing LIVE Bybit orders for SOL/USDT at center {grid_center:.4f}...")
+        
         try:
-            # 1. Fetch live USDT balance
-            balance = await exchange.fetch_balance()
-            free_usdt = float(balance.get('USDT', {}).get('free', 0.0))
+            # 1. Cancel all open orders for SOL/USDT
+            await exchange.cancel_all_orders(symbol="SOL/USDT")
             
-            # Apply absolute size cap in live mode
-            size_usdt = min(free_usdt * settings.position_size_pct, settings.max_trade_size_usdt)
-            cycle_record.size_usdt = size_usdt
-
-            if size_usdt < 5.0:
-                msg = f"Insufficient USDT balance to trade: {free_usdt:.2f} USDT (min: 5.0)"
-                logger.warning(msg)
-                arbitrage_failed(cycle_id, f"{route_name}-{direction}", "Balance Check", msg, mode="LIVE")
-                return
-
-            logger.info(f"Executing LIVE [{route_name}] {direction} cycle with size {size_usdt:.2f} USDT")
-
-            # 2. Iterate through configured legs dynamically
-            free_balance = size_usdt
-            for i, leg in enumerate(opportunity["legs"]):
-                pair = leg["pair"]
-                side = leg["side"]
-                curr = leg["currency"]
-
-                # For subsequent legs, retrieve updated balance of target currency
-                if i > 0:
-                    await asyncio.sleep(0.1)  # small delay for spot book updates
-                    balance = await exchange.fetch_balance()
-                    free_balance = float(balance.get(curr, {}).get('free', 0.0))
-
-                logger.info(f"Leg {i+1}: Market {side.upper()} {pair} with {free_balance:.6f} {curr}...")
-                if side == "buy":
-                    await exchange.create_market_buy_order_with_cost(pair, free_balance)
-                else:
-                    await exchange.create_market_sell_order(pair, free_balance)
-
-            # 3. Compute realized live PnL
-            await asyncio.sleep(0.2)
-            balance = await exchange.fetch_balance()
-            new_usdt = float(balance.get('USDT', {}).get('free', 0.0))
-            pnl = new_usdt - free_usdt
-            actual_edge = pnl / size_usdt
-
-            # Update state metrics
-            state.cash = new_usdt
-            state.account_size = new_usdt
-            state.total_pnl += pnl
-            state.daily_pnl += pnl
-            state.cycle_count += 1
-
-            is_win = pnl >= 0
-            if is_win:
-                state.win_count += 1
-                state.avg_win_usd = (
-                    (state.avg_win_usd * (state.win_count - 1) + pnl) / state.win_count
-                    if state.win_count > 0 else pnl
+            # 2. Place new Buy grid levels
+            placed_orders = []
+            for level in target_grid["buy_orders"]:
+                logger.info(f"Placing LIMIT Buy at {level['price']} (Size: {level['size']})")
+                order = await exchange.create_order(
+                    symbol="SOL/USDT",
+                    type="limit",
+                    side="buy",
+                    amount=level["size"],
+                    price=level["price"],
+                    params={"timeInForce": "PostOnly"}
                 )
-            else:
-                state.loss_count += 1
-                state.avg_loss_usd = (
-                    (state.avg_loss_usd * (state.loss_count - 1) + pnl) / state.loss_count
-                    if state.loss_count > 0 else pnl
+                placed_orders.append({
+                    "id": order["id"],
+                    "side": "buy",
+                    "price": level["price"],
+                    "size": level["size"],
+                    "timestamp": now_iso
+                })
+                await asyncio.sleep(0.05) # small rate limit safety gap
+
+            # 3. Place new Sell grid levels
+            for level in target_grid["sell_orders"]:
+                logger.info(f"Placing LIMIT Sell at {level['price']} (Size: {level['size']})")
+                order = await exchange.create_order(
+                    symbol="SOL/USDT",
+                    type="limit",
+                    side="sell",
+                    amount=level["size"],
+                    price=level["price"],
+                    params={"timeInForce": "PostOnly"}
                 )
+                placed_orders.append({
+                    "id": order["id"],
+                    "side": "sell",
+                    "price": level["price"],
+                    "size": level["size"],
+                    "timestamp": now_iso
+                })
+                await asyncio.sleep(0.05)
 
-            # Update route stats
-            route_key = f"{route_name}-{direction}"
-            if route_key not in state.route_stats:
-                state.route_stats[route_key] = {"win_count": 0, "loss_count": 0, "total_pnl": 0.0}
-            state.route_stats[route_key]["total_pnl"] += pnl
-            if is_win:
-                state.route_stats[route_key]["win_count"] += 1
-            else:
-                state.route_stats[route_key]["loss_count"] += 1
-
-            cycle_record.completed_at = datetime.now(timezone.utc).isoformat()
-            cycle_record.actual_edge_pct = actual_edge
-            cycle_record.pnl_usdt = pnl
-            cycle_record.status = "completed"
-
-            state.closed_trades.append(cycle_record.to_dict())
+            # 4. Save state
+            state.open_grid_orders = placed_orders
+            state.grid_center_price = grid_center
+            
+            # Retrieve live account balances to sync equity
+            balances = await exchange.fetch_balance()
+            state.cash = float(balances.get('USDT', {}).get('free', 0.0))
+            state.asset_balance = float(balances.get('SOL', {}).get('free', 0.0))
+            state.account_size = state.cash + (state.asset_balance * target_grid["mid_price"])
+            
             save_state(state)
-
-            logger.success(f"🎉 Live [{route_name}] Arbitrage Completed! PnL: ${pnl:+.4f} USDT")
-            arbitrage_executed(cycle_id, f"{route_name}-{direction}", size_usdt, pnl, net_edge, mode="LIVE")
+            logger.success(f"🟢 Placed {len(placed_orders)} resting live PostOnly grid orders.")
 
         except Exception as e:
-            logger.error(f"❌ Critical Live execution error on cycle {cycle_id}: {e}")
-            cycle_record.completed_at = datetime.now(timezone.utc).isoformat()
-            cycle_record.reason = str(e)
-            state.closed_trades.append(cycle_record.to_dict())
-            save_state(state)
-            arbitrage_failed(cycle_id, f"{route_name}-{direction}", "Execution Loop", str(e), mode="LIVE")
+            logger.error(f"❌ Failed to cancel/replace live orders: {e}")
+            arbitrage_failed("GRID-REPLACE", "GRID", 0.0, 0.0, grid_center, mode="LIVE")
