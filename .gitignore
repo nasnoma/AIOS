@@ -23,3 +23,14 @@ trading_engine/paper_state.json
 trading_engine/.env
 /data/
 
+# Polymarket / Bybit bot ignores
+polymarket_bot/.env
+polymarket_bot/paper_state.json
+polymarket_bot/paper_state.lock
+polymarket_bot/**/__pycache__/
+polymarket_bot/**/*.pyc
+polymarket_bot/.pytest_cache/
+polymarket_bot/best_params.json
+polymarket_bot/autoresearch_history.json
+polymarket_bot/tests/__pycache__/
+

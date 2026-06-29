@@ -1,290 +1,241 @@
 """
 polymarket_bot/execution.py
 
-Trade executor — paper and live modes.
-
-Paper mode:
-  - Fills at current mid-price instantly (zero latency).
-  - Tracks virtual portfolio in state.py (JSON).
-  - Resolves positions at window close by fetching winning side.
-
-Live mode:
-  - Places FOK/GTC limit orders via clob_client.
-  - Cancels any unfilled orders 30s before window close.
-  - Redemption of winning shares handled post-resolution (Web3).
+Execution engine for Bybit Spot Triangular Arbitrage.
+Supports both simulated (paper) and live execution.
 """
 from __future__ import annotations
 import asyncio
 import uuid
 from datetime import datetime, timezone
-from typing import Optional
-
 from loguru import logger
 
-from polymarket_bot.clob_client import clob_cache
 from polymarket_bot.config import settings
-from polymarket_bot.market import MarketTokens
-from polymarket_bot.risk import RiskDecision
 from polymarket_bot.state import (
-    OpenPosition, PortfolioState, load_state, reset_daily_pnl_if_new_day, save_state
+    load_state, save_state, ArbTradeCycle,
+    reset_daily_pnl_if_new_day
 )
-from polymarket_bot.strategy import Signal, SignalType
+from polymarket_bot.alerts import arbitrage_executed, arbitrage_failed
 
-# Polymarket charges ~1–2¢ per USDC in fees; model conservatively
-_FEE_RATE = 0.02   # 2% of position size (includes slippage estimate)
+_exchange = None
 
 
-async def execute(
-    signal: Signal,
-    risk: RiskDecision,
-    market: MarketTokens,
-) -> Optional[OpenPosition]:
+def get_bybit_client():
+    global _exchange
+    if _exchange is None:
+        import ccxt
+        _exchange = ccxt.bybit({
+            'apiKey': settings.bybit_api_key,
+            'secret': settings.bybit_api_secret,
+            'enableRateLimit': True,
+            'options': {
+                'defaultType': 'spot',
+            }
+        })
+        if settings.bybit_testnet:
+            _exchange.set_sandbox_mode(True)
+    return _exchange
+
+
+async def execute_arbitrage(opportunity: dict) -> None:
     """
-    Execute a trade for an approved signal.
-    Returns the opened OpenPosition, or None if execution fails.
+    Executes a triangular arbitrage cycle.
+    Handles paper or live modes.
     """
-    if not risk.approved:
-        return None
+    cycle_id = uuid.uuid4().hex[:8]
+    direction = opportunity["direction"]
+    net_edge = opportunity["net_edge"]
+    prices = opportunity["prices"]
 
-    if settings.is_live:
-        return await _execute_live(signal, risk, market)
-    else:
-        return await _execute_paper(signal, risk, market)
+    logger.info(f"⚡ Starting Arbitrage Cycle {cycle_id} ({direction}) | Net Edge: {net_edge:.4%}")
 
-
-async def _execute_paper(
-    signal: Signal,
-    risk: RiskDecision,
-    market: MarketTokens,
-) -> Optional[OpenPosition]:
-    """
-    Paper mode: instantly fill at current mid-price, no network call.
-    """
     state = load_state()
     state = reset_daily_pnl_if_new_day(state)
 
-    # Determine which side(s) we are buying
-    if signal.signal_type == SignalType.SPREAD_ARB:
-        side = "BOTH"
-    elif signal.signal_type == SignalType.MOMENTUM_LONG:
-        side = "YES"
-    else:
-        side = "NO"
+    if settings.trading_mode == "paper":
+        # ── PAPER TRADING MODE ──
+        size_usdt = state.cash * settings.position_size_pct
+        pnl = size_usdt * net_edge
 
-    total_cost = risk.total_size_usd * (1 + _FEE_RATE)
-    if state.cash < total_cost:
-        logger.warning(f"Paper exec blocked: insufficient cash ({state.cash:.2f} < {total_cost:.2f})")
-        return None
+        # Update state fields
+        state.cash += pnl
+        state.account_size = state.cash
+        state.total_pnl += pnl
+        state.daily_pnl += pnl
+        state.cycle_count += 1
 
-    pos = OpenPosition(
-        position_id=str(uuid.uuid4())[:8],
-        asset=signal.asset,
-        token_id_yes=market.token_id_up,
-        token_id_no=market.token_id_down,
-        signal_type=signal.signal_type.value,
-        side=side,
-        entry_price_yes=signal.entry_price_yes,
-        entry_price_no=signal.entry_price_no,
-        size_usd=risk.total_size_usd,
-        window_start=market.window_start,
-        window_end=market.window_end,
-        opened_at=datetime.now(timezone.utc).isoformat(),
-    )
-
-    state.cash -= total_cost
-    state.positions.append(_pos_to_dict(pos))
-    save_state(state)
-
-    logger.success(
-        f"📝 PAPER {signal.signal_type.value} | {signal.asset} | side={side} | "
-        f"size=${risk.total_size_usd:.2f} | "
-        f"YES={signal.entry_price_yes} NO={signal.entry_price_no}"
-    )
-    return pos
-
-
-async def _execute_live(
-    signal: Signal,
-    risk: RiskDecision,
-    market: MarketTokens,
-) -> Optional[OpenPosition]:
-    """
-    Live mode: place real limit orders via CLOB.
-    """
-    placed_orders = []
-
-    if signal.buy_yes and risk.size_usd_yes > 0:
-        order_id = await clob_cache.place_limit_order(
-            token_id=market.token_id_up,
-            side="BUY",
-            price=signal.entry_price_yes,
-            size=risk.size_usd_yes / signal.entry_price_yes,  # shares = USD / price
-            order_type="FOK",
-        )
-        if order_id:
-            placed_orders.append(("YES", order_id))
-
-    if signal.buy_no and risk.size_usd_no > 0:
-        order_id = await clob_cache.place_limit_order(
-            token_id=market.token_id_down,
-            side="BUY",
-            price=signal.entry_price_no,
-            size=risk.size_usd_no / signal.entry_price_no,
-            order_type="FOK",
-        )
-        if order_id:
-            placed_orders.append(("NO", order_id))
-
-    if not placed_orders:
-        logger.error(f"Live execution: no orders placed for {signal.asset}")
-        return None
-
-    side = "BOTH" if len(placed_orders) == 2 else placed_orders[0][0]
-    pos = OpenPosition(
-        position_id=str(uuid.uuid4())[:8],
-        asset=signal.asset,
-        token_id_yes=market.token_id_up,
-        token_id_no=market.token_id_down,
-        signal_type=signal.signal_type.value,
-        side=side,
-        entry_price_yes=signal.entry_price_yes,
-        entry_price_no=signal.entry_price_no,
-        size_usd=risk.total_size_usd,
-        window_start=market.window_start,
-        window_end=market.window_end,
-        opened_at=datetime.now(timezone.utc).isoformat(),
-    )
-
-    state = load_state()
-    state.positions.append(_pos_to_dict(pos))
-    save_state(state)
-
-    logger.success(f"🟢 LIVE {signal.signal_type.value} | {signal.asset} | orders={placed_orders}")
-    return pos
-
-
-async def resolve_expired_positions(current_window_start: int, feed: PriceFeed) -> None:
-    """
-    Check all open positions. Resolve (close) those whose window has ended.
-    Calculates P&L based on the winning side from actual Binance spot strike price resolution.
-    """
-    state = load_state()
-    state = reset_daily_pnl_if_new_day(state)
-    changed = False
-
-    for pos_dict in list(state.positions):
-        if pos_dict.get("status") != "open":
-            continue
-        window_end = pos_dict.get("window_end", 0)
-        if current_window_start < window_end:
-            continue  # Window not yet finished
-
-        # Window is over — determine which side won
-        pnl = await _compute_resolution_pnl(pos_dict, feed)
-        pos_dict["pnl_usd"] = round(pnl, 4)
-        pos_dict["status"] = "closed"
-        pos_dict["closed_at"] = datetime.now(timezone.utc).isoformat()
-
-        size = pos_dict.get("size_usd", 0)
-        if pnl > 0:
+        is_win = pnl >= 0
+        if is_win:
             state.win_count += 1
-            # Cumulative moving average for avg win
-            state.avg_win_usd = round(
-                state.avg_win_usd + (pnl - state.avg_win_usd) / state.win_count, 4
+            # Running Average Win
+            state.avg_win_usd = (
+                (state.avg_win_usd * (state.win_count - 1) + pnl) / state.win_count
+                if state.win_count > 0 else pnl
             )
         else:
             state.loss_count += 1
-            # Cumulative moving average for avg loss (stored as negative)
-            state.avg_loss_usd = round(
-                state.avg_loss_usd + (pnl - state.avg_loss_usd) / state.loss_count, 4
+            # Running Average Loss
+            state.avg_loss_usd = (
+                (state.avg_loss_usd * (state.loss_count - 1) + pnl) / state.loss_count
+                if state.loss_count > 0 else pnl
             )
 
-        state.total_pnl += pnl
-        state.daily_pnl += pnl
-        # Return capital to cash (net of fees already deducted at entry)
-        state.cash += size + pnl
-
-        state.positions.remove(pos_dict)
-        state.closed_trades.append(pos_dict)
-        changed = True
-
-        emoji = "✅" if pnl >= 0 else "❌"
-        logger.info(
-            f"{emoji} Resolved {pos_dict['asset']} | side={pos_dict['side']} | "
-            f"size=${size:.2f} | P&L=${pnl:+.2f} | total=${state.total_pnl:+.2f}"
+        cycle_record = ArbTradeCycle(
+            cycle_id=cycle_id,
+            direction=direction,
+            started_at=datetime.now(timezone.utc).isoformat(),
+            completed_at=datetime.now(timezone.utc).isoformat(),
+            est_edge_pct=net_edge,
+            actual_edge_pct=net_edge,
+            size_usdt=size_usdt,
+            pnl_usdt=pnl,
+            status="completed",
+            leg1_price=prices.get("BTCUSDT", 0.0) if direction == "FORWARD" else prices.get("ETHUSDT", 0.0),
+            leg2_price=prices.get("ETHBTC", 0.0),
+            leg3_price=prices.get("ETHUSDT", 0.0) if direction == "FORWARD" else prices.get("BTCUSDT", 0.0),
         )
 
-    state.cycle_count += 1
-    if changed:
+        state.closed_trades.append(cycle_record.to_dict())
         save_state(state)
 
+        logger.success(f"🎉 Simulated Arb Cycle {cycle_id} Completed! PnL: ${pnl:+.4f}")
+        arbitrage_executed(cycle_id, direction, size_usdt, pnl, net_edge, mode="PAPER")
 
-async def compute_unrealized_pnl(pos_dict: dict, feed: PriceFeed) -> float:
-    """Public helper to compute current unrealized P&L for open positions."""
-    return await _compute_resolution_pnl(pos_dict, feed, is_resolution=False)
-
-
-async def _compute_resolution_pnl(pos_dict: dict, feed: PriceFeed, is_resolution: bool = True) -> float:
-    """
-    Compute P&L using Binance spot strike prices for deterministic paper resolution (if is_resolution=True)
-    or current mid prices for mark-to-market unrealized evaluation (if is_resolution=False).
-    """
-    side = pos_dict.get("side", "YES")
-    size_usd = pos_dict.get("size_usd", 0.0)
-    entry_yes = pos_dict.get("entry_price_yes") or 0.5
-    entry_no = pos_dict.get("entry_price_no") or 0.5
-    asset = pos_dict.get("asset", "")
-    window_start = pos_dict.get("window_start", 0)
-    window_end = pos_dict.get("window_end", 0)
-
-    token_id_yes = pos_dict.get("token_id_yes", "")
-    token_id_no = pos_dict.get("token_id_no", "")
-    mid_yes = await clob_cache.get_mid_price(token_id_yes) if token_id_yes else None
-    mid_no = await clob_cache.get_mid_price(token_id_no) if token_id_no else None
-
-    # Determine resolution outcome from actual spot feed strike prices
-    strike = feed.get_strike(asset, window_start)
-    final = feed.get_strike(asset, window_end)
-
-    if strike is not None and final is not None:
-        yes_won = final >= strike
     else:
-        # Fallback to current mid-prices if strike capture missed (e.g. on startup)
-        if mid_yes is not None and mid_no is not None:
-            yes_won = mid_yes > mid_no
-        else:
-            yes_won = entry_yes > 0.5  # Last resort fallback
+        # ── LIVE TRADING MODE ──
+        exchange = get_bybit_client()
+        cycle_record = ArbTradeCycle(
+            cycle_id=cycle_id,
+            direction=direction,
+            started_at=datetime.now(timezone.utc).isoformat(),
+            completed_at="",
+            est_edge_pct=net_edge,
+            actual_edge_pct=0.0,
+            size_usdt=0.0,
+            pnl_usdt=0.0,
+            status="failed",
+        )
 
-    if side == "BOTH":
-        # Spread arb: one leg wins, one leg loses.
-        shares = (size_usd / 2) / ((entry_yes + entry_no) / 2)
-        if is_resolution:
-            guaranteed_pnl = (1.0 - entry_yes - entry_no) * shares
-        else:
-            val_yes = mid_yes if mid_yes is not None else entry_yes
-            val_no = mid_no if mid_no is not None else entry_no
-            guaranteed_pnl = (val_yes + val_no - entry_yes - entry_no) * shares
-        return guaranteed_pnl * (1 - _FEE_RATE)
+        try:
+            # 1. Fetch live USDT balance
+            balance = await asyncio.to_thread(exchange.fetch_balance)
+            free_usdt = float(balance.get('USDT', {}).get('free', 0.0))
+            size_usdt = free_usdt * settings.position_size_pct
+            cycle_record.size_usdt = size_usdt
 
-    if side == "YES":
-        if is_resolution:
-            exit_price = 1.0 if yes_won else 0.0
-        else:
-            exit_price = mid_yes if mid_yes is not None else entry_yes
-        shares = (size_usd / entry_yes) if entry_yes > 0 else 0
-        return (exit_price - entry_yes) * shares * (1 - _FEE_RATE)
+            if size_usdt < 5.0:
+                msg = f"Insufficient USDT balance to trade: {free_usdt:.2f} USDT (min: 5.0)"
+                logger.warning(msg)
+                arbitrage_failed(cycle_id, direction, "Balance Check", msg, mode="LIVE")
+                return
 
-    if side == "NO":
-        if is_resolution:
-            exit_price = 0.0 if yes_won else 1.0
-        else:
-            exit_price = mid_no if mid_no is not None else entry_no
-        shares = (size_usd / entry_no) if entry_no > 0 else 0
-        return (exit_price - entry_no) * shares * (1 - _FEE_RATE)
+            logger.info(f"Executing LIVE {direction} cycle with size {size_usdt:.2f} USDT")
 
-    return 0.0
+            if direction == "FORWARD":
+                # Leg 1: Buy BTC using USDT
+                logger.info("Leg 1: Market Buy BTC/USDT...")
+                await asyncio.to_thread(
+                    exchange.create_market_buy_order_with_cost,
+                    "BTC/USDT",
+                    size_usdt
+                )
 
+                # Leg 2: Buy ETH using BTC balance
+                await asyncio.sleep(0.1)  # tiny delay to allow spot balance to settle
+                balance = await asyncio.to_thread(exchange.fetch_balance)
+                btc_balance = float(balance.get('BTC', {}).get('free', 0.0))
+                logger.info(f"Leg 2: Market Buy ETH/BTC with {btc_balance:.6f} BTC...")
+                await asyncio.to_thread(
+                    exchange.create_market_buy_order_with_cost,
+                    "ETH/BTC",
+                    btc_balance
+                )
 
-def _pos_to_dict(pos: OpenPosition) -> dict:
-    from dataclasses import asdict
-    return asdict(pos)
+                # Leg 3: Sell ETH for USDT
+                await asyncio.sleep(0.1)
+                balance = await asyncio.to_thread(exchange.fetch_balance)
+                eth_balance = float(balance.get('ETH', {}).get('free', 0.0))
+                logger.info(f"Leg 3: Market Sell ETH/USDT for {eth_balance:.6f} ETH...")
+                await asyncio.to_thread(
+                    exchange.create_market_sell_order,
+                    "ETH/USDT",
+                    eth_balance
+                )
+
+            else:  # REVERSE
+                # Leg 1: Buy ETH using USDT
+                logger.info("Leg 1: Market Buy ETH/USDT...")
+                await asyncio.to_thread(
+                    exchange.create_market_buy_order_with_cost,
+                    "ETH/USDT",
+                    size_usdt
+                )
+
+                # Leg 2: Sell ETH for BTC
+                await asyncio.sleep(0.1)
+                balance = await asyncio.to_thread(exchange.fetch_balance)
+                eth_balance = float(balance.get('ETH', {}).get('free', 0.0))
+                logger.info(f"Leg 2: Market Sell ETH/BTC for {eth_balance:.6f} ETH...")
+                await asyncio.to_thread(
+                    exchange.create_market_sell_order,
+                    "ETH/BTC",
+                    eth_balance
+                )
+
+                # Leg 3: Sell BTC for USDT
+                await asyncio.sleep(0.1)
+                balance = await asyncio.to_thread(exchange.fetch_balance)
+                btc_balance = float(balance.get('BTC', {}).get('free', 0.0))
+                logger.info(f"Leg 3: Market Sell BTC/USDT for {btc_balance:.6f} BTC...")
+                await asyncio.to_thread(
+                    exchange.create_market_sell_order,
+                    "BTC/USDT",
+                    btc_balance
+                )
+
+            # 4. Compute actual PnL
+            await asyncio.sleep(0.2)
+            balance = await asyncio.to_thread(exchange.fetch_balance)
+            new_usdt = float(balance.get('USDT', {}).get('free', 0.0))
+            pnl = new_usdt - free_usdt
+            actual_edge = pnl / size_usdt
+
+            # Update State
+            state.cash = new_usdt
+            state.account_size = new_usdt
+            state.total_pnl += pnl
+            state.daily_pnl += pnl
+            state.cycle_count += 1
+
+            is_win = pnl >= 0
+            if is_win:
+                state.win_count += 1
+                state.avg_win_usd = (
+                    (state.avg_win_usd * (state.win_count - 1) + pnl) / state.win_count
+                    if state.win_count > 0 else pnl
+                )
+            else:
+                state.loss_count += 1
+                state.avg_loss_usd = (
+                    (state.avg_loss_usd * (state.loss_count - 1) + pnl) / state.loss_count
+                    if state.loss_count > 0 else pnl
+                )
+
+            cycle_record.completed_at = datetime.now(timezone.utc).isoformat()
+            cycle_record.actual_edge_pct = actual_edge
+            cycle_record.pnl_usdt = pnl
+            cycle_record.status = "completed"
+
+            state.closed_trades.append(cycle_record.to_dict())
+            save_state(state)
+
+            logger.success(f"🎉 Live Arbitrage Cycle {cycle_id} Completed! PnL: ${pnl:+.4f} USDT")
+            arbitrage_executed(cycle_id, direction, size_usdt, pnl, net_edge, mode="LIVE")
+
+        except Exception as e:
+            logger.error(f"❌ Critical Live execution error on cycle {cycle_id}: {e}")
+            cycle_record.completed_at = datetime.now(timezone.utc).isoformat()
+            cycle_record.reason = str(e)
+            state.closed_trades.append(cycle_record.to_dict())
+            save_state(state)
+            arbitrage_failed(cycle_id, direction, "Execution Loop", str(e), mode="LIVE")

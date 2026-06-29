@@ -1,9 +1,8 @@
 """
 polymarket_bot/state.py
 
-JSON-backed paper portfolio state.
+JSON-backed paper/live portfolio state for Bybit Arbitrage Bot.
 Atomic file-lock protected reads/writes.
-No external DB dependency.
 """
 from __future__ import annotations
 import json
@@ -52,31 +51,27 @@ def _file_lock():
 
 
 @dataclass
-class OpenPosition:
-    position_id: str          # unique uuid
-    asset: str                # e.g. "BTC"
-    token_id_yes: str
-    token_id_no: str
-    signal_type: str          # SPREAD_ARB | MOMENTUM_LONG | MOMENTUM_SHORT
-    side: str                 # "YES" | "NO" | "BOTH"
-    entry_price_yes: Optional[float]
-    entry_price_no: Optional[float]
-    size_usd: float
-    window_start: int         # Unix timestamp of window start
-    window_end: int           # Unix timestamp of window end
-    opened_at: str            # ISO timestamp
-    closed_at: Optional[str] = None
-    exit_price: Optional[float] = None
-    pnl_usd: Optional[float] = None
-    status: str = "open"      # open | closed | expired
+class ArbTradeCycle:
+    cycle_id: str             # unique ID
+    direction: str            # "FORWARD" | "REVERSE"
+    started_at: str           # ISO timestamp
+    completed_at: str         # ISO timestamp
+    est_edge_pct: float       # Expected net edge %
+    actual_edge_pct: float    # Actual realized net edge %
+    size_usdt: float          # USDT starting size
+    pnl_usdt: float           # Net profit/loss in USDT
+    status: str               # "completed" | "failed"
+    reason: str = ""          # Rejection or execution details
+    leg1_price: float = 0.0
+    leg2_price: float = 0.0
+    leg3_price: float = 0.0
 
 
 @dataclass
 class PortfolioState:
-    account_size: float = 1000.0
-    cash: float = 1000.0
-    positions: list = field(default_factory=list)        # list[OpenPosition dicts]
-    closed_trades: list = field(default_factory=list)    # list[OpenPosition dicts]
+    account_size: float = 500.0
+    cash: float = 500.0
+    closed_trades: list = field(default_factory=list)    # list of ArbTradeCycle dicts
     total_pnl: float = 0.0
     daily_pnl: float = 0.0
     daily_reset_date: str = ""
@@ -84,7 +79,7 @@ class PortfolioState:
     loss_count: int = 0
     avg_win_usd: float = 0.0
     avg_loss_usd: float = 0.0
-    cycle_count: int = 0      # completed windows tracked
+    cycle_count: int = 0
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -92,8 +87,8 @@ class PortfolioState:
     @classmethod
     def from_dict(cls, d: dict) -> "PortfolioState":
         obj = cls(
-            account_size=d.get("account_size", 1000.0),
-            cash=d.get("cash", 1000.0),
+            account_size=d.get("account_size", 500.0),
+            cash=d.get("cash", 500.0),
             total_pnl=d.get("total_pnl", 0.0),
             daily_pnl=d.get("daily_pnl", 0.0),
             daily_reset_date=d.get("daily_reset_date", ""),
@@ -103,21 +98,8 @@ class PortfolioState:
             avg_loss_usd=d.get("avg_loss_usd", 0.0),
             cycle_count=d.get("cycle_count", 0),
         )
-        obj.positions = d.get("positions", [])
         obj.closed_trades = d.get("closed_trades", [])
-        # One-time backfill: if avg fields are missing (old state file) but trades exist, compute from history
-        if obj.avg_win_usd == 0.0 and obj.avg_loss_usd == 0.0 and obj.closed_trades:
-            wins = [t["pnl_usd"] for t in obj.closed_trades if (t.get("pnl_usd") or 0) > 0]
-            losses = [t["pnl_usd"] for t in obj.closed_trades if (t.get("pnl_usd") or 0) <= 0]
-            if wins:
-                obj.avg_win_usd = round(sum(wins) / len(wins), 4)
-            if losses:
-                obj.avg_loss_usd = round(sum(losses) / len(losses), 4)
         return obj
-
-    @property
-    def open_positions(self) -> list[dict]:
-        return [p for p in self.positions if p.get("status") == "open"]
 
     @property
     def win_rate(self) -> float:
@@ -151,11 +133,13 @@ def get_status() -> dict:
         "total_pnl": round(s.total_pnl, 2),
         "total_pnl_pct": round(s.total_pnl / s.account_size * 100, 2) if s.account_size else 0,
         "daily_pnl": round(s.daily_pnl, 2),
-        "open_positions": len(s.open_positions),
+        "open_positions": 0,  # Arbitrage cycles close instantly, no open positions overnight
         "win_count": s.win_count,
         "loss_count": s.loss_count,
         "win_rate_pct": round(s.win_rate * 100, 1),
         "cycle_count": s.cycle_count,
+        "avg_win_usd": s.avg_win_usd,
+        "avg_loss_usd": s.avg_loss_usd,
     }
 
 

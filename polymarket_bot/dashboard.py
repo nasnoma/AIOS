@@ -1,8 +1,8 @@
 """
 polymarket_bot/dashboard.py
 
-Embedded aiohttp web server running a dashboard for real-time monitoring.
-Features deep navy dark mode, glassmorphic cards, live state updates, and logs.
+Embedded aiohttp web server running a premium quantitative dashboard for Bybit Arbitrage Bot.
+Features deep navy dark mode, glassmorphic cards, live state updates, tickers, and logs.
 """
 from __future__ import annotations
 import os
@@ -23,7 +23,7 @@ def log_sink(message):
     """Loguru sink that stores formatted log lines for the dashboard."""
     recent_logs.append(message.strip())
 
-# Setup loguru sink at import or startup
+# Setup loguru sink
 logger.add(log_sink, level="INFO", format="{time:HH:mm:ss} | {level:7} | {message}")
 
 _INDEX_HTML = """<!DOCTYPE html>
@@ -31,7 +31,7 @@ _INDEX_HTML = """<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Polymarket Bot Dashboard</title>
+    <title>Bybit Triangular Arbitrage Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -138,7 +138,7 @@ _INDEX_HTML = """<!DOCTYPE html>
             box-shadow: 0 0 10px rgba(16, 185, 129, 0.1);
         }
 
-        .status-badge.cooldown {
+        .status-badge.disconnected {
             background-color: var(--color-red-glow);
             color: var(--color-red);
             border-color: rgba(244, 63, 94, 0.3);
@@ -172,7 +172,7 @@ _INDEX_HTML = """<!DOCTYPE html>
 
         .metrics-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 1.5rem;
         }
 
@@ -214,7 +214,7 @@ _INDEX_HTML = """<!DOCTYPE html>
         }
 
         .metric-value {
-            font-size: 2rem;
+            font-size: 1.8rem;
             font-weight: 700;
             letter-spacing: -0.03em;
         }
@@ -233,7 +233,7 @@ _INDEX_HTML = """<!DOCTYPE html>
 
         .dashboard-body {
             display: grid;
-            grid-template-columns: 1.8fr 1.2fr;
+            grid-template-columns: 1.6fr 1.4fr;
             gap: 1.5rem;
         }
 
@@ -309,8 +309,8 @@ _INDEX_HTML = """<!DOCTYPE html>
             text-transform: uppercase;
         }
 
-        .badge.buy { background: var(--color-green-glow); color: var(--color-green); }
-        .badge.sell { background: var(--color-red-glow); color: var(--color-red); }
+        .badge.forward { background: var(--color-green-glow); color: var(--color-green); }
+        .badge.reverse { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
 
         .console-card {
             display: flex;
@@ -345,325 +345,327 @@ _INDEX_HTML = """<!DOCTYPE html>
 
         .spot-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(3, 1fr);
             gap: 1rem;
+            margin-bottom: 1.5rem;
         }
 
-        .spot-card {
+        .ticker-card {
             background: rgba(255, 255, 255, 0.02);
             border: 1px solid var(--border-color);
             border-radius: 0.75rem;
             padding: 1rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            text-align: center;
         }
 
-        .spot-info h4 {
-            font-size: 0.875rem;
+        .ticker-name {
+            font-size: 0.8rem;
             color: var(--text-muted);
-        }
-
-        .spot-val {
-            font-size: 1.25rem;
             font-weight: 600;
-            margin-top: 0.25rem;
+            margin-bottom: 0.5rem;
         }
 
-        .spot-mom {
-            font-size: 0.75rem;
-            font-weight: 600;
+        .ticker-price {
+            font-size: 1.2rem;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
         }
 
-        .status-badge.disconnected {
-            background-color: rgba(245, 158, 11, 0.15);
-            color: var(--color-orange);
-            border-color: rgba(245, 158, 11, 0.3);
-            box-shadow: 0 0 10px rgba(245, 158, 11, 0.1);
+        .arb-monitor {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
         }
 
-        .last-updated {
-            font-size: 0.75rem;
+        .arb-path {
+            background: rgba(6, 182, 212, 0.05);
+            border: 1px solid rgba(6, 182, 212, 0.15);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .arb-path.reverse {
+            background: rgba(99, 102, 241, 0.05);
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+
+        .arb-path-title {
+            font-size: 0.8rem;
             color: var(--text-muted);
-            opacity: 0.6;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.25rem;
         }
 
-        @media (max-width: 640px) {
-            header {
-                padding: 1rem;
-                flex-direction: column;
-                gap: 1rem;
-                align-items: flex-start;
-            }
-            main {
-                padding: 1rem;
-                gap: 1.25rem;
-            }
-            .spot-grid {
-                grid-template-columns: 1fr;
-            }
+        .arb-path-edge {
+            font-size: 1.4rem;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
         }
     </style>
 </head>
 <body>
     <header>
         <div class="logo-container">
-            <div class="logo-icon">P</div>
+            <div class="logo-icon">▲</div>
             <div class="logo-text">
-                <h1>POLYMARKET BOT</h1>
-                <span>Intra-Window Momentum Sniping</span>
+                <h1>Bybit Spot Arbitrage</h1>
+                <span>Halal Triangular Engine</span>
             </div>
         </div>
-        <div style="display:flex; align-items:center; gap:0.75rem;">
-            <span id="last-updated" class="last-updated"></span>
-            <div id="cooldown-badge" class="status-badge active">
-                <div class="pulse-dot"></div>
-                <span id="cooldown-text">Active Monitoring</span>
-            </div>
+        <div class="status-badge active" id="bot-status">
+            <div class="pulse-dot"></div>
+            <span id="bot-status-text">Active</span>
         </div>
     </header>
 
     <main>
+        <!-- Metrics -->
         <div class="metrics-grid">
             <div class="card">
-                <div class="metric-title">Portfolio Balance</div>
-                <div id="cash-value" class="metric-value">$0.00</div>
-                <div class="metric-sub">Capital Pool (Paper)</div>
+                <div class="metric-title">Live Balance</div>
+                <div class="metric-value" id="cash-val">---</div>
+                <div class="metric-sub">USDT Spot Account</div>
             </div>
             <div class="card">
-                <div class="metric-title">Cumulative PnL</div>
-                <div id="pnl-value" class="metric-value">$0.00</div>
-                <div id="pnl-sub" class="metric-sub">---</div>
+                <div class="metric-title">Daily P&L</div>
+                <div class="metric-value" id="daily-pnl">---</div>
+                <div class="metric-sub" id="daily-pnl-sub">Realized today</div>
+            </div>
+            <div class="card">
+                <div class="metric-title">Total P&L</div>
+                <div class="metric-value" id="total-pnl">---</div>
+                <div class="metric-sub" id="total-pnl-sub">Cumulative</div>
             </div>
             <div class="card">
                 <div class="metric-title">Win Rate</div>
-                <div id="winrate-value" class="metric-value">0.0%</div>
-                <div id="winrate-sub" class="metric-sub">0W / 0L</div>
+                <div class="metric-value" id="win-rate">---</div>
+                <div class="metric-sub" id="win-loss-count">-- W / -- L</div>
             </div>
             <div class="card">
-                <div class="metric-title">Strategy Config &amp; EV</div>
-                <div style="font-size: 0.85rem; line-height: 1.8; color: var(--text-muted);">
-                    Momentum Floor: <span id="cfg-mom" class="text-green" style="font-weight:600;">$15</span><br>
-                    Min Probability: <span id="cfg-conf" class="text-green" style="font-weight:600;">56%</span><br>
-                    <span style="border-top: 1px solid var(--border-color); display:block; margin: 0.4rem 0;"></span>
-                    Avg Win: <span id="cfg-avg-win" class="text-green" style="font-weight:600;">---</span><br>
-                    Avg Loss: <span id="cfg-avg-loss" class="text-red" style="font-weight:600;">---</span><br>
-                    <span id="cfg-ev" style="font-size:0.8rem;">EV: <span style="font-weight:600;">---</span></span>
-                </div>
+                <div class="metric-title">Avg Win / Loss</div>
+                <div class="metric-value" id="avg-win-loss">---</div>
+                <div class="metric-sub" id="ev-val">EV/Cycle: ---</div>
             </div>
         </div>
 
-        <div class="dashboard-body">
-            <div class="card" style="display: flex; flex-direction: column; gap: 2rem;">
-                <div>
-                    <div class="section-title">Open Positions</div>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Asset</th>
-                                    <th>Signal Type</th>
-                                    <th>Side</th>
-                                    <th>Entry Price</th>
-                                    <th>Unrealized PnL</th>
-                                </tr>
-                            </thead>
-                            <tbody id="positions-body">
-                                <tr>
-                                    <td colspan="5" style="text-align: center; color: var(--text-muted);">No open positions</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+        <!-- Real-time Orderbooks -->
+        <div class="section-title">
+            <span>Market Monitor</span>
+            <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);" id="last-updated">Updated just now</span>
+        </div>
+        <div class="spot-grid">
+            <div class="ticker-card">
+                <div class="ticker-name">BTC/USDT</div>
+                <div class="ticker-price" id="ticker-btcusdt">---</div>
+            </div>
+            <div class="ticker-card">
+                <div class="ticker-name">ETH/USDT</div>
+                <div class="ticker-price" id="ticker-ethusdt">---</div>
+            </div>
+            <div class="ticker-card">
+                <div class="ticker-name">ETH/BTC</div>
+                <div class="ticker-price" id="ticker-ethbtc">---</div>
+            </div>
+        </div>
 
-                <div>
-                    <div class="section-title">Recent Trade History</div>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Asset</th>
-                                    <th>Side</th>
-                                    <th>Position Size</th>
-                                    <th>Closed At</th>
-                                    <th>Realized PnL</th>
-                                </tr>
-                            </thead>
-                            <tbody id="history-body">
-                                <tr>
-                                    <td colspan="5" style="text-align: center; color: var(--text-muted);">No trade history</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+        <div class="arb-monitor">
+            <div class="arb-path">
+                <div class="arb-path-title">Forward (USDT → BTC → ETH → USDT)</div>
+                <div class="arb-path-edge" id="edge-forward">---</div>
+            </div>
+            <div class="arb-path reverse">
+                <div class="arb-path-title">Reverse (USDT → ETH → BTC → USDT)</div>
+                <div class="arb-path-edge" id="edge-reverse">---</div>
+            </div>
+        </div>
+
+        <!-- Body -->
+        <div class="dashboard-body">
+            <!-- Left: Executed Cycles -->
+            <div class="card" style="display: flex; flex-direction: column;">
+                <div class="section-title">
+                    <span>Recent Cycles</span>
+                    <span style="font-size: 0.8rem; color: var(--text-muted);" id="cycle-count">0 completed</span>
+                </div>
+                <div class="table-container" id="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Cycle ID</th>
+                                <th>Direction</th>
+                                <th>Size</th>
+                                <th>Expected Edge</th>
+                                <th>Realized P&L</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trade-history">
+                            <tr>
+                                <td colspan="5" style="text-align: center; color: var(--text-muted);">No cycles executed yet</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-                <div class="card">
-                    <div class="section-title">Asset Spot Prices</div>
-                    <div class="spot-grid">
-                        <div class="spot-card">
-                            <div class="spot-info">
-                                <h4>BTC Price</h4>
-                                <div id="btc-price" class="spot-val">---</div>
-                            </div>
-                            <div id="btc-mom" class="spot-mom">---</div>
-                        </div>
-                        <div class="spot-card">
-                            <div class="spot-info">
-                                <h4>ETH Price</h4>
-                                <div id="eth-price" class="spot-val">---</div>
-                            </div>
-                            <div id="eth-mom" class="spot-mom">---</div>
-                        </div>
-                    </div>
+            <!-- Right: Log Console -->
+            <div class="card console-card">
+                <div class="section-title">
+                    <span>Real-time Logs</span>
                 </div>
-
-                <div class="card console-card">
-                    <div class="section-title">Live Bot Console</div>
-                    <div id="console-output" class="console-body"></div>
+                <div class="console-body" id="log-console">
+                    <div class="console-line info">Waiting for logs...</div>
                 </div>
             </div>
         </div>
     </main>
 
     <script>
-        let failureCount = 0;
-        let lastUpdatedAt = null;
-
-        function tickLastUpdated() {
-            const el = document.getElementById('last-updated');
-            if (!lastUpdatedAt || failureCount >= 2) return;
-            const secs = Math.round((Date.now() - lastUpdatedAt) / 1000);
-            el.innerText = secs < 5 ? 'Updated just now' : `Updated ${secs}s ago`;
+        const tableContainer = document.getElementById('table-container');
+        function checkTableOverflow() {
+            if (tableContainer.scrollWidth > tableContainer.clientWidth) {
+                tableContainer.classList.add('has-overflow');
+            } else {
+                tableContainer.classList.remove('has-overflow');
+            }
         }
+        window.addEventListener('resize', checkTableOverflow);
 
-        async function fetchState() {
+        let disconnectCount = 0;
+        let lastPollTime = Date.now();
+
+        async function updateDashboard() {
             try {
-                const res = await fetch('/api/state');
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                const data = await res.json();
-                failureCount = 0;
-                lastUpdatedAt = Date.now();
-                document.getElementById('last-updated').innerText = 'Updated just now';
-                updateDashboard(data);
+                const response = await fetch('/api/state');
+                const data = await response.json();
+                
+                disconnectCount = 0;
+                lastPollTime = Date.now();
+                document.getElementById('bot-status').className = 'status-badge active';
+                document.getElementById('bot-status-text').innerText = 'Active';
+
+                const state = data.state;
+                const market = data.market_status;
+
+                // Basic Stats
+                document.getElementById('cash-val').innerText = `${state.cash.toFixed(2)} USDT`;
+                
+                const dPnl = state.daily_pnl;
+                const dEl = document.getElementById('daily-pnl');
+                dEl.innerText = `${dPnl >= 0 ? '+' : ''}${dPnl.toFixed(4)} USDT`;
+                dEl.className = `metric-value ${dPnl >= 0 ? 'text-green' : 'text-red'}`;
+
+                const tPnl = state.total_pnl;
+                const tEl = document.getElementById('total-pnl');
+                tEl.innerText = `${tPnl >= 0 ? '+' : ''}${tPnl.toFixed(4)} USDT`;
+                tEl.className = `metric-value ${tPnl >= 0 ? 'text-green' : 'text-red'}`;
+
+                const totalCycles = state.win_count + state.loss_count;
+                const winRate = totalCycles > 0 ? (state.win_count / totalCycles * 100) : 0;
+                document.getElementById('win-rate').innerText = `${winRate.toFixed(1)}%`;
+                document.getElementById('win-loss-count').innerText = `${state.win_count} W / ${state.loss_count} L`;
+
+                const avgWin = state.avg_win_usd;
+                const avgLoss = state.avg_loss_usd;
+                document.getElementById('avg-win-loss').innerText = `+${avgWin.toFixed(4)} / ${avgLoss.toFixed(4)}`;
+                
+                const ev = (winRate / 100 * avgWin) + ((1 - winRate / 100) * avgLoss);
+                document.getElementById('ev-val').innerText = `EV/Cycle: ${ev >= 0 ? '+' : ''}${ev.toFixed(4)} USDT`;
+
+                document.getElementById('cycle-count').innerText = `${state.cycle_count} completed`;
+
+                // Tickers
+                if (market.BTCUSDT) {
+                    document.getElementById('ticker-btcusdt').innerText = `${market.BTCUSDT.bid.toFixed(2)} / ${market.BTCUSDT.ask.toFixed(2)}`;
+                }
+                if (market.ETHUSDT) {
+                    document.getElementById('ticker-ethusdt').innerText = `${market.ETHUSDT.bid.toFixed(2)} / ${market.ETHUSDT.ask.toFixed(2)}`;
+                }
+                if (market.ETHBTC) {
+                    document.getElementById('ticker-ethbtc').innerText = `${market.ETHBTC.bid.toFixed(5)} / ${market.ETHBTC.ask.toFixed(5)}`;
+                }
+
+                // Edges
+                const edgeF = data.edges.forward;
+                const edgeFE = document.getElementById('edge-forward');
+                edgeFE.innerText = `${edgeF >= 0 ? '+' : ''}${edgeF.toFixed(4)}%`;
+                edgeFE.className = `arb-path-edge ${edgeF >= 0 ? 'text-green' : 'text-red'}`;
+
+                const edgeR = data.edges.reverse;
+                const edgeRE = document.getElementById('edge-reverse');
+                edgeRE.innerText = `${edgeR >= 0 ? '+' : ''}${edgeR.toFixed(4)}%`;
+                edgeRE.className = `arb-path-edge ${edgeR >= 0 ? 'text-green' : 'text-red'}`;
+
+                // Trade History
+                const tbody = document.getElementById('trade-history');
+                if (state.closed_trades && state.closed_trades.length > 0) {
+                    tbody.innerHTML = state.closed_trades.slice().reverse().map(trade => {
+                        const isWin = trade.pnl_usdt >= 0;
+                        const directionClass = trade.direction === 'FORWARD' ? 'forward' : 'reverse';
+                        return `
+                            <tr>
+                                <td><code>${trade.cycle_id}</code></td>
+                                <td><span class="badge ${directionClass}">${trade.direction}</span></td>
+                                <td>${trade.size_usdt.toFixed(2)} USDT</td>
+                                <td>${(trade.est_edge_pct * 100).toFixed(4)}%</td>
+                                <td class="${isWin ? 'text-green' : 'text-red'} font-mono">${trade.pnl_usdt >= 0 ? '+' : ''}${trade.pnl_usdt.toFixed(4)} USDT</td>
+                            </tr>
+                        `;
+                    }).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No cycles executed yet</td></tr>';
+                }
+                checkTableOverflow();
             } catch (err) {
-                failureCount++;
-                console.error("Failed to fetch state:", err);
-                if (failureCount >= 2) {
-                    const badge = document.getElementById('cooldown-badge');
-                    const text = document.getElementById('cooldown-text');
-                    badge.className = 'status-badge disconnected';
-                    text.innerText = '\u26a0 Disconnected';
+                console.error("Dashboard poll failed", err);
+                disconnectCount++;
+                if (disconnectCount >= 2) {
+                    document.getElementById('bot-status').className = 'status-badge disconnected';
+                    document.getElementById('bot-status-text').innerText = '⚠ Disconnected';
                 }
             }
         }
 
-        async function fetchLogs() {
+        async function updateLogs() {
             try {
-                const res = await fetch('/api/logs');
-                const data = await res.json();
-                const container = document.getElementById('console-output');
-                const isScrolledToBottom = container.scrollHeight - container.clientHeight <= container.scrollTop + 30;
+                const response = await fetch('/api/logs');
+                const data = await response.json();
+                const consoleEl = document.getElementById('log-console');
+                
+                const currentScroll = consoleEl.scrollTop;
+                const isAtBottom = (consoleEl.scrollHeight - consoleEl.clientHeight - currentScroll) < 30;
 
-                container.innerHTML = data.logs.map(log => {
-                    let logClass = 'info';
-                    if (log.includes('WARNING')) logClass = 'warning';
-                    if (log.includes('SUCCESS') || log.includes('Resolved') || log.includes('✅')) logClass = 'success';
-                    if (log.includes('ERROR') || log.includes('failed') || log.includes('❌')) logClass = 'error';
-                    return `<div class="console-line ${logClass}">${log}</div>`;
+                consoleEl.innerHTML = data.logs.map(line => {
+                    let levelClass = 'info';
+                    if (line.includes('| WARNING |')) levelClass = 'warning';
+                    if (line.includes('| ERROR   |')) levelClass = 'error';
+                    if (line.includes('Completed!') || line.includes('Executed')) levelClass = 'success';
+                    return `<div class="console-line ${levelClass}">${line}</div>`;
                 }).join('');
 
-                if (isScrolledToBottom) container.scrollTop = container.scrollHeight;
+                if (isAtBottom) {
+                    consoleEl.scrollTop = consoleEl.scrollHeight;
+                }
             } catch (err) {
-                console.error("Failed to fetch logs:", err);
+                console.error("Log poll failed", err);
             }
         }
 
-        function updateDashboard(data) {
-            document.getElementById('cash-value').innerText = `$${data.state.cash.toFixed(2)}`;
-            const totalPnL = data.state.total_pnl;
-            const pnlValEl = document.getElementById('pnl-value');
-            pnlValEl.innerText = `${totalPnL >= 0 ? '+' : ''}$${totalPnL.toFixed(2)}`;
-            pnlValEl.className = `metric-value ${totalPnL >= 0 ? 'text-green' : 'text-red'}`;
-            
-            const dailyPnL = data.state.daily_pnl;
-            document.getElementById('pnl-sub').innerText = `Daily PnL: ${dailyPnL >= 0 ? '+' : ''}$${dailyPnL.toFixed(2)}`;
-            document.getElementById('pnl-sub').className = `metric-sub ${dailyPnL >= 0 ? 'text-green' : 'text-red'}`;
+        // Poll timers
+        setInterval(updateDashboard, 1000);
+        setInterval(updateLogs, 1000);
+        
+        // Initial setup
+        updateDashboard();
+        updateLogs();
 
-            const wins = data.state.win_count;
-            const losses = data.state.loss_count;
-            const winRate = (wins + losses) > 0 ? (wins / (wins + losses) * 100) : 0;
-            document.getElementById('winrate-value').innerText = `${winRate.toFixed(1)}%`;
-            document.getElementById('winrate-sub').innerText = `${wins}W / ${losses}L`;
-
-            // Update config card from live API values
-            if (data.config) {
-                document.getElementById('cfg-mom').innerText = `$${data.config.momentum_floor}`;
-                document.getElementById('cfg-conf').innerText = `${(data.config.min_prob * 100).toFixed(0)}%`;
-            }
-
-            // Update avg win / loss / EV
-            const avgWin = data.state.avg_win_usd || 0;
-            const avgLoss = data.state.avg_loss_usd || 0;
-            const wr = data.state.win_count / Math.max(1, data.state.win_count + data.state.loss_count);
-            document.getElementById('cfg-avg-win').innerText = avgWin !== 0 ? `+$${avgWin.toFixed(2)}` : '---';
-            document.getElementById('cfg-avg-loss').innerText = avgLoss !== 0 ? `$${avgLoss.toFixed(2)}` : '---';
-            if (avgWin !== 0 && avgLoss !== 0) {
-                const ev = (wr * avgWin) + ((1 - wr) * avgLoss);
-                const evEl = document.getElementById('cfg-ev');
-                evEl.innerHTML = `EV/trade: <span style="font-weight:600;" class="${ev >= 0 ? 'text-green' : 'text-red'}">${ev >= 0 ? '+' : ''}$${ev.toFixed(3)}</span>`;
-            } 
-            
-            const badge = document.getElementById('cooldown-badge');
-            const text = document.getElementById('cooldown-text');
-            if (data.cooldown_remaining > 0) {
-                badge.className = 'status-badge cooldown';
-                text.innerText = `Cooldown: ${Math.round(data.cooldown_remaining)}s`;
-            } else {
-                badge.className = 'status-badge active';
-                text.innerText = 'Active Monitoring';
-            }
-
-            const positionsBody = document.getElementById('positions-body');
-            if (data.state.positions && data.state.positions.length > 0) {
-                positionsBody.innerHTML = data.state.positions.map(p => {
-                    const price = p.side === 'YES' ? p.entry_price_yes : (p.side === 'NO' ? p.entry_price_no : 0.0);
-                    return `<tr><td style="font-weight: 600;">${p.asset}</td><td>${p.signal_type}</td><td><span class="badge ${p.side === 'YES' ? 'buy' : 'sell'}">${p.side}</span></td><td>$${price.toFixed(3)}</td><td class="${p.unrealized_pnl >= 0 ? 'text-green' : 'text-red'}" style="font-weight: 600;">${p.unrealized_pnl >= 0 ? '+' : ''}$${p.unrealized_pnl.toFixed(2)}</td></tr>`;
-                }).join('');
-            } else {
-                positionsBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No open positions</td></tr>`;
-            }
-
-            const historyBody = document.getElementById('history-body');
-            const lastTrades = data.state.closed_trades ? data.state.closed_trades.slice(-5).reverse() : [];
-            if (lastTrades.length > 0) {
-                historyBody.innerHTML = lastTrades.map(t => `<tr><td style="font-weight: 600;">${t.asset}</td><td><span class="badge ${t.side === 'YES' ? 'buy' : 'sell'}">${t.side}</span></td><td>$${t.size_usd.toFixed(2)}</td><td>${new Date(t.closed_at).toLocaleTimeString()}</td><td class="${t.pnl_usd >= 0 ? 'text-green' : 'text-red'}" style="font-weight: 600;">${t.pnl_usd >= 0 ? '+' : ''}$${t.pnl_usd.toFixed(2)}</td></tr>`).join('');
-            } else {
-                historyBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No trade history</td></tr>`;
-            }
-
-            if (data.market_status) {
-                ['BTC', 'ETH'].forEach(asset => {
-                    const m = data.market_status[asset];
-                    if (m) {
-                        document.getElementById(`${asset.toLowerCase()}-price`).innerText = m.price ? `$${m.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '---';
-                        const momEl = document.getElementById(`${asset.toLowerCase()}-mom`);
-                        if (m.momentum !== null && m.momentum !== undefined) {
-                            momEl.innerText = `${m.momentum >= 0 ? '+' : ''}$${m.momentum.toFixed(2)}`;
-                            momEl.className = `spot-mom ${m.momentum >= 0 ? 'text-green' : 'text-red'}`;
-                        }
-                    }
-                });
-            }
-        }
-
-        setInterval(fetchState, 3000);
-        setInterval(fetchLogs, 3000);
-        fetchState();
-        fetchLogs();
+        // Update seconds ago timer
+        setInterval(() => {
+            const sec = Math.floor((Date.now() - lastPollTime) / 1000);
+            document.getElementById('last-updated').innerText = sec <= 1 ? 'Updated just now' : `Updated ${sec}s ago`;
+        }, 1000);
     </script>
 </body>
 </html>
@@ -674,69 +676,38 @@ async def handle_dashboard_index(request):
 
 async def handle_api_state(request):
     try:
-        # Load local paper/live state
-        state = load_state()
-        
-        # Access active pricing and cooldown from current app instance
         price_feed = request.app["price_feed"]
         
-        # Calculate expected cooldown
-        consecutive_losses = 0
-        for t in reversed(state.closed_trades):
-            pnl = t.get("pnl_usd")
-            if pnl is not None:
-                if pnl < 0:
-                    consecutive_losses += 1
-                else:
-                    break
+        # Calculate raw forward and reverse edges for display
+        bid_btc, ask_btc, _, _ = price_feed.get_best_bid_ask("BTCUSDT")
+        bid_eth, ask_eth, _, _ = price_feed.get_best_bid_ask("ETHUSDT")
+        bid_ethbtc, ask_ethbtc, _, _ = price_feed.get_best_bid_ask("ETHBTC")
 
-        cooldown_remaining = 0.0
-        if consecutive_losses >= 2 and state.closed_trades:
-            last_closed_str = state.closed_trades[-1].get("closed_at")
-            if last_closed_str:
-                try:
-                    last_closed_dt = datetime.fromisoformat(last_closed_str.replace("Z", "+00:00"))
-                    now_dt = datetime.now(timezone.utc)
-                    elapsed = (now_dt - last_closed_dt).total_seconds()
-                    if elapsed < 600.0:
-                        cooldown_remaining = 600.0 - elapsed
-                except Exception:
-                    pass
+        forward_edge = 0.0
+        reverse_edge = 0.0
+        total_fees = 3 * 0.0010
 
-        # Calculate unrealized P&Ls for dashboard UI
-        from polymarket_bot.execution import compute_unrealized_pnl
-        positions_with_pnl = []
-        for pos in state.open_positions:
-            unrealized = await compute_unrealized_pnl(pos, price_feed)
-            pos_dict = dict(pos)
-            pos_dict["unrealized_pnl"] = unrealized
-            positions_with_pnl.append(pos_dict)
+        if all([bid_btc, ask_btc, bid_eth, ask_eth, bid_ethbtc, ask_ethbtc]):
+            forward_gross = (1.0 / ask_btc) * (1.0 / ask_ethbtc) * bid_eth
+            forward_edge = ((forward_gross - 1.0) - total_fees) * 100.0
 
-        # Assemble market prices + strike based momentum
-        from polymarket_bot.market import get_current_window
-        window = get_current_window()
+            reverse_gross = (1.0 / ask_eth) * bid_ethbtc * bid_btc
+            reverse_edge = ((reverse_gross - 1.0) - total_fees) * 100.0
+
+        state = load_state()
         
         market_status = {}
-        for asset in ["BTC", "ETH"]:
-            price = price_feed.get_latest(asset)
-            strike = price_feed.get_strike(asset, window.window_start)
-            momentum = (price - strike) if (price and strike) else None
-            market_status[asset] = {
-                "price": price,
-                "momentum": momentum
-            }
-
-        state_dict = state.to_dict()
-        state_dict["positions"] = positions_with_pnl
+        for asset in ["BTCUSDT", "ETHUSDT", "ETHBTC"]:
+            bid, ask, _, _ = price_feed.get_best_bid_ask(asset)
+            market_status[asset] = {"bid": bid, "ask": ask}
 
         return web.json_response({
-            "state": state_dict,
-            "cooldown_remaining": cooldown_remaining,
+            "state": state.to_dict(),
+            "edges": {
+                "forward": forward_edge,
+                "reverse": reverse_edge,
+            },
             "market_status": market_status,
-            "config": {
-                "momentum_floor": getattr(settings, "min_momentum_threshold", 15),
-                "min_prob": getattr(settings, "min_confidence", 0.56),
-            }
         })
     except Exception as e:
         logger.warning(f"Error compiling api state: {e}")
@@ -746,7 +717,7 @@ async def handle_api_logs(request):
     return web.json_response({"logs": list(recent_logs)})
 
 async def start_dashboard(price_feed) -> web.AppRunner:
-    """Initialize and start the dashboard web server on port 8080 or env PORT."""
+    """Initialize and start the dashboard web server on port 8080."""
     app = web.Application()
     app["price_feed"] = price_feed
     
