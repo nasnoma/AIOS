@@ -1,8 +1,8 @@
 """
 polymarket_bot/dashboard.py
 
-Embedded aiohttp web server running a premium quantitative dashboard for Bybit SOL/USDT Grid Market Maker.
-Features deep navy dark mode, glassmorphic cards, live order ladder, inventory ratio, and console logs.
+Embedded web server and premium quantitative UI for Bybit-Solana CEX-DEX Arbitrage.
+Displays split wallets, real-time spatial spreads, and completed arbitrage cycles.
 """
 from __future__ import annotations
 import os
@@ -20,7 +20,6 @@ from polymarket_bot.config import settings
 recent_logs = deque(maxlen=100)
 
 def log_sink(message):
-    """Loguru sink that stores formatted log lines for the dashboard."""
     recent_logs.append(message.strip())
 
 # Setup loguru sink
@@ -31,23 +30,24 @@ _INDEX_HTML = """<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bybit SOL/USDT Grid Market Maker</title>
+    <title>Bybit-Solana CEX-DEX Arbitrage Bot</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-main: #04060d;
-            --bg-card: rgba(10, 15, 30, 0.45);
-            --bg-card-hover: rgba(16, 25, 48, 0.6);
-            --border-color: rgba(255, 255, 255, 0.06);
-            --text-main: #f1f5f9;
-            --text-muted: #94a3b8;
+            --bg-main: #03050a;
+            --bg-card: rgba(8, 12, 24, 0.5);
+            --bg-card-hover: rgba(14, 20, 38, 0.65);
+            --border-color: rgba(255, 255, 255, 0.05);
+            --text-main: #f8fafc;
+            --text-muted: #64748b;
             --color-primary: #06b6d4;
             --color-primary-glow: rgba(6, 182, 212, 0.15);
             --color-green: #10b981;
             --color-green-glow: rgba(16, 185, 129, 0.15);
             --color-red: #f43f5e;
             --color-red-glow: rgba(244, 63, 94, 0.15);
-            --color-orange: #f59e0b;
+            --color-purple: #a855f7;
+            --color-purple-glow: rgba(168, 85, 247, 0.15);
         }
 
         * {
@@ -63,24 +63,23 @@ _INDEX_HTML = """<!DOCTYPE html>
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            overflow-x: hidden;
             background-image: 
-                radial-gradient(circle at 10% 20%, rgba(6, 182, 212, 0.04) 0%, transparent 40%),
-                radial-gradient(circle at 90% 80%, rgba(99, 102, 241, 0.04) 0%, transparent 40%);
+                radial-gradient(circle at 5% 10%, rgba(6, 182, 212, 0.05) 0%, transparent 35%),
+                radial-gradient(circle at 95% 90%, rgba(168, 85, 247, 0.05) 0%, transparent 35%);
             background-attachment: fixed;
         }
 
         header {
-            padding: 1.5rem 2rem;
+            padding: 1.25rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid var(--border-color);
-            background: rgba(4, 6, 13, 0.85);
+            background: rgba(3, 5, 10, 0.8);
             backdrop-filter: blur(12px);
-            z-index: 10;
             position: sticky;
             top: 0;
+            z-index: 10;
         }
 
         .logo-container {
@@ -93,26 +92,25 @@ _INDEX_HTML = """<!DOCTYPE html>
             width: 2.25rem;
             height: 2.25rem;
             border-radius: 0.5rem;
-            background: linear-gradient(135deg, var(--color-primary), #6366f1);
+            background: linear-gradient(135deg, var(--color-primary), var(--color-purple));
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 700;
             font-size: 1.2rem;
-            box-shadow: 0 0 15px rgba(6, 182, 212, 0.3);
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.25);
         }
 
         .logo-text h1 {
-            font-size: 1.25rem;
+            font-size: 1.2rem;
             font-weight: 700;
-            letter-spacing: -0.025em;
             background: linear-gradient(to right, #ffffff, #cbd5e1);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
         .logo-text span {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             color: var(--text-muted);
             font-weight: 400;
             text-transform: uppercase;
@@ -122,18 +120,19 @@ _INDEX_HTML = """<!DOCTYPE html>
         .status-badge {
             padding: 0.5rem 1rem;
             border-radius: 2rem;
-            font-size: 0.875rem;
+            font-size: 0.8rem;
             font-weight: 600;
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            background: rgba(255, 255, 255, 0.01);
         }
 
         .status-badge.active {
             background-color: var(--color-green-glow);
             color: var(--color-green);
-            border-color: rgba(16, 185, 129, 0.2);
+            border-color: rgba(16, 185, 129, 0.15);
         }
 
         .pulse-dot {
@@ -158,88 +157,57 @@ _INDEX_HTML = """<!DOCTYPE html>
             margin: 0 auto;
             display: flex;
             flex-direction: column;
-            gap: 2rem;
+            gap: 1.75rem;
         }
 
         .metrics-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 1.5rem;
+            gap: 1.25rem;
         }
 
         .card {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
-            border-radius: 1rem;
-            padding: 1.5rem;
-            backdrop-filter: blur(20px);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            backdrop-filter: blur(15px);
+            transition: all 0.3s ease;
         }
 
         .card:hover {
-            transform: translateY(-2px);
-            border-color: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.08);
             background: var(--bg-card-hover);
+            transform: translateY(-1px);
         }
 
         .metric-title {
-            font-size: 0.875rem;
+            font-size: 0.75rem;
             color: var(--text-muted);
-            margin-bottom: 0.5rem;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
         }
 
         .metric-value {
-            font-size: 1.8rem;
+            font-size: 1.6rem;
             font-weight: 700;
-            letter-spacing: -0.03em;
+            letter-spacing: -0.02em;
         }
 
         .metric-sub {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: var(--text-muted);
-            margin-top: 0.5rem;
+            margin-top: 0.4rem;
         }
 
         .text-green { color: var(--color-green); }
         .text-red { color: var(--color-red); }
 
-        /* Inventory Allocation Progress Bar */
-        .allocation-container {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            margin-top: 0.5rem;
-        }
-
-        .allocation-bar-bg {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 0.5rem;
-            height: 0.75rem;
-            width: 100%;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .allocation-bar-fill {
-            background: linear-gradient(90deg, var(--color-primary), #6366f1);
-            height: 100%;
-            width: 50%;
-            transition: width 0.5s ease-in-out;
-        }
-
-        .allocation-labels {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.75rem;
-            color: var(--text-muted);
-        }
-
         .dashboard-body {
             display: grid;
-            grid-template-columns: 1fr 1.2fr 1fr;
+            grid-template-columns: 1fr 1.2fr 1.2fr;
             gap: 1.5rem;
         }
 
@@ -250,7 +218,7 @@ _INDEX_HTML = """<!DOCTYPE html>
         }
 
         .section-title {
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: 600;
             margin-bottom: 1rem;
             display: flex;
@@ -258,47 +226,45 @@ _INDEX_HTML = """<!DOCTYPE html>
             justify-content: space-between;
         }
 
-        /* Grid Ladder Board */
-        .ladder-list {
+        /* Spatial Spreads List */
+        .spread-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .spread-row {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.01);
             display: flex;
             flex-direction: column;
             gap: 0.5rem;
-            font-family: 'JetBrains Mono', monospace;
         }
 
-        .ladder-row {
+        .spread-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0.65rem 1rem;
-            border-radius: 0.5rem;
-            border: 1px solid transparent;
+            font-weight: 600;
             font-size: 0.85rem;
         }
 
-        .ladder-row.sell {
-            background: rgba(244, 63, 94, 0.05);
-            border-color: rgba(244, 63, 94, 0.12);
-            color: #fca5a5;
+        .spread-detail {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
         }
 
-        .ladder-row.buy {
-            background: rgba(16, 185, 129, 0.05);
-            border-color: rgba(16, 185, 129, 0.12);
-            color: #a7f3d0;
+        .spread-pct {
+            font-size: 1.1rem;
+            font-weight: 700;
         }
 
-        .ladder-row.center {
-            background: rgba(255, 255, 255, 0.02);
-            border-color: rgba(255, 255, 255, 0.08);
-            color: var(--text-main);
-            font-weight: 600;
-            text-align: center;
-            justify-content: center;
-            gap: 0.5rem;
-        }
-
-        /* Trade History & Logs */
+        /* Trades table & Console Logs */
         .table-container {
             width: 100%;
             overflow-x: auto;
@@ -307,89 +273,80 @@ _INDEX_HTML = """<!DOCTYPE html>
         table {
             width: 100%;
             border-collapse: collapse;
-            text-align: left;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
         }
 
         th {
+            text-align: left;
             padding: 0.75rem 1rem;
             color: var(--text-muted);
-            font-weight: 600;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             text-transform: uppercase;
             border-bottom: 1px solid var(--border-color);
         }
 
         td {
-            padding: 0.85rem 1rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+            padding: 0.8rem 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.01);
         }
 
         .badge {
             display: inline-block;
-            padding: 0.2rem 0.4rem;
+            padding: 0.15rem 0.35rem;
             border-radius: 0.25rem;
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             font-weight: 600;
-            text-transform: uppercase;
         }
 
-        .badge.buy { background: var(--color-green-glow); color: var(--color-green); }
-        .badge.sell { background: var(--color-red-glow); color: var(--color-red); }
+        .badge.route-a { background: var(--color-primary-glow); color: var(--color-primary); }
+        .badge.route-b { background: var(--color-purple-glow); color: var(--color-purple); }
 
         .console-card {
             display: flex;
             flex-direction: column;
-            height: clamp(300px, 60vh, 600px);
+            height: clamp(300px, 50vh, 500px);
         }
 
         .console-body {
             flex: 1;
-            background: #020306;
-            border: 1px solid rgba(255, 255, 255, 0.03);
+            background: #010204;
+            border: 1px solid rgba(255, 255, 255, 0.02);
             border-radius: 0.5rem;
             padding: 1rem;
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.75rem;
-            line-height: 1.5;
             overflow-y: auto;
             white-space: pre-wrap;
             color: #cbd5e1;
         }
 
         .console-line {
-            margin-bottom: 0.35rem;
+            margin-bottom: 0.3rem;
             border-left: 2px solid transparent;
             padding-left: 0.5rem;
         }
 
         .console-line.info { border-left-color: var(--color-primary); }
-        .console-line.warning { border-left-color: var(--color-orange); color: var(--color-orange); }
+        .console-line.warning { border-left-color: var(--color-purple); color: var(--color-purple); }
         .console-line.success { border-left-color: var(--color-green); color: var(--color-green); }
         .console-line.error { border-left-color: var(--color-red); color: var(--color-red); }
 
         @media (max-width: 768px) {
-            main {
-                padding: 1rem;
-            }
-            .metrics-grid {
-                grid-template-columns: 1fr 1fr;
-            }
+            main { padding: 1rem; }
+            .metrics-grid { grid-template-columns: 1fr 1fr; }
         }
         @media (max-width: 480px) {
-            .metrics-grid {
-                grid-template-columns: 1fr;
-            }
+            .metrics-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
     <header>
         <div class="logo-container">
-            <div class="logo-icon">▲</div>
+            <div class="logo-icon">⇄</div>
             <div class="logo-text">
-                <h1>Bybit SOL Grid MM</h1>
-                <span>Halal Spot Maker Engine</span>
+                <h1>Bybit-Solana CEX-DEX</h1>
+                <span>Arbitrage Spatiale Engine</span>
             </div>
         </div>
         <div class="status-badge active" id="bot-status">
@@ -399,37 +356,25 @@ _INDEX_HTML = """<!DOCTYPE html>
     </header>
 
     <main>
-        <!-- Metrics -->
+        <!-- Metrics Grid -->
         <div class="metrics-grid">
             <div class="card">
-                <div class="metric-title">Equity (USDT)</div>
+                <div class="metric-title">Account Equity (USDT)</div>
                 <div class="metric-value" id="equity-val">---</div>
-                <div class="metric-sub" id="equity-sub">Cash + Asset Valuation</div>
+                <div class="metric-sub" id="equity-sub">Combined Wallet Valuations</div>
             </div>
             <div class="card">
-                <div class="metric-title">USDT Balance</div>
-                <div class="metric-value" id="cash-val">---</div>
-                <div class="metric-sub">Free Spot Wallet cash</div>
+                <div class="metric-title">Bybit Wallet</div>
+                <div class="metric-value" id="cex-cash-val">---</div>
+                <div class="metric-sub" id="cex-asset-val">--- SOL</div>
             </div>
             <div class="card">
-                <div class="metric-title">SOL Inventory</div>
-                <div class="metric-value" id="asset-val">---</div>
-                <div class="metric-sub" id="avg-entry-val">Avg entry: ---</div>
+                <div class="metric-title">Solana Wallet</div>
+                <div class="metric-value" id="dex-cash-val">---</div>
+                <div class="metric-sub" id="dex-asset-val">--- SOL</div>
             </div>
             <div class="card">
-                <div class="metric-title">Inventory Allocation</div>
-                <div class="allocation-container">
-                    <div class="allocation-bar-bg">
-                        <div class="allocation-bar-fill" id="alloc-bar"></div>
-                    </div>
-                    <div class="allocation-labels">
-                        <span id="label-usdt">50% USDT</span>
-                        <span id="label-sol">50% SOL</span>
-                    </div>
-                </div>
-            </div>
-            <div class="card">
-                <div class="metric-title">Realized P&L</div>
+                <div class="metric-title">Realized Arbitrage P&L</div>
                 <div class="metric-value" id="pnl-val">---</div>
                 <div class="metric-sub" id="daily-pnl-val">Daily P&L: ---</div>
             </div>
@@ -437,36 +382,64 @@ _INDEX_HTML = """<!DOCTYPE html>
 
         <!-- 3-Column Layout -->
         <div class="dashboard-body">
-            <!-- 1. Grid Order Book Ladder -->
+            <!-- 1. Real-time Spatial Spreads -->
             <div class="card" style="display: flex; flex-direction: column;">
                 <div class="section-title">
-                    <span>Order Ladder</span>
-                    <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);" id="last-updated">Updated just now</span>
+                    <span>Spatial Spreads</span>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);" id="last-updated">Updated just now</span>
                 </div>
-                <div class="ladder-list" id="ladder-board">
-                    <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 2rem 0;">No active resting orders</div>
+                <div class="spread-list">
+                    <div class="spread-row">
+                        <div class="spread-header">
+                            <span>DEX-BUY / CEX-SELL</span>
+                            <span class="spread-pct" id="spread-a">---</span>
+                        </div>
+                        <div class="spread-detail">
+                            <span>DEX Swap Cost:</span>
+                            <span id="price-dex-buy">---</span>
+                        </div>
+                        <div class="spread-detail">
+                            <span>CEX Bid Price:</span>
+                            <span id="price-cex-sell">---</span>
+                        </div>
+                    </div>
+
+                    <div class="spread-row">
+                        <div class="spread-header">
+                            <span>CEX-BUY / DEX-SELL</span>
+                            <span class="spread-pct" id="spread-b">---</span>
+                        </div>
+                        <div class="spread-detail">
+                            <span>CEX Ask Price:</span>
+                            <span id="price-cex-buy">---</span>
+                        </div>
+                        <div class="spread-detail">
+                            <span>DEX Swap Value:</span>
+                            <span id="price-dex-sell">---</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- 2. Recent Fills / Closed Trades -->
+            <!-- 2. Recent Arbitrage Cycles -->
             <div class="card" style="display: flex; flex-direction: column;">
                 <div class="section-title">
-                    <span>Recent Completed Fills</span>
-                    <span style="font-size: 0.8rem; color: var(--text-muted);" id="fills-count">0 completed</span>
+                    <span>Closed Arbitrage Cycles</span>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);" id="fills-count">0 completed</span>
                 </div>
                 <div class="table-container">
                     <table>
                         <thead>
                             <tr>
-                                <th>Fill price</th>
-                                <th>Side</th>
+                                <th>Cycle ID</th>
+                                <th>Venues / Route</th>
                                 <th>Size</th>
                                 <th>PnL (USDT)</th>
                             </tr>
                         </thead>
                         <tbody id="trade-history">
                             <tr>
-                                <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 2rem 0;">No fills recorded yet</td>
+                                <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 2rem 0;">No arbitrage events logged yet</td>
                             </tr>
                         </tbody>
                     </table>
@@ -476,10 +449,10 @@ _INDEX_HTML = """<!DOCTYPE html>
             <!-- 3. Logs Console -->
             <div class="card console-card">
                 <div class="section-title">
-                    <span>Real-time Grid Logs</span>
+                    <span>Arbitrage Execution Console</span>
                 </div>
                 <div class="console-body" id="log-console">
-                    <div class="console-line info">Waiting for logs...</div>
+                    <div class="console-line info">Initialising engine consoles...</div>
                 </div>
             </div>
         </div>
@@ -500,28 +473,21 @@ _INDEX_HTML = """<!DOCTYPE html>
                 document.getElementById('bot-status-text').innerText = 'Active';
 
                 const state = data.state;
-                const midPrice = data.mid_price;
-                const resPrice = data.reservation_price;
+                const bestBid = data.bybit_bid;
+                const bestAsk = data.bybit_ask;
+                const dexBuy = data.dex_buy;
+                const dexSell = data.dex_sell;
 
-                // Basic Stats
+                // 1. Basic Stats
                 document.getElementById('equity-val').innerText = `${state.account_size.toFixed(2)} USDT`;
-                document.getElementById('cash-val').innerText = `${state.cash.toFixed(2)} USDT`;
-                document.getElementById('asset-val').innerText = `${state.asset_balance.toFixed(4)} SOL`;
-                document.getElementById('avg-entry-val').innerText = `Avg Entry: $${state.avg_buy_price.toFixed(2)}`;
+                document.getElementById('cex-cash-val').innerText = `${state.cex_cash.toFixed(2)} USDT`;
+                document.getElementById('cex-asset-val').innerText = `${state.cex_asset.toFixed(4)} SOL`;
+                document.getElementById('dex-cash-val').innerText = `${state.dex_cash.toFixed(2)} USDT`;
+                document.getElementById('dex-asset-val').innerText = `${state.dex_asset.toFixed(4)} SOL`;
 
-                // Allocation ratio
-                const solVal = state.asset_balance * midPrice;
-                const totalEquity = state.cash + solVal;
-                const solPct = totalEquity > 0 ? (solVal / totalEquity * 100) : 0;
-                const usdtPct = 100 - solPct;
-
-                document.getElementById('alloc-bar').style.width = `${solPct}%`;
-                document.getElementById('label-usdt').innerText = `${usdtPct.toFixed(0)}% USDT`;
-                document.getElementById('label-sol').innerText = `${solPct.toFixed(0)}% SOL`;
-
-                // Realized P&L
                 const totalPnl = state.total_pnl;
                 const dailyPnl = state.daily_pnl;
+                
                 const pnlValEl = document.getElementById('pnl-val');
                 pnlValEl.innerText = `${totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(4)} USDT`;
                 pnlValEl.className = `metric-value ${totalPnl >= 0 ? 'text-green' : 'text-red'}`;
@@ -530,72 +496,43 @@ _INDEX_HTML = """<!DOCTYPE html>
                 dailyPnlEl.innerText = `Daily P&L: ${dailyPnl >= 0 ? '+' : ''}${dailyPnl.toFixed(4)} USDT`;
                 dailyPnlEl.className = `metric-sub ${dailyPnl >= 0 ? 'text-green' : 'text-red'}`;
 
-                // Order Ladder board
-                const ladderBoard = document.getElementById('ladder-board');
+                // 2. Spatial Spreads
+                if (dexBuy > 0 && bestBid > 0) {
+                    const spreadA = ((bestBid / dexBuy) - 1.0) * 100.0;
+                    document.getElementById('spread-a').innerText = `${spreadA >= 0 ? '+' : ''}${spreadA.toFixed(3)}%`;
+                    document.getElementById('spread-a').className = `spread-pct ${spreadA >= 0.5 ? 'text-green' : 'text-red'}`;
+                    document.getElementById('price-dex-buy').innerText = `$${dexBuy.toFixed(4)}`;
+                    document.getElementById('price-cex-sell').innerText = `$${bestBid.toFixed(4)}`;
+                }
                 
-                if (state.open_grid_orders && state.open_grid_orders.length > 0) {
-                    // Sort open grid orders by price descending
-                    const sortedOrders = state.open_grid_orders.slice().sort((a, b) => b.price - a.price);
-                    
-                    const sells = sortedOrders.filter(o => o.side === 'sell');
-                    const buys = sortedOrders.filter(o => o.side === 'buy');
-
-                    let html = '';
-                    
-                    // Render Sell Orders
-                    sells.forEach(o => {
-                        html += `
-                            <div class="ladder-row sell">
-                                <span>SELL</span>
-                                <span>$${o.price.toFixed(4)}</span>
-                                <span>${o.size.toFixed(4)} SOL</span>
-                            </div>
-                        `;
-                    });
-
-                    // Render Price Center
-                    html += `
-                        <div class="ladder-row center">
-                            <div>SOL Price: <span style="color: var(--color-primary); font-size: 1.05rem;">$${midPrice.toFixed(4)}</span></div>
-                        </div>
-                    `;
-
-                    // Render Buy Orders
-                    buys.forEach(o => {
-                        html += `
-                            <div class="ladder-row buy">
-                                <span>BUY</span>
-                                <span>$${o.price.toFixed(4)}</span>
-                                <span>${o.size.toFixed(4)} SOL</span>
-                            </div>
-                        `;
-                    });
-
-                    ladderBoard.innerHTML = html;
-                } else {
-                    ladderBoard.innerHTML = `<div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 2rem 0;">No active resting orders</div>`;
+                if (bestAsk > 0 && dexSell > 0) {
+                    const spreadB = ((dexSell / bestAsk) - 1.0) * 100.0;
+                    document.getElementById('spread-b').innerText = `${spreadB >= 0 ? '+' : ''}${spreadB.toFixed(3)}%`;
+                    document.getElementById('spread-b').className = `spread-pct ${spreadB >= 0.5 ? 'text-green' : 'text-red'}`;
+                    document.getElementById('price-cex-buy').innerText = `$${bestAsk.toFixed(4)}`;
+                    document.getElementById('price-dex-sell').innerText = `$${dexSell.toFixed(4)}`;
                 }
 
-                // Recent Fills
-                document.getElementById('fills-count').innerText = `${state.cycle_count} fills`;
+                // 3. Fills / Cycles
+                document.getElementById('fills-count').innerText = `${state.cycle_count} cycles`;
                 const tbody = document.getElementById('trade-history');
                 if (state.closed_trades && state.closed_trades.length > 0) {
                     tbody.innerHTML = state.closed_trades.slice().reverse().slice(0, 15).map(trade => {
                         const side = trade.direction;
-                        const isBuy = side === "BUY";
+                        const isRouteA = side === "DEX-BUY_CEX-SELL";
                         return `
                             <tr>
-                                <td><code>$${trade.leg1_price.toFixed(4)}</code></td>
-                                <td><span class="badge ${isBuy ? 'buy' : 'sell'}">${side}</span></td>
-                                <td>${trade.actual_edge_pct.toFixed(4)} SOL</td>
+                                <td><code>${trade.cycle_id}</code></td>
+                                <td><span class="badge ${isRouteA ? 'route-a' : 'route-b'}">${isRouteA ? 'DEX → CEX' : 'CEX → DEX'}</span></td>
+                                <td>${trade.size_usdt.toFixed(2)} USDT</td>
                                 <td class="${trade.pnl_usdt >= 0 ? 'text-green' : 'text-red'} font-mono">
-                                    ${isBuy ? '---' : `${trade.pnl_usdt >= 0 ? '+' : ''}${trade.pnl_usdt.toFixed(4)}`}
+                                    ${trade.pnl_usdt >= 0 ? '+' : ''}${trade.pnl_usdt.toFixed(4)} USDT
                                 </td>
                             </tr>
                         `;
                     }).join('');
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 2rem 0;">No fills recorded yet</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 2rem 0;">No arbitrage events logged yet</td></tr>';
                 }
 
             } catch (err) {
@@ -621,7 +558,7 @@ _INDEX_HTML = """<!DOCTYPE html>
                     let levelClass = 'info';
                     if (line.includes('| WARNING |')) levelClass = 'warning';
                     if (line.includes('| ERROR   |')) levelClass = 'error';
-                    if (line.includes('Fill]') || line.includes('Completed!') || line.includes('Placed') || line.includes('Live')) levelClass = 'success';
+                    if (line.includes('Completed') || line.includes('Arb Trigger')) levelClass = 'success';
                     return `<div class="console-line ${levelClass}">${line}</div>`;
                 }).join('');
 
@@ -633,15 +570,12 @@ _INDEX_HTML = """<!DOCTYPE html>
             }
         }
 
-        // Poll timers
         setInterval(updateDashboard, 1000);
         setInterval(updateLogs, 1000);
         
-        // Initial setup
         updateDashboard();
         updateLogs();
 
-        // Update seconds ago timer
         setInterval(() => {
             const sec = Math.floor((Date.now() - lastPollTime) / 1000);
             document.getElementById('last-updated').innerText = sec <= 1 ? 'Updated just now' : `Updated ${sec}s ago`;
@@ -657,30 +591,18 @@ async def handle_dashboard_index(request):
 async def handle_api_state(request):
     try:
         price_feed = request.app["price_feed"]
+        scanner = request.app["scanner"]
         state = load_state()
 
-        # Fetch SOL mid price
+        # Fetch SOL bids and asks
         bid, ask, _, _ = price_feed.get_best_bid_ask("SOLUSDT")
-        mid_price = (bid + ask) / 2.0 if (bid and ask) else 0.0
-
-        # Calculate shaded reservation price
-        sol_value = state.asset_balance * mid_price
-        total_equity = state.cash + sol_value
-        current_inv_ratio = sol_value / total_equity if total_equity > 0 else 0.5
-        inv_imbalance = settings.inventory_target_pct - current_inv_ratio
-        skew = inv_imbalance * settings.inventory_shading_factor
-        reservation_price = mid_price * (1.0 + skew)
-
-        market_status = {}
-        for asset in ["SOLUSDT"]:
-            b, a, _, _ = price_feed.get_best_bid_ask(asset)
-            market_status[asset] = {"bid": b, "ask": a}
 
         return web.json_response({
             "state": state.to_dict(),
-            "mid_price": mid_price,
-            "reservation_price": reservation_price,
-            "market_status": market_status,
+            "bybit_bid": bid or 0.0,
+            "bybit_ask": ask or 0.0,
+            "dex_buy": scanner.last_dex_buy,
+            "dex_sell": scanner.last_dex_sell,
         })
     except Exception as e:
         logger.warning(f"Error compiling api state: {e}")
@@ -689,10 +611,11 @@ async def handle_api_state(request):
 async def handle_api_logs(request):
     return web.json_response({"logs": list(recent_logs)})
 
-async def start_dashboard(price_feed) -> web.AppRunner:
+async def start_dashboard(price_feed, scanner) -> web.AppRunner:
     """Initialize and start the dashboard web server on port 8080."""
     app = web.Application()
     app["price_feed"] = price_feed
+    app["scanner"] = scanner
     
     app.router.add_get("/", handle_dashboard_index)
     app.router.add_get("/api/state", handle_api_state)

@@ -26,16 +26,14 @@ class Settings(BaseSettings):
     telegram_bot_token: str = ""
     telegram_chat_id: str = ""
 
-    # ── Grid Market Maker Parameters ───────────
+    # ── CEX-DEX Arbitrage Parameters ──────────
     trading_mode: str = "paper"             # "paper" | "live"
-    account_size: float = 500.0             # Default base capital if live fetch fails
-    grid_levels: int = 5                    # Number of buy/sell levels (10 orders total)
-    grid_span_pct: float = 0.015            # Total percentage width of the grid (1.5%)
-    order_size_usdt: float = 10.0           # USDT size per order level
-    inventory_target_pct: float = 0.50      # Target ratio of asset value (50/50)
-    inventory_shading_factor: float = 0.15  # Shifts prices to correct inventory imbalances
-    drift_trigger_pct: float = 0.003        # Cancel & replace grid if mid-price drifts by >0.3%
-    max_price_age_s: float = 2.0            # Discard price updates older than this limit
+    account_size: float = 500.0             # Split equally (e.g. $250 on Bybit, $250 on Raydium)
+    solana_rpc_url: str = "https://api.mainnet-beta.solana.com"
+    solana_wallet_private_key: str = ""
+    min_arbitrage_spread_pct: float = 0.005 # Net profit threshold to execute (0.5%)
+    trade_size_usdt: float = 25.0           # Swap size per leg ($25 USDT)
+    max_price_age_s: float = 3.0            # Max age of price quotes in seconds
 
     # ── Dashboard ──────────────────────────────
     api_port: int = 8080

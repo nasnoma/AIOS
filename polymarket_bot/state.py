@@ -73,10 +73,10 @@ class ArbTradeCycle:
 @dataclass
 class PortfolioState:
     account_size: float = 500.0
-    cash: float = 500.0
-    asset_balance: float = 0.0
-    avg_buy_price: float = 0.0
-    open_grid_orders: list = field(default_factory=list)  # list of active resting orders
+    cex_cash: float = 250.0
+    cex_asset: float = 0.0
+    dex_cash: float = 250.0
+    dex_asset: float = 0.0
     closed_trades: list = field(default_factory=list)      # list of ArbTradeCycle dicts
     total_pnl: float = 0.0
     daily_pnl: float = 0.0
@@ -87,7 +87,6 @@ class PortfolioState:
     avg_loss_usd: float = 0.0
     cycle_count: int = 0
     route_stats: dict = field(default_factory=dict)
-    grid_center_price: float = 0.0
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -96,10 +95,10 @@ class PortfolioState:
     def from_dict(cls, d: dict) -> "PortfolioState":
         obj = cls(
             account_size=d.get("account_size", 500.0),
-            cash=d.get("cash", 500.0),
-            asset_balance=d.get("asset_balance", 0.0),
-            avg_buy_price=d.get("avg_buy_price", 0.0),
-            open_grid_orders=d.get("open_grid_orders", []),
+            cex_cash=d.get("cex_cash", 250.0),
+            cex_asset=d.get("cex_asset", 0.0),
+            dex_cash=d.get("dex_cash", 250.0),
+            dex_asset=d.get("dex_asset", 0.0),
             total_pnl=d.get("total_pnl", 0.0),
             daily_pnl=d.get("daily_pnl", 0.0),
             daily_reset_date=d.get("daily_reset_date", ""),
@@ -109,13 +108,12 @@ class PortfolioState:
             avg_loss_usd=d.get("avg_loss_usd", 0.0),
             cycle_count=d.get("cycle_count", 0),
             route_stats=d.get("route_stats", {}),
-            grid_center_price=d.get("grid_center_price", 0.0),
         )
         obj.closed_trades = d.get("closed_trades", [])
         if not obj.route_stats:
             obj.route_stats = {
-                "SOL-BUY": {"win_count": 0, "loss_count": 0, "total_pnl": 0.0},
-                "SOL-SELL": {"win_count": 0, "loss_count": 0, "total_pnl": 0.0},
+                "DEX-BUY_CEX-SELL": {"win_count": 0, "loss_count": 0, "total_pnl": 0.0},
+                "CEX-BUY_DEX-SELL": {"win_count": 0, "loss_count": 0, "total_pnl": 0.0},
             }
         return obj
 
@@ -134,7 +132,11 @@ def load_state() -> PortfolioState:
             except Exception as e:
                 logger.error(f"Failed to parse paper_state.json: {e} — resetting state.")
         from polymarket_bot.config import settings
-        return PortfolioState(account_size=settings.account_size, cash=settings.account_size)
+        return PortfolioState(
+            account_size=settings.account_size,
+            cex_cash=settings.account_size / 2.0,
+            dex_cash=settings.account_size / 2.0
+        )
 
 
 def save_state(state: PortfolioState) -> None:
@@ -147,11 +149,14 @@ def get_status() -> dict:
     s = load_state()
     return {
         "account_size": s.account_size,
-        "cash": round(s.cash, 2),
+        "cex_cash": round(s.cex_cash, 2),
+        "cex_asset": round(s.cex_asset, 4),
+        "dex_cash": round(s.dex_cash, 2),
+        "dex_asset": round(s.dex_asset, 4),
         "total_pnl": round(s.total_pnl, 2),
         "total_pnl_pct": round(s.total_pnl / s.account_size * 100, 2) if s.account_size else 0,
         "daily_pnl": round(s.daily_pnl, 2),
-        "open_positions": 0,  # Arbitrage cycles close instantly, no open positions overnight
+        "open_positions": 0,
         "win_count": s.win_count,
         "loss_count": s.loss_count,
         "win_rate_pct": round(s.win_rate * 100, 1),
