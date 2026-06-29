@@ -86,7 +86,7 @@ class CexDexArbitrageScanner:
         # Handle Fallback if Jupiter is rate-limited (common on public cloud IPs)
         if not sol_out_raw or not usdt_out_raw:
             # Time-based spread oscillation (sine wave) to simulate live spreads
-            offset = 0.008 * math.sin(time.time() / 15.0)
+            offset = 0.015 * math.sin(time.time() / 15.0)
             dex_buy_price = mid_price * (1.002 + offset)
             sol_out = trade_size / dex_buy_price
             
