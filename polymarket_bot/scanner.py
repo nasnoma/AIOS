@@ -35,7 +35,7 @@ class CexDexArbitrageScanner:
     async def get_jupiter_quote(self, input_mint: str, output_mint: str, amount_raw: int) -> int | None:
         """Queries the Jupiter Quote API for exact swap output amount."""
         await self.init_session()
-        url = "https://quote-api.jup.ag/v6/quote"
+        url = "https://api.jup.ag/swap/v1/quote"
         params = {
             "inputMint": input_mint,
             "outputMint": output_mint,
