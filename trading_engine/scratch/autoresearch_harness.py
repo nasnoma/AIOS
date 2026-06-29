@@ -21,7 +21,7 @@ from loguru import logger
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from trading_engine.config import settings
-from trading_engine.backtest.engine import _run_multi_agent_simulation
+from trading_engine.backtest.engine import _run_multi_agent_simulation, prepare_htf_dfs
 from trading_engine import judge
 
 
@@ -102,6 +102,12 @@ def evaluate_asset(symbol: str, timeframe: str, train_days: int, val_days: int, 
     # Split index
     train_size = int(N * train_days / total_days)
     
+    try:
+        htf_dfs = prepare_htf_dfs(symbol, timeframe)
+    except Exception as e:
+        logger.warning(f"Failed to prepare HTF dfs for harness: {e}")
+        htf_dfs = None
+    
     # Load optimized weights if they exist (written by run_autoresearch_loop.py)
     weights_path = Path(__file__).parent.parent / f"optimized_weights_{target}.json"
     if not weights_path.exists() and target == "crypto":
@@ -126,7 +132,8 @@ def evaluate_asset(symbol: str, timeframe: str, train_days: int, val_days: int, 
         agent_weights=agent_weights,
         initial_capital=10000.0,
         start_idx=20,
-        end_idx=train_size
+        end_idx=train_size,
+        htf_dfs=htf_dfs
     )
     
     # Run Validation backtest
@@ -138,7 +145,8 @@ def evaluate_asset(symbol: str, timeframe: str, train_days: int, val_days: int, 
         agent_weights=agent_weights,
         initial_capital=10000.0,
         start_idx=train_size,
-        end_idx=N
+        end_idx=N,
+        htf_dfs=htf_dfs
     )
     
     # Compute Sortino Ratios

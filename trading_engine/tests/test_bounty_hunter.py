@@ -72,41 +72,16 @@ class TestBountyHunterCryptoScan:
         assert selected_mom[1] == "ETH/USDT"
 
 
-class TestBountyHunterStockScan:
-    @patch("trading_engine.bounty_hunter.get_latest_trading_date")
-    @patch("trading_engine.bounty_hunter.get_with_retry")
-    def test_scan_massive_stocks_filtering(self, mock_get, mock_get_date, mock_massive_key):
-        mock_get_date.return_value = "2026-06-10"
-        
-        mock_resp = MagicMock()
-        mock_resp.ok = True
-        mock_resp.json.return_value = {
-            "results": [
-                {"T": "AAPL", "o": 170.0, "c": 175.0, "v": 1_000_000.0},  # +2.94% change, $175m vol
-                {"T": "TSLA", "o": 180.0, "c": 171.0, "v": 2_000_000.0},  # -5.00% change, $342m vol
-                {"T": "XYZ", "o": 4.0, "c": 4.5, "v": 1_000_000.0},       # under $5 price
-                {"T": "PQR", "o": 100.0, "c": 101.0, "v": 1_000.0},        # under 500k volume
-                {"T": "NVDA", "o": 120.0, "c": 118.0, "v": 5_000_000.0},  # -1.67% change, $590m vol
-            ]
-        }
-        mock_get.return_value = mock_resp
 
-        # Test "oversold" (biggest decliners: TSLA -5.00%, NVDA -1.67%, AAPL +2.94%)
-        selected = bounty_hunter.scan_massive_stocks(mode="oversold", limit=2)
-        assert len(selected) == 2
-        assert selected[0] == "TSLA"
-        assert selected[1] == "NVDA"
 
 
 class TestBountyHunterExecution:
     @patch("trading_engine.bounty_hunter.scan_bybit_crypto")
-    @patch("trading_engine.bounty_hunter.scan_massive_stocks")
     @patch("trading_engine.bounty_hunter.rank_and_enrich_candidates")
     @patch("trading_engine.bounty_hunter.check_preflight_probability")
     @patch("trading_engine.bounty_hunter.run_pipeline")
-    def test_run_bounty_hunt(self, mock_pipeline, mock_preflight, mock_enrich, mock_stocks, mock_crypto):
+    def test_run_bounty_hunt(self, mock_pipeline, mock_preflight, mock_enrich, mock_crypto):
         mock_crypto.return_value = ["BTC/USDT", "ETH/USDT"]
-        mock_stocks.return_value = ["AAPL"]
         mock_enrich.side_effect = lambda symbols, mode, limit: (symbols[:limit], {s: MagicMock() for s in symbols[:limit]})
         mock_preflight.return_value = (True, 100.0, "mocked")
         
@@ -120,14 +95,13 @@ class TestBountyHunterExecution:
         mock_sig.reasoning = "Test reasoning"
         mock_pipeline.return_value = mock_sig
 
-        results = bounty_hunter.run_bounty_hunt(mode="oversold", crypto_limit=2, stock_limit=1, scan_cfds=False)
+        results = bounty_hunter.run_bounty_hunt(mode="oversold", crypto_limit=2)
         
-        assert len(results) == 3
+        assert len(results) == 2
         assert results[0]["symbol"] == "BTC/USDT"
         assert results[0]["final_action"] == "BUY"
-        assert results[2]["symbol"] == "AAPL"
         
-        assert mock_pipeline.call_count == 3
+        assert mock_pipeline.call_count == 2
 
 
 class TestBountyHunterWatchlistAndHotMode:
@@ -152,24 +126,7 @@ class TestBountyHunterWatchlistAndHotMode:
         assert "BTC/USDT" in selected
         assert "ETH/USDT" in selected
 
-    @patch("trading_engine.bounty_hunter.get_latest_trading_date")
-    @patch("trading_engine.bounty_hunter.get_with_retry")
-    def test_scan_massive_stocks_watchlist(self, mock_get, mock_get_date, mock_massive_key):
-        mock_get_date.return_value = "2026-06-10"
-        mock_resp = MagicMock()
-        mock_resp.ok = True
-        mock_resp.json.return_value = {
-            "results": [
-                {"T": "AAPL", "o": 170.0, "c": 175.0, "v": 1_000_000.0},
-                {"T": "TSLA", "o": 180.0, "c": 171.0, "v": 2_000_000.0},
-            ]
-        }
-        mock_get.return_value = mock_resp
-        
-        # Only TSLA in watchlist
-        selected = bounty_hunter.scan_massive_stocks(mode="oversold", limit=2, watchlist=["TSLA"])
-        assert len(selected) == 1
-        assert selected[0] == "TSLA"
+
 
     @patch("trading_engine.data.market_data.build_snapshot")
     @patch("trading_engine.bounty_hunter.fetch_orderbook_imbalance")
@@ -275,14 +232,12 @@ class TestBountyHunterPreflightCheck:
         assert prob == 100.0
 
     @patch("trading_engine.bounty_hunter.scan_bybit_crypto")
-    @patch("trading_engine.bounty_hunter.scan_massive_stocks")
     @patch("trading_engine.bounty_hunter.rank_and_enrich_candidates")
     @patch("trading_engine.data.market_data.build_snapshot")
     @patch("trading_engine.bounty_hunter.run_pipeline")
-    def test_run_bounty_hunt_preflight_filtering(self, mock_pipeline, mock_snapshot, mock_enrich, mock_stocks, mock_crypto):
+    def test_run_bounty_hunt_preflight_filtering(self, mock_pipeline, mock_snapshot, mock_enrich, mock_crypto):
         # We have BTC/USDT (fails pre-flight) and ETH/USDT (passes pre-flight)
         mock_crypto.return_value = ["BTC/USDT", "ETH/USDT"]
-        mock_stocks.return_value = []
         mock_enrich.side_effect = lambda symbols, mode, limit: (symbols[:limit], {"BTC/USDT": mock_snap_btc, "ETH/USDT": mock_snap_eth})
         
         # BTC/USDT snapshot: bad ATR or BB width -> fails
@@ -317,7 +272,7 @@ class TestBountyHunterPreflightCheck:
         mock_sig.reasoning = "ETH passed"
         mock_pipeline.return_value = mock_sig
 
-        results = bounty_hunter.run_bounty_hunt(mode="oversold", crypto_limit=2, stock_limit=0, scan_cfds=False)
+        results = bounty_hunter.run_bounty_hunt(mode="oversold", crypto_limit=2)
         
         assert len(results) == 2
         

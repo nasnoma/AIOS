@@ -57,12 +57,12 @@ class Settings(BaseSettings):
     max_risk_per_trade: float = 0.02
     max_portfolio_heat: float = 0.06
     kelly_fraction: float = 0.25
-    min_agent_agreement: int = 3
-    min_avg_confidence: float = 30.0
+    min_agent_agreement: int = 5
+    min_avg_confidence: float = 52.0
     atr_multiplier: float = 2.8
     rr_ratio: float = 3.0
     stop_loss_pct_max: float = 0.10
-    max_concurrent_positions: int = 12
+    max_concurrent_positions: int = 6
 
     # ── Self Healing ────────────────────────────────────────
     self_healing_consecutive_losses: int = Field(default=4, ge=2, le=4)
@@ -105,12 +105,12 @@ class Settings(BaseSettings):
     bounty_hunter_enabled: bool = True
     bounty_hunter_interval_hours: int = 1
     bounty_hunter_interval_minutes: int = 0
-    bounty_hunter_watchlist: str = ""
+    bounty_hunter_watchlist: str = "BTC/USDT,ETH/USDT,SOL/USDT,BNB/USDT,XRP/USDT,ADA/USDT,AVAX/USDT,DOT/USDT,LINK/USDT,NEAR/USDT,LTC/USDT,UNI/USDT,POL/USDT,APT/USDT,SUI/USDT,OP/USDT,ARB/USDT,AAVE/USDT"
     # Scan strategy: "momentum" (buy confirmed strength) | "oversold" (mean-reversion) | "volume" | "hot"
     # momentum has stronger positive edge on 4H crypto timeframes
     bounty_hunter_scan_mode: str = "momentum"
 
-    # ── Deprecated/Compatibility Fields ──────────────────
+    # ── DEPRECATED / LEGACY (COMPATIBILITY ONLY) ──────────────────
     alpaca_api_key: str = ""
     alpaca_secret_key: str = ""
     alpaca_base_url: str = "https://paper-api.alpaca.markets"

@@ -428,6 +428,11 @@ _INDEX_HTML = """<!DOCTYPE html>
                     </div>
                 </div>
             </div>
+            <div class="card">
+                <div class="metric-title">Realized P&L</div>
+                <div class="metric-value" id="pnl-val">---</div>
+                <div class="metric-sub" id="daily-pnl-val">Daily P&L: ---</div>
+            </div>
         </div>
 
         <!-- 3-Column Layout -->
@@ -513,6 +518,17 @@ _INDEX_HTML = """<!DOCTYPE html>
                 document.getElementById('alloc-bar').style.width = `${solPct}%`;
                 document.getElementById('label-usdt').innerText = `${usdtPct.toFixed(0)}% USDT`;
                 document.getElementById('label-sol').innerText = `${solPct.toFixed(0)}% SOL`;
+
+                // Realized P&L
+                const totalPnl = state.total_pnl;
+                const dailyPnl = state.daily_pnl;
+                const pnlValEl = document.getElementById('pnl-val');
+                pnlValEl.innerText = `${totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(4)} USDT`;
+                pnlValEl.className = `metric-value ${totalPnl >= 0 ? 'text-green' : 'text-red'}`;
+                
+                const dailyPnlEl = document.getElementById('daily-pnl-val');
+                dailyPnlEl.innerText = `Daily P&L: ${dailyPnl >= 0 ? '+' : ''}${dailyPnl.toFixed(4)} USDT`;
+                dailyPnlEl.className = `metric-sub ${dailyPnl >= 0 ? 'text-green' : 'text-red'}`;
 
                 // Order Ladder board
                 const ladderBoard = document.getElementById('ladder-board');

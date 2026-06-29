@@ -144,80 +144,6 @@ def test_retry_on_network_failure():
             db._SessionLocal = None
 
 
-def test_equities_regime_filter():
-    """Asserts that the equities regime filter blocks long trades during a bear trend and passes during a bull trend."""
-    from trading_engine.risk_agent import evaluate as risk_evaluate, RiskDecision
-    from trading_engine.judge import JudgeVerdict, Signal
-    from trading_engine.market_hours import AssetClass
-    from trading_engine.data.market_data import MarketSnapshot
-    import pandas as pd
-    import numpy as np
-
-    # Mock verdict (BUY signal)
-    verdict = JudgeVerdict(
-        decision=Signal.BUY,
-        confidence=90.0,
-        agreement=7,
-        disagreement=1,
-        weighted_score=0.9,
-        reasoning="Strong buy signal",
-        agent_reports=[],
-        approved=True
-    )
-
-    # Mock snap (US Equity)
-    snap = MagicMock(spec=MarketSnapshot)
-    snap.symbol = "AAPL"
-    snap.close = 150.0
-    snap.atr = 3.0
-    snap.bb_width = 0.05
-    snap.timeframe = "1d"
-    snap.asset_type = "stock"
-
-    # 1. Bear Market Test: SPY index below 200 SMA
-    dates = pd.date_range(end="2026-06-20", periods=220, freq="D")
-    df_bear = pd.DataFrame({
-        "close": [100.0] * 200 + [90.0] * 20
-    }, index=dates)
-    df_bear.index.name = "timestamp"
-
-    with patch("trading_engine.data.market_data.load_historical_data", return_value=df_bear), \
-         patch.object(settings, "regime_filter_equities_enabled", True), \
-         patch.object(settings, "regime_us_index", "SPY"), \
-         patch.object(settings, "regime_equities_ma_period", 200):
-        
-        decision = risk_evaluate(verdict, snap)
-        assert decision.approved is False
-        assert "Market regime filter" in decision.reason
-
-    # 2. Bull Market Test: SPY index above 200 SMA
-    df_bull = pd.DataFrame({
-        "close": [100.0] * 200 + [110.0] * 20
-    }, index=dates)
-    df_bull.index.name = "timestamp"
-
-    with patch("trading_engine.data.market_data.load_historical_data", return_value=df_bull), \
-         patch.object(settings, "regime_filter_equities_enabled", True), \
-         patch.object(settings, "regime_us_index", "SPY"), \
-         patch.object(settings, "regime_equities_ma_period", 200):
-        
-        decision = risk_evaluate(verdict, snap)
-        # Note: If the test runs through, it will pass the regime filter check. 
-        # It might still be vetoed by other filters (e.g. portfolio heat), so we mock settings to let it pass.
-        with patch.object(settings, "max_portfolio_heat", 1.0):
-            decision = risk_evaluate(verdict, snap)
-            assert decision.approved is True or "Market regime filter" not in decision.reason
-
-    # 3. Failsafe Test: Index load throws exception
-    with patch("trading_engine.data.market_data.load_historical_data", side_effect=Exception("API failure")), \
-         patch.object(settings, "regime_filter_equities_enabled", True):
-        
-        with patch.object(settings, "max_portfolio_heat", 1.0):
-            decision = risk_evaluate(verdict, snap)
-            # Failsafe should catch exception and allow the trade to proceed
-            assert decision.approved is True or "Market regime filter" not in decision.reason
-
-
 def test_proportional_cash_allocator():
     """Asserts that _allocate_cash_proportionally divides cash correctly and filters out dust sizes."""
     from trading_engine.scheduler import _allocate_cash_proportionally
@@ -259,53 +185,7 @@ def test_proportional_cash_allocator():
     assert all(a[0].symbol != "MSFT" for a in allocs)
 
 
-def test_ngx_atr_proxy_ohlc():
-    """Asserts the ATR-proxy high/low synthesis is deterministic, data-driven, and maintains OHLC invariants."""
-    import numpy as np
-    import pandas as pd
 
-    np.random.seed(99)
-    n = 50
-    closes = pd.Series(100.0 + np.cumsum(np.random.normal(0, 0.5, n)))
-    opens  = closes * (1 + np.random.normal(0, 0.002, n))
-
-    # Reproduce the ATR proxy logic from NGXHistoricalFetcher
-    close_s   = closes.copy()
-    cc_move   = close_s.diff().abs()
-    atr_proxy = cc_move.rolling(14, min_periods=1).mean().fillna(cc_move.mean())
-    price_pct = (atr_proxy / close_s.clip(lower=1e-9)).clip(0.002, 0.05)
-    half      = price_pct * close_s * 0.5
-    highs     = np.maximum(opens.fillna(closes), closes) + half.values
-    lows      = np.minimum(opens.fillna(closes), closes) - half.values
-    highs     = pd.DataFrame({"h": highs, "c": closes}).max(axis=1)
-    lows      = pd.DataFrame({"l": lows,  "c": closes}).min(axis=1).clip(lower=1e-9)
-
-    # 1. OHLC invariants
-    assert (highs >= closes).all(), "high must be >= close on every row"
-    assert (closes >= lows).all(),  "close must be >= low on every row"
-    assert (lows > 0).all(),        "low must be > 0 on every row"
-
-    # 2. Determinism (no random seed dependency)
-    cc_move2   = close_s.diff().abs()
-    atr_proxy2 = cc_move2.rolling(14, min_periods=1).mean().fillna(cc_move2.mean())
-    price_pct2 = (atr_proxy2 / close_s.clip(lower=1e-9)).clip(0.002, 0.05)
-    half2      = price_pct2 * close_s * 0.5
-    highs2     = np.maximum(opens.fillna(closes), closes) + half2.values
-    assert (highs == highs2).all(), "ATR proxy must be fully deterministic"
-
-    # 3. Volatile stock gets wider range than calm stock
-    calm_closes    = pd.Series([100.0] * n)
-    calm_pct       = (calm_closes.diff().abs().rolling(14, min_periods=1).mean().fillna(0) /
-                      calm_closes.clip(lower=1e-9)).clip(0.002, 0.05)
-    calm_half      = calm_pct * calm_closes * 0.5
-
-    np.random.seed(77)
-    volatile_closes = pd.Series(100.0 + np.cumsum(np.random.normal(0, 5, n)))
-    vol_pct         = (volatile_closes.diff().abs().rolling(14, min_periods=1).mean().fillna(0) /
-                       volatile_closes.clip(lower=1e-9)).clip(0.002, 0.05)
-    vol_half        = vol_pct * volatile_closes * 0.5
-
-    assert vol_half.mean() > calm_half.mean(), "Volatile stock should have wider ATR range"
 
 
 def test_confidence_weighted_sizing():

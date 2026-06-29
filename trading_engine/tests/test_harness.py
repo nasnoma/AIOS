@@ -165,7 +165,8 @@ def test_evaluate_asset(mock_fetcher_cls, mock_run_sim, mock_exists):
     result = evaluate_asset("BTC/USDT", "4h", train_days=10, val_days=5)
     
     # Verify fetcher was called correctly
-    mock_fetcher.fetch_ohlcv.assert_called_once_with("BTC/USDT", "4h", 15 * 6 + 250)
+    assert mock_fetcher.fetch_ohlcv.call_count == 3
+    mock_fetcher.fetch_ohlcv.assert_any_call("BTC/USDT", "4h", 15 * 6 + 250)
     
     # Verify simulation was run twice (train and val splits)
     assert mock_run_sim.call_count == 2
