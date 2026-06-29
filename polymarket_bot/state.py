@@ -105,6 +105,14 @@ class PortfolioState:
         )
         obj.positions = d.get("positions", [])
         obj.closed_trades = d.get("closed_trades", [])
+        # One-time backfill: if avg fields are missing (old state file) but trades exist, compute from history
+        if obj.avg_win_usd == 0.0 and obj.avg_loss_usd == 0.0 and obj.closed_trades:
+            wins = [t["pnl_usd"] for t in obj.closed_trades if (t.get("pnl_usd") or 0) > 0]
+            losses = [t["pnl_usd"] for t in obj.closed_trades if (t.get("pnl_usd") or 0) <= 0]
+            if wins:
+                obj.avg_win_usd = round(sum(wins) / len(wins), 4)
+            if losses:
+                obj.avg_loss_usd = round(sum(losses) / len(losses), 4)
         return obj
 
     @property
