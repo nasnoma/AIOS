@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     solana_wallet_private_key: str = ""
     min_arbitrage_spread_pct: float = 0.005 # Net profit threshold to execute (0.5%)
     trade_size_usdt: float = 25.0           # Swap size per leg ($25 USDT)
-    max_price_age_s: float = 3.0            # Max age of price quotes in seconds
+    max_price_age_s: float = 10.0           # Max age of price quotes in seconds
 
     # ── Dashboard ──────────────────────────────
     api_port: int = 8080
