@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     account_size: float = 500.0             # Default base capital if live fetch fails
     min_net_edge_pct: float = 0.0015        # Minimum net profit above 0.30% fee (Maker/Taker spot fees)
     position_size_pct: float = 0.80         # Use 80% of USDT balance per trade to allow buffer
+    max_trade_size_usdt: float = 100.0      # Maximum absolute size allocated to a single cycle
+    paper_slippage_pct: float = 0.0005      # Simulated slippage subtracted in paper mode
+    execution_cooldown_s: float = 5.0       # Cooldown (seconds) after a trade before scanning again
 
     # ── Dashboard ──────────────────────────────
     api_port: int = 8080

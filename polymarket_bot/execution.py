@@ -54,8 +54,10 @@ async def execute_arbitrage(opportunity: dict) -> None:
 
     if settings.trading_mode == "paper":
         # ── PAPER TRADING MODE ──
-        size_usdt = state.cash * settings.position_size_pct
-        pnl = size_usdt * net_edge
+        # Apply absolute size cap and simulated paper slippage
+        size_usdt = min(state.cash * settings.position_size_pct, settings.max_trade_size_usdt)
+        realized_net_edge = net_edge - settings.paper_slippage_pct
+        pnl = size_usdt * realized_net_edge
 
         # Update state fields
         state.cash += pnl
@@ -86,7 +88,7 @@ async def execute_arbitrage(opportunity: dict) -> None:
             started_at=datetime.now(timezone.utc).isoformat(),
             completed_at=datetime.now(timezone.utc).isoformat(),
             est_edge_pct=net_edge,
-            actual_edge_pct=net_edge,
+            actual_edge_pct=realized_net_edge,
             size_usdt=size_usdt,
             pnl_usdt=pnl,
             status="completed",
@@ -98,7 +100,7 @@ async def execute_arbitrage(opportunity: dict) -> None:
         state.closed_trades.append(cycle_record.to_dict())
         save_state(state)
 
-        logger.success(f"🎉 Simulated Arb Cycle {cycle_id} Completed! PnL: ${pnl:+.4f}")
+        logger.success(f"🎉 Simulated Arb Cycle {cycle_id} Completed! PnL: ${pnl:+.4f} (Simulated Slippage: {settings.paper_slippage_pct:.3%})")
         arbitrage_executed(cycle_id, direction, size_usdt, pnl, net_edge, mode="PAPER")
 
     else:
@@ -120,7 +122,9 @@ async def execute_arbitrage(opportunity: dict) -> None:
             # 1. Fetch live USDT balance
             balance = await asyncio.to_thread(exchange.fetch_balance)
             free_usdt = float(balance.get('USDT', {}).get('free', 0.0))
-            size_usdt = free_usdt * settings.position_size_pct
+            
+            # Apply absolute size cap in live mode as well
+            size_usdt = min(free_usdt * settings.position_size_pct, settings.max_trade_size_usdt)
             cycle_record.size_usdt = size_usdt
 
             if size_usdt < 5.0:

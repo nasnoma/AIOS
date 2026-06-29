@@ -46,7 +46,7 @@ class ArbitrageScanner:
 
         # Check thresholds
         if forward_net_edge >= settings.min_net_edge_pct:
-            logger.success(f"🔥 Forward Arb Found! Net Edge: {forward_net_edge:.4%}")
+            logger.success(f"🔥 Forward Arb Found! Gross: {forward_gross-1.0:.4%}, Fees: {total_fees:.2%}, Net Edge: {forward_net_edge:.4%}")
             return {
                 "direction": "FORWARD",
                 "net_edge": forward_net_edge,
@@ -62,9 +62,11 @@ class ArbitrageScanner:
                     "ETHUSDT": bid_sz_eth_usdt,
                 }
             }
+        elif (forward_gross - 1.0) > 0:
+            logger.info(f"⏭️ Forward Arb Rejected: Gross {forward_gross-1.0:.4%} (Fees {total_fees:.2%}) -> Net {forward_net_edge:.4%} below threshold {settings.min_net_edge_pct:.4%}")
 
         if reverse_net_edge >= settings.min_net_edge_pct:
-            logger.success(f"🔥 Reverse Arb Found! Net Edge: {reverse_net_edge:.4%}")
+            logger.success(f"🔥 Reverse Arb Found! Gross: {reverse_gross-1.0:.4%}, Fees: {total_fees:.2%}, Net Edge: {reverse_net_edge:.4%}")
             return {
                 "direction": "REVERSE",
                 "net_edge": reverse_net_edge,
@@ -80,5 +82,7 @@ class ArbitrageScanner:
                     "BTCUSDT": bid_sz_btc_usdt,
                 }
             }
+        elif (reverse_gross - 1.0) > 0:
+            logger.info(f"⏭️ Reverse Arb Rejected: Gross {reverse_gross-1.0:.4%} (Fees {total_fees:.2%}) -> Net {reverse_net_edge:.4%} below threshold {settings.min_net_edge_pct:.4%}")
 
         return None

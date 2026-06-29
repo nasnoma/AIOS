@@ -47,8 +47,8 @@ async def arb_scan_loop(scanner: ArbitrageScanner) -> None:
             if opportunity:
                 # Fire execution task asynchronously
                 await execute_arbitrage(opportunity)
-                # Set 2-second cooldown before scanning again
-                execution_cooldown = now + 2.0
+                # Set configurable cooldown before scanning again
+                execution_cooldown = now + settings.execution_cooldown_s
 
         except Exception as e:
             logger.error(f"Error in arbitrage scanning loop: {e}")
