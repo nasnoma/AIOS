@@ -441,10 +441,14 @@ _INDEX_HTML = """<!DOCTYPE html>
                 <div id="winrate-sub" class="metric-sub">0W / 0L</div>
             </div>
             <div class="card">
-                <div class="metric-title">Rule Configs</div>
-                <div style="font-size: 0.9rem; line-height: 1.4; color: var(--text-muted);">
+                <div class="metric-title">Strategy Config &amp; EV</div>
+                <div style="font-size: 0.85rem; line-height: 1.8; color: var(--text-muted);">
                     Momentum Floor: <span id="cfg-mom" class="text-green" style="font-weight:600;">$15</span><br>
-                    Min Probability: <span id="cfg-conf" class="text-green" style="font-weight:600;">56%</span>
+                    Min Probability: <span id="cfg-conf" class="text-green" style="font-weight:600;">56%</span><br>
+                    <span style="border-top: 1px solid var(--border-color); display:block; margin: 0.4rem 0;"></span>
+                    Avg Win: <span id="cfg-avg-win" class="text-green" style="font-weight:600;">---</span><br>
+                    Avg Loss: <span id="cfg-avg-loss" class="text-red" style="font-weight:600;">---</span><br>
+                    <span id="cfg-ev" style="font-size:0.8rem;">EV: <span style="font-weight:600;">---</span></span>
                 </div>
             </div>
         </div>
@@ -595,9 +599,24 @@ _INDEX_HTML = """<!DOCTYPE html>
             document.getElementById('winrate-value').innerText = `${winRate.toFixed(1)}%`;
             document.getElementById('winrate-sub').innerText = `${wins}W / ${losses}L`;
 
-            document.getElementById('cfg-mom').innerText = `$${data.config.momentum_floor}`;
-            document.getElementById('cfg-conf').innerText = `${(data.config.min_prob * 100).toFixed(0)}%`;
+            // Update config card from live API values
+            if (data.config) {
+                document.getElementById('cfg-mom').innerText = `$${data.config.momentum_floor}`;
+                document.getElementById('cfg-conf').innerText = `${(data.config.min_prob * 100).toFixed(0)}%`;
+            }
 
+            // Update avg win / loss / EV
+            const avgWin = data.state.avg_win_usd || 0;
+            const avgLoss = data.state.avg_loss_usd || 0;
+            const wr = data.state.win_count / Math.max(1, data.state.win_count + data.state.loss_count);
+            document.getElementById('cfg-avg-win').innerText = avgWin !== 0 ? `+$${avgWin.toFixed(2)}` : '---';
+            document.getElementById('cfg-avg-loss').innerText = avgLoss !== 0 ? `$${avgLoss.toFixed(2)}` : '---';
+            if (avgWin !== 0 && avgLoss !== 0) {
+                const ev = (wr * avgWin) + ((1 - wr) * avgLoss);
+                const evEl = document.getElementById('cfg-ev');
+                evEl.innerHTML = `EV/trade: <span style="font-weight:600;" class="${ev >= 0 ? 'text-green' : 'text-red'}">${ev >= 0 ? '+' : ''}$${ev.toFixed(3)}</span>`;
+            } 
+            
             const badge = document.getElementById('cooldown-badge');
             const text = document.getElementById('cooldown-text');
             if (data.cooldown_remaining > 0) {
