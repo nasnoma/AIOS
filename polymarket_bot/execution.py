@@ -17,13 +17,14 @@ from polymarket_bot.state import (
 )
 from polymarket_bot.alerts import arbitrage_executed, arbitrage_failed
 
+import ccxt.async_support as ccxt
+
 _exchange = None
 
 
-def get_bybit_client():
+def get_bybit_client() -> ccxt.bybit:
     global _exchange
     if _exchange is None:
-        import ccxt
         _exchange = ccxt.bybit({
             'apiKey': settings.bybit_api_key,
             'secret': settings.bybit_api_secret,
@@ -35,6 +36,13 @@ def get_bybit_client():
         if settings.bybit_testnet:
             _exchange.set_sandbox_mode(True)
     return _exchange
+
+
+async def close_bybit_client() -> None:
+    global _exchange
+    if _exchange is not None:
+        await _exchange.close()
+        _exchange = None
 
 
 async def execute_arbitrage(opportunity: dict) -> None:
@@ -117,10 +125,9 @@ async def execute_arbitrage(opportunity: dict) -> None:
             pnl_usdt=0.0,
             status="failed",
         )
-
         try:
             # 1. Fetch live USDT balance
-            balance = await asyncio.to_thread(exchange.fetch_balance)
+            balance = await exchange.fetch_balance()
             free_usdt = float(balance.get('USDT', {}).get('free', 0.0))
             
             # Apply absolute size cap in live mode as well
@@ -138,68 +145,44 @@ async def execute_arbitrage(opportunity: dict) -> None:
             if direction == "FORWARD":
                 # Leg 1: Buy BTC using USDT
                 logger.info("Leg 1: Market Buy BTC/USDT...")
-                await asyncio.to_thread(
-                    exchange.create_market_buy_order_with_cost,
-                    "BTC/USDT",
-                    size_usdt
-                )
+                await exchange.create_market_buy_order_with_cost("BTC/USDT", size_usdt)
 
                 # Leg 2: Buy ETH using BTC balance
                 await asyncio.sleep(0.1)  # tiny delay to allow spot balance to settle
-                balance = await asyncio.to_thread(exchange.fetch_balance)
+                balance = await exchange.fetch_balance()
                 btc_balance = float(balance.get('BTC', {}).get('free', 0.0))
                 logger.info(f"Leg 2: Market Buy ETH/BTC with {btc_balance:.6f} BTC...")
-                await asyncio.to_thread(
-                    exchange.create_market_buy_order_with_cost,
-                    "ETH/BTC",
-                    btc_balance
-                )
+                await exchange.create_market_buy_order_with_cost("ETH/BTC", btc_balance)
 
                 # Leg 3: Sell ETH for USDT
                 await asyncio.sleep(0.1)
-                balance = await asyncio.to_thread(exchange.fetch_balance)
+                balance = await exchange.fetch_balance()
                 eth_balance = float(balance.get('ETH', {}).get('free', 0.0))
                 logger.info(f"Leg 3: Market Sell ETH/USDT for {eth_balance:.6f} ETH...")
-                await asyncio.to_thread(
-                    exchange.create_market_sell_order,
-                    "ETH/USDT",
-                    eth_balance
-                )
+                await exchange.create_market_sell_order("ETH/USDT", eth_balance)
 
             else:  # REVERSE
                 # Leg 1: Buy ETH using USDT
                 logger.info("Leg 1: Market Buy ETH/USDT...")
-                await asyncio.to_thread(
-                    exchange.create_market_buy_order_with_cost,
-                    "ETH/USDT",
-                    size_usdt
-                )
+                await exchange.create_market_buy_order_with_cost("ETH/USDT", size_usdt)
 
                 # Leg 2: Sell ETH for BTC
                 await asyncio.sleep(0.1)
-                balance = await asyncio.to_thread(exchange.fetch_balance)
+                balance = await exchange.fetch_balance()
                 eth_balance = float(balance.get('ETH', {}).get('free', 0.0))
                 logger.info(f"Leg 2: Market Sell ETH/BTC for {eth_balance:.6f} ETH...")
-                await asyncio.to_thread(
-                    exchange.create_market_sell_order,
-                    "ETH/BTC",
-                    eth_balance
-                )
+                await exchange.create_market_sell_order("ETH/BTC", eth_balance)
 
                 # Leg 3: Sell BTC for USDT
                 await asyncio.sleep(0.1)
-                balance = await asyncio.to_thread(exchange.fetch_balance)
+                balance = await exchange.fetch_balance()
                 btc_balance = float(balance.get('BTC', {}).get('free', 0.0))
                 logger.info(f"Leg 3: Market Sell BTC/USDT for {btc_balance:.6f} BTC...")
-                await asyncio.to_thread(
-                    exchange.create_market_sell_order,
-                    "BTC/USDT",
-                    btc_balance
-                )
+                await exchange.create_market_sell_order("BTC/USDT", btc_balance)
 
             # 4. Compute actual PnL
             await asyncio.sleep(0.2)
-            balance = await asyncio.to_thread(exchange.fetch_balance)
+            balance = await exchange.fetch_balance()
             new_usdt = float(balance.get('USDT', {}).get('free', 0.0))
             pnl = new_usdt - free_usdt
             actual_edge = pnl / size_usdt

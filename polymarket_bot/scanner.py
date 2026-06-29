@@ -6,6 +6,7 @@ Triangular arbitrage scanning engine for USDT -> BTC -> ETH -> USDT.
 from __future__ import annotations
 from loguru import logger
 
+import asyncio
 from polymarket_bot.config import settings
 from polymarket_bot.price_feed import BybitPriceFeed
 
@@ -18,6 +19,15 @@ class ArbitrageScanner:
         Scans for triangular arbitrage opportunities.
         Returns opportunity dict if found, else None.
         """
+        # Ensure price data is fresh
+        now = asyncio.get_event_loop().time()
+        if self.price_feed.last_update_ts == 0.0:
+            return None
+        price_age = now - self.price_feed.last_update_ts
+        if price_age > settings.max_price_age_s:
+            logger.warning(f"⚠️ Stale market prices (Age: {price_age:.2f}s > limit {settings.max_price_age_s}s). Skipping scan.")
+            return None
+
         # Fetch best bid/ask for all three pairs
         bid_btc_usdt, ask_btc_usdt, bid_sz_btc_usdt, ask_sz_btc_usdt = self.price_feed.get_best_bid_ask("BTCUSDT")
         bid_eth_usdt, ask_eth_usdt, bid_sz_eth_usdt, ask_sz_eth_usdt = self.price_feed.get_best_bid_ask("ETHUSDT")

@@ -399,10 +399,56 @@ _INDEX_HTML = """<!DOCTYPE html>
             margin-bottom: 0.25rem;
         }
 
-        .arb-path-edge {
-            font-size: 1.4rem;
-            font-weight: 700;
-            font-family: 'JetBrains Mono', monospace;
+        @media (max-width: 768px) {
+            main {
+                padding: 1rem;
+                gap: 1.25rem;
+            }
+            header {
+                padding: 1rem;
+            }
+            .spot-grid {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+            .arb-monitor {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+            .metrics-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 1rem;
+            }
+            .logo-text h1 {
+                font-size: 1.1rem;
+            }
+            .logo-text span {
+                font-size: 0.65rem;
+            }
+            .metric-value {
+                font-size: 1.4rem;
+            }
+            .arb-path-edge {
+                font-size: 1.2rem;
+            }
+        }
+        @media (max-width: 480px) {
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+            header {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                gap: 0.5rem;
+            }
+            .logo-text span {
+                display: none; /* Hide subtitle to save horizontal space on extremely small screens */
+            }
+            .status-badge {
+                padding: 0.35rem 0.75rem;
+                font-size: 0.75rem;
+            }
         }
     </style>
 </head>

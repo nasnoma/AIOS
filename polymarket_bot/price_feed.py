@@ -19,11 +19,16 @@ class BybitPriceFeed:
             "ETHBTC": {"bid": 0.0, "ask": 0.0, "bid_size": 0.0, "ask_size": 0.0},
         }
         self.is_connected = False
-        self.ws_url = (
-            "wss://stream-testnet.bybit.com/v5/public/spot"
-            if settings.bybit_testnet
-            else "wss://stream.bybit.com/v5/public/spot"
-        )
+        # In paper trading, always pull from mainnet for real price data.
+        # In live trading, use testnet/mainnet based on bybit_testnet configuration.
+        if settings.trading_mode == "paper":
+            self.ws_url = "wss://stream.bybit.com/v5/public/spot"
+        else:
+            self.ws_url = (
+                "wss://stream-testnet.bybit.com/v5/public/spot"
+                if settings.bybit_testnet
+                else "wss://stream.bybit.com/v5/public/spot"
+            )
         self.last_update_ts = 0.0
 
     def get_best_bid_ask(self, symbol: str) -> tuple[float, float, float, float]:

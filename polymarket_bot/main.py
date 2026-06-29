@@ -20,7 +20,7 @@ from polymarket_bot import alerts
 from polymarket_bot.config import settings
 from polymarket_bot.price_feed import BybitPriceFeed
 from polymarket_bot.scanner import ArbitrageScanner
-from polymarket_bot.execution import execute_arbitrage
+from polymarket_bot.execution import execute_arbitrage, close_bybit_client
 from polymarket_bot.state import get_status, load_state
 from polymarket_bot.dashboard import start_dashboard
 
@@ -125,6 +125,9 @@ async def main() -> None:
         
         # Shut down dashboard
         await runner.cleanup()
+        
+        # Close Bybit client session
+        await close_bybit_client()
         
         # Wait for tasks to cancel
         await asyncio.gather(feed_task, scan_task, summary_task, return_exceptions=True)
