@@ -551,6 +551,29 @@ _INDEX_HTML = """<!DOCTYPE html>
             </div>
         </div>
 
+        <!-- Route Performance -->
+        <div class="section-title">
+            <span>Route Performance Breakdown</span>
+        </div>
+        <div class="spot-grid">
+            <div class="ticker-card">
+                <div class="ticker-name" style="color: var(--color-primary);">BTC-ETH Forward</div>
+                <div class="ticker-price" id="perf-btc-eth-forward">0 W / 0 L (0.0000 USDT)</div>
+            </div>
+            <div class="ticker-card">
+                <div class="ticker-name" style="color: #818cf8;">BTC-ETH Reverse</div>
+                <div class="ticker-price" id="perf-btc-eth-reverse">0 W / 0 L (0.0000 USDT)</div>
+            </div>
+            <div class="ticker-card">
+                <div class="ticker-name" style="color: var(--color-primary);">BTC-SOL Forward</div>
+                <div class="ticker-price" id="perf-btc-sol-forward">0 W / 0 L (0.0000 USDT)</div>
+            </div>
+            <div class="ticker-card">
+                <div class="ticker-name" style="color: #818cf8;">BTC-SOL Reverse</div>
+                <div class="ticker-price" id="perf-btc-sol-reverse">0 W / 0 L (0.0000 USDT)</div>
+            </div>
+        </div>
+
         <!-- Body -->
         <div class="dashboard-body">
             <!-- Left: Executed Cycles -->
@@ -644,6 +667,21 @@ _INDEX_HTML = """<!DOCTYPE html>
                 document.getElementById('ev-val').innerText = `EV/Cycle: ${ev >= 0 ? '+' : ''}${ev.toFixed(4)} USDT`;
 
                 document.getElementById('cycle-count').innerText = `${state.cycle_count} completed`;
+
+                // Route Performance Stats
+                const stats = state.route_stats || {};
+                const showPerf = (id, key) => {
+                    const r = stats[key] || { win_count: 0, loss_count: 0, total_pnl: 0.0 };
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.innerText = `${r.win_count} W / ${r.loss_count} L (${r.total_pnl >= 0 ? '+' : ''}${r.total_pnl.toFixed(4)} USDT)`;
+                        el.className = `ticker-price ${r.total_pnl >= 0 ? 'text-green' : 'text-red'}`;
+                    }
+                };
+                showPerf('perf-btc-eth-forward', 'BTC-ETH-FORWARD');
+                showPerf('perf-btc-eth-reverse', 'BTC-ETH-REVERSE');
+                showPerf('perf-btc-sol-forward', 'BTC-SOL-FORWARD');
+                showPerf('perf-btc-sol-reverse', 'BTC-SOL-REVERSE');
 
                 // Tickers
                 if (market.BTCUSDT) {

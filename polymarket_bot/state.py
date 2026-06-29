@@ -80,6 +80,7 @@ class PortfolioState:
     avg_win_usd: float = 0.0
     avg_loss_usd: float = 0.0
     cycle_count: int = 0
+    route_stats: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -97,8 +98,16 @@ class PortfolioState:
             avg_win_usd=d.get("avg_win_usd", 0.0),
             avg_loss_usd=d.get("avg_loss_usd", 0.0),
             cycle_count=d.get("cycle_count", 0),
+            route_stats=d.get("route_stats", {}),
         )
         obj.closed_trades = d.get("closed_trades", [])
+        if not obj.route_stats:
+            obj.route_stats = {
+                "BTC-ETH-FORWARD": {"win_count": 0, "loss_count": 0, "total_pnl": 0.0},
+                "BTC-ETH-REVERSE": {"win_count": 0, "loss_count": 0, "total_pnl": 0.0},
+                "BTC-SOL-FORWARD": {"win_count": 0, "loss_count": 0, "total_pnl": 0.0},
+                "BTC-SOL-REVERSE": {"win_count": 0, "loss_count": 0, "total_pnl": 0.0},
+            }
         return obj
 
     @property

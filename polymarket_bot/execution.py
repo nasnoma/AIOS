@@ -89,6 +89,16 @@ async def execute_arbitrage(opportunity: dict) -> None:
                 if state.loss_count > 0 else pnl
             )
 
+        # Update route stats
+        route_key = f"{route_name}-{direction}"
+        if route_key not in state.route_stats:
+            state.route_stats[route_key] = {"win_count": 0, "loss_count": 0, "total_pnl": 0.0}
+        state.route_stats[route_key]["total_pnl"] += pnl
+        if is_win:
+            state.route_stats[route_key]["win_count"] += 1
+        else:
+            state.route_stats[route_key]["loss_count"] += 1
+
         # Retrieve prices generically
         price_keys = list(prices.keys())
         leg1_p = prices.get(price_keys[0], 0.0) if len(price_keys) > 0 else 0.0
@@ -194,6 +204,16 @@ async def execute_arbitrage(opportunity: dict) -> None:
                     (state.avg_loss_usd * (state.loss_count - 1) + pnl) / state.loss_count
                     if state.loss_count > 0 else pnl
                 )
+
+            # Update route stats
+            route_key = f"{route_name}-{direction}"
+            if route_key not in state.route_stats:
+                state.route_stats[route_key] = {"win_count": 0, "loss_count": 0, "total_pnl": 0.0}
+            state.route_stats[route_key]["total_pnl"] += pnl
+            if is_win:
+                state.route_stats[route_key]["win_count"] += 1
+            else:
+                state.route_stats[route_key]["loss_count"] += 1
 
             cycle_record.completed_at = datetime.now(timezone.utc).isoformat()
             cycle_record.actual_edge_pct = actual_edge
