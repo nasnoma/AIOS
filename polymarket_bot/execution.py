@@ -2,7 +2,7 @@
 polymarket_bot/execution.py
 
 Execution engine for Bybit Spot Triangular Arbitrage.
-Supports both simulated (paper) and live execution.
+Supports both simulated (paper) and live execution for generic routes.
 """
 from __future__ import annotations
 import asyncio
@@ -48,14 +48,15 @@ async def close_bybit_client() -> None:
 async def execute_arbitrage(opportunity: dict) -> None:
     """
     Executes a triangular arbitrage cycle.
-    Handles paper or live modes.
+    Handles paper or live modes dynamically based on the opportunity config.
     """
     cycle_id = uuid.uuid4().hex[:8]
+    route_name = opportunity.get("route_name", "BTC-ETH")
     direction = opportunity["direction"]
     net_edge = opportunity["net_edge"]
     prices = opportunity["prices"]
 
-    logger.info(f"⚡ Starting Arbitrage Cycle {cycle_id} ({direction}) | Net Edge: {net_edge:.4%}")
+    logger.info(f"⚡ [{route_name}] Starting Arbitrage Cycle {cycle_id} ({direction}) | Net Edge: {net_edge:.4%}")
 
     state = load_state()
     state = reset_daily_pnl_if_new_day(state)
@@ -77,22 +78,26 @@ async def execute_arbitrage(opportunity: dict) -> None:
         is_win = pnl >= 0
         if is_win:
             state.win_count += 1
-            # Running Average Win
             state.avg_win_usd = (
                 (state.avg_win_usd * (state.win_count - 1) + pnl) / state.win_count
                 if state.win_count > 0 else pnl
             )
         else:
             state.loss_count += 1
-            # Running Average Loss
             state.avg_loss_usd = (
                 (state.avg_loss_usd * (state.loss_count - 1) + pnl) / state.loss_count
                 if state.loss_count > 0 else pnl
             )
 
+        # Retrieve prices generically
+        price_keys = list(prices.keys())
+        leg1_p = prices.get(price_keys[0], 0.0) if len(price_keys) > 0 else 0.0
+        leg2_p = prices.get(price_keys[1], 0.0) if len(price_keys) > 1 else 0.0
+        leg3_p = prices.get(price_keys[2], 0.0) if len(price_keys) > 2 else 0.0
+
         cycle_record = ArbTradeCycle(
             cycle_id=cycle_id,
-            direction=direction,
+            direction=f"{route_name}-{direction}",
             started_at=datetime.now(timezone.utc).isoformat(),
             completed_at=datetime.now(timezone.utc).isoformat(),
             est_edge_pct=net_edge,
@@ -100,23 +105,23 @@ async def execute_arbitrage(opportunity: dict) -> None:
             size_usdt=size_usdt,
             pnl_usdt=pnl,
             status="completed",
-            leg1_price=prices.get("BTCUSDT", 0.0) if direction == "FORWARD" else prices.get("ETHUSDT", 0.0),
-            leg2_price=prices.get("ETHBTC", 0.0),
-            leg3_price=prices.get("ETHUSDT", 0.0) if direction == "FORWARD" else prices.get("BTCUSDT", 0.0),
+            leg1_price=leg1_p,
+            leg2_price=leg2_p,
+            leg3_price=leg3_p,
         )
 
         state.closed_trades.append(cycle_record.to_dict())
         save_state(state)
 
-        logger.success(f"🎉 Simulated Arb Cycle {cycle_id} Completed! PnL: ${pnl:+.4f} (Simulated Slippage: {settings.paper_slippage_pct:.3%})")
-        arbitrage_executed(cycle_id, direction, size_usdt, pnl, net_edge, mode="PAPER")
+        logger.success(f"🎉 [{route_name}] Simulated Arb Cycle {cycle_id} Completed! PnL: ${pnl:+.4f} (Simulated Slippage: {settings.paper_slippage_pct:.3%})")
+        arbitrage_executed(cycle_id, f"{route_name}-{direction}", size_usdt, pnl, net_edge, mode="PAPER")
 
     else:
         # ── LIVE TRADING MODE ──
         exchange = get_bybit_client()
         cycle_record = ArbTradeCycle(
             cycle_id=cycle_id,
-            direction=direction,
+            direction=f"{route_name}-{direction}",
             started_at=datetime.now(timezone.utc).isoformat(),
             completed_at="",
             est_edge_pct=net_edge,
@@ -125,69 +130,51 @@ async def execute_arbitrage(opportunity: dict) -> None:
             pnl_usdt=0.0,
             status="failed",
         )
+
         try:
             # 1. Fetch live USDT balance
             balance = await exchange.fetch_balance()
             free_usdt = float(balance.get('USDT', {}).get('free', 0.0))
             
-            # Apply absolute size cap in live mode as well
+            # Apply absolute size cap in live mode
             size_usdt = min(free_usdt * settings.position_size_pct, settings.max_trade_size_usdt)
             cycle_record.size_usdt = size_usdt
 
             if size_usdt < 5.0:
                 msg = f"Insufficient USDT balance to trade: {free_usdt:.2f} USDT (min: 5.0)"
                 logger.warning(msg)
-                arbitrage_failed(cycle_id, direction, "Balance Check", msg, mode="LIVE")
+                arbitrage_failed(cycle_id, f"{route_name}-{direction}", "Balance Check", msg, mode="LIVE")
                 return
 
-            logger.info(f"Executing LIVE {direction} cycle with size {size_usdt:.2f} USDT")
+            logger.info(f"Executing LIVE [{route_name}] {direction} cycle with size {size_usdt:.2f} USDT")
 
-            if direction == "FORWARD":
-                # Leg 1: Buy BTC using USDT
-                logger.info("Leg 1: Market Buy BTC/USDT...")
-                await exchange.create_market_buy_order_with_cost("BTC/USDT", size_usdt)
+            # 2. Iterate through configured legs dynamically
+            free_balance = size_usdt
+            for i, leg in enumerate(opportunity["legs"]):
+                pair = leg["pair"]
+                side = leg["side"]
+                curr = leg["currency"]
 
-                # Leg 2: Buy ETH using BTC balance
-                await asyncio.sleep(0.1)  # tiny delay to allow spot balance to settle
-                balance = await exchange.fetch_balance()
-                btc_balance = float(balance.get('BTC', {}).get('free', 0.0))
-                logger.info(f"Leg 2: Market Buy ETH/BTC with {btc_balance:.6f} BTC...")
-                await exchange.create_market_buy_order_with_cost("ETH/BTC", btc_balance)
+                # For subsequent legs, retrieve updated balance of target currency
+                if i > 0:
+                    await asyncio.sleep(0.1)  # small delay for spot book updates
+                    balance = await exchange.fetch_balance()
+                    free_balance = float(balance.get(curr, {}).get('free', 0.0))
 
-                # Leg 3: Sell ETH for USDT
-                await asyncio.sleep(0.1)
-                balance = await exchange.fetch_balance()
-                eth_balance = float(balance.get('ETH', {}).get('free', 0.0))
-                logger.info(f"Leg 3: Market Sell ETH/USDT for {eth_balance:.6f} ETH...")
-                await exchange.create_market_sell_order("ETH/USDT", eth_balance)
+                logger.info(f"Leg {i+1}: Market {side.upper()} {pair} with {free_balance:.6f} {curr}...")
+                if side == "buy":
+                    await exchange.create_market_buy_order_with_cost(pair, free_balance)
+                else:
+                    await exchange.create_market_sell_order(pair, free_balance)
 
-            else:  # REVERSE
-                # Leg 1: Buy ETH using USDT
-                logger.info("Leg 1: Market Buy ETH/USDT...")
-                await exchange.create_market_buy_order_with_cost("ETH/USDT", size_usdt)
-
-                # Leg 2: Sell ETH for BTC
-                await asyncio.sleep(0.1)
-                balance = await exchange.fetch_balance()
-                eth_balance = float(balance.get('ETH', {}).get('free', 0.0))
-                logger.info(f"Leg 2: Market Sell ETH/BTC for {eth_balance:.6f} ETH...")
-                await exchange.create_market_sell_order("ETH/BTC", eth_balance)
-
-                # Leg 3: Sell BTC for USDT
-                await asyncio.sleep(0.1)
-                balance = await exchange.fetch_balance()
-                btc_balance = float(balance.get('BTC', {}).get('free', 0.0))
-                logger.info(f"Leg 3: Market Sell BTC/USDT for {btc_balance:.6f} BTC...")
-                await exchange.create_market_sell_order("BTC/USDT", btc_balance)
-
-            # 4. Compute actual PnL
+            # 3. Compute realized live PnL
             await asyncio.sleep(0.2)
             balance = await exchange.fetch_balance()
             new_usdt = float(balance.get('USDT', {}).get('free', 0.0))
             pnl = new_usdt - free_usdt
             actual_edge = pnl / size_usdt
 
-            # Update State
+            # Update state metrics
             state.cash = new_usdt
             state.account_size = new_usdt
             state.total_pnl += pnl
@@ -216,8 +203,8 @@ async def execute_arbitrage(opportunity: dict) -> None:
             state.closed_trades.append(cycle_record.to_dict())
             save_state(state)
 
-            logger.success(f"🎉 Live Arbitrage Cycle {cycle_id} Completed! PnL: ${pnl:+.4f} USDT")
-            arbitrage_executed(cycle_id, direction, size_usdt, pnl, net_edge, mode="LIVE")
+            logger.success(f"🎉 Live [{route_name}] Arbitrage Completed! PnL: ${pnl:+.4f} USDT")
+            arbitrage_executed(cycle_id, f"{route_name}-{direction}", size_usdt, pnl, net_edge, mode="LIVE")
 
         except Exception as e:
             logger.error(f"❌ Critical Live execution error on cycle {cycle_id}: {e}")
@@ -225,4 +212,4 @@ async def execute_arbitrage(opportunity: dict) -> None:
             cycle_record.reason = str(e)
             state.closed_trades.append(cycle_record.to_dict())
             save_state(state)
-            arbitrage_failed(cycle_id, direction, "Execution Loop", str(e), mode="LIVE")
+            arbitrage_failed(cycle_id, f"{route_name}-{direction}", "Execution Loop", str(e), mode="LIVE")

@@ -17,6 +17,8 @@ class BybitPriceFeed:
             "BTCUSDT": {"bid": 0.0, "ask": 0.0, "bid_size": 0.0, "ask_size": 0.0},
             "ETHUSDT": {"bid": 0.0, "ask": 0.0, "bid_size": 0.0, "ask_size": 0.0},
             "ETHBTC": {"bid": 0.0, "ask": 0.0, "bid_size": 0.0, "ask_size": 0.0},
+            "SOLUSDT": {"bid": 0.0, "ask": 0.0, "bid_size": 0.0, "ask_size": 0.0},
+            "SOLBTC": {"bid": 0.0, "ask": 0.0, "bid_size": 0.0, "ask_size": 0.0},
         }
         self.is_connected = False
         # In paper trading, always pull from mainnet for real price data.
@@ -46,7 +48,13 @@ class BybitPriceFeed:
                     logger.info("Connected to Bybit public Spot WebSocket.")
 
                     # Subscribe to depth 1 orderbooks
-                    topics = ["orderbook.1.BTCUSDT", "orderbook.1.ETHUSDT", "orderbook.1.ETHBTC"]
+                    topics = [
+                        "orderbook.1.BTCUSDT",
+                        "orderbook.1.ETHUSDT",
+                        "orderbook.1.ETHBTC",
+                        "orderbook.1.SOLUSDT",
+                        "orderbook.1.SOLBTC",
+                    ]
                     sub_msg = {
                         "op": "subscribe",
                         "args": topics

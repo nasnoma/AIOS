@@ -2,7 +2,7 @@
 polymarket_bot/dashboard.py
 
 Embedded aiohttp web server running a premium quantitative dashboard for Bybit Arbitrage Bot.
-Features deep navy dark mode, glassmorphic cards, live state updates, tickers, and logs.
+Features deep navy dark mode, glassmorphic cards, live state updates, multi-route tickers, and logs.
 """
 from __future__ import annotations
 import os
@@ -31,7 +31,7 @@ _INDEX_HTML = """<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bybit Triangular Arbitrage Dashboard</title>
+    <title>Bybit Spot Arbitrage Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -309,13 +309,13 @@ _INDEX_HTML = """<!DOCTYPE html>
             text-transform: uppercase;
         }
 
-        .badge.forward { background: var(--color-green-glow); color: var(--color-green); }
-        .badge.reverse { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
+        .badge.buy { background: var(--color-green-glow); color: var(--color-green); }
+        .badge.sell { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
 
         .console-card {
             display: flex;
             flex-direction: column;
-            height: clamp(200px, 40vh, 450px);
+            height: clamp(200px, 45vh, 500px);
         }
 
         .console-body {
@@ -345,7 +345,7 @@ _INDEX_HTML = """<!DOCTYPE html>
 
         .spot-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
             gap: 1rem;
             margin-bottom: 1.5rem;
         }
@@ -366,29 +366,29 @@ _INDEX_HTML = """<!DOCTYPE html>
         }
 
         .ticker-price {
-            font-size: 1.2rem;
+            font-size: 1.15rem;
             font-weight: 700;
             font-family: 'JetBrains Mono', monospace;
         }
 
         .arb-monitor {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 1rem;
             margin-bottom: 1.5rem;
         }
 
         .arb-path {
-            background: rgba(6, 182, 212, 0.05);
-            border: 1px solid rgba(6, 182, 212, 0.15);
+            background: rgba(6, 182, 212, 0.03);
+            border: 1px solid rgba(6, 182, 212, 0.1);
             border-radius: 0.75rem;
             padding: 1rem;
             text-align: center;
         }
 
         .arb-path.reverse {
-            background: rgba(99, 102, 241, 0.05);
-            border: 1px solid rgba(99, 102, 241, 0.15);
+            background: rgba(99, 102, 241, 0.03);
+            border: 1px solid rgba(99, 102, 241, 0.1);
         }
 
         .arb-path-title {
@@ -408,7 +408,7 @@ _INDEX_HTML = """<!DOCTYPE html>
                 padding: 1rem;
             }
             .spot-grid {
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
                 gap: 0.75rem;
             }
             .arb-monitor {
@@ -449,6 +449,12 @@ _INDEX_HTML = """<!DOCTYPE html>
                 padding: 0.35rem 0.75rem;
                 font-size: 0.75rem;
             }
+        }
+
+        .arb-path-edge {
+            font-size: 1.4rem;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
         }
     </style>
 </head>
@@ -502,6 +508,7 @@ _INDEX_HTML = """<!DOCTYPE html>
             <span>Market Monitor</span>
             <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);" id="last-updated">Updated just now</span>
         </div>
+        
         <div class="spot-grid">
             <div class="ticker-card">
                 <div class="ticker-name">BTC/USDT</div>
@@ -515,16 +522,32 @@ _INDEX_HTML = """<!DOCTYPE html>
                 <div class="ticker-name">ETH/BTC</div>
                 <div class="ticker-price" id="ticker-ethbtc">---</div>
             </div>
+            <div class="ticker-card">
+                <div class="ticker-name">SOL/USDT</div>
+                <div class="ticker-price" id="ticker-solusdt">---</div>
+            </div>
+            <div class="ticker-card">
+                <div class="ticker-name">SOL/BTC</div>
+                <div class="ticker-price" id="ticker-solbtc">---</div>
+            </div>
         </div>
 
         <div class="arb-monitor">
             <div class="arb-path">
-                <div class="arb-path-title">Forward (USDT → BTC → ETH → USDT)</div>
-                <div class="arb-path-edge" id="edge-forward">---</div>
+                <div class="arb-path-title">BTC-ETH Forward (USDT → BTC → ETH → USDT)</div>
+                <div class="arb-path-edge" id="edge-eth-forward">---</div>
             </div>
             <div class="arb-path reverse">
-                <div class="arb-path-title">Reverse (USDT → ETH → BTC → USDT)</div>
-                <div class="arb-path-edge" id="edge-reverse">---</div>
+                <div class="arb-path-title">BTC-ETH Reverse (USDT → ETH → BTC → USDT)</div>
+                <div class="arb-path-edge" id="edge-eth-reverse">---</div>
+            </div>
+            <div class="arb-path">
+                <div class="arb-path-title">BTC-SOL Forward (USDT → BTC → SOL → USDT)</div>
+                <div class="arb-path-edge" id="edge-sol-forward">---</div>
+            </div>
+            <div class="arb-path reverse">
+                <div class="arb-path-title">BTC-SOL Reverse (USDT → SOL → BTC → USDT)</div>
+                <div class="arb-path-edge" id="edge-sol-reverse">---</div>
             </div>
         </div>
 
@@ -632,28 +655,44 @@ _INDEX_HTML = """<!DOCTYPE html>
                 if (market.ETHBTC) {
                     document.getElementById('ticker-ethbtc').innerText = `${market.ETHBTC.bid.toFixed(5)} / ${market.ETHBTC.ask.toFixed(5)}`;
                 }
+                if (market.SOLUSDT) {
+                    document.getElementById('ticker-solusdt').innerText = `${market.SOLUSDT.bid.toFixed(2)} / ${market.SOLUSDT.ask.toFixed(2)}`;
+                }
+                if (market.SOLBTC) {
+                    document.getElementById('ticker-solbtc').innerText = `${market.SOLBTC.bid.toFixed(5)} / ${market.SOLBTC.ask.toFixed(5)}`;
+                }
 
-                // Edges
-                const edgeF = data.edges.forward;
-                const edgeFE = document.getElementById('edge-forward');
-                edgeFE.innerText = `${edgeF >= 0 ? '+' : ''}${edgeF.toFixed(4)}%`;
-                edgeFE.className = `arb-path-edge ${edgeF >= 0 ? 'text-green' : 'text-red'}`;
+                // Edges: BTC-ETH
+                const edgeEthF = data.edges["BTC-ETH"].forward;
+                const edgeEthFE = document.getElementById('edge-eth-forward');
+                edgeEthFE.innerText = `${edgeEthF >= 0 ? '+' : ''}${edgeEthF.toFixed(4)}%`;
+                edgeEthFE.className = `arb-path-edge ${edgeEthF >= 0 ? 'text-green' : 'text-red'}`;
 
-                const edgeR = data.edges.reverse;
-                const edgeRE = document.getElementById('edge-reverse');
-                edgeRE.innerText = `${edgeR >= 0 ? '+' : ''}${edgeR.toFixed(4)}%`;
-                edgeRE.className = `arb-path-edge ${edgeR >= 0 ? 'text-green' : 'text-red'}`;
+                const edgeEthR = data.edges["BTC-ETH"].reverse;
+                const edgeEthRE = document.getElementById('edge-eth-reverse');
+                edgeEthRE.innerText = `${edgeEthR >= 0 ? '+' : ''}${edgeEthR.toFixed(4)}%`;
+                edgeEthRE.className = `arb-path-edge ${edgeEthR >= 0 ? 'text-green' : 'text-red'}`;
+
+                // Edges: BTC-SOL
+                const edgeSolF = data.edges["BTC-SOL"].forward;
+                const edgeSolFE = document.getElementById('edge-sol-forward');
+                edgeSolFE.innerText = `${edgeSolF >= 0 ? '+' : ''}${edgeSolF.toFixed(4)}%`;
+                edgeSolFE.className = `arb-path-edge ${edgeSolF >= 0 ? 'text-green' : 'text-red'}`;
+
+                const edgeSolR = data.edges["BTC-SOL"].reverse;
+                const edgeSolRE = document.getElementById('edge-sol-reverse');
+                edgeSolRE.innerText = `${edgeSolR >= 0 ? '+' : ''}${edgeSolR.toFixed(4)}%`;
+                edgeSolRE.className = `arb-path-edge ${edgeSolR >= 0 ? 'text-green' : 'text-red'}`;
 
                 // Trade History
                 const tbody = document.getElementById('trade-history');
                 if (state.closed_trades && state.closed_trades.length > 0) {
                     tbody.innerHTML = state.closed_trades.slice().reverse().map(trade => {
                         const isWin = trade.pnl_usdt >= 0;
-                        const directionClass = trade.direction === 'FORWARD' ? 'forward' : 'reverse';
                         return `
                             <tr>
                                 <td><code>${trade.cycle_id}</code></td>
-                                <td><span class="badge ${directionClass}">${trade.direction}</span></td>
+                                <td><span class="badge buy">${trade.direction}</span></td>
                                 <td>${trade.size_usdt.toFixed(2)} USDT</td>
                                 <td>${(trade.est_edge_pct * 100).toFixed(4)}%</td>
                                 <td class="${isWin ? 'text-green' : 'text-red'} font-mono">${trade.pnl_usdt >= 0 ? '+' : ''}${trade.pnl_usdt.toFixed(4)} USDT</td>
@@ -687,7 +726,7 @@ _INDEX_HTML = """<!DOCTYPE html>
                     let levelClass = 'info';
                     if (line.includes('| WARNING |')) levelClass = 'warning';
                     if (line.includes('| ERROR   |')) levelClass = 'error';
-                    if (line.includes('Completed!') || line.includes('Executed')) levelClass = 'success';
+                    if (line.includes('Completed!') || line.includes('Executed') || line.includes('Arb Found')) levelClass = 'success';
                     return `<div class="console-line ${levelClass}">${line}</div>`;
                 }).join('');
 
@@ -725,33 +764,47 @@ async def handle_api_state(request):
         price_feed = request.app["price_feed"]
         
         # Calculate raw forward and reverse edges for display
+        total_fees = 3 * 0.0010
+
+        # BTC-ETH
         bid_btc, ask_btc, _, _ = price_feed.get_best_bid_ask("BTCUSDT")
         bid_eth, ask_eth, _, _ = price_feed.get_best_bid_ask("ETHUSDT")
         bid_ethbtc, ask_ethbtc, _, _ = price_feed.get_best_bid_ask("ETHBTC")
 
-        forward_edge = 0.0
-        reverse_edge = 0.0
-        total_fees = 3 * 0.0010
-
+        forward_edge_eth = 0.0
+        reverse_edge_eth = 0.0
         if all([bid_btc, ask_btc, bid_eth, ask_eth, bid_ethbtc, ask_ethbtc]):
-            forward_gross = (1.0 / ask_btc) * (1.0 / ask_ethbtc) * bid_eth
-            forward_edge = ((forward_gross - 1.0) - total_fees) * 100.0
+            forward_gross_eth = (1.0 / ask_btc) * (1.0 / ask_ethbtc) * bid_eth
+            forward_edge_eth = ((forward_gross_eth - 1.0) - total_fees) * 100.0
 
-            reverse_gross = (1.0 / ask_eth) * bid_ethbtc * bid_btc
-            reverse_edge = ((reverse_gross - 1.0) - total_fees) * 100.0
+            reverse_gross_eth = (1.0 / ask_eth) * bid_ethbtc * bid_btc
+            reverse_edge_eth = ((reverse_gross_eth - 1.0) - total_fees) * 100.0
+
+        # BTC-SOL
+        bid_sol, ask_sol, _, _ = price_feed.get_best_bid_ask("SOLUSDT")
+        bid_solbtc, ask_solbtc, _, _ = price_feed.get_best_bid_ask("SOLBTC")
+
+        forward_edge_sol = 0.0
+        reverse_edge_sol = 0.0
+        if all([bid_btc, ask_btc, bid_sol, ask_sol, bid_solbtc, ask_solbtc]):
+            forward_gross_sol = (1.0 / ask_btc) * (1.0 / ask_solbtc) * bid_sol
+            forward_edge_sol = ((forward_gross_sol - 1.0) - total_fees) * 100.0
+
+            reverse_gross_sol = (1.0 / ask_sol) * bid_solbtc * bid_btc
+            reverse_edge_sol = ((reverse_gross_sol - 1.0) - total_fees) * 100.0
 
         state = load_state()
         
         market_status = {}
-        for asset in ["BTCUSDT", "ETHUSDT", "ETHBTC"]:
+        for asset in ["BTCUSDT", "ETHUSDT", "ETHBTC", "SOLUSDT", "SOLBTC"]:
             bid, ask, _, _ = price_feed.get_best_bid_ask(asset)
             market_status[asset] = {"bid": bid, "ask": ask}
 
         return web.json_response({
             "state": state.to_dict(),
             "edges": {
-                "forward": forward_edge,
-                "reverse": reverse_edge,
+                "BTC-ETH": {"forward": forward_edge_eth, "reverse": reverse_edge_eth},
+                "BTC-SOL": {"forward": forward_edge_sol, "reverse": reverse_edge_sol},
             },
             "market_status": market_status,
         })
