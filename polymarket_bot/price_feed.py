@@ -47,13 +47,9 @@ class BybitPriceFeed:
                     self.is_connected = True
                     logger.info("Connected to Bybit public Spot WebSocket.")
 
-                    # Subscribe to depth 1 orderbooks
+                    # Subscribe to depth 1 orderbook for SOLUSDT
                     topics = [
-                        "orderbook.1.BTCUSDT",
-                        "orderbook.1.ETHUSDT",
-                        "orderbook.1.ETHBTC",
                         "orderbook.1.SOLUSDT",
-                        "orderbook.1.SOLBTC",
                     ]
                     sub_msg = {
                         "op": "subscribe",
