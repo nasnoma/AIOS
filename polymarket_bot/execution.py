@@ -70,12 +70,18 @@ async def execute_arbitrage(opportunity: dict, price_feed=None, scanner=None) ->
     buy_price = opportunity["buy_price"]
     sell_price = opportunity["sell_price"]
 
+    # Extract base/quote assets from opportunity
+    base = opportunity.get("base", "SOL")
+    quote = opportunity.get("quote", "USDT")
+    base_mint = opportunity.get("base_mint", "So11111111111111111111111111111111111111112")
+    quote_mint = opportunity.get("quote_mint", "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB")
+
     state = load_state()
     state = reset_daily_pnl_if_new_day(state)
     cycle_id = uuid.uuid4().hex[:8]
     now_iso = datetime.now(timezone.utc).isoformat()
 
-    logger.info(f"⚡ [Arb Trigger] Executing {route} | Expected Net: {net_spread:.2%}")
+    logger.info(f"⚡ [Arb Trigger] Executing {route} for {base}/{quote} | Expected Net: {net_spread:.2%}")
 
     if settings.trading_mode == "paper":
         # ── PAPER SIMULATION MODE ──
@@ -85,14 +91,15 @@ async def execute_arbitrage(opportunity: dict, price_feed=None, scanner=None) ->
             return
 
         # Get volatility from price_feed
-        volatility = price_feed.get_sol_volatility() if (price_feed and hasattr(price_feed, 'get_sol_volatility')) else 0.0015
+        bybit_ticker_symbol = f"{base}{quote}"
+        volatility = price_feed.get_volatility(bybit_ticker_symbol) if (price_feed and hasattr(price_feed, 'get_volatility')) else 0.0015
         
         # Parallel Leg Simulation
         async def simulate_cex_leg():
             await asyncio.sleep(0.12)  # ~120ms Bybit latency
             rechecked_price = sell_price if route == "DEX-BUY_CEX-SELL" else buy_price
             if price_feed:
-                bid, ask, _, _ = price_feed.get_best_bid_ask("SOLUSDT")
+                bid, ask, _, _ = price_feed.get_best_bid_ask(bybit_ticker_symbol)
                 if route == "DEX-BUY_CEX-SELL":
                     if bid > 0: rechecked_price = bid
                 else:
@@ -100,10 +107,8 @@ async def execute_arbitrage(opportunity: dict, price_feed=None, scanner=None) ->
             
             cex_slippage = calculate_slippage(size_usdt, volatility, is_solana_leg=False)
             if route == "DEX-BUY_CEX-SELL":
-                # Sell SOL on CEX (proceeds reduced by slippage)
                 realized_price = rechecked_price * (1.0 - cex_slippage)
             else:
-                # Buy SOL on CEX (cost increased by slippage)
                 realized_price = rechecked_price * (1.0 + cex_slippage)
             return realized_price, cex_slippage
 
@@ -117,18 +122,16 @@ async def execute_arbitrage(opportunity: dict, price_feed=None, scanner=None) ->
 
             rechecked_price = buy_price if route == "DEX-BUY_CEX-SELL" else sell_price
             if scanner and price_feed:
-                bid, ask, _, _ = price_feed.get_best_bid_ask("SOLUSDT")
+                bid, ask, _, _ = price_feed.get_best_bid_ask(bybit_ticker_symbol)
                 mid_price = (bid + ask) / 2.0 if (bid and ask) else rechecked_price
-                sol_in = size_asset
-                dex_buy, _, dex_sell, _ = await scanner.get_latest_dex_prices(mid_price, size_usdt, sol_in)
+                base_in = size_asset
+                dex_buy, _, dex_sell, _ = await scanner.get_latest_dex_prices(base, quote, base_mint, quote_mint, mid_price, size_usdt, base_in)
                 rechecked_price = dex_buy if route == "DEX-BUY_CEX-SELL" else dex_sell
 
             dex_slippage = calculate_slippage(size_usdt, volatility, is_solana_leg=True)
             if route == "DEX-BUY_CEX-SELL":
-                # Buy SOL on DEX (price increased by slippage)
                 realized_price = rechecked_price * (1.0 + dex_slippage)
             else:
-                # Sell SOL on DEX (proceeds reduced by slippage)
                 realized_price = rechecked_price * (1.0 - dex_slippage)
             return realized_price, dex_slippage
 
@@ -137,36 +140,39 @@ async def execute_arbitrage(opportunity: dict, price_feed=None, scanner=None) ->
         )
 
         priority_fee_usd = calculate_solana_priority_fee(volatility)
-        # Convert priority fee to SOL using DEX realized price
+        # Convert priority fee to asset using DEX realized price
         sol_priority_fee = priority_fee_usd / dex_realized_price
 
         # Update local balances
+        cex_asset_val = state.cex_assets.get(base, 0.0)
+        dex_asset_val = state.dex_assets.get(base, 0.0)
+
         if route == "DEX-BUY_CEX-SELL":
-            # Buy SOL on DEX: cost = size_usdt, receive SOL based on dex_realized_price
-            # Subtract priority fee from DEX SOL asset balance
+            # Buy Asset on DEX: cost = size_usdt, receive asset based on dex_realized_price
+            # Subtract priority fee from DEX asset balance
             size_asset_realized = size_usdt / dex_realized_price
             state.dex_cash -= size_usdt
-            state.dex_asset += size_asset_realized - sol_priority_fee
+            state.dex_assets[base] = dex_asset_val + size_asset_realized - sol_priority_fee
 
-            # Sell SOL on CEX: sell size_asset SOL, receive USDT based on cex_realized_price and Bybit 0.1% taker fee
+            # Sell Asset on CEX: sell size_asset, receive cash based on cex_realized_price and Bybit 0.1% taker fee
             cex_proceeds = (size_asset * cex_realized_price) * (1.0 - 0.0010)
             state.cex_cash += cex_proceeds
-            state.cex_asset -= size_asset
+            state.cex_assets[base] = cex_asset_val - size_asset
 
             # P&L
             pnl = cex_proceeds - size_usdt - priority_fee_usd
             expected_pnl = (size_asset * sell_price) * (1.0 - 0.0010) - size_usdt - 0.05
         else:
-            # Buy SOL on CEX: cost = size_usdt * (1 + 0.1% fee), receive size_asset
+            # Buy Asset on CEX: cost = size_usdt * (1 + 0.1% fee), receive size_asset
             cex_cost = size_usdt * (1.0 + 0.0010)
             state.cex_cash -= cex_cost
-            state.cex_asset += size_asset
+            state.cex_assets[base] = cex_asset_val + size_asset
 
-            # Sell SOL on DEX: sell size_asset SOL, receive USDT based on dex_realized_price
+            # Sell Asset on DEX: sell size_asset, receive cash based on dex_realized_price
             # Subtract priority fee from DEX SOL asset balance
             dex_proceeds = (size_asset * dex_realized_price)
             state.dex_cash += dex_proceeds
-            state.dex_asset -= (size_asset + sol_priority_fee)
+            state.dex_assets[base] = dex_asset_val - (size_asset + sol_priority_fee)
 
             # P&L
             pnl = dex_proceeds - cex_cost - priority_fee_usd
@@ -204,11 +210,19 @@ async def execute_arbitrage(opportunity: dict, price_feed=None, scanner=None) ->
         else:
             state.route_stats[route]["loss_count"] += 1
 
-        # Re-value account size
-        mid_price = (cex_realized_price + dex_realized_price) / 2.0
-        total_cash = state.cex_cash + state.dex_cash
-        total_assets = state.cex_asset + state.dex_asset
-        state.account_size = total_cash + (total_assets * mid_price)
+        # Re-value account size dynamically
+        total_assets_value = 0.0
+        if price_feed:
+            for asset_name in ["SOL", "BTC", "ETH"]:
+                bid_p, ask_p, _, _ = price_feed.get_best_bid_ask(f"{asset_name}USDT")
+                mid_p = (bid_p + ask_p) / 2.0 if (bid_p and ask_p) else (140.0 if asset_name == "SOL" else (60000.0 if asset_name == "BTC" else 3000.0))
+                asset_qty = state.cex_assets.get(asset_name, 0.0) + state.dex_assets.get(asset_name, 0.0)
+                total_assets_value += asset_qty * mid_p
+        else:
+            mid_price = (cex_realized_price + dex_realized_price) / 2.0
+            total_assets_value = (state.cex_asset + state.dex_asset) * mid_price
+            
+        state.account_size = state.cex_cash + state.dex_cash + total_assets_value
 
         # Drawdown guard check
         if state.account_size > state.peak_account_size:
@@ -244,7 +258,7 @@ async def execute_arbitrage(opportunity: dict, price_feed=None, scanner=None) ->
         state.closed_trades.append(cycle_record.to_dict())
         save_state(state)
 
-        logger.success(f"🎉 [Paper Arb Completed] {route} | Size: ${size_usdt:.2f} USDT | Realized PnL: ${pnl:+.4f} USDT | Slippage: {slippage_pct:.3%}")
+        logger.success(f"🎉 [Paper Arb Completed] {route} ({base}/{quote}) | Size: ${size_usdt:.2f} USDT | Realized PnL: ${pnl:+.4f} USDT | Slippage: {slippage_pct:.3%}")
         arbitrage_executed(cycle_id, route, size_usdt, pnl, buy_price, mode="PAPER")
 
     else:
@@ -262,12 +276,12 @@ async def execute_arbitrage(opportunity: dict, price_feed=None, scanner=None) ->
             side = "sell" if route == "DEX-BUY_CEX-SELL" else "buy"
             cex_order_task = None
             if settings.live_tx_simulation_only:
-                logger.info(f"🧪 [Dry-Run] Skipping real Bybit order to {side.upper()} {size_asset:.4f} SOL.")
+                logger.info(f"🧪 [Dry-Run] Skipping real Bybit order to {side.upper()} {size_asset:.4f} {base}.")
             else:
-                logger.info(f"Submitting Bybit Spot Market order to {side.upper()} {size_asset:.4f} SOL...")
+                logger.info(f"Submitting Bybit Spot Market order to {side.upper()} {size_asset:.4f} {base}...")
                 cex_order_task = asyncio.create_task(
                     exchange.create_order(
-                        symbol="SOL/USDT",
+                        symbol=f"{base}/{quote}",
                         type="market",
                         side=side,
                         amount=size_asset
@@ -359,8 +373,8 @@ async def execute_arbitrage(opportunity: dict, price_feed=None, scanner=None) ->
 
                 # Sync balances after real trade
                 balances = await exchange.fetch_balance()
-                state.cex_cash = float(balances.get('USDT', {}).get('free', 0.0))
-                state.cex_asset = float(balances.get('SOL', {}).get('free', 0.0))
+                state.cex_cash = float(balances.get(quote, {}).get('free', 0.0))
+                state.cex_assets[base] = float(balances.get(base, {}).get('free', 0.0))
                 save_state(state)
                 await solana_client.close()
             

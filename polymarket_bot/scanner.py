@@ -15,8 +15,19 @@ from polymarket_bot.config import settings
 from polymarket_bot.price_feed import BybitPriceFeed
 from polymarket_bot.state import PortfolioState
 
-USDT_MINT = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"
 SOL_MINT = "So11111111111111111111111111111111111111112"
+WBTC_MINT = "3NZ9J8yJGc2th4xyMn2rrBcfceRA1SGJJJ84pL7E82i7"
+WETH_MINT = "7vfCXTUXx5WJV5JADGB2jLy1zDp7pD4nc16gZVWZ2DB0"
+USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+USDT_MINT = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"
+
+DECIMALS = {
+    "SOL": 9,
+    "BTC": 8,
+    "ETH": 8,
+    "USDC": 6,
+    "USDT": 6
+}
 
 
 class CexDexArbitrageScanner:
@@ -26,6 +37,16 @@ class CexDexArbitrageScanner:
         self.last_dex_buy = 0.0
         self.last_dex_sell = 0.0
         self.jupiter_cooldown_until = 0.0
+        
+        # Configure multiple CEX-DEX spatial routes to scan
+        self.routes = [
+            {"base": "SOL", "quote": "USDT", "base_mint": SOL_MINT, "quote_mint": USDT_MINT},
+            {"base": "BTC", "quote": "USDT", "base_mint": WBTC_MINT, "quote_mint": USDT_MINT},
+            {"base": "ETH", "quote": "USDT", "base_mint": WETH_MINT, "quote_mint": USDT_MINT},
+            {"base": "SOL", "quote": "USDC", "base_mint": SOL_MINT, "quote_mint": USDC_MINT},
+            {"base": "BTC", "quote": "USDC", "base_mint": WBTC_MINT, "quote_mint": USDC_MINT},
+            {"base": "ETH", "quote": "USDC", "base_mint": WETH_MINT, "quote_mint": USDC_MINT},
+        ]
 
     async def init_session(self) -> None:
         if self.session is None:
@@ -133,35 +154,38 @@ class CexDexArbitrageScanner:
                 
         return None
 
-    async def get_latest_dex_prices(self, mid_price: float, trade_size: float, sol_in: float) -> tuple[float, float, float, float]:
+    async def get_latest_dex_prices(self, base: str, quote: str, base_mint: str, quote_mint: str, mid_price: float, trade_size: float, base_in: float) -> tuple[float, float, float, float]:
         """Queries Jupiter Quote API or falls back to simulated prices if rate-limited."""
-        usdt_in_raw = int(trade_size * 1_000_000)
-        sol_out_raw = await self.get_jupiter_quote(USDT_MINT, SOL_MINT, usdt_in_raw)
+        base_dec = DECIMALS.get(base, 9)
+        quote_dec = DECIMALS.get(quote, 6)
 
-        sol_in_raw = int(sol_in * 1_000_000_000.0)
-        usdt_out_raw = await self.get_jupiter_quote(SOL_MINT, USDT_MINT, sol_in_raw)
+        quote_in_raw = int(trade_size * (10 ** quote_dec))
+        base_out_raw = await self.get_jupiter_quote(quote_mint, base_mint, quote_in_raw)
+
+        base_in_raw = int(base_in * (10 ** base_dec))
+        quote_out_raw = await self.get_jupiter_quote(base_mint, quote_mint, base_in_raw)
 
         # Handle Fallback if Jupiter is rate-limited
-        if not sol_out_raw or not usdt_out_raw:
+        if not base_out_raw or not quote_out_raw:
             # Neutral spread matching Bybit mid-price (0.1% spread adjustment)
             # This ensures no artificial arbitrage trades are triggered during rate limits.
             dex_buy_price = mid_price * 1.001
-            sol_out = trade_size / dex_buy_price
+            base_out = trade_size / dex_buy_price
             
             dex_sell_price = mid_price * 0.999
-            usdt_out = sol_in * dex_sell_price
+            quote_out = base_in * dex_sell_price
         else:
-            sol_out = sol_out_raw / 1_000_000_000.0
-            dex_buy_price = trade_size / sol_out
+            base_out = base_out_raw / (10 ** base_dec)
+            dex_buy_price = trade_size / base_out
             
-            usdt_out = usdt_out_raw / 1_000_000.0
-            dex_sell_price = usdt_out / sol_in
+            quote_out = quote_out_raw / (10 ** quote_dec)
+            dex_sell_price = quote_out / base_in
 
-        return dex_buy_price, sol_out, dex_sell_price, usdt_out
+        return dex_buy_price, base_out, dex_sell_price, quote_out
 
     async def scan(self, state: PortfolioState) -> dict | None:
         """
-        Scans for profitable CEX-DEX spreads between Bybit and Solana DEX.
+        Scans for profitable CEX-DEX spreads across all configured routes.
         Returns the best opportunity details if net spread > settings.min_arbitrage_spread_pct.
         """
         # Check if trading is paused due to drawdown
@@ -169,79 +193,100 @@ class CexDexArbitrageScanner:
             logger.warning("⚠️ Trading paused due to Max Drawdown Guard limit breach.")
             return None
 
-        # 1. Fetch Bybit Spot SOLUSDT ticker
-        bid, ask, _, _ = self.price_feed.get_best_bid_ask("SOLUSDT")
-        if not bid or not ask:
-            return None
-
-        # Check Bybit price freshness
-        now = asyncio.get_event_loop().time()
-        price_age = now - self.price_feed.last_update_ts
-        if price_age > settings.max_price_age_s:
-            logger.warning(f"⚠️ Stale Bybit prices (Age: {price_age:.2f}s). Skipping scan.")
-            return None
-
-        mid_price = (bid + ask) / 2.0
-        trade_size = settings.trade_size_usdt
-
-        # 2. Query Jupiter Quote API for DEX prices
-        sol_in = trade_size / mid_price
-        dex_buy_price, sol_out, dex_sell_price, usdt_out = await self.get_latest_dex_prices(mid_price, trade_size, sol_in)
-
-        self.last_dex_buy = dex_buy_price
-        self.last_dex_sell = dex_sell_price
-
-        # 3. Calculate Spread Options
-        # Option A: DEX Buy (USDT->SOL) and CEX Sell (Spot Sell SOL)
-        # Target capital checks
-        opt_a_net = -999.0
-        if state.dex_cash >= trade_size and state.cex_asset >= sol_out:
-            gross_a = (bid / dex_buy_price) - 1.0
-            # Fees: 0.10% Bybit Spot, plus flat $0.05 SOL network fee buffer
-            fees_a = 0.0010 + (0.05 / trade_size)
-            opt_a_net = gross_a - fees_a
-
-        # Option B: CEX Buy (Spot Buy SOL) and DEX Sell (SOL->USDT)
-        opt_b_net = -999.0
-        if state.cex_cash >= trade_size and state.dex_asset >= sol_in:
-            gross_b = (dex_sell_price / ask) - 1.0
-            # Fees: 0.10% Bybit Spot, plus flat $0.05 SOL network fee buffer
-            fees_b = 0.0010 + (0.05 / trade_size)
-            opt_b_net = gross_b - fees_b
-
-        # 4. Trigger Check
         best_opt = None
-        if opt_a_net >= settings.min_arbitrage_spread_pct and opt_a_net >= opt_b_net:
-            quote_resp = None
-            if settings.trading_mode == "live":
-                usdt_in_raw = int(trade_size * 1_000_000)
-                # Fetch full quote response for the live swap transaction
-                quote_resp = await self.get_jupiter_quote_full(USDT_MINT, SOL_MINT, usdt_in_raw)
-            best_opt = {
-                "route": "DEX-BUY_CEX-SELL",
-                "net_spread": opt_a_net,
-                "gross_spread": (bid / dex_buy_price) - 1.0,
-                "buy_price": dex_buy_price,
-                "sell_price": bid,
-                "size_asset": sol_out,
-                "size_usdt": trade_size,
-                "quote_response": quote_resp,
-            }
-        elif opt_b_net >= settings.min_arbitrage_spread_pct and opt_b_net >= opt_a_net:
-            quote_resp = None
-            if settings.trading_mode == "live":
-                sol_in_raw = int(sol_in * 1_000_000_000.0)
-                # Fetch full quote response for the live swap transaction
-                quote_resp = await self.get_jupiter_quote_full(SOL_MINT, USDT_MINT, sol_in_raw)
-            best_opt = {
-                "route": "CEX-BUY_DEX-SELL",
-                "net_spread": opt_b_net,
-                "gross_spread": (dex_sell_price / ask) - 1.0,
-                "buy_price": ask,
-                "sell_price": dex_sell_price,
-                "size_asset": sol_in,
-                "size_usdt": trade_size,
-                "quote_response": quote_resp,
-            }
+        best_net_spread = -999.0
+
+        for r in self.routes:
+            base = r["base"]
+            quote = r["quote"]
+            base_mint = r["base_mint"]
+            quote_mint = r["quote_mint"]
+
+            # Bybit ticker symbol e.g., "SOLUSDT" or "BTCUSDC"
+            bybit_symbol = f"{base}{quote}"
+            bid, ask, _, _ = self.price_feed.get_best_bid_ask(bybit_symbol)
+            if not bid or not ask:
+                continue
+
+            # Check Bybit price freshness
+            now = asyncio.get_event_loop().time()
+            price_age = now - self.price_feed.last_update_ts
+            if price_age > settings.max_price_age_s:
+                logger.warning(f"⚠️ Stale Bybit prices for {bybit_symbol} (Age: {price_age:.2f}s). Skipping.")
+                continue
+
+            mid_price = (bid + ask) / 2.0
+            trade_size = settings.trade_size_usdt
+
+            # 2. Query Jupiter Quote API for DEX prices
+            base_in = trade_size / mid_price
+            dex_buy_price, base_out, dex_sell_price, quote_out = await self.get_latest_dex_prices(
+                base, quote, base_mint, quote_mint, mid_price, trade_size, base_in
+            )
+
+            # Option A: DEX Buy (Cash->Asset) and CEX Sell (Spot Sell Asset)
+            opt_a_net = -999.0
+            cex_asset_bal = state.cex_assets.get(base, 0.0)
+            if state.dex_cash >= trade_size and cex_asset_bal >= base_out:
+                gross_a = (bid / dex_buy_price) - 1.0
+                fees_a = 0.0010 + (0.05 / trade_size)
+                opt_a_net = gross_a - fees_a
+
+            # Option B: CEX Buy (Spot Buy Asset) and DEX Sell (Asset->Cash)
+            opt_b_net = -999.0
+            dex_asset_bal = state.dex_assets.get(base, 0.0)
+            if state.cex_cash >= trade_size and dex_asset_bal >= base_in:
+                gross_b = (dex_sell_price / ask) - 1.0
+                fees_b = 0.0010 + (0.05 / trade_size)
+                opt_b_net = gross_b - fees_b
+
+            # 4. Find Best Opportunity
+            if opt_a_net >= settings.min_arbitrage_spread_pct and opt_a_net > best_net_spread and opt_a_net >= opt_b_net:
+                best_net_spread = opt_a_net
+                quote_resp = None
+                if settings.trading_mode == "live":
+                    quote_dec = DECIMALS.get(quote, 6)
+                    quote_in_raw = int(trade_size * (10 ** quote_dec))
+                    quote_resp = await self.get_jupiter_quote_full(quote_mint, base_mint, quote_in_raw)
+                best_opt = {
+                    "route": "DEX-BUY_CEX-SELL",
+                    "net_spread": opt_a_net,
+                    "gross_spread": (bid / dex_buy_price) - 1.0,
+                    "buy_price": dex_buy_price,
+                    "sell_price": bid,
+                    "size_asset": base_out,
+                    "size_usdt": trade_size,
+                    "base": base,
+                    "quote": quote,
+                    "base_mint": base_mint,
+                    "quote_mint": quote_mint,
+                    "quote_response": quote_resp,
+                }
+            elif opt_b_net >= settings.min_arbitrage_spread_pct and opt_b_net > best_net_spread and opt_b_net >= opt_a_net:
+                best_net_spread = opt_b_net
+                quote_resp = None
+                if settings.trading_mode == "live":
+                    base_dec = DECIMALS.get(base, 9)
+                    base_in_raw = int(base_in * (10 ** base_dec))
+                    quote_resp = await self.get_jupiter_quote_full(base_mint, quote_mint, base_in_raw)
+                best_opt = {
+                    "route": "CEX-BUY_DEX-SELL",
+                    "net_spread": opt_b_net,
+                    "gross_spread": (dex_sell_price / ask) - 1.0,
+                    "buy_price": ask,
+                    "sell_price": dex_sell_price,
+                    "size_asset": base_in,
+                    "size_usdt": trade_size,
+                    "base": base,
+                    "quote": quote,
+                    "base_mint": base_mint,
+                    "quote_mint": quote_mint,
+                    "quote_response": quote_resp,
+                }
+
+        # Keep for UI compatibility
+        if best_opt:
+            self.last_dex_buy = best_opt["buy_price"]
+            self.last_dex_sell = best_opt["sell_price"]
 
         return best_opt

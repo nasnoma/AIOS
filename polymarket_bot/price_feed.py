@@ -18,12 +18,13 @@ class BybitPriceFeed:
         self.orderbooks = {
             "BTCUSDT": {"bid": 0.0, "ask": 0.0, "bid_size": 0.0, "ask_size": 0.0},
             "ETHUSDT": {"bid": 0.0, "ask": 0.0, "bid_size": 0.0, "ask_size": 0.0},
-            "ETHBTC": {"bid": 0.0, "ask": 0.0, "bid_size": 0.0, "ask_size": 0.0},
             "SOLUSDT": {"bid": 0.0, "ask": 0.0, "bid_size": 0.0, "ask_size": 0.0},
-            "SOLBTC": {"bid": 0.0, "ask": 0.0, "bid_size": 0.0, "ask_size": 0.0},
+            "BTCUSDC": {"bid": 0.0, "ask": 0.0, "bid_size": 0.0, "ask_size": 0.0},
+            "ETHUSDC": {"bid": 0.0, "ask": 0.0, "bid_size": 0.0, "ask_size": 0.0},
+            "SOLUSDC": {"bid": 0.0, "ask": 0.0, "bid_size": 0.0, "ask_size": 0.0},
         }
         self.is_connected = False
-        self.price_history = deque(maxlen=50) # store recent mid prices
+        self.price_histories = {} # dictionary of deques storing recent mid prices per symbol
         # In paper trading, always pull from mainnet for real price data.
         # In live trading, use testnet/mainnet based on bybit_testnet configuration.
         if settings.trading_mode == "paper":
@@ -50,9 +51,14 @@ class BybitPriceFeed:
                     self.is_connected = True
                     logger.info("Connected to Bybit public Spot WebSocket.")
 
-                    # Subscribe to depth 1 orderbook for SOLUSDT
+                    # Subscribe to depth 1 orderbooks
                     topics = [
                         "orderbook.1.SOLUSDT",
+                        "orderbook.1.BTCUSDT",
+                        "orderbook.1.ETHUSDT",
+                        "orderbook.1.SOLUSDC",
+                        "orderbook.1.BTCUSDC",
+                        "orderbook.1.ETHUSDC",
                     ]
                     sub_msg = {
                         "op": "subscribe",
@@ -81,21 +87,24 @@ class BybitPriceFeed:
                                     "ask_size": float(asks[0][1]),
                                 }
                                 self.last_update_ts = asyncio.get_event_loop().time()
-                                if symbol == "SOLUSDT":
+                                if symbol in self.orderbooks:
+                                    if symbol not in self.price_histories:
+                                        self.price_histories[symbol] = deque(maxlen=50)
                                     mid_price = (bid_price + ask_price) / 2.0
-                                    self.price_history.append((self.last_update_ts, mid_price))
+                                    self.price_histories[symbol].append((self.last_update_ts, mid_price))
 
             except (websockets.exceptions.ConnectionClosed, Exception) as e:
                 self.is_connected = False
                 logger.error(f"Bybit WebSocket error: {e}. Reconnecting in 3s...")
                 await asyncio.sleep(3)
 
-    def get_sol_volatility(self) -> float:
-        """Calculates volatility of SOLUSDT using standard deviation of returns of recent mid prices."""
-        if len(self.price_history) < 5:
+    def get_volatility(self, symbol: str) -> float:
+        """Calculates volatility of requested symbol using standard deviation of returns of recent mid prices."""
+        history = self.price_histories.get(symbol)
+        if not history or len(history) < 5:
             return 0.0015 # default baseline volatility (0.15% per tick)
         
-        prices = [p for ts, p in self.price_history]
+        prices = [p for ts, p in history]
         returns = []
         for i in range(1, len(prices)):
             if prices[i-1] > 0:
@@ -109,3 +118,7 @@ class BybitPriceFeed:
         variance = sum((r - mean_ret) ** 2 for r in returns) / len(returns)
         std_dev = math.sqrt(variance)
         return max(std_dev, 0.0001) # keep a small positive standard deviation
+
+    def get_sol_volatility(self) -> float:
+        """Fallback wrapper to calculate volatility of SOLUSDT (backward compatibility)."""
+        return self.get_volatility("SOLUSDT")

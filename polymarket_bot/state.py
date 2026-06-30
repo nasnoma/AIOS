@@ -78,9 +78,9 @@ class ArbTradeCycle:
 class PortfolioState:
     account_size: float = 500.0
     cex_cash: float = 250.0
-    cex_asset: float = 1.5
     dex_cash: float = 250.0
-    dex_asset: float = 1.5
+    cex_assets: dict = field(default_factory=lambda: {"SOL": 1.5, "BTC": 0.005, "ETH": 0.05})
+    dex_assets: dict = field(default_factory=lambda: {"SOL": 1.5, "BTC": 0.005, "ETH": 0.05})
     closed_trades: list = field(default_factory=list)      # list of ArbTradeCycle dicts
     total_pnl: float = 0.0
     daily_pnl: float = 0.0
@@ -99,17 +99,39 @@ class PortfolioState:
     total_priority_fees_usd: float = 0.0
     total_volume_usdt: float = 0.0
 
+    @property
+    def cex_asset(self) -> float:
+        return self.cex_assets.get("SOL", 1.5)
+
+    @cex_asset.setter
+    def cex_asset(self, value: float) -> None:
+        self.cex_assets["SOL"] = value
+
+    @property
+    def dex_asset(self) -> float:
+        return self.dex_assets.get("SOL", 1.5)
+
+    @dex_asset.setter
+    def dex_asset(self, value: float) -> None:
+        self.dex_assets["SOL"] = value
+
     def to_dict(self) -> dict:
         return asdict(self)
 
     @classmethod
     def from_dict(cls, d: dict) -> "PortfolioState":
+        # Handle backward compatibility mapping from cex_asset/dex_asset
+        cex_asset_val = d.get("cex_asset", 1.5)
+        dex_asset_val = d.get("dex_asset", 1.5)
+        cex_assets = d.get("cex_assets") or {"SOL": cex_asset_val, "BTC": 0.005, "ETH": 0.05}
+        dex_assets = d.get("dex_assets") or {"SOL": dex_asset_val, "BTC": 0.005, "ETH": 0.05}
+
         obj = cls(
             account_size=d.get("account_size", 500.0),
             cex_cash=d.get("cex_cash", 250.0),
-            cex_asset=d.get("cex_asset", 1.5),
             dex_cash=d.get("dex_cash", 250.0),
-            dex_asset=d.get("dex_asset", 1.5),
+            cex_assets=cex_assets,
+            dex_assets=dex_assets,
             total_pnl=d.get("total_pnl", 0.0),
             daily_pnl=d.get("daily_pnl", 0.0),
             daily_reset_date=d.get("daily_reset_date", ""),
@@ -153,9 +175,9 @@ def load_state() -> PortfolioState:
         return PortfolioState(
             account_size=settings.account_size,
             cex_cash=settings.account_size / 2.0,
-            cex_asset=1.5,
+            cex_assets={"SOL": 1.5, "BTC": 0.005, "ETH": 0.05},
             dex_cash=settings.account_size / 2.0,
-            dex_asset=1.5
+            dex_assets={"SOL": 1.5, "BTC": 0.005, "ETH": 0.05}
         )
 
 
