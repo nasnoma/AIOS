@@ -33,7 +33,6 @@ class BybitPriceFeed:
             "JTOUSDC": {"bid": 0.0, "ask": 0.0, "bid_size": 0.0, "ask_size": 0.0},
             "WIFUSDC": {"bid": 0.0, "ask": 0.0, "bid_size": 0.0, "ask_size": 0.0},
             "BONKUSDC": {"bid": 0.0, "ask": 0.0, "bid_size": 0.0, "ask_size": 0.0},
-            "POPCATUSDC": {"bid": 0.0, "ask": 0.0, "bid_size": 0.0, "ask_size": 0.0},
         }
         self.is_connected = False
         self.price_histories = {} # dictionary of deques storing recent mid prices per symbol
@@ -82,7 +81,6 @@ class BybitPriceFeed:
                         "orderbook.1.JTOUSDC",
                         "orderbook.1.WIFUSDC",
                         "orderbook.1.BONKUSDC",
-                        "orderbook.1.POPCATUSDC",
                     ]
                     # Batch subscribe to respect the 10-topic limit per message
                     batch_size = 9

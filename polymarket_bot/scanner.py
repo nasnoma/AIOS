@@ -20,12 +20,12 @@ WBTC_MINT = "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh"
 WETH_MINT = "7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs"
 USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
 USDT_MINT = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"
-JUP_MINT = "JUPyiwrEE3E2nvwJPEe2GYCtRPCWvLcUMptcLUgJ575"
-PYTH_MINT = "HZ128uz4g7D51MNGDxDwAd4NZf68Lrxm8ExKQ52C1mEe"
-JTO_MINT = "jtojtome5hxZURJuKdfbeJrgQAebCc51Bt2VWggdf8B"
-WIF_MINT = "EKpQEPVJj67vw7dKj48KVJ6uy1m978Cg7C1xpx1Xm791"
-BONK_MINT = "DezXAZ8z7PnrFcdubkPGoG6SLxxRQQfZH3PpZrPM24a"
-POPCAT_MINT = "7GCihJUkPG4thJZmW212pqGN8gQJ83Un2FzeztWmoPot"
+JUP_MINT = "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN"
+PYTH_MINT = "HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3"
+JTO_MINT = "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL"
+WIF_MINT = "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm"
+BONK_MINT = "DezXAZ8z7PnrRJjz3wXBoRgixCa6xjnB7YaB1pPB263"
+POPCAT_MINT = "7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr"
 
 DECIMALS = {
     "SOL": 9,
@@ -70,7 +70,6 @@ class CexDexArbitrageScanner:
             {"base": "JTO", "quote": "USDC", "base_mint": JTO_MINT, "quote_mint": USDC_MINT},
             {"base": "WIF", "quote": "USDC", "base_mint": WIF_MINT, "quote_mint": USDC_MINT},
             {"base": "BONK", "quote": "USDC", "base_mint": BONK_MINT, "quote_mint": USDC_MINT},
-            {"base": "POPCAT", "quote": "USDC", "base_mint": POPCAT_MINT, "quote_mint": USDC_MINT},
         ]
         self.route_index = 0
         self.scan_count = 0
