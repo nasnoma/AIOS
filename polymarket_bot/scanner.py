@@ -223,6 +223,9 @@ class CexDexArbitrageScanner:
             dex_buy_price, base_out, dex_sell_price, quote_out = await self.get_latest_dex_prices(
                 base, quote, base_mint, quote_mint, mid_price, trade_size, base_in
             )
+            if base == "SOL" and quote == "USDT":
+                self.last_dex_buy = dex_buy_price
+                self.last_dex_sell = dex_sell_price
 
             # Option A: DEX Buy (Cash->Asset) and CEX Sell (Spot Sell Asset)
             opt_a_net = -999.0
