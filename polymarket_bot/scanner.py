@@ -95,7 +95,7 @@ class CexDexArbitrageScanner:
             return None
 
         await self.init_session()
-        url = "https://quote-api.jup.ag/v6/quote"
+        url = "https://api.jup.ag/swap/v1/quote"
         params = {
             "inputMint": input_mint,
             "outputMint": output_mint,
@@ -145,7 +145,7 @@ class CexDexArbitrageScanner:
             return None
 
         await self.init_session()
-        url = "https://quote-api.jup.ag/v6/quote"
+        url = "https://api.jup.ag/swap/v1/quote"
         params = {
             "inputMint": input_mint,
             "outputMint": output_mint,
