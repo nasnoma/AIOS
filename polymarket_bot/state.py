@@ -116,7 +116,10 @@ class PortfolioState:
         self.dex_assets["SOL"] = value
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        d = asdict(self)
+        d["cex_asset"] = self.cex_asset
+        d["dex_asset"] = self.dex_asset
+        return d
 
     @classmethod
     def from_dict(cls, d: dict) -> "PortfolioState":
