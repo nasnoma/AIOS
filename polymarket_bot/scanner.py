@@ -76,8 +76,13 @@ class CexDexArbitrageScanner:
         self.scan_count = 0
 
     async def init_session(self) -> None:
+        import socket
         if self.session is None:
-            self.session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=3.0))
+            connector = aiohttp.TCPConnector(family=socket.AF_INET, use_dns_cache=True)
+            self.session = aiohttp.ClientSession(
+                connector=connector,
+                timeout=aiohttp.ClientTimeout(total=3.0)
+            )
 
     async def close_session(self) -> None:
         if self.session is not None:
