@@ -25,6 +25,7 @@ class CexDexArbitrageScanner:
         self.session = None
         self.last_dex_buy = 0.0
         self.last_dex_sell = 0.0
+        self.jupiter_cooldown_until = 0.0
 
     async def init_session(self) -> None:
         if self.session is None:
@@ -37,6 +38,10 @@ class CexDexArbitrageScanner:
 
     async def get_jupiter_quote(self, input_mint: str, output_mint: str, amount_raw: int, max_retries: int = 3) -> int | None:
         """Queries the Jupiter Quote API with simulated/real 429 rate limit handling & exponential backoff."""
+        now = asyncio.get_event_loop().time()
+        if settings.trading_mode == "paper" and now < self.jupiter_cooldown_until:
+            return None
+
         await self.init_session()
         url = "https://api.jup.ag/swap/v1/quote"
         params = {
@@ -61,9 +66,14 @@ class CexDexArbitrageScanner:
                         data = await resp.json()
                         return int(data.get("outAmount", 0))
                     elif resp.status == 429:
-                        logger.warning(f"⚠️ [HTTP 429] Jupiter API Rate Limit (Attempt {attempt+1}/{max_retries}). Retrying...")
-                        await asyncio.sleep(base_delay * (2 ** attempt))
-                        continue
+                        if settings.trading_mode == "paper":
+                            self.jupiter_cooldown_until = asyncio.get_event_loop().time() + 60.0
+                            logger.warning("⚠️ [HTTP 429] Jupiter API Rate Limit hit. Backing off real API calls for 60 seconds.")
+                            break
+                        else:
+                            logger.warning(f"⚠️ [HTTP 429] Jupiter API Rate Limit (Attempt {attempt+1}/{max_retries}). Retrying...")
+                            await asyncio.sleep(base_delay * (2 ** attempt))
+                            continue
                     else:
                         logger.warning(f"⚠️ Jupiter Quote API returned HTTP {resp.status}")
                         break
