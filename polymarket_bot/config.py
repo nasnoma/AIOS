@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     solana_rpc_url: str = "https://api.mainnet-beta.solana.com"
     jupiter_api_key: str = ""               # Optional Jupiter API key to bypass rate limits
     solana_wallet_private_key: str = ""
-    min_arbitrage_spread_pct: float = 0.005 # Net profit threshold to execute (0.5%)
+    min_arbitrage_spread_pct: float = 0.0015 # Net profit threshold to execute (0.15%)
     trade_size_usdt: float = 25.0           # Swap size per leg ($25 USDT)
     max_price_age_s: float = 10.0           # Max age of price quotes in seconds
     dedicated_rpc_url: str = ""             # If configured, reduces simulated latency
