@@ -137,11 +137,12 @@ class CexDexArbitrageScanner:
 
         # Handle Fallback if Jupiter is rate-limited
         if not sol_out_raw or not usdt_out_raw:
-            offset = 0.015 * math.sin(time.time() / 15.0)
-            dex_buy_price = mid_price * (1.002 + offset)
+            # Neutral spread matching Bybit mid-price (0.1% spread adjustment)
+            # This ensures no artificial arbitrage trades are triggered during rate limits.
+            dex_buy_price = mid_price * 1.001
             sol_out = trade_size / dex_buy_price
             
-            dex_sell_price = mid_price * (0.998 + offset)
+            dex_sell_price = mid_price * 0.999
             usdt_out = sol_in * dex_sell_price
         else:
             sol_out = sol_out_raw / 1_000_000_000.0
