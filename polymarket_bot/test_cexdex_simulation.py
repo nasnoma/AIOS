@@ -99,6 +99,7 @@ async def run_test():
     save_state(state)
 
     print("\n🔎 Scanning for Route B opportunity...")
+    scanner.route_index = 0
     opp_b = await scanner.scan(state)
     assert opp_b is not None, "Scanner did not detect profitable Route B"
     assert opp_b["route"] == "CEX-BUY_DEX-SELL", "Incorrect route identified"

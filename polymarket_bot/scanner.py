@@ -47,6 +47,7 @@ class CexDexArbitrageScanner:
             {"base": "BTC", "quote": "USDC", "base_mint": WBTC_MINT, "quote_mint": USDC_MINT},
             {"base": "ETH", "quote": "USDC", "base_mint": WETH_MINT, "quote_mint": USDC_MINT},
         ]
+        self.route_index = 0
 
     async def init_session(self) -> None:
         if self.session is None:
@@ -185,109 +186,111 @@ class CexDexArbitrageScanner:
 
     async def scan(self, state: PortfolioState) -> dict | None:
         """
-        Scans for profitable CEX-DEX spreads across all configured routes.
-        Returns the best opportunity details if net spread > settings.min_arbitrage_spread_pct.
+        Scans for profitable CEX-DEX spreads using a round-robin schedule
+        to respect rate limits.
         """
         # Check if trading is paused due to drawdown
         if state.max_drawdown_paused:
             logger.warning("⚠️ Trading paused due to Max Drawdown Guard limit breach.")
             return None
 
+        if not self.routes:
+            return None
+
+        # Round-robin selection of route
+        r = self.routes[self.route_index]
+        self.route_index = (self.route_index + 1) % len(self.routes)
+
+        base = r["base"]
+        quote = r["quote"]
+        base_mint = r["base_mint"]
+        quote_mint = r["quote_mint"]
+
+        # Bybit ticker symbol e.g., "SOLUSDT" or "BTCUSDC"
+        bybit_symbol = f"{base}{quote}"
+        bid, ask, _, _ = self.price_feed.get_best_bid_ask(bybit_symbol)
+        if not bid or not ask:
+            return None
+
+        # Check Bybit price freshness
+        now = asyncio.get_event_loop().time()
+        price_age = now - self.price_feed.last_update_ts
+        if price_age > settings.max_price_age_s:
+            logger.warning(f"⚠️ Stale Bybit prices for {bybit_symbol} (Age: {price_age:.2f}s). Skipping.")
+            return None
+
+        mid_price = (bid + ask) / 2.0
+        trade_size = settings.trade_size_usdt
+
+        # 2. Query Jupiter Quote API for DEX prices
+        base_in = trade_size / mid_price
+        dex_buy_price, base_out, dex_sell_price, quote_out = await self.get_latest_dex_prices(
+            base, quote, base_mint, quote_mint, mid_price, trade_size, base_in
+        )
+        if base == "SOL" and quote == "USDT":
+            self.last_dex_buy = dex_buy_price
+            self.last_dex_sell = dex_sell_price
+
+        # Option A: DEX Buy (Cash->Asset) and CEX Sell (Spot Sell Asset)
+        opt_a_net = -999.0
+        cex_asset_bal = state.cex_assets.get(base, 0.0)
+        if state.dex_cash >= trade_size and cex_asset_bal >= base_out:
+            gross_a = (bid / dex_buy_price) - 1.0
+            fees_a = 0.0010 + (0.05 / trade_size)
+            opt_a_net = gross_a - fees_a
+
+        # Option B: CEX Buy (Spot Buy Asset) and DEX Sell (Asset->Cash)
+        opt_b_net = -999.0
+        dex_asset_bal = state.dex_assets.get(base, 0.0)
+        if state.cex_cash >= trade_size and dex_asset_bal >= base_in:
+            gross_b = (dex_sell_price / ask) - 1.0
+            fees_b = 0.0010 + (0.05 / trade_size)
+            opt_b_net = gross_b - fees_b
+
+        # 4. Find Best Opportunity
         best_opt = None
-        best_net_spread = -999.0
+        if opt_a_net >= settings.min_arbitrage_spread_pct and opt_a_net >= opt_b_net:
+            quote_resp = None
+            if settings.trading_mode == "live":
+                quote_dec = DECIMALS.get(quote, 6)
+                quote_in_raw = int(trade_size * (10 ** quote_dec))
+                quote_resp = await self.get_jupiter_quote_full(quote_mint, base_mint, quote_in_raw)
+            best_opt = {
+                "route": "DEX-BUY_CEX-SELL",
+                "net_spread": opt_a_net,
+                "gross_spread": (bid / dex_buy_price) - 1.0,
+                "buy_price": dex_buy_price,
+                "sell_price": bid,
+                "size_asset": base_out,
+                "size_usdt": trade_size,
+                "base": base,
+                "quote": quote,
+                "base_mint": base_mint,
+                "quote_mint": quote_mint,
+                "quote_response": quote_resp,
+            }
+        elif opt_b_net >= settings.min_arbitrage_spread_pct and opt_b_net >= opt_a_net:
+            quote_resp = None
+            if settings.trading_mode == "live":
+                base_dec = DECIMALS.get(base, 9)
+                base_in_raw = int(base_in * (10 ** base_dec))
+                quote_resp = await self.get_jupiter_quote_full(base_mint, quote_mint, base_in_raw)
+            best_opt = {
+                "route": "CEX-BUY_DEX-SELL",
+                "net_spread": opt_b_net,
+                "gross_spread": (dex_sell_price / ask) - 1.0,
+                "buy_price": ask,
+                "sell_price": dex_sell_price,
+                "size_asset": base_in,
+                "size_usdt": trade_size,
+                "base": base,
+                "quote": quote,
+                "base_mint": base_mint,
+                "quote_mint": quote_mint,
+                "quote_response": quote_resp,
+            }
 
-        for r in self.routes:
-            base = r["base"]
-            quote = r["quote"]
-            base_mint = r["base_mint"]
-            quote_mint = r["quote_mint"]
-
-            # Bybit ticker symbol e.g., "SOLUSDT" or "BTCUSDC"
-            bybit_symbol = f"{base}{quote}"
-            bid, ask, _, _ = self.price_feed.get_best_bid_ask(bybit_symbol)
-            if not bid or not ask:
-                continue
-
-            # Check Bybit price freshness
-            now = asyncio.get_event_loop().time()
-            price_age = now - self.price_feed.last_update_ts
-            if price_age > settings.max_price_age_s:
-                logger.warning(f"⚠️ Stale Bybit prices for {bybit_symbol} (Age: {price_age:.2f}s). Skipping.")
-                continue
-
-            mid_price = (bid + ask) / 2.0
-            trade_size = settings.trade_size_usdt
-
-            # 2. Query Jupiter Quote API for DEX prices
-            base_in = trade_size / mid_price
-            dex_buy_price, base_out, dex_sell_price, quote_out = await self.get_latest_dex_prices(
-                base, quote, base_mint, quote_mint, mid_price, trade_size, base_in
-            )
-            if base == "SOL" and quote == "USDT":
-                self.last_dex_buy = dex_buy_price
-                self.last_dex_sell = dex_sell_price
-
-            # Option A: DEX Buy (Cash->Asset) and CEX Sell (Spot Sell Asset)
-            opt_a_net = -999.0
-            cex_asset_bal = state.cex_assets.get(base, 0.0)
-            if state.dex_cash >= trade_size and cex_asset_bal >= base_out:
-                gross_a = (bid / dex_buy_price) - 1.0
-                fees_a = 0.0010 + (0.05 / trade_size)
-                opt_a_net = gross_a - fees_a
-
-            # Option B: CEX Buy (Spot Buy Asset) and DEX Sell (Asset->Cash)
-            opt_b_net = -999.0
-            dex_asset_bal = state.dex_assets.get(base, 0.0)
-            if state.cex_cash >= trade_size and dex_asset_bal >= base_in:
-                gross_b = (dex_sell_price / ask) - 1.0
-                fees_b = 0.0010 + (0.05 / trade_size)
-                opt_b_net = gross_b - fees_b
-
-            # 4. Find Best Opportunity
-            if opt_a_net >= settings.min_arbitrage_spread_pct and opt_a_net > best_net_spread and opt_a_net >= opt_b_net:
-                best_net_spread = opt_a_net
-                quote_resp = None
-                if settings.trading_mode == "live":
-                    quote_dec = DECIMALS.get(quote, 6)
-                    quote_in_raw = int(trade_size * (10 ** quote_dec))
-                    quote_resp = await self.get_jupiter_quote_full(quote_mint, base_mint, quote_in_raw)
-                best_opt = {
-                    "route": "DEX-BUY_CEX-SELL",
-                    "net_spread": opt_a_net,
-                    "gross_spread": (bid / dex_buy_price) - 1.0,
-                    "buy_price": dex_buy_price,
-                    "sell_price": bid,
-                    "size_asset": base_out,
-                    "size_usdt": trade_size,
-                    "base": base,
-                    "quote": quote,
-                    "base_mint": base_mint,
-                    "quote_mint": quote_mint,
-                    "quote_response": quote_resp,
-                }
-            elif opt_b_net >= settings.min_arbitrage_spread_pct and opt_b_net > best_net_spread and opt_b_net >= opt_a_net:
-                best_net_spread = opt_b_net
-                quote_resp = None
-                if settings.trading_mode == "live":
-                    base_dec = DECIMALS.get(base, 9)
-                    base_in_raw = int(base_in * (10 ** base_dec))
-                    quote_resp = await self.get_jupiter_quote_full(base_mint, quote_mint, base_in_raw)
-                best_opt = {
-                    "route": "CEX-BUY_DEX-SELL",
-                    "net_spread": opt_b_net,
-                    "gross_spread": (dex_sell_price / ask) - 1.0,
-                    "buy_price": ask,
-                    "sell_price": dex_sell_price,
-                    "size_asset": base_in,
-                    "size_usdt": trade_size,
-                    "base": base,
-                    "quote": quote,
-                    "base_mint": base_mint,
-                    "quote_mint": quote_mint,
-                    "quote_response": quote_resp,
-                }
-
-        # Keep for UI compatibility
+        # Keep for UI compatibility if profitable
         if best_opt:
             self.last_dex_buy = best_opt["buy_price"]
             self.last_dex_sell = best_opt["sell_price"]
