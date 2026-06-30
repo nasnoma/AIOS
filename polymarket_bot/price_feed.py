@@ -84,12 +84,16 @@ class BybitPriceFeed:
                         "orderbook.1.BONKUSDC",
                         "orderbook.1.POPCATUSDC",
                     ]
-                    sub_msg = {
-                        "op": "subscribe",
-                        "args": topics
-                    }
-                    await ws.send(json.dumps(sub_msg))
-                    logger.info(f"Subscribed to Bybit orderbook topics: {topics}")
+                    # Batch subscribe to respect the 10-topic limit per message
+                    batch_size = 9
+                    for i in range(0, len(topics), batch_size):
+                        batch = topics[i : i + batch_size]
+                        sub_msg = {
+                            "op": "subscribe",
+                            "args": batch
+                        }
+                        await ws.send(json.dumps(sub_msg))
+                    logger.info(f"Subscribed to Bybit orderbook topics in batches: {topics}")
 
                     async for message in ws:
                         data = json.loads(message)
