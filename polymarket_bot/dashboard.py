@@ -380,6 +380,61 @@ _INDEX_HTML = """<!DOCTYPE html>
             </div>
         </div>
 
+        <!-- Realism Metrics Grid -->
+        <div class="metrics-grid" style="margin-top: -0.5rem;">
+            <div class="card">
+                <div class="metric-title">Cumulative Slippage</div>
+                <div class="metric-value" id="slip-val">---</div>
+                <div class="metric-sub" id="slip-sub">Total Slippage Cost: ---</div>
+            </div>
+            <div class="card">
+                <div class="metric-title">DEX → CEX Route PnL</div>
+                <div class="metric-value" id="route-a-pnl">---</div>
+                <div class="metric-sub" id="route-a-winrate">Win Rate: ---</div>
+            </div>
+            <div class="card">
+                <div class="metric-title">CEX → DEX Route PnL</div>
+                <div class="metric-value" id="route-b-pnl">---</div>
+                <div class="metric-sub" id="route-b-winrate">Win Rate: ---</div>
+            </div>
+            <div class="card">
+                <div class="metric-title">Drawdown / priority fees</div>
+                <div class="metric-value" id="drawdown-val">---</div>
+                <div class="metric-sub" id="fees-sub">Fees Paid: ---</div>
+            </div>
+        </div>
+
+        <!-- Rebalancing Card -->
+        <div class="card" style="display: flex; flex-direction: column; gap: 0.75rem; background: rgba(8, 12, 24, 0.35);">
+            <div class="section-title">
+                <span>🔄 Simulate Portfolio Rebalancing</span>
+            </div>
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                    <label style="font-size: 0.75rem; color: var(--text-muted);">Asset</label>
+                    <select id="rebalance-asset" style="background: var(--bg-main); color: var(--text-main); border: 1px solid var(--border-color); padding: 0.5rem; border-radius: 0.25rem; outline: none; cursor: pointer;">
+                        <option value="USDT">USDT</option>
+                        <option value="SOL">SOL</option>
+                    </select>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                    <label style="font-size: 0.75rem; color: var(--text-muted);">Direction</label>
+                    <select id="rebalance-dir" style="background: var(--bg-main); color: var(--text-main); border: 1px solid var(--border-color); padding: 0.5rem; border-radius: 0.25rem; outline: none; cursor: pointer;">
+                        <option value="CEX_TO_DEX">CEX → DEX (Deducts CEX Withdrawal Fee)</option>
+                        <option value="DEX_TO_CEX">DEX → CEX (Deducts On-Chain SOL Gas)</option>
+                    </select>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                    <label style="font-size: 0.75rem; color: var(--text-muted);">Amount</label>
+                    <input type="number" id="rebalance-amt" value="50" step="any" style="background: var(--bg-main); color: var(--text-main); border: 1px solid var(--border-color); padding: 0.5rem; border-radius: 0.25rem; width: 120px; outline: none;">
+                </div>
+                <button onclick="triggerRebalance()" style="background: linear-gradient(135deg, var(--color-primary), var(--color-purple)); color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 0.25rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s; margin-top: 1rem;">
+                    Execute Rebalance
+                </button>
+                <div id="rebalance-status" style="font-size: 0.85rem; margin-top: 1rem; font-weight: 600;"></div>
+            </div>
+        </div>
+
         <!-- 3-Column Layout -->
         <div class="dashboard-body">
             <!-- 1. Real-time Spatial Spreads -->
@@ -432,14 +487,16 @@ _INDEX_HTML = """<!DOCTYPE html>
                         <thead>
                             <tr>
                                 <th>Cycle ID</th>
-                                <th>Venues / Route</th>
+                                <th>Route</th>
                                 <th>Size</th>
-                                <th>PnL (USDT)</th>
+                                <th>Expected</th>
+                                <th>Actual P&L</th>
+                                <th>Slippage</th>
                             </tr>
                         </thead>
                         <tbody id="trade-history">
                             <tr>
-                                <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 2rem 0;">No arbitrage events logged yet</td>
+                                <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem 0;">No arbitrage events logged yet</td>
                             </tr>
                         </tbody>
                     </table>
@@ -462,6 +519,37 @@ _INDEX_HTML = """<!DOCTYPE html>
         let disconnectCount = 0;
         let lastPollTime = Date.now();
 
+        async function triggerRebalance() {
+            const asset = document.getElementById('rebalance-asset').value;
+            const direction = document.getElementById('rebalance-dir').value;
+            const amount = parseFloat(document.getElementById('rebalance-amt').value);
+            const statusEl = document.getElementById('rebalance-status');
+            
+            statusEl.className = '';
+            statusEl.innerText = 'Executing rebalance...';
+            
+            try {
+                const res = await fetch('/api/rebalance', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ asset, direction, amount })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    statusEl.style.color = '#10b981';
+                    statusEl.innerText = data.message;
+                    setTimeout(() => { statusEl.innerText = ''; }, 5000);
+                    updateDashboard();
+                } else {
+                    statusEl.style.color = '#f43f5e';
+                    statusEl.innerText = `Error: ${data.error}`;
+                }
+            } catch (err) {
+                statusEl.style.color = '#f43f5e';
+                statusEl.innerText = `Error: ${err.message}`;
+            }
+        }
+
         async function updateDashboard() {
             try {
                 const response = await fetch('/api/state');
@@ -469,14 +557,23 @@ _INDEX_HTML = """<!DOCTYPE html>
                 
                 disconnectCount = 0;
                 lastPollTime = Date.now();
-                document.getElementById('bot-status').className = 'status-badge active';
-                document.getElementById('bot-status-text').innerText = 'Active';
 
                 const state = data.state;
                 const bestBid = data.bybit_bid;
                 const bestAsk = data.bybit_ask;
                 const dexBuy = data.dex_buy;
                 const dexSell = data.dex_sell;
+                const cumSlipPct = data.cumulative_slippage_pct || 0.0;
+                const totalSlipUsd = state.total_slippage_usd || 0.0;
+
+                // Bot Status Badge (Handle Max Drawdown Pause)
+                if (state.max_drawdown_paused) {
+                    document.getElementById('bot-status').className = 'status-badge disconnected';
+                    document.getElementById('bot-status-text').innerText = 'PAUSED (Drawdown Guard)';
+                } else {
+                    document.getElementById('bot-status').className = 'status-badge active';
+                    document.getElementById('bot-status-text').innerText = 'Active';
+                }
 
                 // 1. Basic Stats
                 document.getElementById('equity-val').innerText = `${state.account_size.toFixed(2)} USDT`;
@@ -496,7 +593,38 @@ _INDEX_HTML = """<!DOCTYPE html>
                 dailyPnlEl.innerText = `Daily P&L: ${dailyPnl >= 0 ? '+' : ''}${dailyPnl.toFixed(4)} USDT`;
                 dailyPnlEl.className = `metric-sub ${dailyPnl >= 0 ? 'text-green' : 'text-red'}`;
 
-                // 2. Spatial Spreads
+                // 2. Realism Upgrades Cards
+                // Slippage Card
+                document.getElementById('slip-val').innerText = `${cumSlipPct >= 0 ? '+' : ''}${cumSlipPct.toFixed(3)}%`;
+                document.getElementById('slip-val').className = `metric-value ${totalSlipUsd <= 0.05 ? 'text-green' : 'text-red'}`;
+                document.getElementById('slip-sub').innerText = `Total Slippage: $${totalSlipUsd.toFixed(3)} USDT`;
+
+                // Route A Stats
+                const routeA = state.route_stats["DEX-BUY_CEX-SELL"] || {win_count: 0, loss_count: 0, total_pnl: 0.0};
+                const rA_total = routeA.win_count + routeA.loss_count;
+                const rA_wr = rA_total > 0 ? (routeA.win_count / rA_total * 100.0) : 0.0;
+                document.getElementById('route-a-pnl').innerText = `${routeA.total_pnl >= 0 ? '+' : ''}${routeA.total_pnl.toFixed(2)} USDT`;
+                document.getElementById('route-a-pnl').className = `metric-value ${routeA.total_pnl >= 0 ? 'text-green' : 'text-red'}`;
+                document.getElementById('route-a-winrate').innerText = `Win Rate: ${rA_wr.toFixed(1)}% (${routeA.win_count}/${rA_total})`;
+
+                // Route B Stats
+                const routeB = state.route_stats["CEX-BUY_DEX-SELL"] || {win_count: 0, loss_count: 0, total_pnl: 0.0};
+                const rB_total = routeB.win_count + routeB.loss_count;
+                const rB_wr = rB_total > 0 ? (routeB.win_count / rB_total * 100.0) : 0.0;
+                document.getElementById('route-b-pnl').innerText = `${routeB.total_pnl >= 0 ? '+' : ''}${routeB.total_pnl.toFixed(2)} USDT`;
+                document.getElementById('route-b-pnl').className = `metric-value ${routeB.total_pnl >= 0 ? 'text-green' : 'text-red'}`;
+                document.getElementById('route-b-winrate').innerText = `Win Rate: ${rB_wr.toFixed(1)}% (${routeB.win_count}/${rB_total})`;
+
+                // Drawdown & Priority Fees Card
+                const peak = state.peak_account_size || state.account_size || 500.0;
+                const current = state.account_size || 500.0;
+                const dd = peak > 0 ? ((peak - current) / peak * 100.0) : 0.0;
+                const totalFees = state.total_priority_fees_usd || 0.0;
+                document.getElementById('drawdown-val').innerText = `${dd.toFixed(2)}% DD`;
+                document.getElementById('drawdown-val').className = `metric-value ${state.max_drawdown_paused ? 'text-red' : 'text-green'}`;
+                document.getElementById('fees-sub').innerText = `Priority Fees: $${totalFees.toFixed(4)} USDT`;
+
+                // 3. Spatial Spreads
                 if (dexBuy > 0 && bestBid > 0) {
                     const spreadA = ((bestBid / dexBuy) - 1.0) * 100.0;
                     document.getElementById('spread-a').innerText = `${spreadA >= 0 ? '+' : ''}${spreadA.toFixed(3)}%`;
@@ -513,26 +641,31 @@ _INDEX_HTML = """<!DOCTYPE html>
                     document.getElementById('price-dex-sell').innerText = `$${dexSell.toFixed(4)}`;
                 }
 
-                // 3. Fills / Cycles
+                // 4. Fills / Cycles
                 document.getElementById('fills-count').innerText = `${state.cycle_count} cycles`;
                 const tbody = document.getElementById('trade-history');
                 if (state.closed_trades && state.closed_trades.length > 0) {
                     tbody.innerHTML = state.closed_trades.slice().reverse().slice(0, 15).map(trade => {
                         const side = trade.direction;
                         const isRouteA = side === "DEX-BUY_CEX-SELL";
+                        const expP = trade.expected_pnl !== undefined ? trade.expected_pnl : trade.pnl_usdt;
+                        const actP = trade.actual_pnl !== undefined ? trade.actual_pnl : trade.pnl_usdt;
+                        const slipP = trade.slippage_pct !== undefined ? (trade.slippage_pct * 100).toFixed(3) + "%" : "0.0%";
                         return `
                             <tr>
                                 <td><code>${trade.cycle_id}</code></td>
                                 <td><span class="badge ${isRouteA ? 'route-a' : 'route-b'}">${isRouteA ? 'DEX → CEX' : 'CEX → DEX'}</span></td>
-                                <td>${trade.size_usdt.toFixed(2)} USDT</td>
-                                <td class="${trade.pnl_usdt >= 0 ? 'text-green' : 'text-red'} font-mono">
-                                    ${trade.pnl_usdt >= 0 ? '+' : ''}${trade.pnl_usdt.toFixed(4)} USDT
+                                <td>${trade.size_usdt.toFixed(1)}</td>
+                                <td style="font-family: 'JetBrains Mono', monospace; color: var(--text-muted);">${expP >= 0 ? '+' : ''}${expP.toFixed(3)}</td>
+                                <td class="${actP >= 0 ? 'text-green' : 'text-red'} font-mono" style="font-family: 'JetBrains Mono', monospace; font-weight: 600;">
+                                    ${actP >= 0 ? '+' : ''}${actP.toFixed(3)}
                                 </td>
+                                <td class="text-red font-mono" style="font-family: 'JetBrains Mono', monospace;">${slipP}</td>
                             </tr>
                         `;
                     }).join('');
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 2rem 0;">No arbitrage events logged yet</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem 0;">No arbitrage events logged yet</td></tr>';
                 }
 
             } catch (err) {
@@ -597,12 +730,17 @@ async def handle_api_state(request):
         # Fetch SOL bids and asks
         bid, ask, _, _ = price_feed.get_best_bid_ask("SOLUSDT")
 
+        # Calculate advanced slippage metrics
+        vol = state.total_volume_usdt
+        slip_pct = (state.total_slippage_usd / vol * 100.0) if vol > 0 else 0.0
+
         return web.json_response({
             "state": state.to_dict(),
             "bybit_bid": bid or 0.0,
             "bybit_ask": ask or 0.0,
             "dex_buy": scanner.last_dex_buy,
             "dex_sell": scanner.last_dex_sell,
+            "cumulative_slippage_pct": round(slip_pct, 4),
         })
     except Exception as e:
         logger.warning(f"Error compiling api state: {e}")
@@ -610,6 +748,26 @@ async def handle_api_state(request):
 
 async def handle_api_logs(request):
     return web.json_response({"logs": list(recent_logs)})
+
+async def handle_api_rebalance(request):
+    try:
+        data = await request.json()
+        asset = data.get("asset")  # "USDT" or "SOL"
+        direction = data.get("direction")  # "CEX_TO_DEX" or "DEX_TO_CEX"
+        amount = float(data.get("amount", 0))
+
+        from polymarket_bot.state import rebalance_portfolio
+        state = load_state()
+        success, message = rebalance_portfolio(state, asset, direction, amount)
+        if success:
+            logger.info(f"🔄 [Manual Rebalance] {message}")
+            return web.json_response({"success": True, "message": message})
+        else:
+            logger.warning(f"❌ [Rebalance Failed] {message}")
+            return web.json_response({"success": False, "error": message}, status=400)
+    except Exception as e:
+        logger.error(f"Error executing rebalance: {e}")
+        return web.json_response({"success": False, "error": str(e)}, status=500)
 
 async def start_dashboard(price_feed, scanner) -> web.AppRunner:
     """Initialize and start the dashboard web server on port 8080."""
@@ -620,6 +778,7 @@ async def start_dashboard(price_feed, scanner) -> web.AppRunner:
     app.router.add_get("/", handle_dashboard_index)
     app.router.add_get("/api/state", handle_api_state)
     app.router.add_get("/api/logs", handle_api_logs)
+    app.router.add_post("/api/rebalance", handle_api_rebalance)
     
     runner = web.AppRunner(app)
     await runner.setup()

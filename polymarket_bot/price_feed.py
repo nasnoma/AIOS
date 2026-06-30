@@ -6,6 +6,8 @@ Low-latency WebSocket price feed subscribing to Bybit v5 Spot orderbook depth 1.
 from __future__ import annotations
 import asyncio
 import json
+import math
+from collections import deque
 from loguru import logger
 import websockets
 
@@ -21,6 +23,7 @@ class BybitPriceFeed:
             "SOLBTC": {"bid": 0.0, "ask": 0.0, "bid_size": 0.0, "ask_size": 0.0},
         }
         self.is_connected = False
+        self.price_history = deque(maxlen=50) # store recent mid prices
         # In paper trading, always pull from mainnet for real price data.
         # In live trading, use testnet/mainnet based on bybit_testnet configuration.
         if settings.trading_mode == "paper":
@@ -69,15 +72,40 @@ class BybitPriceFeed:
                             bids = s_data.get("b", [])
                             asks = s_data.get("a", [])
                             if bids and asks:
+                                bid_price = float(bids[0][0])
+                                ask_price = float(asks[0][0])
                                 self.orderbooks[symbol] = {
-                                    "bid": float(bids[0][0]),
-                                    "ask": float(asks[0][0]),
+                                    "bid": bid_price,
+                                    "ask": ask_price,
                                     "bid_size": float(bids[0][1]),
                                     "ask_size": float(asks[0][1]),
                                 }
                                 self.last_update_ts = asyncio.get_event_loop().time()
+                                if symbol == "SOLUSDT":
+                                    mid_price = (bid_price + ask_price) / 2.0
+                                    self.price_history.append((self.last_update_ts, mid_price))
 
             except (websockets.exceptions.ConnectionClosed, Exception) as e:
                 self.is_connected = False
                 logger.error(f"Bybit WebSocket error: {e}. Reconnecting in 3s...")
                 await asyncio.sleep(3)
+
+    def get_sol_volatility(self) -> float:
+        """Calculates volatility of SOLUSDT using standard deviation of returns of recent mid prices."""
+        if len(self.price_history) < 5:
+            return 0.0015 # default baseline volatility (0.15% per tick)
+        
+        prices = [p for ts, p in self.price_history]
+        returns = []
+        for i in range(1, len(prices)):
+            if prices[i-1] > 0:
+                ret = (prices[i] - prices[i-1]) / prices[i-1]
+                returns.append(ret)
+                
+        if not returns:
+            return 0.0015
+            
+        mean_ret = sum(returns) / len(returns)
+        variance = sum((r - mean_ret) ** 2 for r in returns) / len(returns)
+        std_dev = math.sqrt(variance)
+        return max(std_dev, 0.0001) # keep a small positive standard deviation

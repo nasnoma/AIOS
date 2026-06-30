@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     min_arbitrage_spread_pct: float = 0.005 # Net profit threshold to execute (0.5%)
     trade_size_usdt: float = 25.0           # Swap size per leg ($25 USDT)
     max_price_age_s: float = 10.0           # Max age of price quotes in seconds
+    dedicated_rpc_url: str = ""             # If configured, reduces simulated latency
+    max_paper_drawdown_pct: float = 0.05    # Max drawdown percentage to pause paper trading
+    jupiter_429_sim_prob: float = 0.05      # Probability of simulated 429 rate limit errors
 
     # ── Dashboard ──────────────────────────────
     api_port: int = 8080

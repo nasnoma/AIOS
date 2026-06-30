@@ -65,6 +65,10 @@ class ArbTradeCycle:
     leg1_price: float = 0.0
     leg2_price: float = 0.0
     leg3_price: float = 0.0
+    expected_pnl: float = 0.0
+    actual_pnl: float = 0.0
+    slippage_pct: float = 0.0
+    priority_fee_usd: float = 0.0
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -87,6 +91,13 @@ class PortfolioState:
     avg_loss_usd: float = 0.0
     cycle_count: int = 0
     route_stats: dict = field(default_factory=dict)
+    peak_account_size: float = 500.0
+    max_drawdown_paused: bool = False
+    total_expected_pnl: float = 0.0
+    total_actual_pnl: float = 0.0
+    total_slippage_usd: float = 0.0
+    total_priority_fees_usd: float = 0.0
+    total_volume_usdt: float = 0.0
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -96,9 +107,9 @@ class PortfolioState:
         obj = cls(
             account_size=d.get("account_size", 500.0),
             cex_cash=d.get("cex_cash", 250.0),
-            cex_asset=d.get("cex_asset", 0.0),
+            cex_asset=d.get("cex_asset", 1.5),
             dex_cash=d.get("dex_cash", 250.0),
-            dex_asset=d.get("dex_asset", 0.0),
+            dex_asset=d.get("dex_asset", 1.5),
             total_pnl=d.get("total_pnl", 0.0),
             daily_pnl=d.get("daily_pnl", 0.0),
             daily_reset_date=d.get("daily_reset_date", ""),
@@ -108,6 +119,13 @@ class PortfolioState:
             avg_loss_usd=d.get("avg_loss_usd", 0.0),
             cycle_count=d.get("cycle_count", 0),
             route_stats=d.get("route_stats", {}),
+            peak_account_size=d.get("peak_account_size", d.get("account_size", 500.0)),
+            max_drawdown_paused=d.get("max_drawdown_paused", False),
+            total_expected_pnl=d.get("total_expected_pnl", 0.0),
+            total_actual_pnl=d.get("total_actual_pnl", 0.0),
+            total_slippage_usd=d.get("total_slippage_usd", 0.0),
+            total_priority_fees_usd=d.get("total_priority_fees_usd", 0.0),
+            total_volume_usdt=d.get("total_volume_usdt", 0.0),
         )
         obj.closed_trades = d.get("closed_trades", [])
         if not obj.route_stats:
@@ -175,3 +193,81 @@ def reset_daily_pnl_if_new_day(state: PortfolioState) -> PortfolioState:
         state.daily_pnl = 0.0
         state.daily_reset_date = today
     return state
+
+
+def rebalance_portfolio(state: PortfolioState, asset: str, direction: str, amount: float) -> tuple[bool, str]:
+    """
+    Executes a transfer of assets between CEX and DEX wallets, simulating fees.
+    Returns (success, message).
+    """
+    if amount <= 0:
+        return False, "Amount must be positive."
+
+    # Fee structures:
+    # CEX to DEX (withdrawal fees on Bybit):
+    # - SOL: 0.005 SOL
+    # - USDT: 1.0 USDT
+    # DEX to CEX (on-chain tx fees):
+    # - SOL: 0.00005 SOL
+    # - USDT: 0.00005 SOL (fees paid in SOL)
+
+    if direction == "CEX_TO_DEX":
+        if asset == "USDT":
+            fee = 1.0
+            if state.cex_cash < amount:
+                return False, f"Insufficient CEX USDT. Have {state.cex_cash:.2f}, need {amount:.2f}."
+            state.cex_cash -= amount
+            state.dex_cash += (amount - fee)
+            state.total_priority_fees_usd += fee
+            
+            # Re-value account size
+            state.account_size = state.cex_cash + state.dex_cash + (state.cex_asset + state.dex_asset) * 140.0
+            save_state(state)
+            return True, f"Rebalanced {amount:.2f} USDT from CEX to DEX. Fee: {fee:.2f} USDT."
+        elif asset == "SOL":
+            fee = 0.005
+            if state.cex_asset < amount:
+                return False, f"Insufficient CEX SOL. Have {state.cex_asset:.4f}, need {amount:.4f}."
+            state.cex_asset -= amount
+            state.dex_asset += (amount - fee)
+            fee_usd = fee * 140.0
+            state.total_priority_fees_usd += fee_usd
+            
+            state.account_size = state.cex_cash + state.dex_cash + (state.cex_asset + state.dex_asset) * 140.0
+            save_state(state)
+            return True, f"Rebalanced {amount:.4f} SOL from CEX to DEX. Fee: {fee:.4f} SOL (~${fee_usd:.2f})."
+        else:
+            return False, f"Unsupported asset: {asset}."
+
+    elif direction == "DEX_TO_CEX":
+        sol_fee = 0.00005
+        if state.dex_asset < sol_fee:
+            return False, f"Insufficient DEX SOL to pay for transaction gas ({sol_fee:.5f} SOL required)."
+
+        if asset == "USDT":
+            if state.dex_cash < amount:
+                return False, f"Insufficient DEX USDT. Have {state.dex_cash:.2f}, need {amount:.2f}."
+            state.dex_cash -= amount
+            state.cex_cash += amount
+            state.dex_asset -= sol_fee
+            fee_usd = sol_fee * 140.0
+            state.total_priority_fees_usd += fee_usd
+            
+            state.account_size = state.cex_cash + state.dex_cash + (state.cex_asset + state.dex_asset) * 140.0
+            save_state(state)
+            return True, f"Rebalanced {amount:.2f} USDT from DEX to CEX. Fee: {sol_fee:.5f} SOL (~${fee_usd:.5f})."
+        elif asset == "SOL":
+            if state.dex_asset < amount + sol_fee:
+                return False, f"Insufficient DEX SOL. Have {state.dex_asset:.4f}, need {amount + sol_fee:.4f} SOL (inc. fee)."
+            state.dex_asset -= (amount + sol_fee)
+            state.cex_asset += amount
+            fee_usd = sol_fee * 140.0
+            state.total_priority_fees_usd += fee_usd
+            
+            state.account_size = state.cex_cash + state.dex_cash + (state.cex_asset + state.dex_asset) * 140.0
+            save_state(state)
+            return True, f"Rebalanced {amount:.4f} SOL from DEX to CEX. Fee: {sol_fee:.5f} SOL (~${fee_usd:.5f})."
+        else:
+            return False, f"Unsupported asset: {asset}."
+    else:
+        return False, f"Unsupported direction: {direction}."

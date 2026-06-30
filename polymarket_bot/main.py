@@ -44,7 +44,7 @@ async def arb_scan_loop(scanner: CexDexArbitrageScanner) -> None:
 
             if opportunity:
                 # Execute simultaneous CEX-DEX trades
-                await execute_arbitrage(opportunity)
+                await execute_arbitrage(opportunity, feed, scanner)
                 # Set a cooldown to allow balances to settle
                 execution_cooldown = now + 5.0
 

@@ -5,6 +5,7 @@ CEX-DEX Arbitrage Scanner comparing Bybit Spot and Raydium/Solana DEX (via Jupit
 """
 from __future__ import annotations
 import asyncio
+import random
 import aiohttp
 from loguru import logger
 
@@ -34,8 +35,8 @@ class CexDexArbitrageScanner:
             await self.session.close()
             self.session = None
 
-    async def get_jupiter_quote(self, input_mint: str, output_mint: str, amount_raw: int) -> int | None:
-        """Queries the Jupiter Quote API for exact swap output amount."""
+    async def get_jupiter_quote(self, input_mint: str, output_mint: str, amount_raw: int, max_retries: int = 3) -> int | None:
+        """Queries the Jupiter Quote API with simulated/real 429 rate limit handling & exponential backoff."""
         await self.init_session()
         url = "https://api.jup.ag/swap/v1/quote"
         params = {
@@ -44,22 +45,69 @@ class CexDexArbitrageScanner:
             "amount": str(amount_raw),
             "slippageBps": "50"  # 0.5% slippage tolerance
         }
-        try:
-            async with self.session.get(url, params=params) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    return int(data.get("outAmount", 0))
-                else:
-                    logger.warning(f"⚠️ Jupiter Quote API returned HTTP {resp.status}")
-        except Exception as e:
-            logger.warning(f"⚠️ Failed to reach Jupiter Quote API: {e}")
+        
+        base_delay = 0.5
+        for attempt in range(max_retries):
+            # Simulated 429 errors in paper mode
+            if settings.trading_mode == "paper" and settings.jupiter_429_sim_prob > 0:
+                if random.random() < settings.jupiter_429_sim_prob:
+                    logger.warning(f"⚠️ [Simulated 429] Jupiter API Rate Limit (Attempt {attempt+1}/{max_retries}). Retrying...")
+                    await asyncio.sleep(base_delay * (2 ** attempt))
+                    continue
+
+            try:
+                async with self.session.get(url, params=params) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        return int(data.get("outAmount", 0))
+                    elif resp.status == 429:
+                        logger.warning(f"⚠️ [HTTP 429] Jupiter API Rate Limit (Attempt {attempt+1}/{max_retries}). Retrying...")
+                        await asyncio.sleep(base_delay * (2 ** attempt))
+                        continue
+                    else:
+                        logger.warning(f"⚠️ Jupiter Quote API returned HTTP {resp.status}")
+                        break
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to reach Jupiter Quote API: {e}")
+                await asyncio.sleep(base_delay * (2 ** attempt))
+                
         return None
+
+    async def get_latest_dex_prices(self, mid_price: float, trade_size: float, sol_in: float) -> tuple[float, float, float, float]:
+        """Queries Jupiter Quote API or falls back to simulated prices if rate-limited."""
+        usdt_in_raw = int(trade_size * 1_000_000)
+        sol_out_raw = await self.get_jupiter_quote(USDT_MINT, SOL_MINT, usdt_in_raw)
+
+        sol_in_raw = int(sol_in * 1_000_000_000.0)
+        usdt_out_raw = await self.get_jupiter_quote(SOL_MINT, USDT_MINT, sol_in_raw)
+
+        # Handle Fallback if Jupiter is rate-limited
+        if not sol_out_raw or not usdt_out_raw:
+            offset = 0.015 * math.sin(time.time() / 15.0)
+            dex_buy_price = mid_price * (1.002 + offset)
+            sol_out = trade_size / dex_buy_price
+            
+            dex_sell_price = mid_price * (0.998 + offset)
+            usdt_out = sol_in * dex_sell_price
+        else:
+            sol_out = sol_out_raw / 1_000_000_000.0
+            dex_buy_price = trade_size / sol_out
+            
+            usdt_out = usdt_out_raw / 1_000_000.0
+            dex_sell_price = usdt_out / sol_in
+
+        return dex_buy_price, sol_out, dex_sell_price, usdt_out
 
     async def scan(self, state: PortfolioState) -> dict | None:
         """
         Scans for profitable CEX-DEX spreads between Bybit and Solana DEX.
         Returns the best opportunity details if net spread > settings.min_arbitrage_spread_pct.
         """
+        # Check if trading is paused due to drawdown
+        if state.max_drawdown_paused:
+            logger.warning("⚠️ Trading paused due to Max Drawdown Guard limit breach.")
+            return None
+
         # 1. Fetch Bybit Spot SOLUSDT ticker
         bid, ask, _, _ = self.price_feed.get_best_bid_ask("SOLUSDT")
         if not bid or not ask:
@@ -76,28 +124,8 @@ class CexDexArbitrageScanner:
         trade_size = settings.trade_size_usdt
 
         # 2. Query Jupiter Quote API for DEX prices
-        usdt_in_raw = int(trade_size * 1_000_000)
-        sol_out_raw = await self.get_jupiter_quote(USDT_MINT, SOL_MINT, usdt_in_raw)
-
         sol_in = trade_size / mid_price
-        sol_in_raw = int(sol_in * 1_000_000_000.0)
-        usdt_out_raw = await self.get_jupiter_quote(SOL_MINT, USDT_MINT, sol_in_raw)
-
-        # Handle Fallback if Jupiter is rate-limited (common on public cloud IPs)
-        if not sol_out_raw or not usdt_out_raw:
-            # Time-based spread oscillation (sine wave) to simulate live spreads
-            offset = 0.015 * math.sin(time.time() / 15.0)
-            dex_buy_price = mid_price * (1.002 + offset)
-            sol_out = trade_size / dex_buy_price
-            
-            dex_sell_price = mid_price * (0.998 + offset)
-            usdt_out = sol_in * dex_sell_price
-        else:
-            sol_out = sol_out_raw / 1_000_000_000.0
-            dex_buy_price = trade_size / sol_out
-            
-            usdt_out = usdt_out_raw / 1_000_000.0
-            dex_sell_price = usdt_out / sol_in
+        dex_buy_price, sol_out, dex_sell_price, usdt_out = await self.get_latest_dex_prices(mid_price, trade_size, sol_in)
 
         self.last_dex_buy = dex_buy_price
         self.last_dex_sell = dex_sell_price

@@ -68,15 +68,15 @@ async def run_test():
     print(f"✅ Route A detected! Net Spread: {opp['net_spread']:.2%}")
 
     # Execute trade
-    await execute_arbitrage(opp)
+    await execute_arbitrage(opp, feed, scanner)
     
     # Verify balances
     state = load_state()
     assert state.dex_cash == 225.0, "DEX cash not debited"
-    assert state.dex_asset == 2.185, "DEX asset not credited"
-    # Bybit Sell: 0.185 SOL * $140.00 * (1 - 0.0010 taker fee) = $25.874
-    # state.cex_cash increases from 250.0 to 275.874
-    assert state.cex_cash > 275.80, "CEX cash did not credit correctly"
+    # DEX assets should increase but reflect dynamic slippage and priority fees
+    assert 2.15 < state.dex_asset < 2.19, f"DEX asset incorrect: {state.dex_asset}"
+    # Bybit Sell: 0.185 SOL * $140.00 * (1 - 0.0010 taker fee) = $25.874 (before slippage)
+    assert state.cex_cash > 275.0, "CEX cash did not credit correctly"
     assert state.cex_asset == 1.815, "CEX asset not debited"
     assert state.total_pnl > 0.0, "Realized P&L should be positive"
     print(f"✅ Route A execution successful! Net realized PnL: ${state.total_pnl:+.4f} USDT")
@@ -105,16 +105,15 @@ async def run_test():
     print(f"✅ Route B detected! Net Spread: {opp_b['net_spread']:.2%}")
 
     # Execute trade
-    await execute_arbitrage(opp_b)
+    await execute_arbitrage(opp_b, feed, scanner)
 
     # Verify balances
     state = load_state()
     # Bybit Buy: cost = $25.0 * 1.0010 = $25.025
     assert state.cex_cash == 224.975, "CEX cash not debited correctly"
     assert state.cex_asset > 2.0, "CEX asset not credited"
-    # Raydium Sell: proceeds = $26.50 - $0.05 SOL network fee = $26.45
-    # state.dex_cash increases from 250.0 to 276.45
-    assert state.dex_cash == 276.45, "DEX cash not credited correctly"
+    # Raydium Sell: proceeds should increase from 250.0 and reflect slippage
+    assert state.dex_cash > 275.0, "DEX cash not credited correctly"
     assert state.total_pnl > 0.0, "Realized P&L should be positive"
     print(f"✅ Route B execution successful! Net realized PnL: ${state.total_pnl:+.4f} USDT")
 

@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import uuid
 import base64
+import random
 from datetime import datetime, timezone
 from loguru import logger
 
@@ -17,6 +18,7 @@ from polymarket_bot.state import (
     reset_daily_pnl_if_new_day
 )
 from polymarket_bot.alerts import arbitrage_executed, arbitrage_failed
+from polymarket_bot.slippage import calculate_slippage, calculate_solana_priority_fee
 
 import ccxt.async_support as ccxt
 
@@ -55,7 +57,7 @@ async def close_bybit_client() -> None:
         _exchange = None
 
 
-async def execute_arbitrage(opportunity: dict) -> None:
+async def execute_arbitrage(opportunity: dict, price_feed=None, scanner=None) -> None:
     """
     Executes CEX-DEX arbitrage opportunity.
     Supports both simulated (paper) and live execution.
@@ -76,36 +78,109 @@ async def execute_arbitrage(opportunity: dict) -> None:
 
     if settings.trading_mode == "paper":
         # ── PAPER SIMULATION MODE ──
-        # Simulate local state balance adjustments
-        flat_network_fee = 0.05
+        if state.max_drawdown_paused:
+            logger.warning(f"❌ Paper execution blocked: Max Drawdown Guard active.")
+            arbitrage_failed(cycle_id, route, size_usdt, net_spread, buy_price, mode="PAPER")
+            return
 
+        # Get volatility from price_feed
+        volatility = price_feed.get_sol_volatility() if (price_feed and hasattr(price_feed, 'get_sol_volatility')) else 0.0015
+        
+        # Parallel Leg Simulation
+        async def simulate_cex_leg():
+            await asyncio.sleep(0.12)  # ~120ms Bybit latency
+            rechecked_price = sell_price if route == "DEX-BUY_CEX-SELL" else buy_price
+            if price_feed:
+                bid, ask, _, _ = price_feed.get_best_bid_ask("SOLUSDT")
+                if route == "DEX-BUY_CEX-SELL":
+                    if bid > 0: rechecked_price = bid
+                else:
+                    if ask > 0: rechecked_price = ask
+            
+            cex_slippage = calculate_slippage(size_usdt, volatility, is_solana_leg=False)
+            if route == "DEX-BUY_CEX-SELL":
+                # Sell SOL on CEX (proceeds reduced by slippage)
+                realized_price = rechecked_price * (1.0 - cex_slippage)
+            else:
+                # Buy SOL on CEX (cost increased by slippage)
+                realized_price = rechecked_price * (1.0 + cex_slippage)
+            return realized_price, cex_slippage
+
+        async def simulate_dex_leg():
+            # Solana leg delay
+            if settings.dedicated_rpc_url:
+                latency = random.uniform(0.3, 0.7)  # Dedicated RPC speedup
+            else:
+                latency = random.uniform(0.6, 1.4)  # Public RPC
+            await asyncio.sleep(latency)
+
+            rechecked_price = buy_price if route == "DEX-BUY_CEX-SELL" else sell_price
+            if scanner and price_feed:
+                bid, ask, _, _ = price_feed.get_best_bid_ask("SOLUSDT")
+                mid_price = (bid + ask) / 2.0 if (bid and ask) else rechecked_price
+                sol_in = size_asset
+                dex_buy, _, dex_sell, _ = await scanner.get_latest_dex_prices(mid_price, size_usdt, sol_in)
+                rechecked_price = dex_buy if route == "DEX-BUY_CEX-SELL" else dex_sell
+
+            dex_slippage = calculate_slippage(size_usdt, volatility, is_solana_leg=True)
+            if route == "DEX-BUY_CEX-SELL":
+                # Buy SOL on DEX (price increased by slippage)
+                realized_price = rechecked_price * (1.0 + dex_slippage)
+            else:
+                # Sell SOL on DEX (proceeds reduced by slippage)
+                realized_price = rechecked_price * (1.0 - dex_slippage)
+            return realized_price, dex_slippage
+
+        (cex_realized_price, cex_slip), (dex_realized_price, dex_slip) = await asyncio.gather(
+            simulate_cex_leg(), simulate_dex_leg()
+        )
+
+        priority_fee_usd = calculate_solana_priority_fee(volatility)
+        # Convert priority fee to SOL using DEX realized price
+        sol_priority_fee = priority_fee_usd / dex_realized_price
+
+        # Update local balances
         if route == "DEX-BUY_CEX-SELL":
-            # Buy SOL on DEX (USDT -> SOL), Sell SOL on CEX (SOL -> USDT)
+            # Buy SOL on DEX: cost = size_usdt, receive SOL based on dex_realized_price
+            # Subtract priority fee from DEX SOL asset balance
+            size_asset_realized = size_usdt / dex_realized_price
             state.dex_cash -= size_usdt
-            state.dex_asset += size_asset
+            state.dex_asset += size_asset_realized - sol_priority_fee
 
-            cex_proceeds = (size_asset * sell_price) * (1.0 - 0.0010)
+            # Sell SOL on CEX: sell size_asset SOL, receive USDT based on cex_realized_price and Bybit 0.1% taker fee
+            cex_proceeds = (size_asset * cex_realized_price) * (1.0 - 0.0010)
             state.cex_cash += cex_proceeds
             state.cex_asset -= size_asset
 
-            pnl = cex_proceeds - size_usdt - flat_network_fee
-
+            # P&L
+            pnl = cex_proceeds - size_usdt - priority_fee_usd
+            expected_pnl = (size_asset * sell_price) * (1.0 - 0.0010) - size_usdt - 0.05
         else:
-            # Buy SOL on CEX (USDT -> SOL), Sell SOL on DEX (SOL -> USDT)
+            # Buy SOL on CEX: cost = size_usdt * (1 + 0.1% fee), receive size_asset
             cex_cost = size_usdt * (1.0 + 0.0010)
             state.cex_cash -= cex_cost
             state.cex_asset += size_asset
 
-            dex_proceeds = (size_asset * sell_price)
-            state.dex_cash += dex_proceeds - flat_network_fee
-            state.dex_asset -= size_asset
+            # Sell SOL on DEX: sell size_asset SOL, receive USDT based on dex_realized_price
+            # Subtract priority fee from DEX SOL asset balance
+            dex_proceeds = (size_asset * dex_realized_price)
+            state.dex_cash += dex_proceeds
+            state.dex_asset -= (size_asset + sol_priority_fee)
 
-            pnl = dex_proceeds - cex_cost - flat_network_fee
+            # P&L
+            pnl = dex_proceeds - cex_cost - priority_fee_usd
+            expected_pnl = (size_asset * sell_price) - cex_cost - 0.05
 
         # Update stats
         state.total_pnl += pnl
         state.daily_pnl += pnl
         state.cycle_count += 1
+        state.total_expected_pnl += expected_pnl
+        state.total_actual_pnl += pnl
+        state.total_slippage_usd += (expected_pnl - pnl)
+        state.total_priority_fees_usd += priority_fee_usd
+        state.total_volume_usdt += (size_usdt * 2.0)
+
         is_win = pnl >= 0
         if is_win:
             state.win_count += 1
@@ -129,29 +204,46 @@ async def execute_arbitrage(opportunity: dict) -> None:
             state.route_stats[route]["loss_count"] += 1
 
         # Re-value account size
-        mid_price = (buy_price + sell_price) / 2.0
+        mid_price = (cex_realized_price + dex_realized_price) / 2.0
         total_cash = state.cex_cash + state.dex_cash
         total_assets = state.cex_asset + state.dex_asset
         state.account_size = total_cash + (total_assets * mid_price)
 
+        # Drawdown guard check
+        if state.account_size > state.peak_account_size:
+            state.peak_account_size = state.account_size
+        drawdown_pct = (state.peak_account_size - state.account_size) / state.peak_account_size
+        if drawdown_pct >= settings.max_paper_drawdown_pct:
+            state.max_drawdown_paused = True
+            logger.warning(
+                f"🚨 [Max Drawdown Guard] Breached! Drawdown: {drawdown_pct:.2%} (Limit: {settings.max_paper_drawdown_pct:.2%}). "
+                f"Paper trading paused."
+            )
+
         # Log history
+        actual_spread = pnl / size_usdt
+        slippage_pct = (cex_slip + dex_slip) / 2.0
         cycle_record = ArbTradeCycle(
             cycle_id=cycle_id,
             direction=route,
             started_at=now_iso,
-            completed_at=now_iso,
+            completed_at=datetime.now(timezone.utc).isoformat(),
             est_edge_pct=net_spread,
-            actual_edge_pct=net_spread,
+            actual_edge_pct=actual_spread,
             size_usdt=size_usdt,
             pnl_usdt=pnl,
             status="completed",
-            leg1_price=buy_price,
-            leg2_price=sell_price
+            leg1_price=buy_price if route == "CEX-BUY_DEX-SELL" else dex_realized_price,
+            leg2_price=cex_realized_price if route == "CEX-BUY_DEX-SELL" else sell_price,
+            expected_pnl=expected_pnl,
+            actual_pnl=pnl,
+            slippage_pct=slippage_pct,
+            priority_fee_usd=priority_fee_usd
         )
         state.closed_trades.append(cycle_record.to_dict())
         save_state(state)
 
-        logger.success(f"🎉 [Paper Arb Completed] {route} | Size: ${size_usdt:.2f} USDT | Realized PnL: ${pnl:+.4f} USDT")
+        logger.success(f"🎉 [Paper Arb Completed] {route} | Size: ${size_usdt:.2f} USDT | Realized PnL: ${pnl:+.4f} USDT | Slippage: {slippage_pct:.3%}")
         arbitrage_executed(cycle_id, route, size_usdt, pnl, buy_price, mode="PAPER")
 
     else:
