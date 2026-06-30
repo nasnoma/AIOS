@@ -79,8 +79,8 @@ class PortfolioState:
     account_size: float = 500.0
     cex_cash: float = 250.0
     dex_cash: float = 250.0
-    cex_assets: dict = field(default_factory=lambda: {"SOL": 1.5, "BTC": 0.005, "ETH": 0.05})
-    dex_assets: dict = field(default_factory=lambda: {"SOL": 1.5, "BTC": 0.005, "ETH": 0.05})
+    cex_assets: dict = field(default_factory=lambda: {"SOL": 1.5, "BTC": 0.005, "ETH": 0.05, "JUP": 100.0, "PYTH": 100.0, "JTO": 20.0, "WIF": 50.0, "BONK": 500000.0, "POPCAT": 50.0})
+    dex_assets: dict = field(default_factory=lambda: {"SOL": 1.5, "BTC": 0.005, "ETH": 0.05, "JUP": 100.0, "PYTH": 100.0, "JTO": 20.0, "WIF": 50.0, "BONK": 500000.0, "POPCAT": 50.0})
     closed_trades: list = field(default_factory=list)      # list of ArbTradeCycle dicts
     total_pnl: float = 0.0
     daily_pnl: float = 0.0
@@ -178,9 +178,9 @@ def load_state() -> PortfolioState:
         return PortfolioState(
             account_size=settings.account_size,
             cex_cash=settings.account_size / 2.0,
-            cex_assets={"SOL": 1.5, "BTC": 0.005, "ETH": 0.05},
+            cex_assets={"SOL": 1.5, "BTC": 0.005, "ETH": 0.05, "JUP": 100.0, "PYTH": 100.0, "JTO": 20.0, "WIF": 50.0, "BONK": 500000.0, "POPCAT": 50.0},
             dex_cash=settings.account_size / 2.0,
-            dex_assets={"SOL": 1.5, "BTC": 0.005, "ETH": 0.05}
+            dex_assets={"SOL": 1.5, "BTC": 0.005, "ETH": 0.05, "JUP": 100.0, "PYTH": 100.0, "JTO": 20.0, "WIF": 50.0, "BONK": 500000.0, "POPCAT": 50.0}
         )
 
 

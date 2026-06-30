@@ -20,13 +20,25 @@ WBTC_MINT = "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh"
 WETH_MINT = "7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs"
 USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
 USDT_MINT = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"
+JUP_MINT = "JUPyiwrEE3E2nvwJPEe2GYCtRPCWvLcUMptcLUgJ575"
+PYTH_MINT = "HZ128uz4g7D51MNGDxDwAd4NZf68Lrxm8ExKQ52C1mEe"
+JTO_MINT = "jtojtome5hxZURJuKdfbeJrgQAebCc51Bt2VWggdf8B"
+WIF_MINT = "EKpQEPVJj67vw7dKj48KVJ6uy1m978Cg7C1xpx1Xm791"
+BONK_MINT = "DezXAZ8z7PnrFcdubkPGoG6SLxxRQQfZH3PpZrPM24a"
+POPCAT_MINT = "7GCihJUkPG4thJZmW212pqGN8gQJ83Un2FzeztWmoPot"
 
 DECIMALS = {
     "SOL": 9,
     "BTC": 8,
     "ETH": 8,
     "USDC": 6,
-    "USDT": 6
+    "USDT": 6,
+    "JUP": 6,
+    "PYTH": 6,
+    "JTO": 9,
+    "WIF": 6,
+    "BONK": 5,
+    "POPCAT": 9
 }
 
 
@@ -43,9 +55,22 @@ class CexDexArbitrageScanner:
             {"base": "SOL", "quote": "USDT", "base_mint": SOL_MINT, "quote_mint": USDT_MINT},
             {"base": "BTC", "quote": "USDT", "base_mint": WBTC_MINT, "quote_mint": USDT_MINT},
             {"base": "ETH", "quote": "USDT", "base_mint": WETH_MINT, "quote_mint": USDT_MINT},
+            {"base": "JUP", "quote": "USDT", "base_mint": JUP_MINT, "quote_mint": USDT_MINT},
+            {"base": "PYTH", "quote": "USDT", "base_mint": PYTH_MINT, "quote_mint": USDT_MINT},
+            {"base": "JTO", "quote": "USDT", "base_mint": JTO_MINT, "quote_mint": USDT_MINT},
+            {"base": "WIF", "quote": "USDT", "base_mint": WIF_MINT, "quote_mint": USDT_MINT},
+            {"base": "BONK", "quote": "USDT", "base_mint": BONK_MINT, "quote_mint": USDT_MINT},
+            {"base": "POPCAT", "quote": "USDT", "base_mint": POPCAT_MINT, "quote_mint": USDT_MINT},
+            
             {"base": "SOL", "quote": "USDC", "base_mint": SOL_MINT, "quote_mint": USDC_MINT},
             {"base": "BTC", "quote": "USDC", "base_mint": WBTC_MINT, "quote_mint": USDC_MINT},
             {"base": "ETH", "quote": "USDC", "base_mint": WETH_MINT, "quote_mint": USDC_MINT},
+            {"base": "JUP", "quote": "USDC", "base_mint": JUP_MINT, "quote_mint": USDC_MINT},
+            {"base": "PYTH", "quote": "USDC", "base_mint": PYTH_MINT, "quote_mint": USDC_MINT},
+            {"base": "JTO", "quote": "USDC", "base_mint": JTO_MINT, "quote_mint": USDC_MINT},
+            {"base": "WIF", "quote": "USDC", "base_mint": WIF_MINT, "quote_mint": USDC_MINT},
+            {"base": "BONK", "quote": "USDC", "base_mint": BONK_MINT, "quote_mint": USDC_MINT},
+            {"base": "POPCAT", "quote": "USDC", "base_mint": POPCAT_MINT, "quote_mint": USDC_MINT},
         ]
         self.route_index = 0
 
