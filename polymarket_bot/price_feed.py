@@ -73,21 +73,21 @@ class BybitPriceFeed:
                             topic = data["topic"]
                             s_data = data["data"]
                             symbol = s_data.get("s")
-                            
-                            # Parse best bids and asks
                             bids = s_data.get("b", [])
                             asks = s_data.get("a", [])
-                            if bids and asks:
-                                bid_price = float(bids[0][0])
-                                ask_price = float(asks[0][0])
-                                self.orderbooks[symbol] = {
-                                    "bid": bid_price,
-                                    "ask": ask_price,
-                                    "bid_size": float(bids[0][1]),
-                                    "ask_size": float(asks[0][1]),
-                                }
+                            
+                            if bids:
+                                self.orderbooks[symbol]["bid"] = float(bids[0][0])
+                                self.orderbooks[symbol]["bid_size"] = float(bids[0][1])
+                            if asks:
+                                self.orderbooks[symbol]["ask"] = float(asks[0][0])
+                                self.orderbooks[symbol]["ask_size"] = float(asks[0][1])
+
+                            if bids or asks:
                                 self.last_update_ts = asyncio.get_event_loop().time()
-                                if symbol in self.orderbooks:
+                                bid_price = self.orderbooks[symbol]["bid"]
+                                ask_price = self.orderbooks[symbol]["ask"]
+                                if bid_price > 0 and ask_price > 0:
                                     if symbol not in self.price_histories:
                                         self.price_histories[symbol] = deque(maxlen=50)
                                     mid_price = (bid_price + ask_price) / 2.0
