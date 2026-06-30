@@ -50,6 +50,9 @@ class CexDexArbitrageScanner:
             "amount": str(amount_raw),
             "slippageBps": "50"  # 0.5% slippage tolerance
         }
+        headers = {}
+        if settings.jupiter_api_key:
+            headers["x-api-key"] = settings.jupiter_api_key
         
         base_delay = 0.5
         for attempt in range(max_retries):
@@ -61,7 +64,7 @@ class CexDexArbitrageScanner:
                     continue
 
             try:
-                async with self.session.get(url, params=params) as resp:
+                async with self.session.get(url, params=params, headers=headers) as resp:
                     if resp.status == 200:
                         data = await resp.json()
                         return int(data.get("outAmount", 0))
@@ -96,6 +99,9 @@ class CexDexArbitrageScanner:
             "amount": str(amount_raw),
             "slippageBps": "50"  # 0.5% slippage tolerance
         }
+        headers = {}
+        if settings.jupiter_api_key:
+            headers["x-api-key"] = settings.jupiter_api_key
         
         base_delay = 0.5
         for attempt in range(max_retries):
@@ -106,7 +112,7 @@ class CexDexArbitrageScanner:
                     continue
 
             try:
-                async with self.session.get(url, params=params) as resp:
+                async with self.session.get(url, params=params, headers=headers) as resp:
                     if resp.status == 200:
                         return await resp.json()
                     elif resp.status == 429:

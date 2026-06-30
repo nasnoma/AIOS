@@ -297,8 +297,12 @@ async def execute_arbitrage(opportunity: dict, price_feed=None, scanner=None) ->
             }
 
             swap_url = "https://api.jup.ag/swap/v1/swap"
+            headers = {}
+            if settings.jupiter_api_key:
+                headers["x-api-key"] = settings.jupiter_api_key
+
             async with aiohttp.ClientSession() as session:
-                async with session.post(swap_url, json=swap_payload) as resp:
+                async with session.post(swap_url, json=swap_payload, headers=headers) as resp:
                     if resp.status != 200:
                         err_text = await resp.text()
                         raise RuntimeError(f"Jupiter swap API returned HTTP {resp.status}: {err_text}")

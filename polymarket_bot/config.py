@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     trading_mode: str = "paper"             # "paper" | "live"
     account_size: float = 500.0             # Split equally (e.g. $250 on Bybit, $250 on Raydium)
     solana_rpc_url: str = "https://api.mainnet-beta.solana.com"
+    jupiter_api_key: str = ""               # Optional Jupiter API key to bypass rate limits
     solana_wallet_private_key: str = ""
     min_arbitrage_spread_pct: float = 0.005 # Net profit threshold to execute (0.5%)
     trade_size_usdt: float = 25.0           # Swap size per leg ($25 USDT)
