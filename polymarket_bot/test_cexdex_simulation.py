@@ -36,6 +36,9 @@ class MockCexDexScanner(CexDexArbitrageScanner):
 
 async def run_test():
     print("🧪 Running Bybit-Solana CEX-DEX Arbitrage simulation tests...")
+    from polymarket_bot.config import settings
+    settings.trade_size_usdt = 25.0
+    settings.min_arbitrage_spread_pct = 0.0015
 
     # 1. Initialize clean split balances
     state = load_state()

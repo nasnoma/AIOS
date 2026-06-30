@@ -32,12 +32,12 @@ class Settings(BaseSettings):
     solana_rpc_url: str = "https://api.mainnet-beta.solana.com"
     jupiter_api_key: str = ""               # Optional Jupiter API key to bypass rate limits
     solana_wallet_private_key: str = ""
-    min_arbitrage_spread_pct: float = 0.0015 # Net profit threshold to execute (0.15%)
-    trade_size_usdt: float = 25.0           # Swap size per leg ($25 USDT)
+    min_arbitrage_spread_pct: float = 0.0008 # Net profit threshold to execute (0.08%)
+    trade_size_usdt: float = 100.0          # Swap size per leg ($100 USDT)
     max_price_age_s: float = 10.0           # Max age of price quotes in seconds
     dedicated_rpc_url: str = ""             # If configured, reduces simulated latency
     max_paper_drawdown_pct: float = 0.05    # Max drawdown percentage to pause paper trading
-    jupiter_429_sim_prob: float = 0.05      # Probability of simulated 429 rate limit errors
+    jupiter_429_sim_prob: float = 0.0       # Probability of simulated 429 rate limit errors (disabled)
     live_tx_simulation_only: bool = True    # If True, live mode simulates transactions instead of broadcasting them
 
     # ── Dashboard ──────────────────────────────

@@ -185,6 +185,6 @@ class ArbitrageAutoresearch:
             logger.info("✅ Restored original environment settings.")
 
 if __name__ == "__main__":
-    # Runs 5 experiments, each running the bot in paper mode for 10 minutes (600s)
-    researcher = ArbitrageAutoresearch(run_time_seconds=600)
-    researcher.optimize(steps=5)
+    # Runs 4 experiments, each running the bot in paper mode for 20 seconds
+    researcher = ArbitrageAutoresearch(run_time_seconds=20)
+    researcher.optimize(steps=4)
