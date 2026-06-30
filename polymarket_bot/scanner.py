@@ -91,7 +91,7 @@ class CexDexArbitrageScanner:
             return None
 
         await self.init_session()
-        url = "https://api.jup.ag/swap/v1/quote"
+        url = "https://quote-api.jup.ag/v6/quote"
         params = {
             "inputMint": input_mint,
             "outputMint": output_mint,
@@ -126,7 +126,8 @@ class CexDexArbitrageScanner:
                             await asyncio.sleep(base_delay * (2 ** attempt))
                             continue
                     else:
-                        logger.warning(f"⚠️ Jupiter Quote API returned HTTP {resp.status}")
+                        err_text = await resp.text()
+                        logger.warning(f"⚠️ Jupiter Quote API returned HTTP {resp.status}: {err_text}")
                         break
             except Exception as e:
                 logger.warning(f"⚠️ Failed to reach Jupiter Quote API: {e}")
@@ -140,7 +141,7 @@ class CexDexArbitrageScanner:
             return None
 
         await self.init_session()
-        url = "https://api.jup.ag/swap/v1/quote"
+        url = "https://quote-api.jup.ag/v6/quote"
         params = {
             "inputMint": input_mint,
             "outputMint": output_mint,
@@ -173,7 +174,8 @@ class CexDexArbitrageScanner:
                             await asyncio.sleep(base_delay * (2 ** attempt))
                             continue
                     else:
-                        logger.warning(f"⚠️ Jupiter Quote API returned HTTP {resp.status}")
+                        err_text = await resp.text()
+                        logger.warning(f"⚠️ Jupiter Quote API returned HTTP {resp.status}: {err_text}")
                         break
             except Exception as e:
                 logger.warning(f"⚠️ Failed to reach Jupiter Quote API: {e}")
