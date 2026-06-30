@@ -73,6 +73,7 @@ class CexDexArbitrageScanner:
             {"base": "POPCAT", "quote": "USDC", "base_mint": POPCAT_MINT, "quote_mint": USDC_MINT},
         ]
         self.route_index = 0
+        self.scan_count = 0
 
     async def init_session(self) -> None:
         if self.session is None:
@@ -234,7 +235,11 @@ class CexDexArbitrageScanner:
         # Bybit ticker symbol e.g., "SOLUSDT" or "BTCUSDC"
         bybit_symbol = f"{base}{quote}"
         bid, ask, _, _ = self.price_feed.get_best_bid_ask(bybit_symbol)
+        
+        self.scan_count += 1
         if not bid or not ask:
+            if self.scan_count % 10 == 0:
+                logger.info(f"🔍 [Scanner Heartbeat] Waiting for Bybit WebSocket quotes for {bybit_symbol}...")
             return None
 
         # Check Bybit price freshness
@@ -255,6 +260,13 @@ class CexDexArbitrageScanner:
         if base == "SOL" and quote == "USDT":
             self.last_dex_buy = dex_buy_price
             self.last_dex_sell = dex_sell_price
+
+        # Periodic log to show heartbeat
+        if self.scan_count % 10 == 0:
+            logger.info(
+                f"🔍 [Scanner Heartbeat] Active | Route: {bybit_symbol} | "
+                f"Bybit Mid: ${mid_price:.4f} | DEX Buy: ${dex_buy_price:.4f}, Sell: ${dex_sell_price:.4f}"
+            )
 
         # Option A: DEX Buy (Cash->Asset) and CEX Sell (Spot Sell Asset)
         opt_a_net = -999.0
