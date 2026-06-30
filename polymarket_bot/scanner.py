@@ -80,6 +80,50 @@ class CexDexArbitrageScanner:
             except Exception as e:
                 logger.warning(f"⚠️ Failed to reach Jupiter Quote API: {e}")
                 await asyncio.sleep(base_delay * (2 ** attempt))
+        return None
+
+    async def get_jupiter_quote_full(self, input_mint: str, output_mint: str, amount_raw: int, max_retries: int = 3) -> dict | None:
+        """Queries the Jupiter Quote API and returns the entire JSON response dict (useful for live swaps)."""
+        now = asyncio.get_event_loop().time()
+        if settings.trading_mode == "paper" and now < self.jupiter_cooldown_until:
+            return None
+
+        await self.init_session()
+        url = "https://api.jup.ag/swap/v1/quote"
+        params = {
+            "inputMint": input_mint,
+            "outputMint": output_mint,
+            "amount": str(amount_raw),
+            "slippageBps": "50"  # 0.5% slippage tolerance
+        }
+        
+        base_delay = 0.5
+        for attempt in range(max_retries):
+            if settings.trading_mode == "paper" and settings.jupiter_429_sim_prob > 0:
+                if random.random() < settings.jupiter_429_sim_prob:
+                    logger.warning(f"⚠️ [Simulated 429] Jupiter API Rate Limit (Attempt {attempt+1}/{max_retries}). Retrying...")
+                    await asyncio.sleep(base_delay * (2 ** attempt))
+                    continue
+
+            try:
+                async with self.session.get(url, params=params) as resp:
+                    if resp.status == 200:
+                        return await resp.json()
+                    elif resp.status == 429:
+                        if settings.trading_mode == "paper":
+                            self.jupiter_cooldown_until = asyncio.get_event_loop().time() + 60.0
+                            logger.warning("⚠️ [HTTP 429] Jupiter API Rate Limit hit. Backing off real API calls for 60 seconds.")
+                            break
+                        else:
+                            logger.warning(f"⚠️ [HTTP 429] Jupiter API Rate Limit (Attempt {attempt+1}/{max_retries}). Retrying...")
+                            await asyncio.sleep(base_delay * (2 ** attempt))
+                            continue
+                    else:
+                        logger.warning(f"⚠️ Jupiter Quote API returned HTTP {resp.status}")
+                        break
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to reach Jupiter Quote API: {e}")
+                await asyncio.sleep(base_delay * (2 ** attempt))
                 
         return None
 
@@ -161,6 +205,11 @@ class CexDexArbitrageScanner:
         # 4. Trigger Check
         best_opt = None
         if opt_a_net >= settings.min_arbitrage_spread_pct and opt_a_net >= opt_b_net:
+            quote_resp = None
+            if settings.trading_mode == "live":
+                usdt_in_raw = int(trade_size * 1_000_000)
+                # Fetch full quote response for the live swap transaction
+                quote_resp = await self.get_jupiter_quote_full(USDT_MINT, SOL_MINT, usdt_in_raw)
             best_opt = {
                 "route": "DEX-BUY_CEX-SELL",
                 "net_spread": opt_a_net,
@@ -169,8 +218,14 @@ class CexDexArbitrageScanner:
                 "sell_price": bid,
                 "size_asset": sol_out,
                 "size_usdt": trade_size,
+                "quote_response": quote_resp,
             }
         elif opt_b_net >= settings.min_arbitrage_spread_pct and opt_b_net >= opt_a_net:
+            quote_resp = None
+            if settings.trading_mode == "live":
+                sol_in_raw = int(sol_in * 1_000_000_000.0)
+                # Fetch full quote response for the live swap transaction
+                quote_resp = await self.get_jupiter_quote_full(SOL_MINT, USDT_MINT, sol_in_raw)
             best_opt = {
                 "route": "CEX-BUY_DEX-SELL",
                 "net_spread": opt_b_net,
@@ -179,6 +234,7 @@ class CexDexArbitrageScanner:
                 "sell_price": dex_sell_price,
                 "size_asset": sol_in,
                 "size_usdt": trade_size,
+                "quote_response": quote_resp,
             }
 
         return best_opt

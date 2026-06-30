@@ -9,6 +9,7 @@ import asyncio
 import uuid
 import base64
 import random
+import aiohttp
 from datetime import datetime, timezone
 from loguru import logger
 
@@ -257,47 +258,109 @@ async def execute_arbitrage(opportunity: dict, price_feed=None, scanner=None) ->
         logger.info(f"🚀 Launching simultaneous Live CEX-DEX executions...")
 
         try:
-            # 1. Place CEX Spot Market Order
-            # For DEX-BUY_CEX-SELL, we SELL on Bybit
-            # For CEX-BUY_DEX-SELL, we BUY on Bybit
+            # 1. Prepare CEX Spot Market Order
             side = "sell" if route == "DEX-BUY_CEX-SELL" else "buy"
-            
-            logger.info(f"Submitting Bybit Spot Market order to {side.upper()} {size_asset:.4f} SOL...")
-            cex_order_task = asyncio.create_task(
-                exchange.create_order(
-                    symbol="SOL/USDT",
-                    type="market",
-                    side=side,
-                    amount=size_asset
+            cex_order_task = None
+            if settings.live_tx_simulation_only:
+                logger.info(f"🧪 [Dry-Run] Skipping real Bybit order to {side.upper()} {size_asset:.4f} SOL.")
+            else:
+                logger.info(f"Submitting Bybit Spot Market order to {side.upper()} {size_asset:.4f} SOL...")
+                cex_order_task = asyncio.create_task(
+                    exchange.create_order(
+                        symbol="SOL/USDT",
+                        type="market",
+                        side=side,
+                        amount=size_asset
+                    )
                 )
-            )
 
-            # 2. Build & Send On-Chain Swap transaction via Solana RPC
-            # In a real setup, we query Jupiter API's /swap endpoint and sign the payload.
-            # Here we structure the solders Keypair loading and transaction pipeline.
+            # 2. Build & Sign On-Chain Swap transaction via Jupiter Swap API
             if not _HAS_SOLANA_SDK:
-                raise RuntimeError("Solana Python SDK is not installed in the container environment.")
+                raise RuntimeError("Solana Python SDK is not installed in the environment.")
 
             # Load Solana Keypair
             private_bytes = base64.b64decode(settings.solana_wallet_private_key)
             keypair = Keypair.from_bytes(private_bytes)
+            user_pubkey = str(keypair.pubkey())
 
-            logger.info(f"Broadcasting Solana DEX transaction from wallet: {keypair.pubkey()}...")
-            # In live, the caller passes quoteResponse data, we mock this as RPC connection logic.
+            logger.info(f"Requesting Jupiter swap payload for wallet: {user_pubkey}...")
+            quote_response = opportunity.get("quote_response")
+            if not quote_response:
+                raise ValueError("Opportunity dictionary is missing quote_response JSON payload.")
+
+            swap_payload = {
+                "quoteResponse": quote_response,
+                "userPublicKey": user_pubkey,
+                "wrapAndUnwrapSol": True,
+                "dynamicComputeUnitLimit": True,
+                "prioritizationFeeLamports": "auto"
+            }
+
+            swap_url = "https://api.jup.ag/swap/v1/swap"
+            async with aiohttp.ClientSession() as session:
+                async with session.post(swap_url, json=swap_payload) as resp:
+                    if resp.status != 200:
+                        err_text = await resp.text()
+                        raise RuntimeError(f"Jupiter swap API returned HTTP {resp.status}: {err_text}")
+                    swap_data = await resp.json()
+
+            swap_tx_base64 = swap_data.get("swapTransaction")
+            if not swap_tx_base64:
+                raise ValueError("Jupiter swap API response did not contain swapTransaction base64 data.")
+
+            # Deserialize the transaction and sign it
+            tx_bytes = base64.b64decode(swap_tx_base64)
+            tx = VersionedTransaction.from_bytes(tx_bytes)
+            tx = VersionedTransaction(tx.message, [keypair])
+
             solana_client = AsyncClient(settings.solana_rpc_url)
+
+            if settings.live_tx_simulation_only:
+                # ── SIMULATION DRY-RUN MODE ──
+                logger.info("🧪 [Dry-Run] Simulating transaction on-chain via Solana RPC...")
+                sim_resp = await solana_client.simulate_transaction(tx)
+                if sim_resp.value.err:
+                    logs_str = "\n".join(sim_resp.value.logs or [])
+                    logger.error(f"❌ [Simulated Tx Failure] Logs:\n{logs_str}")
+                    raise RuntimeError(f"Solana transaction simulation failed: {sim_resp.value.err}")
+                else:
+                    logs_str = "\n".join(sim_resp.value.logs or [])
+                    logger.success(f"🟢 [Simulated Tx Success] Compute Units: {sim_resp.value.units_consumed}")
+                    logger.info(f"Simulated Tx Logs:\n{logs_str}")
+                await solana_client.close()
+            else:
+                # ── REAL EXECUTION MODE ──
+                async def execute_solana_swap():
+                    logger.info("Broadcasting signed raw transaction to Solana mainnet...")
+                    tx_resp = await solana_client.send_raw_transaction(bytes(tx))
+                    tx_sig = tx_resp.value
+                    logger.info(f"Transaction broadcasted. Signature: {tx_sig}. Confirming...")
+                    
+                    confirmed = False
+                    for _ in range(30):
+                        status_resp = await solana_client.get_signature_statuses([tx_sig])
+                        if status_resp.value and status_resp.value[0]:
+                            status = status_resp.value[0]
+                            if status.confirmations is not None or status.confirmation_status == "confirmed":
+                                confirmed = True
+                                break
+                        await asyncio.sleep(1)
+                    
+                    if not confirmed:
+                        raise RuntimeError(f"Transaction confirmation timed out. Signature: {tx_sig}")
+                    logger.success(f"🟢 Solana transaction confirmed successfully! Sig: {tx_sig}")
+
+                # Run both Bybit Spot and Solana swap concurrently
+                await asyncio.gather(cex_order_task, execute_solana_swap())
+
+                # Sync balances after real trade
+                balances = await exchange.fetch_balance()
+                state.cex_cash = float(balances.get('USDT', {}).get('free', 0.0))
+                state.cex_asset = float(balances.get('SOL', {}).get('free', 0.0))
+                save_state(state)
+                await solana_client.close()
             
-            # Run tasks concurrently
-            cex_res, _ = await asyncio.gather(cex_order_task, solana_client.get_version())
-            
-            # Sync balances
-            balances = await exchange.fetch_balance()
-            state.cex_cash = float(balances.get('USDT', {}).get('free', 0.0))
-            state.cex_asset = float(balances.get('SOL', {}).get('free', 0.0))
-            
-            save_state(state)
-            await solana_client.close()
-            
-            logger.success(f"🟢 Live CEX-DEX Execution completed successfully! Cycle ID: {cycle_id}")
+            logger.success(f"🟢 Live CEX-DEX Execution step completed! Cycle ID: {cycle_id}")
 
         except Exception as e:
             logger.error(f"❌ Live Execution failure: {e}")

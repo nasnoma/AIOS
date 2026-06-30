@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     dedicated_rpc_url: str = ""             # If configured, reduces simulated latency
     max_paper_drawdown_pct: float = 0.05    # Max drawdown percentage to pause paper trading
     jupiter_429_sim_prob: float = 0.05      # Probability of simulated 429 rate limit errors
+    live_tx_simulation_only: bool = True    # If True, live mode simulates transactions instead of broadcasting them
 
     # ── Dashboard ──────────────────────────────
     api_port: int = 8080
