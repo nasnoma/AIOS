@@ -41,6 +41,9 @@ _HARDCODED_DEFAULTS = {
 
 def _load_judge_params() -> dict:
     """Load judge weights and thresholds from param file, with fallback to defaults."""
+    import os
+    if os.environ.get("IS_TESTING") == "true":
+        return _HARDCODED_DEFAULTS
     if _WEIGHTS_PARAM_PATH.exists():
         try:
             data = json.loads(_WEIGHTS_PARAM_PATH.read_text())

@@ -20,6 +20,14 @@ def use_test_database():
     original_chat_id = settings.telegram_chat_id
     settings.telegram_bot_token = ""
     settings.telegram_chat_id = ""
+
+    # Override engine execution parameters for test consistency
+    original_regime = settings.regime_filter_enabled
+    original_agreement = settings.min_agent_agreement
+    original_confidence = settings.min_avg_confidence
+    settings.regime_filter_enabled = True
+    settings.min_agent_agreement = 5
+    settings.min_avg_confidence = 52.0
     
     yield
     
@@ -28,5 +36,8 @@ def use_test_database():
     os.environ.pop("IS_TESTING", None)
     settings.telegram_bot_token = original_bot_token
     settings.telegram_chat_id = original_chat_id
+    settings.regime_filter_enabled = original_regime
+    settings.min_agent_agreement = original_agreement
+    settings.min_avg_confidence = original_confidence
     db._engine = None
     db._SessionLocal = None

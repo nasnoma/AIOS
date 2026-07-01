@@ -233,7 +233,7 @@ def rank_and_enrich_candidates(symbols: list[str], mode: str, limit: int) -> lis
             ema20 = getattr(snap, "ema20", 0)
             ema50 = getattr(snap, "ema50", 0)
             ema200 = getattr(snap, "ema200", 0)
-            if (isinstance(ema20, (int, float)) and isinstance(ema50, (int, float)) and isinstance(ema200, (int, float))
+            if settings.regime_filter_enabled and (isinstance(ema20, (int, float)) and isinstance(ema50, (int, float)) and isinstance(ema200, (int, float))
                 and ema20 > 0 and ema50 > 0 and ema200 > 0):
                 if ema20 < ema50 < ema200:
                     logger.info(f"🚫 {symbol} skipped (oversold in confirmed downtrend EMA20<50<200)")
@@ -494,11 +494,11 @@ def check_preflight_probability(snap: MarketSnapshot, mode: str) -> tuple[bool, 
 
     probability = max(0.0, min(100.0, probability))
     
-    # Check if passes threshold — raised to 80% for higher-quality signal filtering
-    is_viable = probability >= 80.0
+    # Check if passes threshold — lowered to 50% to allow more trading candidates
+    is_viable = probability >= 50.0
     reason_str = " | ".join(reasons) if reasons else "Neutral conditions"
     if not is_viable:
-        reason_str = f"Pass probability {probability:.1f}% below 80% threshold. Details: {reason_str}"
+        reason_str = f"Pass probability {probability:.1f}% below 50% threshold. Details: {reason_str}"
         
     return is_viable, probability, reason_str
 
