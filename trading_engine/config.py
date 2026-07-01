@@ -77,7 +77,7 @@ class Settings(BaseSettings):
     # ── Market Regime Filter ─────────────────────────────────
     # Only allow LONG crypto entries when BTC is above its N-period MA on the
     # configured timeframe.  Set regime_filter_enabled=False to bypass.
-    regime_filter_enabled: bool = True
+    regime_filter_enabled: bool = False
     regime_btc_ma_period: int = 50
     regime_btc_timeframe: str = "1d"
     crypto_use_perpetuals: bool = False
