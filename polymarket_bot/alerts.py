@@ -1,7 +1,7 @@
 """
 polymarket_bot/alerts.py
 
-Self-contained Telegram alerting for Bybit Arbitrage Bot.
+Telegram alerting for Polymarket Scalping Bot.
 """
 from __future__ import annotations
 import asyncio
@@ -46,50 +46,49 @@ def send(text: str) -> None:
         pass  # No running event loop — silently skip
 
 
-def arbitrage_executed(cycle_id: str, direction: str, size: float, pnl: float,
-                       net_edge: float, mode: str = "PAPER") -> None:
-    emoji = "✅" if pnl >= 0 else "❌"
+def startup(mode: str, assets: list[str], account_size: float) -> None:
+    assets_str = ", ".join(assets)
     send(
-        f"{emoji} <b>{mode} Arbitrage Executed</b>\n"
+        f"🚀 <b>Polymarket Scalping Bot Started</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"🆔 ID: <code>{cycle_id}</code>\n"
-        f"🔄 Cycle: <b>{direction}</b>\n"
-        f"💵 Size: ${size:.2f} USDT\n"
-        f"📈 Expected Edge: {net_edge:.4%}\n"
-        f"💰 Realized P&L: <b>${pnl:+.4f} USDT</b>"
+        f"🔧 Mode: <b>{mode.upper()}</b>\n"
+        f"🪙 Assets: <code>{assets_str}</code>\n"
+        f"💰 Initial Capital: ${account_size:,.2f} USDT"
     )
 
 
-def arbitrage_failed(cycle_id: str, direction: str, step_failed: str, error_msg: str,
-                     mode: str = "PAPER") -> None:
+def trade_opened(asset: str, signal_type: str, side: str, size_usd: float,
+                 entry_yes: Optional[float], entry_no: Optional[float], mode: str = "PAPER") -> None:
+    yes_str = f"{entry_yes:.3f}" if entry_yes else "None"
+    no_str = f"{entry_no:.3f}" if entry_no else "None"
     send(
-        f"⚠️ <b>{mode} Arbitrage Execution Failed</b>\n"
+        f"🎯 <b>{mode} Trade Opened</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"🆔 ID: <code>{cycle_id}</code>\n"
-        f"🔄 Cycle: <b>{direction}</b>\n"
-        f"🚫 Step Failed: <code>{step_failed}</code>\n"
-        f"🛑 Error: <code>{error_msg}</code>"
+        f"🪙 Asset: <b>{asset}</b>\n"
+        f"🔄 Signal: <code>{signal_type}</code>\n"
+        f"↕️ Side: {side}\n"
+        f"💵 Size: ${size_usd:.2f} USDT\n"
+        f"🟢 Entry YES: {yes_str} | Entry NO: {no_str}"
+    )
+
+
+def circuit_breaker_hit(daily_pnl: float, max_daily_loss: float) -> None:
+    send(
+        f"🚨 <b>Circuit Breaker Triggered!</b>\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"📉 Daily Loss: <b>${daily_pnl:+.2f} USDT</b>\n"
+        f"🛑 Max Allowed Loss: ${max_daily_loss:.2f} USDT\n"
+        f"⚠️ Trading paused until next UTC day."
     )
 
 
 def daily_summary(status: dict) -> None:
     send(
-        f"📈 <b>Daily Summary (Bybit Arb)</b>\n"
+        f"📊 <b>Daily Summary (Polymarket Scalper)</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"💵 Daily P&L: <b>${status.get('daily_pnl', 0):+.4f} USDT</b>\n"
-        f"📊 Total P&L: <b>${status.get('total_pnl', 0):+.4f} USDT</b>\n"
-        f"🎯 Win rate: {status.get('win_rate_pct', 0):.1f}%\n"
-        f"✅ Wins: {status.get('win_count', 0)} | "
-        f"❌ Losses: {status.get('loss_count', 0)}\n"
-        f"🔄 Cycles: {status.get('cycle_count', 0)}"
-    )
-
-
-def startup(mode: str, account_size: float) -> None:
-    send(
-        f"🚀 <b>Bybit Arbitrage Bot Started</b>\n"
-        f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"🔧 Mode: <b>{mode.upper()}</b>\n"
-        f"🪙 Whitelist: <code>BTC/USDT, ETH/BTC, ETH/USDT</code>\n"
-        f"💰 Initial Capital: ${account_size:,.2f} USDT"
+        f"💵 Daily P&L: <b>${status.get('daily_pnl', 0):+.2f} USDT</b>\n"
+        f"📈 Total P&L: <b>${status.get('total_pnl', 0):+.2f} USDT</b>\n"
+        f"🎯 Win Rate: {status.get('win_rate_pct', 0):.1f}%\n"
+        f"🏆 Wins: {status.get('win_count', 0)} | ❌ Losses: {status.get('loss_count', 0)}\n"
+        f"🏦 Current Cash: ${status.get('cash', 0):,.2f} USDT"
     )
