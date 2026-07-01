@@ -171,7 +171,22 @@ def load_state() -> PortfolioState:
         if _STATE_FILE.exists() and _STATE_FILE.stat().st_size > 0:
             try:
                 with open(_STATE_FILE) as f:
-                    return PortfolioState.from_dict(json.load(f))
+                    state = PortfolioState.from_dict(json.load(f))
+                default_assets = {"SOL": 1.5, "BTC": 0.005, "ETH": 0.05, "JUP": 100.0, "PYTH": 100.0, "JTO": 20.0, "WIF": 50.0, "BONK": 500000.0, "POPCAT": 50.0}
+                updated = False
+                for asset, qty in default_assets.items():
+                    if asset not in state.cex_assets:
+                        state.cex_assets[asset] = qty
+                        updated = True
+                    if asset not in state.dex_assets:
+                        state.dex_assets[asset] = qty
+                        updated = True
+                if updated:
+                    logger.info("Migrated existing state file with new asset balances.")
+                    # We write directly without lock inside the outer lock to avoid deadlocks
+                    with open(_STATE_FILE, "w") as f_out:
+                        json.dump(state.to_dict(), f_out, indent=2)
+                return state
             except Exception as e:
                 logger.error(f"Failed to parse paper_state.json: {e} — resetting state.")
         from polymarket_bot.config import settings

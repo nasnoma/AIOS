@@ -275,20 +275,40 @@ class CexDexArbitrageScanner:
             )
 
         # Option A: DEX Buy (Cash->Asset) and CEX Sell (Spot Sell Asset)
-        opt_a_net = -999.0
+        gross_a = (bid / dex_buy_price) - 1.0
+        fees_a = 0.0010 + (0.05 / trade_size)
+        opt_a_net = gross_a - fees_a
+        
         cex_asset_bal = state.cex_assets.get(base, 0.0)
-        if state.dex_cash >= trade_size and cex_asset_bal >= base_out:
-            gross_a = (bid / dex_buy_price) - 1.0
-            fees_a = 0.0010 + (0.05 / trade_size)
-            opt_a_net = gross_a - fees_a
+        has_balances_a = (state.dex_cash >= trade_size and cex_asset_bal >= base_out)
+        
+        if opt_a_net >= settings.min_arbitrage_spread_pct and not has_balances_a:
+            logger.warning(
+                f"⚠️ [Spread Skipped] Profitable Route A (DEX-BUY_CEX-SELL) detected for {bybit_symbol} (+{opt_a_net:.3%}), "
+                f"but skipped due to insufficient balances. Required: DEX cash >= ${trade_size:.2f} (Have: ${state.dex_cash:.2f}), "
+                f"CEX {base} >= {base_out:.6f} (Have: {cex_asset_bal:.6f})"
+            )
+            opt_a_net = -999.0
+        elif not has_balances_a:
+            opt_a_net = -999.0
 
         # Option B: CEX Buy (Spot Buy Asset) and DEX Sell (Asset->Cash)
-        opt_b_net = -999.0
+        gross_b = (dex_sell_price / ask) - 1.0
+        fees_b = 0.0010 + (0.05 / trade_size)
+        opt_b_net = gross_b - fees_b
+        
         dex_asset_bal = state.dex_assets.get(base, 0.0)
-        if state.cex_cash >= trade_size and dex_asset_bal >= base_in:
-            gross_b = (dex_sell_price / ask) - 1.0
-            fees_b = 0.0010 + (0.05 / trade_size)
-            opt_b_net = gross_b - fees_b
+        has_balances_b = (state.cex_cash >= trade_size and dex_asset_bal >= base_in)
+        
+        if opt_b_net >= settings.min_arbitrage_spread_pct and not has_balances_b:
+            logger.warning(
+                f"⚠️ [Spread Skipped] Profitable Route B (CEX-BUY_DEX-SELL) detected for {bybit_symbol} (+{opt_b_net:.3%}), "
+                f"but skipped due to insufficient balances. Required: CEX cash >= ${trade_size:.2f} (Have: ${state.cex_cash:.2f}), "
+                f"DEX {base} >= {base_in:.6f} (Have: {dex_asset_bal:.6f})"
+            )
+            opt_b_net = -999.0
+        elif not has_balances_b:
+            opt_b_net = -999.0
 
         # 4. Find Best Opportunity
         best_opt = None
