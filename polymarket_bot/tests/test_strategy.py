@@ -267,4 +267,4 @@ def test_min_signal_confidence_bypassed_by_strong_momentum():
         cfg=cfg,
     )
     assert signal.signal_type == SignalType.MOMENTUM_LONG
-    assert signal.confidence >= 0.35
+    assert signal.confidence < 0.35

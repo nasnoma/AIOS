@@ -1,0 +1,1593 @@
+[
+  {
+    "iteration": 0,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.3,
+      "volatility": 0.8,
+      "structure": 1.2,
+      "sentiment": 0.9,
+      "macro": 1.0
+    },
+    "fitness": 0.2909,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1541,
+          "win_rate": 27.3,
+          "profit_factor": 0.87,
+          "total_return_pct": -12.18,
+          "max_drawdown_pct": 9.69,
+          "sortino_ratio": -0.0983398955089976
+        },
+        "val": {
+          "total_trades": 882,
+          "win_rate": 29.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -6.52,
+          "max_drawdown_pct": 3.77,
+          "sortino_ratio": -0.10976441998452237
+        },
+        "fitness_score": 0.2909
+      }
+    },
+    "reasoning": "Baseline configuration",
+    "improved": true
+  },
+  {
+    "iteration": 1,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.2,
+      "volatility": 1.4,
+      "structure": 1.2,
+      "sentiment": 1.4,
+      "macro": 1.0
+    },
+    "fitness": 0.2853,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1541,
+          "win_rate": 27.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.63,
+          "max_drawdown_pct": 9.49,
+          "sortino_ratio": -0.10460468709768023
+        },
+        "val": {
+          "total_trades": 885,
+          "win_rate": 29.0,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.62,
+          "max_drawdown_pct": 3.83,
+          "sortino_ratio": -0.112215536460235
+        },
+        "fitness_score": 0.2853
+      }
+    },
+    "reasoning": "The current weights show trend and orderflow are overweighted, while volatility and sentiment are underweighted. Given the low win rate and negative total return, increasing the weights of volatility and sentiment may help to reduce risk and improve overall performance. Meanwhile, decreasing the weights of trend and orderflow could mitigate potential overfitting to specific market conditions. The new weights aim to strike a balance between these factors.",
+    "improved": false
+  },
+  {
+    "iteration": 2,
+    "weights": {
+      "trend": 1.0,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.1,
+      "volatility": 1.4,
+      "structure": 1.2,
+      "sentiment": 1.3,
+      "macro": 1.0
+    },
+    "fitness": 0.2912,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1523,
+          "win_rate": 27.3,
+          "profit_factor": 0.87,
+          "total_return_pct": -12.24,
+          "max_drawdown_pct": 9.19,
+          "sortino_ratio": -0.10053316941604147
+        },
+        "val": {
+          "total_trades": 881,
+          "win_rate": 29.2,
+          "profit_factor": 0.86,
+          "total_return_pct": -6.49,
+          "max_drawdown_pct": 3.71,
+          "sortino_ratio": -0.1087255612694333
+        },
+        "fitness_score": 0.2912
+      }
+    },
+    "reasoning": "The current weights show trend and orderflow are overweighted while volatility and sentiment are underweighted. Given the low win rates and negative total return percentages, increasing the weights of volatility and sentiment may help improve risk management and market sentiment analysis. Decreasing the weights of trend and orderflow could reduce over-reliance on these factors. The new weights aim to balance the contributions of each agent.",
+    "improved": true
+  },
+  {
+    "iteration": 3,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.4,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.0,
+      "structure": 1.1,
+      "sentiment": 1.1,
+      "macro": 1.0
+    },
+    "fitness": 0.2878,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1554,
+          "win_rate": 27.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.76,
+          "max_drawdown_pct": 9.53,
+          "sortino_ratio": -0.10548584012291753
+        },
+        "val": {
+          "total_trades": 880,
+          "win_rate": 29.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -6.49,
+          "max_drawdown_pct": 3.74,
+          "sortino_ratio": -0.1090676629701232
+        },
+        "fitness_score": 0.2878
+      }
+    },
+    "reasoning": "The current weights show a slight overemphasis on volatility and sentiment, which may be contributing to the low profit factor and high max drawdown. The optimization history suggests that reducing volatility's weight and adjusting other weights may lead to improvement. Given the low win rate and negative total return, increasing the weight of trend and momentum while decreasing volatility's weight could help improve the overall performance.",
+    "improved": false
+  },
+  {
+    "iteration": 4,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.5,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.1,
+      "structure": 1.2,
+      "sentiment": 1.2,
+      "macro": 1.0
+    },
+    "fitness": 0.2926,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1537,
+          "win_rate": 27.4,
+          "profit_factor": 0.87,
+          "total_return_pct": -12.13,
+          "max_drawdown_pct": 8.95,
+          "sortino_ratio": -0.09761326412875841
+        },
+        "val": {
+          "total_trades": 877,
+          "win_rate": 29.2,
+          "profit_factor": 0.86,
+          "total_return_pct": -6.39,
+          "max_drawdown_pct": 3.66,
+          "sortino_ratio": -0.10656207384401245
+        },
+        "fitness_score": 0.2926
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on volatility and sentiment, while trend and macro are at baseline. Given the performance metrics, the win rate and profit factor are low, indicating a need for adjustment. The optimization history suggests that increases in trend and momentum weights have led to improved fitness scores in the past. Therefore, a new set of weights will slightly increase the trend and momentum weights, while reducing the volatility weight to balance the overall performance.",
+    "improved": true
+  },
+  {
+    "iteration": 5,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.4,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.3,
+      "structure": 1.3,
+      "sentiment": 1.2,
+      "macro": 1.0
+    },
+    "fitness": 0.2885,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1539,
+          "win_rate": 27.2,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.51,
+          "max_drawdown_pct": 9.26,
+          "sortino_ratio": -0.10299394671572039
+        },
+        "val": {
+          "total_trades": 881,
+          "win_rate": 29.2,
+          "profit_factor": 0.86,
+          "total_return_pct": -6.51,
+          "max_drawdown_pct": 3.77,
+          "sortino_ratio": -0.10954827690380893
+        },
+        "fitness_score": 0.2885
+      }
+    },
+    "reasoning": "The current weights seem to be slightly overemphasizing momentum and underemphasizing volatility and structure. Given the recent improvement in fitness score with the current weights, a minor adjustment to balance these factors while maintaining the overall trend could be beneficial. Increasing the weight on volatility and structure, while slightly reducing momentum, could help improve the composite fitness score by diversifying the decision-making process and potentially capturing more nuanced market dynamics.",
+    "improved": false
+  },
+  {
+    "iteration": 6,
+    "weights": {
+      "trend": 1.5,
+      "momentum": 1.2,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.3,
+      "structure": 1.2,
+      "sentiment": 1.1,
+      "macro": 1.0
+    },
+    "fitness": 0.2917,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1533,
+          "win_rate": 27.3,
+          "profit_factor": 0.87,
+          "total_return_pct": -12.34,
+          "max_drawdown_pct": 9.21,
+          "sortino_ratio": -0.10096529999739572
+        },
+        "val": {
+          "total_trades": 852,
+          "win_rate": 29.2,
+          "profit_factor": 0.86,
+          "total_return_pct": -6.23,
+          "max_drawdown_pct": 3.61,
+          "sortino_ratio": -0.10666035583995816
+        },
+        "fitness_score": 0.2917
+      }
+    },
+    "reasoning": "The current weights seem to be slightly overemphasizing momentum and underemphasizing volatility, given the performance metrics. The trend agent could also be given more weight considering its potential impact on long-term performance. Adjusting these weights while keeping others relatively stable could lead to improved overall performance.",
+    "improved": false
+  },
+  {
+    "iteration": 7,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.4,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.3,
+      "structure": 1.1,
+      "sentiment": 1.1,
+      "macro": 1.0
+    },
+    "fitness": 0.2892,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1529,
+          "win_rate": 27.4,
+          "profit_factor": 0.87,
+          "total_return_pct": -12.19,
+          "max_drawdown_pct": 9.04,
+          "sortino_ratio": -0.09904988540450661
+        },
+        "val": {
+          "total_trades": 881,
+          "win_rate": 29.1,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.55,
+          "max_drawdown_pct": 3.8,
+          "sortino_ratio": -0.11055019686071327
+        },
+        "fitness_score": 0.2892
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on momentum and a moderate emphasis on trend, orderflow, structure, and sentiment. However, the performance metrics indicate a need for improvement in win rate and profit factor. Given the optimization history, increasing the weight of volatility and slightly adjusting the weights of trend and momentum could potentially improve the fitness score. The val performance metrics show a better win rate but still a negative total return, suggesting a need for a more balanced approach.",
+    "improved": false
+  },
+  {
+    "iteration": 8,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.4,
+      "volume": 0.9,
+      "orderflow": 1.2,
+      "volatility": 1.3,
+      "structure": 1.2,
+      "sentiment": 1.3,
+      "macro": 1.0
+    },
+    "fitness": 0.2889,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1535,
+          "win_rate": 27.2,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.5,
+          "max_drawdown_pct": 9.28,
+          "sortino_ratio": -0.10328448160705773
+        },
+        "val": {
+          "total_trades": 884,
+          "win_rate": 29.2,
+          "profit_factor": 0.86,
+          "total_return_pct": -6.46,
+          "max_drawdown_pct": 3.71,
+          "sortino_ratio": -0.10738167972428944
+        },
+        "fitness_score": 0.2889
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on momentum and trend, with momentum having the highest weight at 1.5. However, the optimization history suggests that increasing the weight of trend and momentum does not always lead to improvement. The best fitness score was achieved with the current weights, which have a balanced distribution. To further improve, I propose slightly increasing the weight of volatility, which has shown promise in some iterations, and decreasing the weight of volume, which has been consistently low. I also suggest a minor adjustment to the sentiment weight, as it has been performing well in some iterations.",
+    "improved": false
+  },
+  {
+    "iteration": 9,
+    "weights": {
+      "trend": 1.6,
+      "momentum": 1.2,
+      "volume": 1.4,
+      "orderflow": 1.1,
+      "volatility": 1.3,
+      "structure": 1.1,
+      "sentiment": 1.2,
+      "macro": 1.2
+    },
+    "fitness": 0.2842,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1544,
+          "win_rate": 27.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.79,
+          "max_drawdown_pct": 9.54,
+          "sortino_ratio": -0.10674131130244525
+        },
+        "val": {
+          "total_trades": 886,
+          "win_rate": 28.9,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.71,
+          "max_drawdown_pct": 3.91,
+          "sortino_ratio": -0.1148741983411448
+        },
+        "fitness_score": 0.2842
+      }
+    },
+    "reasoning": "The current weights show momentum and trend are overweighted, while volume and macro are underweighted. The optimization history suggests that increasing trend and decreasing momentum can lead to improved fitness scores. Additionally, the performance metrics indicate that the strategy struggles with high drawdowns, suggesting a need to balance risk and return. Therefore, a new set of weights is proposed to balance the agents and reduce drawdowns.",
+    "improved": false
+  },
+  {
+    "iteration": 10,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.6,
+      "volume": 1.1,
+      "orderflow": 1.2,
+      "volatility": 1.3,
+      "structure": 1.2,
+      "sentiment": 1.1,
+      "macro": 1.1
+    },
+    "fitness": 0.2849,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1544,
+          "win_rate": 27.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.76,
+          "max_drawdown_pct": 9.6,
+          "sortino_ratio": -0.10611721564930135
+        },
+        "val": {
+          "total_trades": 874,
+          "win_rate": 28.9,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.56,
+          "max_drawdown_pct": 3.84,
+          "sortino_ratio": -0.11236746019867226
+        },
+        "fitness_score": 0.2849
+      }
+    },
+    "reasoning": "The current weights have trend and momentum slightly overweighted, while volume and macro are underweighted. The optimization history suggests that increasing trend and momentum weights has led to improved fitness scores in some cases, but also that over-increasing them can lead to no improvement. The volatility and structure agents have shown some positive impact when increased. Given the current performance metrics, a balanced approach with slight adjustments to trend, momentum, and volatility might lead to further improvement.",
+    "improved": false
+  },
+  {
+    "iteration": 12,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.3,
+      "volume": 1.1,
+      "orderflow": 1.2,
+      "volatility": 1.0,
+      "structure": 1.2,
+      "sentiment": 1.2,
+      "macro": 1.1
+    },
+    "fitness": 0.2858,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1542,
+          "win_rate": 27.2,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.52,
+          "max_drawdown_pct": 9.38,
+          "sortino_ratio": -0.1028320956754619
+        },
+        "val": {
+          "total_trades": 885,
+          "win_rate": 29.0,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.62,
+          "max_drawdown_pct": 3.83,
+          "sortino_ratio": -0.112215536460235
+        },
+        "fitness_score": 0.2858
+      }
+    },
+    "reasoning": "The current weights have a trend weight of 1.3 and momentum weight of 1.5, which are relatively high. The optimization history suggests that increasing the trend weight and decreasing the momentum weight may lead to improvement. The volume and macro weights are underweighted, so increasing them may also be beneficial. The orderflow, volatility, structure, and sentiment weights seem relatively balanced, so minor adjustments can be made to these. Based on the performance metrics, a slight increase in the trend weight and decreases in the momentum and volatility weights may improve the fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 13,
+    "weights": {
+      "trend": 1.6,
+      "momentum": 1.7,
+      "volume": 0.9,
+      "orderflow": 1.1,
+      "volatility": 1.4,
+      "structure": 1.1,
+      "sentiment": 1.1,
+      "macro": 0.9
+    },
+    "fitness": 0.2879,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1540,
+          "win_rate": 27.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.66,
+          "max_drawdown_pct": 9.58,
+          "sortino_ratio": -0.10532827030223306
+        },
+        "val": {
+          "total_trades": 872,
+          "win_rate": 29.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -6.42,
+          "max_drawdown_pct": 3.73,
+          "sortino_ratio": -0.10855843518493578
+        },
+        "fitness_score": 0.2879
+      }
+    },
+    "reasoning": "Analyzing the optimization history and performance metrics, it appears that the trend and momentum agents have been overweighted in previous iterations, resulting in improved fitness scores. The volatility agent has also shown promise when given a higher weight. Conversely, the volume and macro agents have been underweighted, but their impact on the fitness score has been minimal. To improve the composite fitness score, I propose increasing the weights of the trend, momentum, and volatility agents, while maintaining a balanced approach with the other agents.",
+    "improved": false
+  },
+  {
+    "iteration": 14,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.6,
+      "volume": 1.1,
+      "orderflow": 1.2,
+      "volatility": 1.1,
+      "structure": 1.3,
+      "sentiment": 1.3,
+      "macro": 1.1
+    },
+    "fitness": 0.2914,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1534,
+          "win_rate": 27.3,
+          "profit_factor": 0.87,
+          "total_return_pct": -12.19,
+          "max_drawdown_pct": 9.13,
+          "sortino_ratio": -0.0987413395803904
+        },
+        "val": {
+          "total_trades": 882,
+          "win_rate": 29.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -6.53,
+          "max_drawdown_pct": 3.74,
+          "sortino_ratio": -0.10973707738636282
+        },
+        "fitness_score": 0.2914
+      }
+    },
+    "reasoning": "Based on the optimization history, the best fitness score was achieved with trend weight of 1.3 and momentum weight of 1.5. The volatility weight of 1.1 also contributed to this improved score. However, the recent iterations suggest that reducing the trend weight and increasing the momentum weight could lead to further improvement. Additionally, the sentiment and structure weights seem to have a positive impact when increased slightly. The volume and macro weights have not shown significant improvement when changed, so they will be kept at moderate levels.",
+    "improved": false
+  },
+  {
+    "iteration": 15,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.2,
+      "volume": 1.3,
+      "orderflow": 1.2,
+      "volatility": 1.0,
+      "structure": 1.3,
+      "sentiment": 1.3,
+      "macro": 1.2
+    },
+    "fitness": 0.288,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1538,
+          "win_rate": 27.2,
+          "profit_factor": 0.87,
+          "total_return_pct": -12.42,
+          "max_drawdown_pct": 9.34,
+          "sortino_ratio": -0.10178224608354565
+        },
+        "val": {
+          "total_trades": 885,
+          "win_rate": 29.0,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.62,
+          "max_drawdown_pct": 3.83,
+          "sortino_ratio": -0.112215536460235
+        },
+        "fitness_score": 0.288
+      }
+    },
+    "reasoning": "The current weights seem to be overemphasizing momentum and underemphasizing volume and macro. The optimization history suggests that reducing momentum and increasing volume and macro weights could lead to improved fitness scores. Additionally, the sentiment and structure weights appear to be performing well and can be maintained or slightly increased. The trend weight can be adjusted to balance the overall performance.",
+    "improved": false
+  },
+  {
+    "iteration": 16,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.2,
+      "volume": 1.4,
+      "orderflow": 1.1,
+      "volatility": 1.0,
+      "structure": 1.2,
+      "sentiment": 1.1,
+      "macro": 1.3
+    },
+    "fitness": 0.288,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1538,
+          "win_rate": 27.2,
+          "profit_factor": 0.87,
+          "total_return_pct": -12.42,
+          "max_drawdown_pct": 9.34,
+          "sortino_ratio": -0.10178224608354565
+        },
+        "val": {
+          "total_trades": 885,
+          "win_rate": 29.0,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.62,
+          "max_drawdown_pct": 3.83,
+          "sortino_ratio": -0.112215536460235
+        },
+        "fitness_score": 0.288
+      }
+    },
+    "reasoning": "The current weights seem to be slightly imbalanced, with trend and momentum being overweighted, while volume and macro are underweighted. The optimization history suggests that increasing the weight of trend and momentum does not necessarily lead to better performance. The val metrics show a higher win rate but a lower profit factor, indicating that the strategy is taking on more risk without sufficient return. To improve the composite fitness score, I propose reducing the weight of trend and momentum, increasing the weight of volume and macro, and adjusting the other agents to maintain a balanced portfolio.",
+    "improved": false
+  },
+  {
+    "iteration": 17,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.1,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.3,
+      "structure": 1.4,
+      "sentiment": 1.4,
+      "macro": 0.9
+    },
+    "fitness": 0.2844,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1535,
+          "win_rate": 27.3,
+          "profit_factor": 0.87,
+          "total_return_pct": -12.39,
+          "max_drawdown_pct": 9.3,
+          "sortino_ratio": -0.10161527328126829
+        },
+        "val": {
+          "total_trades": 881,
+          "win_rate": 28.8,
+          "profit_factor": 0.84,
+          "total_return_pct": -6.81,
+          "max_drawdown_pct": 4.07,
+          "sortino_ratio": -0.11930839745476693
+        },
+        "fitness_score": 0.2844
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on momentum and trend, but the optimization history suggests that increasing trend and momentum weights has not led to significant improvements. The val metrics show a higher win rate but lower profit factor, indicating potential over-trading. To address this, I propose reducing the momentum weight and increasing the structure and sentiment weights to focus on more informed trading decisions. The volatility weight will be increased to account for risk management, while the macro weight will be reduced to minimize external influences.",
+    "improved": false
+  },
+  {
+    "iteration": 18,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.3,
+      "volume": 1.4,
+      "orderflow": 1.2,
+      "volatility": 1.2,
+      "structure": 1.3,
+      "sentiment": 1.1,
+      "macro": 1.2
+    },
+    "fitness": 0.289,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1525,
+          "win_rate": 27.3,
+          "profit_factor": 0.87,
+          "total_return_pct": -12.15,
+          "max_drawdown_pct": 9.15,
+          "sortino_ratio": -0.09910992316647714
+        },
+        "val": {
+          "total_trades": 884,
+          "win_rate": 29.1,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.59,
+          "max_drawdown_pct": 3.79,
+          "sortino_ratio": -0.1112098442593912
+        },
+        "fitness_score": 0.289
+      }
+    },
+    "reasoning": "The current weights and optimization history suggest that the trend and momentum agents may be overweighted, while the volume agent is underweighted. The volatility and structure agents show potential for improvement. A new set of weights will be proposed to balance these agents and potentially improve the composite fitness score. The trend agent will be reduced, momentum will be adjusted, volume will be increased, and volatility and structure will be fine-tuned.",
+    "improved": false
+  },
+  {
+    "iteration": 20,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.1,
+      "volume": 1.4,
+      "orderflow": 1.2,
+      "volatility": 1.0,
+      "structure": 1.3,
+      "sentiment": 1.3,
+      "macro": 1.4
+    },
+    "fitness": 0.2853,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1541,
+          "win_rate": 27.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.63,
+          "max_drawdown_pct": 9.49,
+          "sortino_ratio": -0.10460468709768023
+        },
+        "val": {
+          "total_trades": 885,
+          "win_rate": 29.0,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.62,
+          "max_drawdown_pct": 3.83,
+          "sortino_ratio": -0.112215536460235
+        },
+        "fitness_score": 0.2853
+      }
+    },
+    "reasoning": "The current weights show a mix of over and underweighting across agents. Momentum and trend agents have been overweighted in some iterations, while volume and macro have been underweighted. The optimization history suggests that reducing the weight of momentum and increasing the weight of volume and macro may lead to improved performance. Additionally, the sentiment and structure agents have shown promise in certain iterations, so their weights will be slightly increased. The new weights aim to strike a balance between these agents to improve the composite fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 21,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.2,
+      "volatility": 1.0,
+      "structure": 1.4,
+      "sentiment": 1.3,
+      "macro": 1.1
+    },
+    "fitness": 0.2857,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1542,
+          "win_rate": 27.2,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.53,
+          "max_drawdown_pct": 9.39,
+          "sortino_ratio": -0.10299551108497045
+        },
+        "val": {
+          "total_trades": 885,
+          "win_rate": 29.0,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.62,
+          "max_drawdown_pct": 3.83,
+          "sortino_ratio": -0.112215536460235
+        },
+        "fitness_score": 0.2857
+      }
+    },
+    "reasoning": "Based on the optimization history, it appears that increasing the weights of trend, structure, and sentiment has led to slight improvements in the fitness score. However, the momentum and volatility weights have been inconsistent. Given the current performance metrics, a slight increase in trend and structure weights, while maintaining a balanced approach with the other agents, may lead to improved performance. The win rate and profit factor suggest that the system is close to being profitable, but needs a slight adjustment to tip the balance in favor of more winning trades.",
+    "improved": false
+  },
+  {
+    "iteration": 22,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.2,
+      "volatility": 1.0,
+      "structure": 1.2,
+      "sentiment": 1.1,
+      "macro": 1.3
+    },
+    "fitness": 0.2853,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1541,
+          "win_rate": 27.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.63,
+          "max_drawdown_pct": 9.49,
+          "sortino_ratio": -0.10460468709768023
+        },
+        "val": {
+          "total_trades": 885,
+          "win_rate": 29.0,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.62,
+          "max_drawdown_pct": 3.83,
+          "sortino_ratio": -0.112215536460235
+        },
+        "fitness_score": 0.2853
+      }
+    },
+    "reasoning": "The current weights seem to be slightly overemphasizing momentum and underemphasizing trend and macro. The optimization history suggests that increasing trend and macro weights while decreasing momentum weight could lead to improvement. Additionally, the val metrics show a slightly higher win rate and lower max drawdown compared to train metrics, indicating potential overfitting. Therefore, a more balanced approach with a slight emphasis on trend and macro could help improve the composite fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 23,
+    "weights": {
+      "trend": 1.6,
+      "momentum": 1.8,
+      "volume": 0.8,
+      "orderflow": 1.2,
+      "volatility": 1.1,
+      "structure": 1.3,
+      "sentiment": 1.2,
+      "macro": 0.9
+    },
+    "fitness": 0.2885,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1525,
+          "win_rate": 27.0,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.68,
+          "max_drawdown_pct": 9.61,
+          "sortino_ratio": -0.1070532435221031
+        },
+        "val": {
+          "total_trades": 864,
+          "win_rate": 29.3,
+          "profit_factor": 0.86,
+          "total_return_pct": -6.25,
+          "max_drawdown_pct": 3.59,
+          "sortino_ratio": -0.10450447062484629
+        },
+        "fitness_score": 0.2885
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on momentum and structure, but overall, the weights are relatively balanced. However, the performance metrics indicate a low win rate and profit factor, suggesting that the agents may not be effectively capturing market trends. To improve the composite fitness score, I propose increasing the weights of trend and momentum, while slightly decreasing the weights of volume and macro. This adjustment aims to enhance the system's ability to capture market trends and momentum, while reducing the influence of less effective agents.",
+    "improved": false
+  },
+  {
+    "iteration": 24,
+    "weights": {
+      "trend": 1.6,
+      "momentum": 1.2,
+      "volume": 1.3,
+      "orderflow": 1.2,
+      "volatility": 1.0,
+      "structure": 1.5,
+      "sentiment": 1.1,
+      "macro": 1.4
+    },
+    "fitness": 0.2852,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1544,
+          "win_rate": 27.2,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.58,
+          "max_drawdown_pct": 9.85,
+          "sortino_ratio": -0.10353574145851187
+        },
+        "val": {
+          "total_trades": 885,
+          "win_rate": 29.0,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.62,
+          "max_drawdown_pct": 3.83,
+          "sortino_ratio": -0.112215536460235
+        },
+        "fitness_score": 0.2852
+      }
+    },
+    "reasoning": "The current weights seem to be slightly overemphasizing momentum and underemphasizing volume and macro. The optimization history shows that iterations with higher trend and structure weights tend to have better fitness scores. Therefore, I propose increasing the weights of trend and structure, while decreasing the weight of momentum and increasing the weights of volume and macro to improve the composite fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 25,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.2,
+      "volume": 1.4,
+      "orderflow": 1.2,
+      "volatility": 1.0,
+      "structure": 1.1,
+      "sentiment": 1.1,
+      "macro": 1.5
+    },
+    "fitness": 0.2855,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1540,
+          "win_rate": 27.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.56,
+          "max_drawdown_pct": 9.48,
+          "sortino_ratio": -0.10372321713640553
+        },
+        "val": {
+          "total_trades": 885,
+          "win_rate": 29.0,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.62,
+          "max_drawdown_pct": 3.83,
+          "sortino_ratio": -0.112215536460235
+        },
+        "fitness_score": 0.2855
+      }
+    },
+    "reasoning": "Based on the optimization history and performance metrics, it appears that the trend and momentum agents have been overweighted in previous iterations, while the volume and macro agents have been underweighted. The sentiment and structure agents have shown mixed results. To improve the composite fitness score, I propose reducing the weights of trend and momentum, increasing the weights of volume and macro, and making minor adjustments to the other agents.",
+    "improved": false
+  },
+  {
+    "iteration": 26,
+    "weights": {
+      "trend": 1.7,
+      "momentum": 1.9,
+      "volume": 0.9,
+      "orderflow": 1.2,
+      "volatility": 1.1,
+      "structure": 1.2,
+      "sentiment": 1.2,
+      "macro": 0.8
+    },
+    "fitness": 0.2891,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1530,
+          "win_rate": 27.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.49,
+          "max_drawdown_pct": 9.48,
+          "sortino_ratio": -0.10362084260217369
+        },
+        "val": {
+          "total_trades": 874,
+          "win_rate": 29.2,
+          "profit_factor": 0.86,
+          "total_return_pct": -6.34,
+          "max_drawdown_pct": 3.64,
+          "sortino_ratio": -0.10541174333935004
+        },
+        "fitness_score": 0.2891
+      }
+    },
+    "reasoning": "The trend agent appears to be underweighted given its relatively low weight and the fact that the highest fitness scores were achieved with trend weights above 1.4. The momentum agent also seems underweighted, as iterations with higher momentum weights tend to have better fitness scores. Conversely, the volume and macro agents may be overweighted, as reducing their weights in some iterations still resulted in comparable or slightly better fitness scores. The orderflow, volatility, structure, and sentiment agents seem to be relatively balanced, with their weights not having a significant impact on the fitness score. Therefore, a new set of weights that increases the trend and momentum weights while slightly decreasing the volume and macro weights may lead to an improved composite fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 27,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.4,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.2,
+      "structure": 1.5,
+      "sentiment": 1.1,
+      "macro": 1.1
+    },
+    "fitness": 0.2768,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1503,
+          "win_rate": 27.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.36,
+          "max_drawdown_pct": 9.41,
+          "sortino_ratio": -0.1041375412930614
+        },
+        "val": {
+          "total_trades": 891,
+          "win_rate": 28.6,
+          "profit_factor": 0.83,
+          "total_return_pct": -7.3,
+          "max_drawdown_pct": 4.49,
+          "sortino_ratio": -0.13238208957032582
+        },
+        "fitness_score": 0.2768
+      }
+    },
+    "reasoning": "The current weights and optimization history suggest that trend and momentum agents have been overweighted in previous iterations with mixed results. The best fitness score of 0.2926 was achieved with a more balanced weight distribution. To improve, I propose increasing the weight of the structure agent, which has shown potential in previous iterations, and slightly decreasing the weight of the trend agent. I also suggest a minor increase in the weight of the volatility agent to better capture market fluctuations.",
+    "improved": false
+  },
+  {
+    "iteration": 28,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.2,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.3,
+      "structure": 1.4,
+      "sentiment": 1.0,
+      "macro": 1.2
+    },
+    "fitness": 0.2848,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1525,
+          "win_rate": 27.0,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.79,
+          "max_drawdown_pct": 9.68,
+          "sortino_ratio": -0.10855835038325302
+        },
+        "val": {
+          "total_trades": 885,
+          "win_rate": 29.2,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.56,
+          "max_drawdown_pct": 3.76,
+          "sortino_ratio": -0.11022979557852013
+        },
+        "fitness_score": 0.2848
+      }
+    },
+    "reasoning": "The current weights and optimization history suggest that trend and momentum agents have been overweighted in previous iterations with mixed results. The macro agent has been underweighted, which could be impacting the overall fitness score. To improve the composite fitness score, a more balanced approach is proposed, with a slight emphasis on volatility and structure, which have shown promise in certain iterations. The trend and momentum agents are reduced to make room for increased weights in other areas.",
+    "improved": false
+  },
+  {
+    "iteration": 29,
+    "weights": {
+      "trend": 1.6,
+      "momentum": 1.8,
+      "volume": 0.8,
+      "orderflow": 1.0,
+      "volatility": 1.0,
+      "structure": 1.1,
+      "sentiment": 1.0,
+      "macro": 0.9
+    },
+    "fitness": 0.2915,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1530,
+          "win_rate": 27.3,
+          "profit_factor": 0.87,
+          "total_return_pct": -12.33,
+          "max_drawdown_pct": 9.31,
+          "sortino_ratio": -0.10114618553264731
+        },
+        "val": {
+          "total_trades": 872,
+          "win_rate": 29.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -6.36,
+          "max_drawdown_pct": 3.67,
+          "sortino_ratio": -0.10625278155039174
+        },
+        "fitness_score": 0.2915
+      }
+    },
+    "reasoning": "The current weights seem to be evenly distributed, but the performance metrics suggest that trend and momentum agents have the most potential for improvement. The optimization history shows that iterations with higher trend and momentum weights tend to have better fitness scores. Therefore, I propose increasing the weights of trend and momentum agents while slightly decreasing the weights of other agents to maintain a balanced distribution.",
+    "improved": false
+  },
+  {
+    "iteration": 30,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.2,
+      "volume": 1.3,
+      "orderflow": 1.2,
+      "volatility": 1.4,
+      "structure": 1.4,
+      "sentiment": 1.1,
+      "macro": 1.2
+    },
+    "fitness": 0.2923,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1522,
+          "win_rate": 27.3,
+          "profit_factor": 0.87,
+          "total_return_pct": -12.19,
+          "max_drawdown_pct": 9.15,
+          "sortino_ratio": -0.09995165183374002
+        },
+        "val": {
+          "total_trades": 878,
+          "win_rate": 29.3,
+          "profit_factor": 0.86,
+          "total_return_pct": -6.36,
+          "max_drawdown_pct": 3.58,
+          "sortino_ratio": -0.10514082201867468
+        },
+        "fitness_score": 0.2923
+      }
+    },
+    "reasoning": "The current weights seem to be slightly biased towards trend and momentum, while volume and macro are underweighted. The optimization history suggests that increasing trend and momentum weights has not led to significant improvements. Therefore, a more balanced approach with a slight emphasis on volatility and structure, which have shown some promise in the optimization history, may lead to better performance. The new weights aim to reduce the reliance on trend and momentum while giving more importance to volatility and structure.",
+    "improved": false
+  },
+  {
+    "iteration": 31,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.4,
+      "volume": 1.4,
+      "orderflow": 1.1,
+      "volatility": 1.2,
+      "structure": 1.3,
+      "sentiment": 1.1,
+      "macro": 1.3
+    },
+    "fitness": 0.2855,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1540,
+          "win_rate": 27.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.56,
+          "max_drawdown_pct": 9.48,
+          "sortino_ratio": -0.10372321713640553
+        },
+        "val": {
+          "total_trades": 885,
+          "win_rate": 29.0,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.62,
+          "max_drawdown_pct": 3.83,
+          "sortino_ratio": -0.112215536460235
+        },
+        "fitness_score": 0.2855
+      }
+    },
+    "reasoning": "The current agent weights and optimization history suggest that trend and momentum agents have been overweighted in previous iterations, while volume and macro agents have been underweighted. The recent iterations with higher fitness scores have trend weights around 1.1-1.6 and momentum weights around 1.2-1.8. However, the volume agent has been consistently underweighted. To improve the composite fitness score, I propose increasing the weight of the volume agent and slightly decreasing the weights of trend and momentum agents. The orderflow, volatility, structure, and sentiment agents seem to be relatively stable, so their weights will be adjusted slightly to maintain a balanced portfolio.",
+    "improved": false
+  },
+  {
+    "iteration": 32,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.3,
+      "volume": 1.1,
+      "orderflow": 1.1,
+      "volatility": 1.4,
+      "structure": 1.4,
+      "sentiment": 1.0,
+      "macro": 1.1
+    },
+    "fitness": 0.2887,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1505,
+          "win_rate": 27.0,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.52,
+          "max_drawdown_pct": 9.47,
+          "sortino_ratio": -0.10639552870851286
+        },
+        "val": {
+          "total_trades": 878,
+          "win_rate": 29.4,
+          "profit_factor": 0.86,
+          "total_return_pct": -6.35,
+          "max_drawdown_pct": 3.57,
+          "sortino_ratio": -0.10480362477264561
+        },
+        "fitness_score": 0.2887
+      }
+    },
+    "reasoning": "The current weights have a mix of over and underweighted agents. Momentum and trend agents have higher weights but the overall performance is not significantly improved. The optimization history suggests that increasing trend and momentum weights does not necessarily lead to better fitness scores. Instead, a balanced approach with a slight emphasis on volatility and structure, which have shown some promise in previous iterations, might yield better results. The new weights aim to balance the agents while giving a slight edge to volatility and structure.",
+    "improved": false
+  },
+  {
+    "iteration": 33,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.4,
+      "volume": 1.2,
+      "orderflow": 1.1,
+      "volatility": 1.3,
+      "structure": 1.2,
+      "sentiment": 1.1,
+      "macro": 1.4
+    },
+    "fitness": 0.2853,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1541,
+          "win_rate": 27.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.63,
+          "max_drawdown_pct": 9.49,
+          "sortino_ratio": -0.10460468709768023
+        },
+        "val": {
+          "total_trades": 885,
+          "win_rate": 29.0,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.62,
+          "max_drawdown_pct": 3.83,
+          "sortino_ratio": -0.112215536460235
+        },
+        "fitness_score": 0.2853
+      }
+    },
+    "reasoning": "The current weights and optimization history suggest that trend and momentum agents are often overweighted, while macro and volume agents are underweighted. To improve the composite fitness score, a more balanced approach is needed. Increasing the weight of the macro agent and decreasing the weight of the trend agent may help. Additionally, a slight increase in the weight of the volatility agent could help mitigate risk. The proposed weights aim to achieve a better balance between the agents, with a focus on improving the overall risk-return profile.",
+    "improved": false
+  },
+  {
+    "iteration": 35,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.2,
+      "volume": 1.4,
+      "orderflow": 1.3,
+      "volatility": 1.1,
+      "structure": 1.2,
+      "sentiment": 1.1,
+      "macro": 1.2
+    },
+    "fitness": 0.289,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1525,
+          "win_rate": 27.3,
+          "profit_factor": 0.87,
+          "total_return_pct": -12.14,
+          "max_drawdown_pct": 9.14,
+          "sortino_ratio": -0.09897304201426639
+        },
+        "val": {
+          "total_trades": 884,
+          "win_rate": 29.1,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.59,
+          "max_drawdown_pct": 3.79,
+          "sortino_ratio": -0.1112098442593912
+        },
+        "fitness_score": 0.289
+      }
+    },
+    "reasoning": "The current weights seem to slightly favor momentum and trend, but the optimization history suggests that increasing trend and momentum weights does not necessarily lead to improvement. The val set win rate and profit factor are higher than the train set, indicating potential overfitting. To address this, I propose reducing the weights of trend and momentum, and increasing the weights of volume and orderflow, which could help improve the overall performance and reduce overfitting.",
+    "improved": false
+  },
+  {
+    "iteration": 36,
+    "weights": {
+      "trend": 1.6,
+      "momentum": 1.8,
+      "volume": 1.4,
+      "orderflow": 1.1,
+      "volatility": 1.2,
+      "structure": 1.2,
+      "sentiment": 1.0,
+      "macro": 1.1
+    },
+    "fitness": 0.2853,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1540,
+          "win_rate": 27.3,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.56,
+          "max_drawdown_pct": 9.47,
+          "sortino_ratio": -0.10345017071430475
+        },
+        "val": {
+          "total_trades": 881,
+          "win_rate": 28.9,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.63,
+          "max_drawdown_pct": 3.89,
+          "sortino_ratio": -0.11333373980158444
+        },
+        "fitness_score": 0.2853
+      }
+    },
+    "reasoning": "Based on the optimization history, the trend and momentum agents have shown potential for improvement when overweighted. The volume agent has also shown promise when given a higher weight. The orderflow, volatility, and structure agents have been relatively stable, while the sentiment and macro agents have not shown significant improvement with increased weights. A new set of weights will prioritize trend, momentum, and volume, while maintaining a balanced approach with the other agents.",
+    "improved": false
+  },
+  {
+    "iteration": 37,
+    "weights": {
+      "trend": 1.0,
+      "momentum": 1.1,
+      "volume": 1.2,
+      "orderflow": 1.1,
+      "volatility": 1.4,
+      "structure": 1.3,
+      "sentiment": 1.0,
+      "macro": 1.3
+    },
+    "fitness": 0.2889,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1526,
+          "win_rate": 27.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.41,
+          "max_drawdown_pct": 9.32,
+          "sortino_ratio": -0.10283642247648049
+        },
+        "val": {
+          "total_trades": 881,
+          "win_rate": 29.2,
+          "profit_factor": 0.86,
+          "total_return_pct": -6.46,
+          "max_drawdown_pct": 3.68,
+          "sortino_ratio": -0.10779387880228564
+        },
+        "fitness_score": 0.2889
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on momentum and trend, but the optimization history suggests that increasing trend and momentum weights does not necessarily lead to improvement. The val metrics show a higher win rate but lower profit factor, indicating potential over-trading. Decreasing the weights of trend and momentum while increasing the weights of volatility and structure may help improve the profit factor and reduce over-trading. The macro weight has been relatively low in recent iterations, so increasing it may also help.",
+    "improved": false
+  },
+  {
+    "iteration": 38,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.6,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.3,
+      "structure": 1.2,
+      "sentiment": 1.1,
+      "macro": 1.1
+    },
+    "fitness": 0.2918,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1524,
+          "win_rate": 27.3,
+          "profit_factor": 0.87,
+          "total_return_pct": -12.13,
+          "max_drawdown_pct": 9.13,
+          "sortino_ratio": -0.09879595771588495
+        },
+        "val": {
+          "total_trades": 873,
+          "win_rate": 29.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -6.42,
+          "max_drawdown_pct": 3.72,
+          "sortino_ratio": -0.10803820802688607
+        },
+        "fitness_score": 0.2918
+      }
+    },
+    "reasoning": "The current weights show a relatively balanced distribution, but the optimization history suggests that slight adjustments to trend, momentum, and volatility weights may lead to improvements. The trend agent seems to have a positive impact when overweighted, as seen in iteration 29 and 36. Momentum also shows promise when slightly overweighted. Volatility, on the other hand, seems to perform better when its weight is around 1.2 to 1.4. Given the metrics, a slight increase in trend and momentum, along with a targeted adjustment to volatility, could potentially enhance the composite fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 39,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.2,
+      "volume": 1.3,
+      "orderflow": 1.1,
+      "volatility": 1.2,
+      "structure": 1.1,
+      "sentiment": 1.2,
+      "macro": 1.4
+    },
+    "fitness": 0.2853,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1541,
+          "win_rate": 27.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.63,
+          "max_drawdown_pct": 9.49,
+          "sortino_ratio": -0.10460468709768023
+        },
+        "val": {
+          "total_trades": 885,
+          "win_rate": 29.0,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.62,
+          "max_drawdown_pct": 3.83,
+          "sortino_ratio": -0.112215536460235
+        },
+        "fitness_score": 0.2853
+      }
+    },
+    "reasoning": "The current weights seem to be slightly overemphasizing momentum and underemphasizing volume and macro. The optimization history suggests that iterations with higher trend and momentum weights tend to perform slightly better, but at the cost of reduced performance in other areas. To balance this, I propose reducing momentum and increasing volume and macro, while slightly adjusting trend and structure to compensate.",
+    "improved": false
+  },
+  {
+    "iteration": 40,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.2,
+      "volume": 1.4,
+      "orderflow": 1.2,
+      "volatility": 1.1,
+      "structure": 1.2,
+      "sentiment": 1.1,
+      "macro": 1.5
+    },
+    "fitness": 0.2855,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1540,
+          "win_rate": 27.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.56,
+          "max_drawdown_pct": 9.48,
+          "sortino_ratio": -0.10372321713640553
+        },
+        "val": {
+          "total_trades": 885,
+          "win_rate": 29.0,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.62,
+          "max_drawdown_pct": 3.83,
+          "sortino_ratio": -0.112215536460235
+        },
+        "fitness_score": 0.2855
+      }
+    },
+    "reasoning": "The current weights and optimization history suggest that trend and momentum agents are potentially over-weighted, while volume and macro agents may be under-weighted. The fitness scores across iterations indicate a need for a more balanced approach. Increasing the weight of volume and macro, while slightly decreasing trend and momentum, could lead to improved overall performance.",
+    "improved": false
+  },
+  {
+    "iteration": 41,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.1,
+      "volume": 1.2,
+      "orderflow": 1.1,
+      "volatility": 1.3,
+      "structure": 1.0,
+      "sentiment": 1.0,
+      "macro": 1.2
+    },
+    "fitness": 0.2845,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1544,
+          "win_rate": 27.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.81,
+          "max_drawdown_pct": 9.56,
+          "sortino_ratio": -0.10703893641994566
+        },
+        "val": {
+          "total_trades": 884,
+          "win_rate": 29.0,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.63,
+          "max_drawdown_pct": 3.88,
+          "sortino_ratio": -0.11302608486265968
+        },
+        "fitness_score": 0.2845
+      }
+    },
+    "reasoning": "The current weights seem to be slightly biased towards momentum and structure, but the performance metrics indicate a need for a more balanced approach. The low win rates and negative profit factors across both training and validation sets suggest that the model is struggling to make accurate predictions. A more balanced weight distribution, with a slight emphasis on trend and volatility, may help improve the model's overall performance.",
+    "improved": false
+  },
+  {
+    "iteration": 42,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.2,
+      "volume": 1.4,
+      "orderflow": 1.2,
+      "volatility": 1.3,
+      "structure": 1.1,
+      "sentiment": 1.1,
+      "macro": 1.5
+    },
+    "fitness": 0.2857,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1539,
+          "win_rate": 27.2,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.52,
+          "max_drawdown_pct": 9.41,
+          "sortino_ratio": -0.10311667405830284
+        },
+        "val": {
+          "total_trades": 885,
+          "win_rate": 29.0,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.63,
+          "max_drawdown_pct": 3.83,
+          "sortino_ratio": -0.1122615314011768
+        },
+        "fitness_score": 0.2857
+      }
+    },
+    "reasoning": "Analyzing the provided metrics, it appears that the trend and momentum agents are slightly overweighted, while the volume and macro agents are underweighted. The performance metrics also suggest that the strategy is struggling with profitability, as evidenced by the negative total return percentages and low profit factors. To address this, I propose reducing the weights of trend and momentum, and increasing the weights of volume and macro. Additionally, I will slightly increase the weight of volatility, as it may help to mitigate some of the losses. The new set of weights should provide a better balance and potentially improve the composite fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 43,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.2,
+      "volume": 1.4,
+      "orderflow": 1.2,
+      "volatility": 1.1,
+      "structure": 1.1,
+      "sentiment": 1.3,
+      "macro": 1.5
+    },
+    "fitness": 0.2853,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1541,
+          "win_rate": 27.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.63,
+          "max_drawdown_pct": 9.49,
+          "sortino_ratio": -0.10460468709768023
+        },
+        "val": {
+          "total_trades": 885,
+          "win_rate": 29.0,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.62,
+          "max_drawdown_pct": 3.83,
+          "sortino_ratio": -0.112215536460235
+        },
+        "fitness_score": 0.2853
+      }
+    },
+    "reasoning": "Based on the provided metrics, the trend and momentum agents seem to be overweighted, while the volume and macro agents are underweighted. The optimization history suggests that increasing the weights of volume and macro, while decreasing the weights of trend and momentum, may lead to improved performance. Additionally, the sentiment agent's weight can be increased slightly to enhance the overall fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 44,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.3,
+      "volume": 1.3,
+      "orderflow": 1.2,
+      "volatility": 1.4,
+      "structure": 1.2,
+      "sentiment": 1.3,
+      "macro": 1.2
+    },
+    "fitness": 0.2857,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1539,
+          "win_rate": 27.2,
+          "profit_factor": 0.86,
+          "total_return_pct": -12.52,
+          "max_drawdown_pct": 9.41,
+          "sortino_ratio": -0.10311667405830284
+        },
+        "val": {
+          "total_trades": 885,
+          "win_rate": 29.0,
+          "profit_factor": 0.85,
+          "total_return_pct": -6.63,
+          "max_drawdown_pct": 3.83,
+          "sortino_ratio": -0.1122615314011768
+        },
+        "fitness_score": 0.2857
+      }
+    },
+    "reasoning": "The current weights show momentum and trend are overweighted, while volume and macro are underweighted. The optimization history suggests that increasing volume and decreasing trend may lead to improvement. The val metrics show a higher win rate but lower profit factor, indicating a need for better risk management. Increasing the weight of volatility may help with this. The structure and sentiment weights seem balanced, but a slight increase in sentiment may improve the overall fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 45,
+    "weights": {
+      "trend": 0.8,
+      "momentum": 0.9,
+      "volume": 1.4,
+      "orderflow": 1.5,
+      "volatility": 1.6,
+      "structure": 1.1,
+      "sentiment": 1.0,
+      "macro": 1.2
+    },
+    "fitness": 0.2786,
+    "metrics": {
+      "DOT/USDT": {
+        "train": {
+          "total_trades": 1439,
+          "win_rate": 27.6,
+          "profit_factor": 0.87,
+          "total_return_pct": -11.39,
+          "max_drawdown_pct": 9.1,
+          "sortino_ratio": -0.09555397827659777
+        },
+        "val": {
+          "total_trades": 880,
+          "win_rate": 28.3,
+          "profit_factor": 0.82,
+          "total_return_pct": -7.23,
+          "max_drawdown_pct": 4.48,
+          "sortino_ratio": -0.13373217595668707
+        },
+        "fitness_score": 0.2786
+      }
+    },
+    "reasoning": "Based on the provided metrics, the trend and momentum agents appear to be underperforming with low win rates and negative total return percentages. In contrast, the volume and orderflow agents seem to be contributing positively to the overall performance. The optimization history suggests that increasing the weights of trend and momentum agents has not led to significant improvements. Therefore, a new set of weights is proposed, where the trend and momentum agents are underweighted, and the volume and orderflow agents are overweighted. The volatility agent is also given a higher weight due to its potential to capture risk and improve the Sortino ratio.",
+    "improved": false
+  }
+]

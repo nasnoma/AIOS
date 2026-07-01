@@ -1,0 +1,483 @@
+[
+  {
+    "iteration": 0,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.3,
+      "volatility": 0.8,
+      "structure": 1.2,
+      "sentiment": 0.9,
+      "macro": 1.0
+    },
+    "fitness": -0.0675,
+    "metrics": {
+      "CL/USDT:USDT": {
+        "train": {
+          "total_trades": 6,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": -1.69,
+          "max_drawdown_pct": 1.67,
+          "sortino_ratio": -0.9723837999623708
+        },
+        "val": {
+          "total_trades": 4,
+          "win_rate": 25.0,
+          "profit_factor": 0.81,
+          "total_return_pct": -0.15,
+          "max_drawdown_pct": 0.69,
+          "sortino_ratio": -0.16347598982046077
+        },
+        "fitness_score": -0.0675
+      }
+    },
+    "reasoning": "Baseline configuration",
+    "improved": true
+  },
+  {
+    "iteration": 1,
+    "weights": {
+      "trend": 1.0,
+      "momentum": 1.1,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.2,
+      "structure": 1.1,
+      "sentiment": 1.2,
+      "macro": 1.0
+    },
+    "fitness": -0.0677,
+    "metrics": {
+      "CL/USDT:USDT": {
+        "train": {
+          "total_trades": 6,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": -1.7,
+          "max_drawdown_pct": 1.67,
+          "sortino_ratio": -0.9733480919268531
+        },
+        "val": {
+          "total_trades": 4,
+          "win_rate": 25.0,
+          "profit_factor": 0.81,
+          "total_return_pct": -0.15,
+          "max_drawdown_pct": 0.69,
+          "sortino_ratio": -0.16347598982046077
+        },
+        "fitness_score": -0.0677
+      }
+    },
+    "reasoning": "The current weights show trend and orderflow agents are overweighted, while volatility and sentiment agents are underweighted. The performance metrics indicate a low win rate and negative total return, suggesting the need for a more balanced approach. Reducing the trend and orderflow weights, while increasing the volatility and sentiment weights, may lead to improved overall performance. The momentum, volume, structure, and macro agents' weights will be adjusted slightly to maintain a balanced portfolio.",
+    "improved": false
+  },
+  {
+    "iteration": 0,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.3,
+      "volatility": 0.8,
+      "structure": 1.2,
+      "sentiment": 0.9,
+      "macro": 1.0
+    },
+    "fitness": -0.0675,
+    "metrics": {
+      "CL/USDT:USDT": {
+        "train": {
+          "total_trades": 6,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": -1.69,
+          "max_drawdown_pct": 1.67,
+          "sortino_ratio": -0.9723837999623708
+        },
+        "val": {
+          "total_trades": 4,
+          "win_rate": 25.0,
+          "profit_factor": 0.81,
+          "total_return_pct": -0.15,
+          "max_drawdown_pct": 0.69,
+          "sortino_ratio": -0.16347598982046077
+        },
+        "fitness_score": -0.0675
+      }
+    },
+    "reasoning": "Baseline configuration",
+    "improved": true
+  },
+  {
+    "iteration": 1,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.1,
+      "volatility": 1.4,
+      "structure": 1.2,
+      "sentiment": 1.4,
+      "macro": 1.0
+    },
+    "fitness": -0.0677,
+    "metrics": {
+      "CL/USDT:USDT": {
+        "train": {
+          "total_trades": 6,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": -1.7,
+          "max_drawdown_pct": 1.67,
+          "sortino_ratio": -0.9733480919268531
+        },
+        "val": {
+          "total_trades": 4,
+          "win_rate": 25.0,
+          "profit_factor": 0.81,
+          "total_return_pct": -0.15,
+          "max_drawdown_pct": 0.69,
+          "sortino_ratio": -0.16347598982046077
+        },
+        "fitness_score": -0.0677
+      }
+    },
+    "reasoning": "The current weights show trend and orderflow are overweighted, while volatility and sentiment are underweighted. Given the poor performance metrics, especially the low win rate and negative profit factor, a more balanced approach may be beneficial. Increasing the weights of volatility and sentiment, which are currently underweighted, may help improve the overall performance by incorporating more diverse perspectives. Decreasing the weights of trend and orderflow slightly could also prevent over-reliance on these factors.",
+    "improved": false
+  },
+  {
+    "iteration": 2,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.0,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.4,
+      "structure": 1.1,
+      "sentiment": 0.9,
+      "macro": 1.0
+    },
+    "fitness": -0.0677,
+    "metrics": {
+      "CL/USDT:USDT": {
+        "train": {
+          "total_trades": 6,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": -1.7,
+          "max_drawdown_pct": 1.67,
+          "sortino_ratio": -0.9733480919268531
+        },
+        "val": {
+          "total_trades": 4,
+          "win_rate": 25.0,
+          "profit_factor": 0.81,
+          "total_return_pct": -0.15,
+          "max_drawdown_pct": 0.69,
+          "sortino_ratio": -0.16347598982046077
+        },
+        "fitness_score": -0.0677
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on trend and orderflow, but the performance metrics indicate a need for improvement in overall win rate and profit factor. The volatility agent is underweighted, which could be contributing to the poor performance during periods of high market volatility. Increasing the weight of volatility and adjusting the other agents to maintain a balanced approach may lead to improved performance.",
+    "improved": false
+  },
+  {
+    "iteration": 3,
+    "weights": {
+      "trend": 1.0,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.1,
+      "volatility": 1.4,
+      "structure": 1.0,
+      "sentiment": 1.4,
+      "macro": 1.0
+    },
+    "fitness": -0.0677,
+    "metrics": {
+      "CL/USDT:USDT": {
+        "train": {
+          "total_trades": 6,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": -1.7,
+          "max_drawdown_pct": 1.67,
+          "sortino_ratio": -0.9733480919268531
+        },
+        "val": {
+          "total_trades": 4,
+          "win_rate": 25.0,
+          "profit_factor": 0.81,
+          "total_return_pct": -0.15,
+          "max_drawdown_pct": 0.69,
+          "sortino_ratio": -0.16347598982046077
+        },
+        "fitness_score": -0.0677
+      }
+    },
+    "reasoning": "The current weights show trend, orderflow, and structure are overweighted, while volatility and sentiment are underweighted. Given the poor performance metrics, particularly the low win rate and high max drawdown, a more balanced approach may be beneficial. The optimization history suggests that changes to the weights have not significantly improved the fitness score, indicating a need for a more substantial adjustment. Increasing the weights of volatility and sentiment, which are currently underweighted, may help improve the model's ability to adapt to market conditions and sentiment shifts. Decreasing the weights of trend, orderflow, and structure, which are currently overweighted, may reduce the model's reliance on these factors and promote a more balanced decision-making process.",
+    "improved": false
+  },
+  {
+    "iteration": 4,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.0,
+      "volume": 1.2,
+      "orderflow": 1.1,
+      "volatility": 1.4,
+      "structure": 1.1,
+      "sentiment": 1.3,
+      "macro": 1.0
+    },
+    "fitness": -0.0677,
+    "metrics": {
+      "CL/USDT:USDT": {
+        "train": {
+          "total_trades": 6,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": -1.7,
+          "max_drawdown_pct": 1.67,
+          "sortino_ratio": -0.9733480919268531
+        },
+        "val": {
+          "total_trades": 4,
+          "win_rate": 25.0,
+          "profit_factor": 0.81,
+          "total_return_pct": -0.15,
+          "max_drawdown_pct": 0.69,
+          "sortino_ratio": -0.16347598982046077
+        },
+        "fitness_score": -0.0677
+      }
+    },
+    "reasoning": "The current weights show trend and orderflow are overweighted, while volatility and sentiment are underweighted. The performance metrics indicate poor win rates and profit factors, suggesting a need for adjustment. Decreasing trend and orderflow, while increasing volatility and sentiment, may improve the overall fitness score. Additionally, momentum and structure seem moderately weighted, but their performance is not outstanding, so slight adjustments are proposed.",
+    "improved": false
+  },
+  {
+    "iteration": 5,
+    "weights": {
+      "trend": 1.0,
+      "momentum": 1.3,
+      "volume": 1.1,
+      "orderflow": 1.1,
+      "volatility": 1.4,
+      "structure": 1.2,
+      "sentiment": 1.2,
+      "macro": 1.0
+    },
+    "fitness": -0.0677,
+    "metrics": {
+      "CL/USDT:USDT": {
+        "train": {
+          "total_trades": 6,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": -1.7,
+          "max_drawdown_pct": 1.67,
+          "sortino_ratio": -0.9733480919268531
+        },
+        "val": {
+          "total_trades": 4,
+          "win_rate": 25.0,
+          "profit_factor": 0.81,
+          "total_return_pct": -0.15,
+          "max_drawdown_pct": 0.69,
+          "sortino_ratio": -0.16347598982046077
+        },
+        "fitness_score": -0.0677
+      }
+    },
+    "reasoning": "The current weights show trend and orderflow are overweighted, while volatility is underweighted. Given the poor performance metrics, particularly the low win rate and negative profit factor, a more balanced approach may be beneficial. Increasing the weight on volatility and reducing the weight on trend and orderflow could help improve the composite fitness score. Additionally, a slight increase in the weight on momentum and sentiment may also be beneficial.",
+    "improved": false
+  },
+  {
+    "iteration": 6,
+    "weights": {
+      "trend": 1.6,
+      "momentum": 1.5,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 0.6,
+      "structure": 1.1,
+      "sentiment": 1.0,
+      "macro": 1.0
+    },
+    "fitness": -0.0675,
+    "metrics": {
+      "CL/USDT:USDT": {
+        "train": {
+          "total_trades": 6,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": -1.69,
+          "max_drawdown_pct": 1.67,
+          "sortino_ratio": -0.9723837999623708
+        },
+        "val": {
+          "total_trades": 4,
+          "win_rate": 25.0,
+          "profit_factor": 0.81,
+          "total_return_pct": -0.15,
+          "max_drawdown_pct": 0.69,
+          "sortino_ratio": -0.16347598982046077
+        },
+        "fitness_score": -0.0675
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on trend and orderflow, but the performance metrics indicate a need for improvement in win rate and profit factor. The optimization history suggests that increasing volatility and sentiment weights may not be effective. A more balanced approach with a slight increase in trend and momentum weights, and a decrease in volatility weight, may lead to better performance.",
+    "improved": false
+  },
+  {
+    "iteration": 7,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.1,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.6,
+      "structure": 1.1,
+      "sentiment": 1.0,
+      "macro": 1.0
+    },
+    "fitness": -0.0677,
+    "metrics": {
+      "CL/USDT:USDT": {
+        "train": {
+          "total_trades": 6,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": -1.7,
+          "max_drawdown_pct": 1.67,
+          "sortino_ratio": -0.9733480919268531
+        },
+        "val": {
+          "total_trades": 4,
+          "win_rate": 25.0,
+          "profit_factor": 0.81,
+          "total_return_pct": -0.15,
+          "max_drawdown_pct": 0.69,
+          "sortino_ratio": -0.16347598982046077
+        },
+        "fitness_score": -0.0677
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on trend and orderflow, but the overall performance is still negative. The optimization history suggests that changes to the weights have not significantly improved the fitness score. Given the lack of improvement, a more drastic adjustment is needed. The volatility weight is currently the lowest, which might be underestimating its importance in a trading environment where risk management is crucial. Increasing the volatility weight while slightly adjusting others to maintain a balanced approach could potentially improve the fitness score. The trend and orderflow weights will be slightly reduced to compensate for the increase in volatility weight, ensuring that no single agent dominates the decision-making process.",
+    "improved": false
+  },
+  {
+    "iteration": 8,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.0,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.4,
+      "structure": 1.3,
+      "sentiment": 0.9,
+      "macro": 1.0
+    },
+    "fitness": -0.0677,
+    "metrics": {
+      "CL/USDT:USDT": {
+        "train": {
+          "total_trades": 6,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": -1.7,
+          "max_drawdown_pct": 1.67,
+          "sortino_ratio": -0.9733480919268531
+        },
+        "val": {
+          "total_trades": 4,
+          "win_rate": 25.0,
+          "profit_factor": 0.81,
+          "total_return_pct": -0.15,
+          "max_drawdown_pct": 0.69,
+          "sortino_ratio": -0.16347598982046077
+        },
+        "fitness_score": -0.0677
+      }
+    },
+    "reasoning": "The current weights show trend and orderflow being overweighted, while volatility is underweighted. Given the poor performance metrics, especially the low win rate and high max drawdown, it's reasonable to adjust the weights to give more emphasis to volatility and structure, which could help in risk management and identifying better trade setups. The new set of weights aims to balance the influence of each agent, with a slight increase in volatility and structure to potentially improve the overall trading performance.",
+    "improved": false
+  },
+  {
+    "iteration": 9,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.2,
+      "volatility": 1.4,
+      "structure": 1.3,
+      "sentiment": 1.0,
+      "macro": 1.0
+    },
+    "fitness": -0.0677,
+    "metrics": {
+      "CL/USDT:USDT": {
+        "train": {
+          "total_trades": 6,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": -1.7,
+          "max_drawdown_pct": 1.67,
+          "sortino_ratio": -0.9733480919268531
+        },
+        "val": {
+          "total_trades": 4,
+          "win_rate": 25.0,
+          "profit_factor": 0.81,
+          "total_return_pct": -0.15,
+          "max_drawdown_pct": 0.69,
+          "sortino_ratio": -0.16347598982046077
+        },
+        "fitness_score": -0.0677
+      }
+    },
+    "reasoning": "The current weights show a slight overemphasis on trend and orderflow, while volatility is underweighted. Given the poor performance metrics, a more balanced approach may be beneficial. The new weights aim to reduce the impact of trend and orderflow, while increasing the influence of volatility and structure, which could help improve the overall fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 10,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.2,
+      "volume": 1.2,
+      "orderflow": 1.1,
+      "volatility": 1.2,
+      "structure": 1.1,
+      "sentiment": 1.1,
+      "macro": 1.1
+    },
+    "fitness": -0.0677,
+    "metrics": {
+      "CL/USDT:USDT": {
+        "train": {
+          "total_trades": 6,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": -1.7,
+          "max_drawdown_pct": 1.67,
+          "sortino_ratio": -0.9733480919268531
+        },
+        "val": {
+          "total_trades": 4,
+          "win_rate": 25.0,
+          "profit_factor": 0.81,
+          "total_return_pct": -0.15,
+          "max_drawdown_pct": 0.69,
+          "sortino_ratio": -0.16347598982046077
+        },
+        "fitness_score": -0.0677
+      }
+    },
+    "reasoning": "The current weights show a mix of over and underweighting across agents. Notably, volatility is underweighted at 0.8, while trend and orderflow are overweighted at 1.4 and 1.3 respectively. Given the lack of improvement in recent iterations, a more balanced approach may be beneficial. Reducing trend and orderflow weights, increasing volatility, and making minor adjustments to other agents could lead to a better composite fitness score.",
+    "improved": false
+  }
+]

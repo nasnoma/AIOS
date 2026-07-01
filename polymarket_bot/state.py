@@ -1,8 +1,9 @@
 """
 polymarket_bot/state.py
 
-JSON-backed paper/live portfolio state for Bybit Arbitrage Bot.
+JSON-backed paper portfolio state.
 Atomic file-lock protected reads/writes.
+No external DB dependency.
 """
 from __future__ import annotations
 import json
@@ -51,37 +52,31 @@ def _file_lock():
 
 
 @dataclass
-class ArbTradeCycle:
-    cycle_id: str             # unique ID
-    direction: str            # "FORWARD" | "REVERSE"
-    started_at: str           # ISO timestamp
-    completed_at: str         # ISO timestamp
-    est_edge_pct: float       # Expected net edge %
-    actual_edge_pct: float    # Actual realized net edge %
-    size_usdt: float          # USDT starting size
-    pnl_usdt: float           # Net profit/loss in USDT
-    status: str               # "completed" | "failed"
-    reason: str = ""          # Rejection or execution details
-    leg1_price: float = 0.0
-    leg2_price: float = 0.0
-    leg3_price: float = 0.0
-    expected_pnl: float = 0.0
-    actual_pnl: float = 0.0
-    slippage_pct: float = 0.0
-    priority_fee_usd: float = 0.0
-
-    def to_dict(self) -> dict:
-        return asdict(self)
+class OpenPosition:
+    position_id: str          # unique uuid
+    asset: str                # e.g. "BTC"
+    token_id_yes: str
+    token_id_no: str
+    signal_type: str          # SPREAD_ARB | MOMENTUM_LONG | MOMENTUM_SHORT
+    side: str                 # "YES" | "NO" | "BOTH"
+    entry_price_yes: Optional[float]
+    entry_price_no: Optional[float]
+    size_usd: float
+    window_start: int         # Unix timestamp of window start
+    window_end: int           # Unix timestamp of window end
+    opened_at: str            # ISO timestamp
+    closed_at: Optional[str] = None
+    exit_price: Optional[float] = None
+    pnl_usd: Optional[float] = None
+    status: str = "open"      # open | closed | expired
 
 
 @dataclass
 class PortfolioState:
-    account_size: float = 500.0
-    cex_cash: float = 250.0
-    dex_cash: float = 250.0
-    cex_assets: dict = field(default_factory=lambda: {"SOL": 1.5, "BTC": 0.005, "ETH": 0.05, "JUP": 100.0, "PYTH": 100.0, "JTO": 20.0, "WIF": 50.0, "BONK": 500000.0, "POPCAT": 50.0})
-    dex_assets: dict = field(default_factory=lambda: {"SOL": 1.5, "BTC": 0.005, "ETH": 0.05, "JUP": 100.0, "PYTH": 100.0, "JTO": 20.0, "WIF": 50.0, "BONK": 500000.0, "POPCAT": 50.0})
-    closed_trades: list = field(default_factory=list)      # list of ArbTradeCycle dicts
+    account_size: float = 1000.0
+    cash: float = 1000.0
+    positions: list = field(default_factory=list)        # list[OpenPosition dicts]
+    closed_trades: list = field(default_factory=list)    # list[OpenPosition dicts]
     total_pnl: float = 0.0
     daily_pnl: float = 0.0
     daily_reset_date: str = ""
@@ -89,52 +84,16 @@ class PortfolioState:
     loss_count: int = 0
     avg_win_usd: float = 0.0
     avg_loss_usd: float = 0.0
-    cycle_count: int = 0
-    route_stats: dict = field(default_factory=dict)
-    peak_account_size: float = 500.0
-    max_drawdown_paused: bool = False
-    total_expected_pnl: float = 0.0
-    total_actual_pnl: float = 0.0
-    total_slippage_usd: float = 0.0
-    total_priority_fees_usd: float = 0.0
-    total_volume_usdt: float = 0.0
-
-    @property
-    def cex_asset(self) -> float:
-        return self.cex_assets.get("SOL", 1.5)
-
-    @cex_asset.setter
-    def cex_asset(self, value: float) -> None:
-        self.cex_assets["SOL"] = value
-
-    @property
-    def dex_asset(self) -> float:
-        return self.dex_assets.get("SOL", 1.5)
-
-    @dex_asset.setter
-    def dex_asset(self, value: float) -> None:
-        self.dex_assets["SOL"] = value
+    cycle_count: int = 0      # completed windows tracked
 
     def to_dict(self) -> dict:
-        d = asdict(self)
-        d["cex_asset"] = self.cex_asset
-        d["dex_asset"] = self.dex_asset
-        return d
+        return asdict(self)
 
     @classmethod
     def from_dict(cls, d: dict) -> "PortfolioState":
-        # Handle backward compatibility mapping from cex_asset/dex_asset
-        cex_asset_val = d.get("cex_asset", 1.5)
-        dex_asset_val = d.get("dex_asset", 1.5)
-        cex_assets = d.get("cex_assets") or {"SOL": cex_asset_val, "BTC": 0.005, "ETH": 0.05}
-        dex_assets = d.get("dex_assets") or {"SOL": dex_asset_val, "BTC": 0.005, "ETH": 0.05}
-
         obj = cls(
-            account_size=d.get("account_size", 500.0),
-            cex_cash=d.get("cex_cash", 250.0),
-            dex_cash=d.get("dex_cash", 250.0),
-            cex_assets=cex_assets,
-            dex_assets=dex_assets,
+            account_size=d.get("account_size", 1000.0),
+            cash=d.get("cash", 1000.0),
             total_pnl=d.get("total_pnl", 0.0),
             daily_pnl=d.get("daily_pnl", 0.0),
             daily_reset_date=d.get("daily_reset_date", ""),
@@ -143,22 +102,22 @@ class PortfolioState:
             avg_win_usd=d.get("avg_win_usd", 0.0),
             avg_loss_usd=d.get("avg_loss_usd", 0.0),
             cycle_count=d.get("cycle_count", 0),
-            route_stats=d.get("route_stats", {}),
-            peak_account_size=d.get("peak_account_size", d.get("account_size", 500.0)),
-            max_drawdown_paused=d.get("max_drawdown_paused", False),
-            total_expected_pnl=d.get("total_expected_pnl", 0.0),
-            total_actual_pnl=d.get("total_actual_pnl", 0.0),
-            total_slippage_usd=d.get("total_slippage_usd", 0.0),
-            total_priority_fees_usd=d.get("total_priority_fees_usd", 0.0),
-            total_volume_usdt=d.get("total_volume_usdt", 0.0),
         )
+        obj.positions = d.get("positions", [])
         obj.closed_trades = d.get("closed_trades", [])
-        if not obj.route_stats:
-            obj.route_stats = {
-                "DEX-BUY_CEX-SELL": {"win_count": 0, "loss_count": 0, "total_pnl": 0.0},
-                "CEX-BUY_DEX-SELL": {"win_count": 0, "loss_count": 0, "total_pnl": 0.0},
-            }
+        # One-time backfill: if avg fields are missing (old state file) but trades exist, compute from history
+        if obj.avg_win_usd == 0.0 and obj.avg_loss_usd == 0.0 and obj.closed_trades:
+            wins = [t["pnl_usd"] for t in obj.closed_trades if (t.get("pnl_usd") or 0) > 0]
+            losses = [t["pnl_usd"] for t in obj.closed_trades if (t.get("pnl_usd") or 0) <= 0]
+            if wins:
+                obj.avg_win_usd = round(sum(wins) / len(wins), 4)
+            if losses:
+                obj.avg_loss_usd = round(sum(losses) / len(losses), 4)
         return obj
+
+    @property
+    def open_positions(self) -> list[dict]:
+        return [p for p in self.positions if p.get("status") == "open"]
 
     @property
     def win_rate(self) -> float:
@@ -171,32 +130,11 @@ def load_state() -> PortfolioState:
         if _STATE_FILE.exists() and _STATE_FILE.stat().st_size > 0:
             try:
                 with open(_STATE_FILE) as f:
-                    state = PortfolioState.from_dict(json.load(f))
-                default_assets = {"SOL": 1.5, "BTC": 0.005, "ETH": 0.05, "JUP": 100.0, "PYTH": 100.0, "JTO": 20.0, "WIF": 50.0, "BONK": 500000.0, "POPCAT": 50.0}
-                updated = False
-                for asset, qty in default_assets.items():
-                    if asset not in state.cex_assets:
-                        state.cex_assets[asset] = qty
-                        updated = True
-                    if asset not in state.dex_assets:
-                        state.dex_assets[asset] = qty
-                        updated = True
-                if updated:
-                    logger.info("Migrated existing state file with new asset balances.")
-                    # We write directly without lock inside the outer lock to avoid deadlocks
-                    with open(_STATE_FILE, "w") as f_out:
-                        json.dump(state.to_dict(), f_out, indent=2)
-                return state
+                    return PortfolioState.from_dict(json.load(f))
             except Exception as e:
                 logger.error(f"Failed to parse paper_state.json: {e} — resetting state.")
         from polymarket_bot.config import settings
-        return PortfolioState(
-            account_size=settings.account_size,
-            cex_cash=settings.account_size / 2.0,
-            cex_assets={"SOL": 1.5, "BTC": 0.005, "ETH": 0.05, "JUP": 100.0, "PYTH": 100.0, "JTO": 20.0, "WIF": 50.0, "BONK": 500000.0, "POPCAT": 50.0},
-            dex_cash=settings.account_size / 2.0,
-            dex_assets={"SOL": 1.5, "BTC": 0.005, "ETH": 0.05, "JUP": 100.0, "PYTH": 100.0, "JTO": 20.0, "WIF": 50.0, "BONK": 500000.0, "POPCAT": 50.0}
-        )
+        return PortfolioState(account_size=settings.account_size, cash=settings.account_size)
 
 
 def save_state(state: PortfolioState) -> None:
@@ -209,20 +147,15 @@ def get_status() -> dict:
     s = load_state()
     return {
         "account_size": s.account_size,
-        "cex_cash": round(s.cex_cash, 2),
-        "cex_asset": round(s.cex_asset, 4),
-        "dex_cash": round(s.dex_cash, 2),
-        "dex_asset": round(s.dex_asset, 4),
+        "cash": round(s.cash, 2),
         "total_pnl": round(s.total_pnl, 2),
         "total_pnl_pct": round(s.total_pnl / s.account_size * 100, 2) if s.account_size else 0,
         "daily_pnl": round(s.daily_pnl, 2),
-        "open_positions": 0,
+        "open_positions": len(s.open_positions),
         "win_count": s.win_count,
         "loss_count": s.loss_count,
         "win_rate_pct": round(s.win_rate * 100, 1),
         "cycle_count": s.cycle_count,
-        "avg_win_usd": s.avg_win_usd,
-        "avg_loss_usd": s.avg_loss_usd,
     }
 
 
@@ -233,81 +166,3 @@ def reset_daily_pnl_if_new_day(state: PortfolioState) -> PortfolioState:
         state.daily_pnl = 0.0
         state.daily_reset_date = today
     return state
-
-
-def rebalance_portfolio(state: PortfolioState, asset: str, direction: str, amount: float) -> tuple[bool, str]:
-    """
-    Executes a transfer of assets between CEX and DEX wallets, simulating fees.
-    Returns (success, message).
-    """
-    if amount <= 0:
-        return False, "Amount must be positive."
-
-    # Fee structures:
-    # CEX to DEX (withdrawal fees on Bybit):
-    # - SOL: 0.005 SOL
-    # - USDT: 1.0 USDT
-    # DEX to CEX (on-chain tx fees):
-    # - SOL: 0.00005 SOL
-    # - USDT: 0.00005 SOL (fees paid in SOL)
-
-    if direction == "CEX_TO_DEX":
-        if asset == "USDT":
-            fee = 1.0
-            if state.cex_cash < amount:
-                return False, f"Insufficient CEX USDT. Have {state.cex_cash:.2f}, need {amount:.2f}."
-            state.cex_cash -= amount
-            state.dex_cash += (amount - fee)
-            state.total_priority_fees_usd += fee
-            
-            # Re-value account size
-            state.account_size = state.cex_cash + state.dex_cash + (state.cex_asset + state.dex_asset) * 140.0
-            save_state(state)
-            return True, f"Rebalanced {amount:.2f} USDT from CEX to DEX. Fee: {fee:.2f} USDT."
-        elif asset == "SOL":
-            fee = 0.005
-            if state.cex_asset < amount:
-                return False, f"Insufficient CEX SOL. Have {state.cex_asset:.4f}, need {amount:.4f}."
-            state.cex_asset -= amount
-            state.dex_asset += (amount - fee)
-            fee_usd = fee * 140.0
-            state.total_priority_fees_usd += fee_usd
-            
-            state.account_size = state.cex_cash + state.dex_cash + (state.cex_asset + state.dex_asset) * 140.0
-            save_state(state)
-            return True, f"Rebalanced {amount:.4f} SOL from CEX to DEX. Fee: {fee:.4f} SOL (~${fee_usd:.2f})."
-        else:
-            return False, f"Unsupported asset: {asset}."
-
-    elif direction == "DEX_TO_CEX":
-        sol_fee = 0.00005
-        if state.dex_asset < sol_fee:
-            return False, f"Insufficient DEX SOL to pay for transaction gas ({sol_fee:.5f} SOL required)."
-
-        if asset == "USDT":
-            if state.dex_cash < amount:
-                return False, f"Insufficient DEX USDT. Have {state.dex_cash:.2f}, need {amount:.2f}."
-            state.dex_cash -= amount
-            state.cex_cash += amount
-            state.dex_asset -= sol_fee
-            fee_usd = sol_fee * 140.0
-            state.total_priority_fees_usd += fee_usd
-            
-            state.account_size = state.cex_cash + state.dex_cash + (state.cex_asset + state.dex_asset) * 140.0
-            save_state(state)
-            return True, f"Rebalanced {amount:.2f} USDT from DEX to CEX. Fee: {sol_fee:.5f} SOL (~${fee_usd:.5f})."
-        elif asset == "SOL":
-            if state.dex_asset < amount + sol_fee:
-                return False, f"Insufficient DEX SOL. Have {state.dex_asset:.4f}, need {amount + sol_fee:.4f} SOL (inc. fee)."
-            state.dex_asset -= (amount + sol_fee)
-            state.cex_asset += amount
-            fee_usd = sol_fee * 140.0
-            state.total_priority_fees_usd += fee_usd
-            
-            state.account_size = state.cex_cash + state.dex_cash + (state.cex_asset + state.dex_asset) * 140.0
-            save_state(state)
-            return True, f"Rebalanced {amount:.4f} SOL from DEX to CEX. Fee: {sol_fee:.5f} SOL (~${fee_usd:.5f})."
-        else:
-            return False, f"Unsupported asset: {asset}."
-    else:
-        return False, f"Unsupported direction: {direction}."

@@ -1,7 +1,7 @@
 """
 polymarket_bot/config.py
 
-Configuration settings loaded from environment variables.
+Configuration settings loaded from environment variables for the Polymarket Scalping Bot.
 """
 from __future__ import annotations
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -17,31 +17,55 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # ── Bybit API Credentials ──────────────────
-    bybit_api_key: str = "vU8Cg21arhQjUEWxvr"
-    bybit_api_secret: str = "EpbpMD2kpjxWOVeh94jwhHHNfREsFAAZSenk"
-    bybit_testnet: bool = True
+    # ── Polymarket / Polygon Wallet ────────────────────────────────
+    polymarket_private_key: str = ""
+    polymarket_funder: str = ""
+    polymarket_signature_type: int = 0         # 0=EOA/MetaMask  1=Magic Link/Proxy
 
-    # ── Telegram Alerts ────────────────────────
+    # ── LLM (OpenRouter) ───────────────────────────────────────────
+    openrouter_api_key: str = ""
+    llm_model: str = "google/gemini-flash-1.5"   # Fast, cheap model for advisory tasks
+    llm_advisor_interval_cycles: int = 20      # Run LLM every N completed windows
+    llm_auto_tune: bool = False
+
+    # ── Alerts (Telegram) ──────────────────────────────────────────
     telegram_bot_token: str = ""
     telegram_chat_id: str = ""
 
-    # ── CEX-DEX Arbitrage Parameters ──────────
-    trading_mode: str = "paper"             # "paper" | "live"
-    account_size: float = 500.0             # Split equally (e.g. $250 on Bybit, $250 on Raydium)
-    solana_rpc_url: str = "https://api.mainnet-beta.solana.com"
-    jupiter_api_key: str = ""               # Optional Jupiter API key to bypass rate limits
-    solana_wallet_private_key: str = ""
-    min_arbitrage_spread_pct: float = -0.0100 # Net profit threshold to execute (-1.00%)
-    trade_size_usdt: float = 100.0          # Swap size per leg ($100 USDT)
-    max_price_age_s: float = 10.0           # Max age of price quotes in seconds
-    dedicated_rpc_url: str = ""             # If configured, reduces simulated latency
-    max_paper_drawdown_pct: float = 0.05    # Max drawdown percentage to pause paper trading
-    jupiter_429_sim_prob: float = 0.0       # Probability of simulated 429 rate limit errors (disabled)
-    live_tx_simulation_only: bool = True    # If True, live mode simulates transactions instead of broadcasting them
+    # ── Trading Mode ───────────────────────────────────────────────
+    trading_mode: str = "paper"                  # paper | live
+    account_size: float = 1000.0                 # Virtual USD for paper mode
 
-    # ── Dashboard ──────────────────────────────
-    api_port: int = 8080
+    # ── Target Markets ─────────────────────────────────────────────
+    target_assets: str = "BTC,ETH"               # Comma-separated: BTC | ETH | SOL
+
+    # ── Risk Controls ──────────────────────────────────────────────
+    max_risk_per_trade_pct: float = 0.01         # 1% of bankroll per trade max
+    max_concurrent_positions: int = 3          # Max open positions at one time
+    max_daily_loss_usd: float = 100.0            # Circuit breaker: halt after $100 loss/day
+    max_acceptable_slippage: float = 0.01
+
+    # ── Strategy Parameters ────────────────────────────────────────
+    spread_arb_threshold: float = 0.98           # Buy both legs if YES+NO sum < this
+    momentum_threshold_usd: float = 15.0         # Min BTC $ move in 30s to trigger signal
+    min_confidence: float = 0.70                 # Min implied prob on favoured side (0–1)
+    min_signal_confidence: float = 0.35          # Min combined confidence
+    max_entry_price: float = 0.95                # Don't buy shares above 95¢
+    entry_window_min_s: int = 45               # Don't enter before 45s into a 5-min window
+    entry_window_max_s: int = 270              # Don't enter after 270s into a 5-min window
+    momentum_lookback_s: int = 30              # BTC price lookback window for momentum calc
+
+    # ── Bybit settings (required for price feed) ──────────────────
+    bybit_testnet: bool = True
+
+    # ── Properties ─────────────────────────────────────────────────
+    @property
+    def assets(self) -> list[str]:
+        return [a.strip() for a in self.target_assets.split(",") if a.strip()]
+
+    @property
+    def is_live(self) -> bool:
+        return self.trading_mode == "live"
 
 
 settings = Settings()

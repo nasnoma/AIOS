@@ -1,0 +1,592 @@
+{
+  "DANGCEM": {
+    "strategy": "MomBreakout",
+    "score": 2.0144,
+    "return_pct": 1.36,
+    "win_rate": 100.0,
+    "profit_factor": 99.9,
+    "max_drawdown_pct": 0.0,
+    "total_trades": 2,
+    "updated_at": "2026-06-21T06:28:34.830213+00:00"
+  },
+  "SEPLAT": {
+    "strategy": "EMA_Cross",
+    "score": 1.894,
+    "return_pct": 3.56,
+    "win_rate": 50.0,
+    "profit_factor": 6.58,
+    "max_drawdown_pct": 0.61,
+    "total_trades": 2,
+    "updated_at": "2026-06-21T04:39:30Z"
+  },
+  "BUAFOODS": {
+    "strategy": "MomBreakout",
+    "score": 1.8896,
+    "return_pct": 1.52,
+    "win_rate": 50.0,
+    "profit_factor": 13.11,
+    "max_drawdown_pct": 0.13,
+    "total_trades": 2,
+    "updated_at": "2026-06-21T04:39:30Z"
+  },
+  "UNILEVER": {
+    "strategy": "EMA_Cross",
+    "score": 0.8801,
+    "return_pct": 1.86,
+    "win_rate": 50.0,
+    "profit_factor": 2.12,
+    "max_drawdown_pct": 1.66,
+    "total_trades": 2,
+    "updated_at": "2026-06-21T04:39:30Z"
+  },
+  "NB": {
+    "strategy": "EMA_Cross",
+    "score": 0.8197,
+    "return_pct": 1.22,
+    "win_rate": 33.3,
+    "profit_factor": 2.06,
+    "max_drawdown_pct": 0.96,
+    "total_trades": 3,
+    "updated_at": "2026-06-21T04:39:30Z"
+  },
+  "NASCON": {
+    "strategy": "MomBreakout",
+    "score": 0.7625,
+    "return_pct": 0.48,
+    "win_rate": 33.3,
+    "profit_factor": 1.9,
+    "max_drawdown_pct": 0.53,
+    "total_trades": 3,
+    "updated_at": "2026-06-21T04:39:30Z"
+  },
+  "CADBURY": {
+    "strategy": "MomBreakout",
+    "score": 0.5766,
+    "return_pct": 0.14,
+    "win_rate": 50.0,
+    "profit_factor": 1.26,
+    "max_drawdown_pct": 0.52,
+    "total_trades": 2,
+    "updated_at": "2026-06-21T04:39:30Z"
+  },
+  "BUACEMENT": {
+    "strategy": "MomBreakout",
+    "score": 0.5,
+    "return_pct": 0.07,
+    "win_rate": 50.0,
+    "profit_factor": 1.03,
+    "max_drawdown_pct": 1.16,
+    "total_trades": 4,
+    "updated_at": "2026-06-21T04:39:30Z"
+  },
+  "CAP": {
+    "strategy": "EMA_Cross",
+    "score": 0.2986,
+    "return_pct": -0.35,
+    "win_rate": 50.0,
+    "profit_factor": 0.47,
+    "max_drawdown_pct": 0.67,
+    "total_trades": 2,
+    "updated_at": "2026-06-21T04:39:30Z"
+  },
+  "MTNN": {
+    "strategy": "EMA_Cross",
+    "score": 0.278,
+    "return_pct": -1.59,
+    "win_rate": 20.0,
+    "profit_factor": 0.63,
+    "max_drawdown_pct": 4.27,
+    "total_trades": 5,
+    "updated_at": "2026-06-21T04:39:30Z"
+  },
+  "OKOMUOIL": {
+    "strategy": "MomBreakout",
+    "score": 0.2477,
+    "return_pct": -0.86,
+    "win_rate": 33.3,
+    "profit_factor": 0.44,
+    "max_drawdown_pct": 0.86,
+    "total_trades": 3,
+    "updated_at": "2026-06-21T04:39:30Z"
+  },
+  "OANDO": {
+    "strategy": "MomBreakout",
+    "score": 0.1971,
+    "return_pct": -1.21,
+    "win_rate": 40.0,
+    "profit_factor": 0.24,
+    "max_drawdown_pct": 1.21,
+    "total_trades": 5,
+    "updated_at": "2026-06-21T04:39:30Z"
+  },
+  "PRESCO": {
+    "strategy": "MomBreakout",
+    "score": 0.1439,
+    "return_pct": -0.55,
+    "win_rate": 33.3,
+    "profit_factor": 0.14,
+    "max_drawdown_pct": 0.55,
+    "total_trades": 3,
+    "updated_at": "2026-06-21T04:39:30Z"
+  },
+  "MEYER": {
+    "strategy": "EMA_Cross",
+    "score": 0.006,
+    "return_pct": -1.25,
+    "win_rate": 0.0,
+    "profit_factor": 0.0,
+    "max_drawdown_pct": 1.25,
+    "total_trades": 2,
+    "updated_at": "2026-06-21T04:39:30Z"
+  },
+  "ARADEL": {
+    "strategy": "MomBreakout",
+    "score": 0.0032,
+    "return_pct": -1.95,
+    "win_rate": 0.0,
+    "profit_factor": 0.0,
+    "max_drawdown_pct": 1.95,
+    "total_trades": 2,
+    "updated_at": "2026-06-21T04:39:30Z"
+  },
+  "WAPCO": {
+    "strategy": "MomBreakout",
+    "score": 0.0025,
+    "return_pct": -2.84,
+    "win_rate": 0.0,
+    "profit_factor": 0.0,
+    "max_drawdown_pct": 2.84,
+    "total_trades": 3,
+    "updated_at": "2026-06-21T04:39:30Z"
+  },
+  "AIRTELAFRI": {
+    "strategy": "EMA_Cross",
+    "score": -999.0,
+    "return_pct": -1.25,
+    "win_rate": 0.0,
+    "profit_factor": 0.0,
+    "max_drawdown_pct": 1.25,
+    "total_trades": 1,
+    "updated_at": "2026-06-21T04:39:30Z"
+  },
+  "JAIZBANK": {
+    "strategy": "EMA_Cross",
+    "score": -999.0,
+    "return_pct": 3.93,
+    "win_rate": 100.0,
+    "profit_factor": 99.9,
+    "max_drawdown_pct": 0.0,
+    "total_trades": 1,
+    "updated_at": "2026-06-21T04:39:30Z"
+  },
+  "FLOURMILL": {
+    "strategy": "EMA_Cross",
+    "score": -999.0,
+    "return_pct": 2.38,
+    "win_rate": 100.0,
+    "profit_factor": 99.9,
+    "max_drawdown_pct": 0.0,
+    "total_trades": 1,
+    "updated_at": "2026-06-21T04:39:30Z"
+  },
+  "ACCESSCORP": {
+    "strategy": "EMA_Cross",
+    "score": 0.948,
+    "return_pct": 2.61,
+    "win_rate": 50.0,
+    "profit_factor": 2.31,
+    "max_drawdown_pct": 2.0,
+    "total_trades": 2,
+    "updated_at": "2026-06-21T05:29:11.472180+00:00"
+  },
+  "ZENITHBANK": {
+    "strategy": "MomBreakout",
+    "score": 0.9201,
+    "return_pct": 8.8,
+    "win_rate": 55.6,
+    "profit_factor": 2.12,
+    "max_drawdown_pct": 3.96,
+    "total_trades": 9,
+    "updated_at": "2026-06-21T05:29:11.498288+00:00"
+  },
+  "STERLINGNG": {
+    "strategy": "EMA_Cross",
+    "score": 0.7809,
+    "return_pct": 4.81,
+    "win_rate": 42.9,
+    "profit_factor": 1.85,
+    "max_drawdown_pct": 4.43,
+    "total_trades": 7,
+    "updated_at": "2026-06-21T05:29:11.524040+00:00"
+  },
+  "UBA": {
+    "strategy": "MomBreakout",
+    "score": 0.9933,
+    "return_pct": 4.35,
+    "win_rate": 60.0,
+    "profit_factor": 2.34,
+    "max_drawdown_pct": 3.02,
+    "total_trades": 5,
+    "updated_at": "2026-06-21T05:29:11.547849+00:00"
+  },
+  "GTCO": {
+    "strategy": "EMA_Cross",
+    "score": 1.9709,
+    "return_pct": 7.32,
+    "win_rate": 75.0,
+    "profit_factor": 10.96,
+    "max_drawdown_pct": 0.69,
+    "total_trades": 4,
+    "updated_at": "2026-06-21T05:29:11.572472+00:00"
+  },
+  "UCAP": {
+    "strategy": "EMA_Cross",
+    "score": 0.4155,
+    "return_pct": -0.52,
+    "win_rate": 33.3,
+    "profit_factor": 0.92,
+    "max_drawdown_pct": 5.26,
+    "total_trades": 6,
+    "updated_at": "2026-06-21T05:29:11.597190+00:00"
+  },
+  "CHAMS": {
+    "strategy": "EMA_Cross",
+    "score": 2.0415,
+    "return_pct": 11.06,
+    "win_rate": 100.0,
+    "profit_factor": 99.9,
+    "max_drawdown_pct": 0.0,
+    "total_trades": 3,
+    "updated_at": "2026-06-21T05:29:11.619864+00:00"
+  },
+  "VFDGROUP": {
+    "strategy": "MomBreakout",
+    "score": 2.0438,
+    "return_pct": 11.08,
+    "win_rate": 100.0,
+    "profit_factor": 99.9,
+    "max_drawdown_pct": 0.0,
+    "total_trades": 4,
+    "updated_at": "2026-06-21T05:29:11.642687+00:00"
+  },
+  "LINKASSURE": {
+    "strategy": "EMA_Cross",
+    "score": 0.6555,
+    "return_pct": 1.89,
+    "win_rate": 50.0,
+    "profit_factor": 1.46,
+    "max_drawdown_pct": 3.11,
+    "total_trades": 6,
+    "updated_at": "2026-06-21T05:29:11.669077+00:00"
+  },
+  "FCMB": {
+    "strategy": "MomBreakout",
+    "score": 0.7234,
+    "return_pct": 2.97,
+    "win_rate": 42.9,
+    "profit_factor": 1.69,
+    "max_drawdown_pct": 2.39,
+    "total_trades": 7,
+    "updated_at": "2026-06-21T05:29:11.694142+00:00"
+  },
+  "FIRSTHOLDCO": {
+    "strategy": "EMA_Cross",
+    "score": 2.0366,
+    "return_pct": 10.25,
+    "win_rate": 100.0,
+    "profit_factor": 99.9,
+    "max_drawdown_pct": 0.0,
+    "total_trades": 2,
+    "updated_at": "2026-06-21T05:29:11.717827+00:00"
+  },
+  "TIP": {
+    "strategy": "MomBreakout",
+    "score": 0.4297,
+    "return_pct": -0.31,
+    "win_rate": 50.0,
+    "profit_factor": 0.85,
+    "max_drawdown_pct": 2.0,
+    "total_trades": 2,
+    "updated_at": "2026-06-21T05:29:11.735836+00:00"
+  },
+  "NSLTECH": {
+    "strategy": "EMA_Cross",
+    "score": -999.0,
+    "return_pct": 0.0,
+    "win_rate": 0.0,
+    "profit_factor": 0.0,
+    "max_drawdown_pct": 0.0,
+    "total_trades": 0,
+    "updated_at": "2026-06-21T05:29:11.751576+00:00"
+  },
+  "JAPAULGOLD": {
+    "strategy": "EMA_Cross",
+    "score": 1.0865,
+    "return_pct": 4.61,
+    "win_rate": 50.0,
+    "profit_factor": 2.68,
+    "max_drawdown_pct": 2.74,
+    "total_trades": 4,
+    "updated_at": "2026-06-21T05:29:11.776102+00:00"
+  },
+  "UNIVINSURE": {
+    "strategy": "MomBreakout",
+    "score": 1.2802,
+    "return_pct": 20.01,
+    "win_rate": 60.0,
+    "profit_factor": 3.05,
+    "max_drawdown_pct": 7.52,
+    "total_trades": 10,
+    "updated_at": "2026-06-21T05:29:11.798770+00:00"
+  },
+  "MBENEFIT": {
+    "strategy": "MomBreakout",
+    "score": 1.7962,
+    "return_pct": 29.31,
+    "win_rate": 66.7,
+    "profit_factor": 4.39,
+    "max_drawdown_pct": 3.96,
+    "total_trades": 12,
+    "updated_at": "2026-06-21T05:29:11.826092+00:00"
+  },
+  "AIICO": {
+    "strategy": "EMA_Cross",
+    "score": 1.3438,
+    "return_pct": 4.35,
+    "win_rate": 66.7,
+    "profit_factor": 3.3,
+    "max_drawdown_pct": 1.82,
+    "total_trades": 3,
+    "updated_at": "2026-06-21T05:29:11.850937+00:00"
+  },
+  "TANTALIZER": {
+    "strategy": "MomBreakout",
+    "score": 0.0021,
+    "return_pct": -2.22,
+    "win_rate": 0.0,
+    "profit_factor": 0.0,
+    "max_drawdown_pct": 2.22,
+    "total_trades": 2,
+    "updated_at": "2026-06-21T05:29:11.867951+00:00"
+  },
+  "FIDELITYBK": {
+    "strategy": "EMA_Cross",
+    "score": 0.7565,
+    "return_pct": 0.6,
+    "win_rate": 75.0,
+    "profit_factor": 1.58,
+    "max_drawdown_pct": 1.04,
+    "total_trades": 4,
+    "updated_at": "2026-06-21T05:29:11.892608+00:00"
+  },
+  "LASACO": {
+    "strategy": "EMA_Cross",
+    "score": 1.0348,
+    "return_pct": 6.29,
+    "win_rate": 40.0,
+    "profit_factor": 2.59,
+    "max_drawdown_pct": 3.59,
+    "total_trades": 5,
+    "updated_at": "2026-06-21T05:29:11.916146+00:00"
+  },
+  "DANGSUGAR": {
+    "strategy": "EMA_Cross",
+    "score": 0.6014,
+    "return_pct": 1.95,
+    "win_rate": 40.0,
+    "profit_factor": 1.38,
+    "max_drawdown_pct": 2.94,
+    "total_trades": 5,
+    "updated_at": "2026-06-21T05:29:11.940572+00:00"
+  },
+  "NEIMETH": {
+    "strategy": "MomBreakout",
+    "score": 1.8407,
+    "return_pct": 22.03,
+    "win_rate": 66.7,
+    "profit_factor": 4.58,
+    "max_drawdown_pct": 4.79,
+    "total_trades": 9,
+    "updated_at": "2026-06-21T05:29:11.966915+00:00"
+  },
+  "ELLAHLAKES": {
+    "strategy": "EMA_Cross",
+    "score": 0.7621,
+    "return_pct": 2.25,
+    "win_rate": 50.0,
+    "profit_factor": 1.77,
+    "max_drawdown_pct": 2.77,
+    "total_trades": 4,
+    "updated_at": "2026-06-21T05:29:11.996524+00:00"
+  },
+  "ZICHIS": {
+    "strategy": "MomBreakout",
+    "score": 1.9477,
+    "return_pct": 8.04,
+    "win_rate": 66.7,
+    "profit_factor": 5.02,
+    "max_drawdown_pct": 2.0,
+    "total_trades": 3,
+    "updated_at": "2026-06-21T05:29:12.018787+00:00"
+  },
+  "WEMABANK": {
+    "strategy": "MomBreakout",
+    "score": 2.0593,
+    "return_pct": 16.54,
+    "win_rate": 100.0,
+    "profit_factor": 99.9,
+    "max_drawdown_pct": 0.0,
+    "total_trades": 5,
+    "updated_at": "2026-06-21T05:29:12.044207+00:00"
+  },
+  "VERITASKAP": {
+    "strategy": "EMA_Cross",
+    "score": 1.3734,
+    "return_pct": 5.12,
+    "win_rate": 66.7,
+    "profit_factor": 3.38,
+    "max_drawdown_pct": 2.0,
+    "total_trades": 3,
+    "updated_at": "2026-06-21T05:29:12.069835+00:00"
+  },
+  "DEAPCAP": {
+    "strategy": "MomBreakout",
+    "score": 1.7721,
+    "return_pct": 21.77,
+    "win_rate": 58.3,
+    "profit_factor": 4.43,
+    "max_drawdown_pct": 2.84,
+    "total_trades": 12,
+    "updated_at": "2026-06-21T05:29:12.096569+00:00"
+  },
+  "CONHALLPLC": {
+    "strategy": "EMA_Cross",
+    "score": 1.9687,
+    "return_pct": 6.68,
+    "win_rate": 75.0,
+    "profit_factor": 7.43,
+    "max_drawdown_pct": 1.04,
+    "total_trades": 4,
+    "updated_at": "2026-06-21T05:29:12.120260+00:00"
+  },
+  "AFRIPRUD": {
+    "strategy": "MomBreakout",
+    "score": 0.7492,
+    "return_pct": 2.86,
+    "win_rate": 57.1,
+    "profit_factor": 1.67,
+    "max_drawdown_pct": 4.01,
+    "total_trades": 7,
+    "updated_at": "2026-06-21T05:29:12.144768+00:00"
+  },
+  "INTENEGINS": {
+    "strategy": "EMA_Cross",
+    "score": 1.9503,
+    "return_pct": 8.3,
+    "win_rate": 75.0,
+    "profit_factor": 4.94,
+    "max_drawdown_pct": 2.0,
+    "total_trades": 4,
+    "updated_at": "2026-06-21T05:29:12.173476+00:00"
+  },
+  "GUINEAINS": {
+    "strategy": "MomBreakout",
+    "score": 1.9979,
+    "return_pct": 16.56,
+    "win_rate": 75.0,
+    "profit_factor": 6.57,
+    "max_drawdown_pct": 2.0,
+    "total_trades": 8,
+    "updated_at": "2026-06-21T05:29:12.200891+00:00"
+  },
+  "UPDCREIT": {
+    "strategy": "EMA_Cross",
+    "score": 1.5529,
+    "return_pct": 7.59,
+    "win_rate": 50.0,
+    "profit_factor": 3.99,
+    "max_drawdown_pct": 2.42,
+    "total_trades": 4,
+    "updated_at": "2026-06-21T05:29:12.227839+00:00"
+  },
+  "CHAMPION": {
+    "strategy": "EMA_Cross",
+    "score": -999.0,
+    "return_pct": 0.0,
+    "win_rate": 0.0,
+    "profit_factor": 0.0,
+    "max_drawdown_pct": 0.0,
+    "total_trades": 0,
+    "updated_at": "2026-06-21T05:29:12.248868+00:00"
+  },
+  "INTBREW": {
+    "strategy": "MomBreakout",
+    "score": 0.9158,
+    "return_pct": 8.94,
+    "win_rate": 44.4,
+    "profit_factor": 2.19,
+    "max_drawdown_pct": 4.7,
+    "total_trades": 9,
+    "updated_at": "2026-06-21T05:29:12.275069+00:00"
+  },
+  "WAPIC": {
+    "strategy": "MomBreakout",
+    "score": 1.1023,
+    "return_pct": 13.03,
+    "win_rate": 50.0,
+    "profit_factor": 2.65,
+    "max_drawdown_pct": 3.17,
+    "total_trades": 8,
+    "updated_at": "2026-06-21T05:29:12.301146+00:00"
+  },
+  "NPFMCRFBK": {
+    "strategy": "MomBreakout",
+    "score": 1.4682,
+    "return_pct": 13.36,
+    "win_rate": 60.0,
+    "profit_factor": 3.62,
+    "max_drawdown_pct": 4.12,
+    "total_trades": 10,
+    "updated_at": "2026-06-21T05:29:12.325247+00:00"
+  },
+  "NGXGROUP": {
+    "strategy": "MomBreakout",
+    "score": 2.0281,
+    "return_pct": 31.32,
+    "win_rate": 72.7,
+    "profit_factor": 7.96,
+    "max_drawdown_pct": 4.5,
+    "total_trades": 11,
+    "updated_at": "2026-06-21T05:29:12.357035+00:00"
+  },
+  "TRANSEXPR": {
+    "strategy": "MomBreakout",
+    "score": 2.1226,
+    "return_pct": 40.71,
+    "win_rate": 100.0,
+    "profit_factor": 99.9,
+    "max_drawdown_pct": 0.0,
+    "total_trades": 7,
+    "updated_at": "2026-06-21T05:29:12.382259+00:00"
+  },
+  "ROYALEX": {
+    "strategy": "MomBreakout",
+    "score": 0.7795,
+    "return_pct": 5.77,
+    "win_rate": 61.5,
+    "profit_factor": 1.69,
+    "max_drawdown_pct": 4.35,
+    "total_trades": 13,
+    "updated_at": "2026-06-21T05:29:12.408118+00:00"
+  },
+  "REGALINS": {
+    "strategy": "EMA_Cross",
+    "score": -999.0,
+    "return_pct": -1.19,
+    "win_rate": 0.0,
+    "profit_factor": 0.0,
+    "max_drawdown_pct": 1.19,
+    "total_trades": 1,
+    "updated_at": "2026-06-21T05:29:12.429764+00:00"
+  }
+}

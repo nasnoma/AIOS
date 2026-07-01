@@ -1,0 +1,1630 @@
+[
+  {
+    "iteration": 0,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.3,
+      "volatility": 0.8,
+      "structure": 1.2,
+      "sentiment": 0.9,
+      "macro": 1.0
+    },
+    "fitness": 0.3217,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1544,
+          "win_rate": 30.4,
+          "profit_factor": 0.95,
+          "total_return_pct": -7.12,
+          "max_drawdown_pct": 3.13,
+          "sortino_ratio": -0.03118601185537304
+        },
+        "val": {
+          "total_trades": 822,
+          "win_rate": 29.9,
+          "profit_factor": 0.84,
+          "total_return_pct": -5.14,
+          "max_drawdown_pct": 2.91,
+          "sortino_ratio": -0.12015131088068048
+        },
+        "fitness_score": 0.3217
+      }
+    },
+    "reasoning": "Baseline configuration",
+    "improved": true
+  },
+  {
+    "iteration": 1,
+    "weights": {
+      "trend": 1.0,
+      "momentum": 0.9,
+      "volume": 1.1,
+      "orderflow": 1.1,
+      "volatility": 1.2,
+      "structure": 1.1,
+      "sentiment": 1.1,
+      "macro": 1.0
+    },
+    "fitness": 0.322,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1542,
+          "win_rate": 30.3,
+          "profit_factor": 0.94,
+          "total_return_pct": -7.41,
+          "max_drawdown_pct": 3.44,
+          "sortino_ratio": -0.036487208151353825
+        },
+        "val": {
+          "total_trades": 817,
+          "win_rate": 30.4,
+          "profit_factor": 0.85,
+          "total_return_pct": -4.97,
+          "max_drawdown_pct": 2.77,
+          "sortino_ratio": -0.11225966111552173
+        },
+        "fitness_score": 0.322
+      }
+    },
+    "reasoning": "The current weights indicate that trend, momentum, orderflow, and structure are overweighted, while volatility and sentiment are underweighted. Given the low win rate and negative total return, it's likely that the overweighted agents are contributing to overtrading. To improve the composite fitness score, I propose reducing the weights of trend, momentum, and orderflow, while increasing the weights of volatility and sentiment to better manage risk and capture market sentiment. The weights of volume, structure, and macro will be adjusted to maintain a balanced approach.",
+    "improved": true
+  },
+  {
+    "iteration": 2,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.2,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.0,
+      "structure": 1.0,
+      "sentiment": 0.9,
+      "macro": 1.0
+    },
+    "fitness": 0.3226,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1543,
+          "win_rate": 30.8,
+          "profit_factor": 0.96,
+          "total_return_pct": -6.68,
+          "max_drawdown_pct": 2.96,
+          "sortino_ratio": -0.02317059393731363
+        },
+        "val": {
+          "total_trades": 815,
+          "win_rate": 29.8,
+          "profit_factor": 0.83,
+          "total_return_pct": -5.18,
+          "max_drawdown_pct": 2.99,
+          "sortino_ratio": -0.12428032721443998
+        },
+        "fitness_score": 0.3226
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on volatility and structure, but overall the weights are relatively balanced. However, the performance metrics indicate a low win rate and profit factor, suggesting that the agents may not be effectively capturing market trends. To improve the composite fitness score, I propose reducing the weight on volatility and increasing the weights on trend and momentum, as these agents are likely to be more effective in capturing market direction. Additionally, a slight increase in the weight on orderflow may help improve the profit factor.",
+    "improved": true
+  },
+  {
+    "iteration": 3,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.0,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.4,
+      "structure": 1.3,
+      "sentiment": 0.9,
+      "macro": 1.0
+    },
+    "fitness": 0.3226,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1418,
+          "win_rate": 30.6,
+          "profit_factor": 0.96,
+          "total_return_pct": -6.41,
+          "max_drawdown_pct": 2.79,
+          "sortino_ratio": -0.02736836089333137
+        },
+        "val": {
+          "total_trades": 767,
+          "win_rate": 29.3,
+          "profit_factor": 0.83,
+          "total_return_pct": -4.86,
+          "max_drawdown_pct": 2.74,
+          "sortino_ratio": -0.12208192483579731
+        },
+        "fitness_score": 0.3226
+      }
+    },
+    "reasoning": "The current weights seem to be slightly overweighted on trend and momentum, while underweighted on volatility and structure. Given the low profit factor and high max drawdown, increasing the weight on volatility and structure could help to reduce risk and improve overall performance. The sentiment weight is the lowest, but its impact is unclear without further analysis. A slight reduction in trend and momentum weights, and a moderate increase in volatility and structure weights could lead to a more balanced and robust performance.",
+    "improved": false
+  },
+  {
+    "iteration": 4,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.0,
+      "volume": 0.9,
+      "orderflow": 1.1,
+      "volatility": 1.2,
+      "structure": 1.2,
+      "sentiment": 0.8,
+      "macro": 0.9
+    },
+    "fitness": 0.3192,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1442,
+          "win_rate": 30.7,
+          "profit_factor": 0.95,
+          "total_return_pct": -6.64,
+          "max_drawdown_pct": 3.0,
+          "sortino_ratio": -0.029912457243790252
+        },
+        "val": {
+          "total_trades": 775,
+          "win_rate": 29.3,
+          "profit_factor": 0.83,
+          "total_return_pct": -4.96,
+          "max_drawdown_pct": 2.86,
+          "sortino_ratio": -0.1247073803411316
+        },
+        "fitness_score": 0.3192
+      }
+    },
+    "reasoning": "The current weights seem to slightly overemphasize trend and momentum while underemphasizing volatility and structure. Given the low profit factor and negative total return percentage in both training and validation sets, it's crucial to balance the weights. Increasing the weight on volatility might help in managing risk, and a slight increase in structure could improve the overall strategy's adaptability. Decreasing trend and momentum slightly could prevent over-reliance on these factors. The weights for volume, orderflow, sentiment, and macro seem relatively balanced but could be adjusted slightly downward to accommodate increases in volatility and structure.",
+    "improved": false
+  },
+  {
+    "iteration": 5,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.0,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.2,
+      "structure": 1.2,
+      "sentiment": 1.0,
+      "macro": 1.0
+    },
+    "fitness": 0.3218,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1514,
+          "win_rate": 30.6,
+          "profit_factor": 0.95,
+          "total_return_pct": -7.05,
+          "max_drawdown_pct": 3.47,
+          "sortino_ratio": -0.03190307741731035
+        },
+        "val": {
+          "total_trades": 813,
+          "win_rate": 30.0,
+          "profit_factor": 0.84,
+          "total_return_pct": -5.05,
+          "max_drawdown_pct": 2.86,
+          "sortino_ratio": -0.11752633096087006
+        },
+        "fitness_score": 0.3218
+      }
+    },
+    "reasoning": "The current weights seem to be slightly overemphasizing trend and momentum, while underemphasizing volatility and structure. Given the low profit factor and high max drawdown, increasing the weight of volatility and structure could help mitigate risk. Meanwhile, reducing the weight of trend and momentum might prevent overfitting to specific market conditions. The sentiment and macro weights appear to be at a reasonable level, but a slight adjustment to sentiment could help improve the win rate.",
+    "improved": false
+  },
+  {
+    "iteration": 6,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.0,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.2,
+      "structure": 1.2,
+      "sentiment": 0.9,
+      "macro": 1.0
+    },
+    "fitness": 0.3222,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1509,
+          "win_rate": 30.6,
+          "profit_factor": 0.95,
+          "total_return_pct": -7.02,
+          "max_drawdown_pct": 3.44,
+          "sortino_ratio": -0.03179915631612981
+        },
+        "val": {
+          "total_trades": 818,
+          "win_rate": 30.1,
+          "profit_factor": 0.84,
+          "total_return_pct": -5.04,
+          "max_drawdown_pct": 2.82,
+          "sortino_ratio": -0.11603333820542068
+        },
+        "fitness_score": 0.3222
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on trend and momentum, but the performance metrics indicate a need for improvement in win rate and profit factor. The optimization history suggests that reducing trend and momentum weights while increasing volatility and structure weights may lead to better outcomes. The new weights aim to balance the contributions of each agent, with a slight increase in volatility and structure to potentially improve risk management and market understanding.",
+    "improved": false
+  },
+  {
+    "iteration": 8,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.1,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.1,
+      "structure": 1.0,
+      "sentiment": 1.1,
+      "macro": 1.0
+    },
+    "fitness": 0.3215,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1546,
+          "win_rate": 30.4,
+          "profit_factor": 0.95,
+          "total_return_pct": -7.25,
+          "max_drawdown_pct": 3.26,
+          "sortino_ratio": -0.033251728965038266
+        },
+        "val": {
+          "total_trades": 820,
+          "win_rate": 30.0,
+          "profit_factor": 0.84,
+          "total_return_pct": -5.11,
+          "max_drawdown_pct": 2.88,
+          "sortino_ratio": -0.11873581122938538
+        },
+        "fitness_score": 0.3215
+      }
+    },
+    "reasoning": "The current weights seem to slightly favor trend and orderflow, while sentiment is underweighted. Given the similar performance across iterations, a balanced approach may help. The optimization history suggests that significant deviations from the current weights have not yielded substantial improvements. Thus, a minor adjustment to balance the weights while slightly increasing the importance of sentiment and volatility, which have shown some positive impact in certain iterations, could be beneficial.",
+    "improved": false
+  },
+  {
+    "iteration": 9,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.1,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 0.9,
+      "structure": 0.9,
+      "sentiment": 1.2,
+      "macro": 1.2
+    },
+    "fitness": 0.3215,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1546,
+          "win_rate": 30.4,
+          "profit_factor": 0.95,
+          "total_return_pct": -7.25,
+          "max_drawdown_pct": 3.26,
+          "sortino_ratio": -0.033251728965038266
+        },
+        "val": {
+          "total_trades": 820,
+          "win_rate": 30.0,
+          "profit_factor": 0.84,
+          "total_return_pct": -5.11,
+          "max_drawdown_pct": 2.88,
+          "sortino_ratio": -0.11873581122938538
+        },
+        "fitness_score": 0.3215
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on trend and orderflow, while sentiment is underweighted. The optimization history suggests that increasing volatility and structure weights may not be beneficial. Given the low win rates and negative total returns, a more balanced approach may be necessary. Decreasing trend and orderflow weights, while increasing sentiment and macro weights could lead to improved performance.",
+    "improved": false
+  },
+  {
+    "iteration": 10,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.1,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.0,
+      "structure": 1.1,
+      "sentiment": 1.1,
+      "macro": 1.0
+    },
+    "fitness": 0.3215,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1546,
+          "win_rate": 30.4,
+          "profit_factor": 0.95,
+          "total_return_pct": -7.25,
+          "max_drawdown_pct": 3.26,
+          "sortino_ratio": -0.033251728965038266
+        },
+        "val": {
+          "total_trades": 820,
+          "win_rate": 30.0,
+          "profit_factor": 0.84,
+          "total_return_pct": -5.11,
+          "max_drawdown_pct": 2.88,
+          "sortino_ratio": -0.11873581122938538
+        },
+        "fitness_score": 0.3215
+      }
+    },
+    "reasoning": "The current weights have trend and momentum slightly overweighted, while sentiment is underweighted. Given the similar performance across iterations, a slight adjustment to balance the weights while increasing the emphasis on sentiment and structure, which have shown potential for improvement in certain iterations, could lead to better overall performance. The adjustments aim to maintain a balanced approach while exploring the potential benefits of increased emphasis on market sentiment and structure.",
+    "improved": false
+  },
+  {
+    "iteration": 11,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.1,
+      "volume": 1.0,
+      "orderflow": 1.3,
+      "volatility": 1.1,
+      "structure": 1.0,
+      "sentiment": 1.1,
+      "macro": 1.0
+    },
+    "fitness": 0.3214,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1546,
+          "win_rate": 30.7,
+          "profit_factor": 0.96,
+          "total_return_pct": -7.0,
+          "max_drawdown_pct": 3.22,
+          "sortino_ratio": -0.028666478349078574
+        },
+        "val": {
+          "total_trades": 815,
+          "win_rate": 29.8,
+          "profit_factor": 0.83,
+          "total_return_pct": -5.16,
+          "max_drawdown_pct": 3.0,
+          "sortino_ratio": -0.12323567783408772
+        },
+        "fitness_score": 0.3214
+      }
+    },
+    "reasoning": "Analyzing the provided metrics, the trend and orderflow agents seem to be contributing positively with higher weights in successful iterations. The sentiment agent is underweighted and could potentially improve the overall performance. The momentum and volatility agents have shown mixed results and may require a slight adjustment. The volume, structure, and macro agents appear to be neutral. Therefore, a new set of weights will slightly increase the trend, orderflow, and sentiment agents while making minor adjustments to the momentum and volatility agents.",
+    "improved": false
+  },
+  {
+    "iteration": 12,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.1,
+      "volume": 1.1,
+      "orderflow": 1.1,
+      "volatility": 1.1,
+      "structure": 1.1,
+      "sentiment": 1.2,
+      "macro": 1.1
+    },
+    "fitness": 0.3215,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1546,
+          "win_rate": 30.4,
+          "profit_factor": 0.95,
+          "total_return_pct": -7.25,
+          "max_drawdown_pct": 3.26,
+          "sortino_ratio": -0.033251728965038266
+        },
+        "val": {
+          "total_trades": 820,
+          "win_rate": 30.0,
+          "profit_factor": 0.84,
+          "total_return_pct": -5.11,
+          "max_drawdown_pct": 2.88,
+          "sortino_ratio": -0.11873581122938538
+        },
+        "fitness_score": 0.3215
+      }
+    },
+    "reasoning": "The current weights show trend and orderflow are slightly overweighted, while sentiment is underweighted. The optimization history suggests that increasing trend and orderflow weights has not led to significant improvements. Given the low win rates and negative profit factors, it's crucial to balance the weights. Decreasing trend and orderflow, while increasing sentiment and slightly adjusting other weights may lead to a more balanced and potentially improved performance.",
+    "improved": false
+  },
+  {
+    "iteration": 13,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.0,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.2,
+      "structure": 1.2,
+      "sentiment": 1.1,
+      "macro": 1.0
+    },
+    "fitness": 0.3211,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1547,
+          "win_rate": 30.4,
+          "profit_factor": 0.95,
+          "total_return_pct": -7.27,
+          "max_drawdown_pct": 3.27,
+          "sortino_ratio": -0.03345693323956331
+        },
+        "val": {
+          "total_trades": 822,
+          "win_rate": 29.9,
+          "profit_factor": 0.84,
+          "total_return_pct": -5.14,
+          "max_drawdown_pct": 2.91,
+          "sortino_ratio": -0.12004031292057317
+        },
+        "fitness_score": 0.3211
+      }
+    },
+    "reasoning": "The current weights seem to slightly favor trend and orderflow, while sentiment is underweighted. Given the lack of improvement in recent iterations, a more balanced approach may be beneficial. The new weights aim to slightly increase the influence of volatility and structure, while maintaining a balanced overall distribution.",
+    "improved": false
+  },
+  {
+    "iteration": 14,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.3,
+      "volume": 0.9,
+      "orderflow": 1.1,
+      "volatility": 0.8,
+      "structure": 0.9,
+      "sentiment": 1.2,
+      "macro": 1.1
+    },
+    "fitness": 0.322,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1542,
+          "win_rate": 30.5,
+          "profit_factor": 0.96,
+          "total_return_pct": -6.95,
+          "max_drawdown_pct": 3.04,
+          "sortino_ratio": -0.028172937974183878
+        },
+        "val": {
+          "total_trades": 819,
+          "win_rate": 29.9,
+          "profit_factor": 0.83,
+          "total_return_pct": -5.16,
+          "max_drawdown_pct": 2.94,
+          "sortino_ratio": -0.12187510635571856
+        },
+        "fitness_score": 0.322
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on trend and orderflow, but the performance metrics indicate a need for improvement in win rate and profit factor. The optimization history suggests that increasing trend and momentum weights while slightly decreasing volatility and structure weights may lead to better performance. Sentiment and macro weights can be adjusted to balance the overall portfolio.",
+    "improved": false
+  },
+  {
+    "iteration": 15,
+    "weights": {
+      "trend": 1.5,
+      "momentum": 1.4,
+      "volume": 0.8,
+      "orderflow": 1.1,
+      "volatility": 0.9,
+      "structure": 0.8,
+      "sentiment": 1.0,
+      "macro": 0.9
+    },
+    "fitness": 0.3222,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1537,
+          "win_rate": 30.8,
+          "profit_factor": 0.96,
+          "total_return_pct": -6.66,
+          "max_drawdown_pct": 2.96,
+          "sortino_ratio": -0.02339545994102775
+        },
+        "val": {
+          "total_trades": 810,
+          "win_rate": 29.6,
+          "profit_factor": 0.83,
+          "total_return_pct": -5.2,
+          "max_drawdown_pct": 2.9,
+          "sortino_ratio": -0.12641296776098077
+        },
+        "fitness_score": 0.3222
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on trend and orderflow, but the optimization history suggests that increasing trend and momentum weights while slightly decreasing others could lead to improvement. The low win rates and negative profit factors across train and validation sets indicate a need for a more balanced approach. Thus, adjusting the weights to emphasize trend and momentum slightly while ensuring all other agents contribute meaningfully could enhance the composite fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 16,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.0,
+      "volume": 1.2,
+      "orderflow": 1.1,
+      "volatility": 1.0,
+      "structure": 1.2,
+      "sentiment": 1.0,
+      "macro": 1.1
+    },
+    "fitness": 0.3214,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1547,
+          "win_rate": 30.4,
+          "profit_factor": 0.95,
+          "total_return_pct": -7.26,
+          "max_drawdown_pct": 3.27,
+          "sortino_ratio": -0.03342110193578651
+        },
+        "val": {
+          "total_trades": 820,
+          "win_rate": 30.0,
+          "profit_factor": 0.84,
+          "total_return_pct": -5.1,
+          "max_drawdown_pct": 2.88,
+          "sortino_ratio": -0.11862459794052695
+        },
+        "fitness_score": 0.3214
+      }
+    },
+    "reasoning": "Analyzing the optimization history and performance metrics, it appears that the trend and momentum agents have been overweighted in recent iterations, while the volume and structure agents have been underweighted. The sentiment and macro agents have also shown inconsistent performance. To improve the composite fitness score, a more balanced approach is proposed, with increased weights for volume and structure, and reduced weights for trend and momentum.",
+    "improved": false
+  },
+  {
+    "iteration": 17,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.3,
+      "volume": 1.1,
+      "orderflow": 1.2,
+      "volatility": 1.0,
+      "structure": 1.0,
+      "sentiment": 1.0,
+      "macro": 1.0
+    },
+    "fitness": 0.3226,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1543,
+          "win_rate": 30.8,
+          "profit_factor": 0.96,
+          "total_return_pct": -6.68,
+          "max_drawdown_pct": 2.96,
+          "sortino_ratio": -0.02317059393731363
+        },
+        "val": {
+          "total_trades": 815,
+          "win_rate": 29.8,
+          "profit_factor": 0.83,
+          "total_return_pct": -5.18,
+          "max_drawdown_pct": 2.99,
+          "sortino_ratio": -0.12428032721443998
+        },
+        "fitness_score": 0.3226
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on trend and momentum, but the optimization history suggests that increasing trend and momentum weights has not led to significant improvements. The low win rates and negative total return percentages across train and validation sets indicate a need for a more balanced approach. Notably, the structure and volatility agents have seen varied weights without clear positive impact. Given the lack of clear trends in the optimization history, a balanced approach with slight adjustments to reflect the importance of trend and momentum in trading decisions, while also considering the potential of volume and orderflow, is proposed.",
+    "improved": false
+  },
+  {
+    "iteration": 18,
+    "weights": {
+      "trend": 1.5,
+      "momentum": 1.4,
+      "volume": 1.1,
+      "orderflow": 1.2,
+      "volatility": 1.2,
+      "structure": 1.1,
+      "sentiment": 0.9,
+      "macro": 1.0
+    },
+    "fitness": 0.3224,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1537,
+          "win_rate": 30.8,
+          "profit_factor": 0.96,
+          "total_return_pct": -6.66,
+          "max_drawdown_pct": 2.98,
+          "sortino_ratio": -0.023315947090345124
+        },
+        "val": {
+          "total_trades": 810,
+          "win_rate": 29.6,
+          "profit_factor": 0.83,
+          "total_return_pct": -5.17,
+          "max_drawdown_pct": 2.92,
+          "sortino_ratio": -0.12508432471278347
+        },
+        "fitness_score": 0.3224
+      }
+    },
+    "reasoning": "The current weights seem to be underutilizing the trend and momentum agents, which are typically strong indicators of market direction. The optimization history suggests that increasing the weights of trend and momentum agents has resulted in slight improvements in fitness score. However, the weights of volatility and structure agents have been decreased in recent iterations, which may be detrimental to the overall performance. A new set of weights that balances the trend, momentum, and volatility agents may lead to improved performance.",
+    "improved": false
+  },
+  {
+    "iteration": 19,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.3,
+      "volume": 1.1,
+      "orderflow": 1.2,
+      "volatility": 1.1,
+      "structure": 1.1,
+      "sentiment": 1.0,
+      "macro": 1.0
+    },
+    "fitness": 0.323,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1538,
+          "win_rate": 30.7,
+          "profit_factor": 0.96,
+          "total_return_pct": -6.71,
+          "max_drawdown_pct": 3.02,
+          "sortino_ratio": -0.02416697898732387
+        },
+        "val": {
+          "total_trades": 812,
+          "win_rate": 29.9,
+          "profit_factor": 0.83,
+          "total_return_pct": -5.11,
+          "max_drawdown_pct": 2.92,
+          "sortino_ratio": -0.12113313594546628
+        },
+        "fitness_score": 0.323
+      }
+    },
+    "reasoning": "The current weights seem to slightly favor trend and momentum, but the optimization history suggests that increasing trend and momentum weights has not led to significant improvements. The sentiment weight is currently the lowest, and the optimization history shows that decreasing it further has not been beneficial. The volume and structure weights have been relatively stable, but increasing them slightly could potentially improve the fitness score. The orderflow and volatility weights have been adjusted in various ways without clear improvement. Given this, a balanced approach with slight adjustments to trend, momentum, and sentiment could be beneficial.",
+    "improved": true
+  },
+  {
+    "iteration": 20,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.2,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.3,
+      "structure": 1.2,
+      "sentiment": 0.9,
+      "macro": 0.9
+    },
+    "fitness": 0.3284,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1491,
+          "win_rate": 30.9,
+          "profit_factor": 0.97,
+          "total_return_pct": -6.42,
+          "max_drawdown_pct": 2.92,
+          "sortino_ratio": -0.022109587784799364
+        },
+        "val": {
+          "total_trades": 799,
+          "win_rate": 29.7,
+          "profit_factor": 0.84,
+          "total_return_pct": -4.96,
+          "max_drawdown_pct": 2.79,
+          "sortino_ratio": -0.11711835780244675
+        },
+        "fitness_score": 0.3284
+      }
+    },
+    "reasoning": "The current set of weights seems to slightly favor trend and momentum, but the overall performance is still subpar. Given the low win rates and negative total return percentages across both training and validation sets, it's clear that the strategy is not capturing the market dynamics effectively. The optimization history suggests that increases in trend and momentum weights have led to slight improvements, but not significantly so. A more balanced approach, with a slight emphasis on volatility and structure, which are currently underweighted, might help in capturing more nuanced market movements and improving the overall fitness score.",
+    "improved": true
+  },
+  {
+    "iteration": 21,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.4,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.2,
+      "structure": 1.2,
+      "sentiment": 0.9,
+      "macro": 1.1
+    },
+    "fitness": 0.3214,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1540,
+          "win_rate": 30.7,
+          "profit_factor": 0.96,
+          "total_return_pct": -6.78,
+          "max_drawdown_pct": 3.08,
+          "sortino_ratio": -0.025347608502186418
+        },
+        "val": {
+          "total_trades": 816,
+          "win_rate": 29.7,
+          "profit_factor": 0.83,
+          "total_return_pct": -5.24,
+          "max_drawdown_pct": 3.04,
+          "sortino_ratio": -0.12693700678208147
+        },
+        "fitness_score": 0.3214
+      }
+    },
+    "reasoning": "The current weights seem to be over-emphasizing trend and volatility, while under-emphasizing momentum and macro. The optimization history suggests that increasing the weights of trend and momentum can lead to improved fitness scores. However, the recent improvement in fitness score at iteration 20 suggests that the current weights are a good starting point. A slight adjustment to increase the weight of momentum and decrease the weight of volatility may lead to further improvement.",
+    "improved": false
+  },
+  {
+    "iteration": 22,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.1,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.3,
+      "structure": 1.1,
+      "sentiment": 1.1,
+      "macro": 1.1
+    },
+    "fitness": 0.3215,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1546,
+          "win_rate": 30.4,
+          "profit_factor": 0.95,
+          "total_return_pct": -7.25,
+          "max_drawdown_pct": 3.26,
+          "sortino_ratio": -0.033251728965038266
+        },
+        "val": {
+          "total_trades": 820,
+          "win_rate": 30.0,
+          "profit_factor": 0.84,
+          "total_return_pct": -5.11,
+          "max_drawdown_pct": 2.88,
+          "sortino_ratio": -0.11873581122938538
+        },
+        "fitness_score": 0.3215
+      }
+    },
+    "reasoning": "The current weights have trend and volatility at 1.3, indicating they are overweighted. Momentum and structure are also slightly overweighted at 1.2. Sentiment and macro are underweighted at 0.9. The optimization history shows that iterations with higher trend and momentum weights tend to perform better. However, the last improved iteration had lower momentum and higher volatility. To balance this, I propose reducing trend and momentum slightly while increasing sentiment and macro to give them more influence. Volatility will be kept high as it has shown positive impact in previous iterations.",
+    "improved": false
+  },
+  {
+    "iteration": 23,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.3,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.2,
+      "structure": 1.3,
+      "sentiment": 1.0,
+      "macro": 1.0
+    },
+    "fitness": 0.3184,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1535,
+          "win_rate": 30.4,
+          "profit_factor": 0.95,
+          "total_return_pct": -7.24,
+          "max_drawdown_pct": 3.21,
+          "sortino_ratio": -0.03401422098328019
+        },
+        "val": {
+          "total_trades": 814,
+          "win_rate": 29.7,
+          "profit_factor": 0.83,
+          "total_return_pct": -5.16,
+          "max_drawdown_pct": 2.86,
+          "sortino_ratio": -0.12350144425044675
+        },
+        "fitness_score": 0.3184
+      }
+    },
+    "reasoning": "The current weights have trend and volatility overweighted at 1.3, while sentiment and macro are underweighted at 0.9. Given the recent improvement in fitness score with the current weights, a slight adjustment to balance the weights while maintaining the emphasis on trend and volatility could be beneficial. The momentum and structure agents have shown promise in previous iterations, so a slight increase in their weights may also be beneficial.",
+    "improved": false
+  },
+  {
+    "iteration": 24,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.1,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.1,
+      "structure": 1.4,
+      "sentiment": 1.2,
+      "macro": 1.2
+    },
+    "fitness": 0.3215,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1546,
+          "win_rate": 30.4,
+          "profit_factor": 0.95,
+          "total_return_pct": -7.25,
+          "max_drawdown_pct": 3.26,
+          "sortino_ratio": -0.033251728965038266
+        },
+        "val": {
+          "total_trades": 820,
+          "win_rate": 30.0,
+          "profit_factor": 0.84,
+          "total_return_pct": -5.11,
+          "max_drawdown_pct": 2.88,
+          "sortino_ratio": -0.11873581122938538
+        },
+        "fitness_score": 0.3215
+      }
+    },
+    "reasoning": "The current weights seem to be slightly overemphasizing trend and volatility while underemphasizing sentiment and macro. Given the recent improvements in fitness scores when trend and momentum weights were slightly reduced and structure weight was increased, a balanced approach with a slight emphasis on structure and a reduction in trend and volatility might yield better results. The win rate and profit factor suggest that the system is slightly over-trading, so a more conservative approach with higher weights on structure and sentiment could help improve the overall performance.",
+    "improved": false
+  },
+  {
+    "iteration": 25,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.1,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.4,
+      "structure": 1.1,
+      "sentiment": 0.8,
+      "macro": 0.8
+    },
+    "fitness": 0.3149,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1393,
+          "win_rate": 31.0,
+          "profit_factor": 0.97,
+          "total_return_pct": -5.99,
+          "max_drawdown_pct": 2.58,
+          "sortino_ratio": -0.02136275285634297
+        },
+        "val": {
+          "total_trades": 751,
+          "win_rate": 28.5,
+          "profit_factor": 0.8,
+          "total_return_pct": -5.24,
+          "max_drawdown_pct": 2.93,
+          "sortino_ratio": -0.14661341101784434
+        },
+        "fitness_score": 0.3149
+      }
+    },
+    "reasoning": "Based on the optimization history and performance metrics, it seems that overweighting trend and volatility while slightly reducing the weight of sentiment and macro could lead to improvement. The current best weights from iteration 20 will be used as a starting point. Trend and volatility will be increased to 1.4 and 1.4 respectively, while sentiment and macro will be decreased to 0.8 and 0.8 respectively. Momentum, volume, orderflow, and structure will be adjusted slightly to maintain a balanced approach.",
+    "improved": false
+  },
+  {
+    "iteration": 26,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.1,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.1,
+      "structure": 1.3,
+      "sentiment": 1.0,
+      "macro": 1.1
+    },
+    "fitness": 0.322,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1521,
+          "win_rate": 30.7,
+          "profit_factor": 0.96,
+          "total_return_pct": -6.86,
+          "max_drawdown_pct": 3.22,
+          "sortino_ratio": -0.02802378994879716
+        },
+        "val": {
+          "total_trades": 815,
+          "win_rate": 29.8,
+          "profit_factor": 0.83,
+          "total_return_pct": -5.13,
+          "max_drawdown_pct": 2.92,
+          "sortino_ratio": -0.12136635015199244
+        },
+        "fitness_score": 0.322
+      }
+    },
+    "reasoning": "The current weights show trend and volatility being overweighted, while sentiment and macro are underweighted. The optimization history suggests that increasing trend and momentum weights has not consistently led to improved fitness scores. Instead, a balanced approach with slight adjustments to underweighted agents may yield better results. The new weights aim to balance the contributions of each agent, with a slight emphasis on structure and orderflow, which have shown promise in previous iterations.",
+    "improved": false
+  },
+  {
+    "iteration": 28,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.0,
+      "volume": 1.2,
+      "orderflow": 1.2,
+      "volatility": 1.1,
+      "structure": 1.3,
+      "sentiment": 1.0,
+      "macro": 1.0
+    },
+    "fitness": 0.3153,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1544,
+          "win_rate": 30.2,
+          "profit_factor": 0.94,
+          "total_return_pct": -7.47,
+          "max_drawdown_pct": 3.49,
+          "sortino_ratio": -0.037284525511268186
+        },
+        "val": {
+          "total_trades": 826,
+          "win_rate": 29.8,
+          "profit_factor": 0.83,
+          "total_return_pct": -5.24,
+          "max_drawdown_pct": 2.84,
+          "sortino_ratio": -0.12458931399164343
+        },
+        "fitness_score": 0.3153
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on trend and volatility, which could be contributing to the negative total return and low profit factor. The optimization history suggests that increasing the weights of trend and momentum has not led to significant improvements. Therefore, a more balanced approach with a slight increase in the weights of volume, orderflow, and structure, which have been relatively underweighted, may help improve the composite fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 29,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.3,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.2,
+      "structure": 1.2,
+      "sentiment": 1.1,
+      "macro": 1.1
+    },
+    "fitness": 0.3189,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1545,
+          "win_rate": 30.5,
+          "profit_factor": 0.95,
+          "total_return_pct": -7.21,
+          "max_drawdown_pct": 3.3,
+          "sortino_ratio": -0.032616094255458694
+        },
+        "val": {
+          "total_trades": 819,
+          "win_rate": 29.9,
+          "profit_factor": 0.83,
+          "total_return_pct": -5.16,
+          "max_drawdown_pct": 2.94,
+          "sortino_ratio": -0.12187510635571856
+        },
+        "fitness_score": 0.3189
+      }
+    },
+    "reasoning": "The current weights show trend and volatility are overweighted, while sentiment and macro are underweighted. The optimization history suggests that increasing trend and momentum weights can improve the fitness score. However, the last few iterations indicate that over-emphasizing any single agent can lead to decreased performance. A balanced approach, slightly increasing the weights of underperforming agents like sentiment and macro, while maintaining a strong emphasis on trend and momentum, could lead to improved overall performance.",
+    "improved": false
+  },
+  {
+    "iteration": 30,
+    "weights": {
+      "trend": 1.5,
+      "momentum": 1.1,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.4,
+      "structure": 1.1,
+      "sentiment": 1.0,
+      "macro": 1.0
+    },
+    "fitness": 0.3252,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1438,
+          "win_rate": 30.9,
+          "profit_factor": 0.97,
+          "total_return_pct": -6.16,
+          "max_drawdown_pct": 2.59,
+          "sortino_ratio": -0.021087616969701174
+        },
+        "val": {
+          "total_trades": 745,
+          "win_rate": 29.1,
+          "profit_factor": 0.83,
+          "total_return_pct": -4.82,
+          "max_drawdown_pct": 2.7,
+          "sortino_ratio": -0.1262521461019244
+        },
+        "fitness_score": 0.3252
+      }
+    },
+    "reasoning": "Analyzing the optimization history and performance metrics, it appears that the trend and volatility agents have been overweighted in previous iterations with positive outcomes. The sentiment and macro agents have been underweighted, but increasing their weights has not led to significant improvements. Therefore, a new set of weights will slightly increase the trend and volatility agents while adjusting the other agents to maintain a balanced approach.",
+    "improved": false
+  },
+  {
+    "iteration": 31,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.4,
+      "volume": 1.1,
+      "orderflow": 1.3,
+      "volatility": 1.1,
+      "structure": 1.2,
+      "sentiment": 0.8,
+      "macro": 0.8
+    },
+    "fitness": 0.318,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1523,
+          "win_rate": 30.3,
+          "profit_factor": 0.95,
+          "total_return_pct": -7.15,
+          "max_drawdown_pct": 3.22,
+          "sortino_ratio": -0.03334082787841466
+        },
+        "val": {
+          "total_trades": 799,
+          "win_rate": 29.4,
+          "profit_factor": 0.83,
+          "total_return_pct": -5.07,
+          "max_drawdown_pct": 3.07,
+          "sortino_ratio": -0.12506457321033335
+        },
+        "fitness_score": 0.318
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on trend and volatility, but the performance metrics indicate a need for improvement in win rate and profit factor. The optimization history suggests that increasing the weights of momentum and orderflow while decreasing the weights of sentiment and macro may lead to better performance. Therefore, a new set of weights is proposed to balance the contributions of each agent and improve the overall fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 32,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.4,
+      "volume": 1.0,
+      "orderflow": 1.3,
+      "volatility": 1.1,
+      "structure": 1.4,
+      "sentiment": 0.8,
+      "macro": 0.8
+    },
+    "fitness": 0.3334,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1502,
+          "win_rate": 30.5,
+          "profit_factor": 0.95,
+          "total_return_pct": -6.98,
+          "max_drawdown_pct": 2.71,
+          "sortino_ratio": -0.031741723875050046
+        },
+        "val": {
+          "total_trades": 794,
+          "win_rate": 30.2,
+          "profit_factor": 0.87,
+          "total_return_pct": -4.51,
+          "max_drawdown_pct": 2.45,
+          "sortino_ratio": -0.09532488547541301
+        },
+        "fitness_score": 0.3334
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on trend and volatility, but the performance metrics indicate a need for improvement in win rate and profit factor. The optimization history suggests that increasing the weights of momentum and orderflow while decreasing the weights of sentiment and macro could lead to better performance. Additionally, the structure agent's weight can be increased to improve the overall trading decision-making process.",
+    "improved": true
+  },
+  {
+    "iteration": 33,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.3,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.1,
+      "structure": 1.3,
+      "sentiment": 1.2,
+      "macro": 1.2
+    },
+    "fitness": 0.3185,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1543,
+          "win_rate": 30.3,
+          "profit_factor": 0.95,
+          "total_return_pct": -7.36,
+          "max_drawdown_pct": 3.38,
+          "sortino_ratio": -0.03543502390757734
+        },
+        "val": {
+          "total_trades": 820,
+          "win_rate": 29.9,
+          "profit_factor": 0.83,
+          "total_return_pct": -5.14,
+          "max_drawdown_pct": 2.93,
+          "sortino_ratio": -0.12057888471699252
+        },
+        "fitness_score": 0.3185
+      }
+    },
+    "reasoning": "The current weights seem to be slightly overemphasizing trend and structure, while underemphasizing sentiment and macro. Given the low win rates and negative total return percentages across both training and validation sets, it's crucial to adjust the weights to potentially improve the profit factor and reduce drawdowns. Increasing the weights of sentiment and macro, which are currently underweighted, might help in capturing more nuanced market dynamics. Conversely, slightly reducing the weights of trend and structure could mitigate over-reliance on these factors. The momentum and orderflow weights appear balanced but could be slightly adjusted to enhance overall performance. Volatility's weight seems appropriate given its moderate value.",
+    "improved": false
+  },
+  {
+    "iteration": 34,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.5,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.1,
+      "structure": 1.4,
+      "sentiment": 1.0,
+      "macro": 1.0
+    },
+    "fitness": 0.3179,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1545,
+          "win_rate": 29.7,
+          "profit_factor": 0.92,
+          "total_return_pct": -8.29,
+          "max_drawdown_pct": 3.89,
+          "sortino_ratio": -0.05212121203228314
+        },
+        "val": {
+          "total_trades": 794,
+          "win_rate": 30.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -4.7,
+          "max_drawdown_pct": 2.74,
+          "sortino_ratio": -0.10530406382478652
+        },
+        "fitness_score": 0.3179
+      }
+    },
+    "reasoning": "The current set of weights shows a slight emphasis on momentum and structure, which could be contributing to the moderate performance. However, the sentiment and macro agents are underweighted, which might be hindering the overall fitness score. The optimization history suggests that slight adjustments to the weights can lead to improvements. Therefore, a new set of weights will be proposed with a focus on balancing the contributions from each agent, slightly increasing the weights of underperforming agents like sentiment and macro, while maintaining a strong emphasis on momentum and structure.",
+    "improved": false
+  },
+  {
+    "iteration": 35,
+    "weights": {
+      "trend": 1.5,
+      "momentum": 1.4,
+      "volume": 1.1,
+      "orderflow": 1.2,
+      "volatility": 1.2,
+      "structure": 1.6,
+      "sentiment": 0.6,
+      "macro": 0.6
+    },
+    "fitness": 0.3294,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1404,
+          "win_rate": 30.5,
+          "profit_factor": 0.96,
+          "total_return_pct": -6.34,
+          "max_drawdown_pct": 2.42,
+          "sortino_ratio": -0.027274981641469836
+        },
+        "val": {
+          "total_trades": 743,
+          "win_rate": 29.6,
+          "profit_factor": 0.85,
+          "total_return_pct": -4.52,
+          "max_drawdown_pct": 2.58,
+          "sortino_ratio": -0.11065827187193822
+        },
+        "fitness_score": 0.3294
+      }
+    },
+    "reasoning": "The current best weights are from iteration 32 with a fitness score of 0.3334. The metrics suggest that the trend, momentum, and structure agents are performing well, while the sentiment and macro agents are underperforming. To improve the composite fitness score, I propose increasing the weights of the trend and structure agents, while decreasing the weights of the sentiment and macro agents. The momentum agent's weight will be kept the same, and the volume, orderflow, and volatility agents' weights will be adjusted slightly to maintain a balanced portfolio.",
+    "improved": false
+  },
+  {
+    "iteration": 36,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.2,
+      "volume": 1.2,
+      "orderflow": 1.4,
+      "volatility": 1.3,
+      "structure": 1.3,
+      "sentiment": 1.0,
+      "macro": 1.0
+    },
+    "fitness": 0.3287,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1508,
+          "win_rate": 30.4,
+          "profit_factor": 0.95,
+          "total_return_pct": -6.99,
+          "max_drawdown_pct": 3.38,
+          "sortino_ratio": -0.0313746536957201
+        },
+        "val": {
+          "total_trades": 808,
+          "win_rate": 30.1,
+          "profit_factor": 0.86,
+          "total_return_pct": -4.77,
+          "max_drawdown_pct": 2.69,
+          "sortino_ratio": -0.10465477252987102
+        },
+        "fitness_score": 0.3287
+      }
+    },
+    "reasoning": "The current set of weights has a trend weight of 1.2 and a momentum weight of 1.4, which are both relatively high. The structure weight is also high at 1.4. The sentiment and macro weights are low at 0.8. The optimization history suggests that increasing the trend weight and decreasing the sentiment and macro weights has led to some improvement in the fitness score. However, the win rate and profit factor are still low, indicating that the system is not performing well. To improve the composite fitness score, I propose decreasing the momentum weight and increasing the volume and orderflow weights to improve the win rate and profit factor. I also propose increasing the volatility weight to reduce the max drawdown. The sentiment and macro weights will be increased slightly to improve the overall performance.",
+    "improved": false
+  },
+  {
+    "iteration": 37,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.4,
+      "volume": 1.0,
+      "orderflow": 1.5,
+      "volatility": 1.3,
+      "structure": 1.4,
+      "sentiment": 0.9,
+      "macro": 0.9
+    },
+    "fitness": 0.3408,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1452,
+          "win_rate": 31.1,
+          "profit_factor": 0.97,
+          "total_return_pct": -6.08,
+          "max_drawdown_pct": 2.4,
+          "sortino_ratio": -0.0185735030070851
+        },
+        "val": {
+          "total_trades": 756,
+          "win_rate": 30.3,
+          "profit_factor": 0.87,
+          "total_return_pct": -4.28,
+          "max_drawdown_pct": 2.41,
+          "sortino_ratio": -0.09348297773097643
+        },
+        "fitness_score": 0.3408
+      }
+    },
+    "reasoning": "The current weights have trend, momentum, and structure as the highest weighted agents. However, the optimization history suggests that overweighting trend and momentum does not necessarily lead to improved fitness scores. The best improvement in fitness score was seen in iteration 32, where trend, momentum, and structure were weighted at 1.2, 1.4, and 1.4 respectively. The sentiment and macro agents are underweighted, but increasing their weights has not led to significant improvements in the past. Therefore, a new set of weights will be proposed that slightly increases the weight of orderflow and volatility, while maintaining the current weights of trend, momentum, and structure.",
+    "improved": true
+  },
+  {
+    "iteration": 38,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.5,
+      "volume": 1.0,
+      "orderflow": 1.6,
+      "volatility": 1.2,
+      "structure": 1.5,
+      "sentiment": 0.8,
+      "macro": 0.8
+    },
+    "fitness": 0.3415,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1400,
+          "win_rate": 31.0,
+          "profit_factor": 0.97,
+          "total_return_pct": -5.75,
+          "max_drawdown_pct": 2.13,
+          "sortino_ratio": -0.016225820630976218
+        },
+        "val": {
+          "total_trades": 744,
+          "win_rate": 30.1,
+          "profit_factor": 0.87,
+          "total_return_pct": -4.21,
+          "max_drawdown_pct": 2.41,
+          "sortino_ratio": -0.09339338862242852
+        },
+        "fitness_score": 0.3415
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on orderflow and momentum, with sentiment and macro being underweighted. The optimization history suggests that increases in trend, momentum, and structure weights have led to improved fitness scores in some instances, while decreases in sentiment and macro weights have also been present in improved iterations. Given the current performance metrics, a slight increase in the weights of trend, momentum, and structure, while maintaining or slightly decreasing the weights of sentiment and macro, could potentially lead to further improvement in the composite fitness score.",
+    "improved": true
+  },
+  {
+    "iteration": 39,
+    "weights": {
+      "trend": 1.6,
+      "momentum": 1.2,
+      "volume": 1.0,
+      "orderflow": 1.4,
+      "volatility": 1.5,
+      "structure": 1.7,
+      "sentiment": 0.8,
+      "macro": 0.8
+    },
+    "fitness": 0.3331,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1383,
+          "win_rate": 30.3,
+          "profit_factor": 0.94,
+          "total_return_pct": -6.77,
+          "max_drawdown_pct": 3.42,
+          "sortino_ratio": -0.0368926152809071
+        },
+        "val": {
+          "total_trades": 699,
+          "win_rate": 30.5,
+          "profit_factor": 0.88,
+          "total_return_pct": -3.94,
+          "max_drawdown_pct": 2.1,
+          "sortino_ratio": -0.0901202096334341
+        },
+        "fitness_score": 0.3331
+      }
+    },
+    "reasoning": "The current weights show that orderflow and momentum are overweighted, while sentiment and macro are underweighted. The optimization history suggests that increasing the weights of trend, structure, and volatility can lead to improved fitness scores. Therefore, I propose to increase the weights of trend, structure, and volatility, while decreasing the weights of orderflow and momentum, and keeping sentiment and macro at their current levels.",
+    "improved": false
+  },
+  {
+    "iteration": 40,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.4,
+      "volume": 1.1,
+      "orderflow": 1.5,
+      "volatility": 1.1,
+      "structure": 1.4,
+      "sentiment": 0.9,
+      "macro": 0.9
+    },
+    "fitness": 0.3207,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1508,
+          "win_rate": 30.2,
+          "profit_factor": 0.94,
+          "total_return_pct": -7.56,
+          "max_drawdown_pct": 3.45,
+          "sortino_ratio": -0.041959829765866215
+        },
+        "val": {
+          "total_trades": 786,
+          "win_rate": 30.0,
+          "profit_factor": 0.85,
+          "total_return_pct": -4.78,
+          "max_drawdown_pct": 2.73,
+          "sortino_ratio": -0.11339380520354037
+        },
+        "fitness_score": 0.3207
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on orderflow and momentum, with trend and structure also being significant. However, the optimization history suggests that over-emphasizing any single agent can lead to decreased performance. The recent improvements in fitness score were seen when trend, momentum, and orderflow were balanced, with sentiment and macro being underweighted. Given the slight underperformance in the validation set compared to the training set, it might be beneficial to slightly reduce the weights of the more dominant agents and increase the weights of the underweighted ones to improve generalization. Thus, a balanced approach with a slight adjustment towards the underweighted agents could potentially improve the composite fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 41,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.6,
+      "volume": 1.1,
+      "orderflow": 1.5,
+      "volatility": 1.2,
+      "structure": 1.5,
+      "sentiment": 1.2,
+      "macro": 1.2
+    },
+    "fitness": 0.3186,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1533,
+          "win_rate": 30.2,
+          "profit_factor": 0.94,
+          "total_return_pct": -7.45,
+          "max_drawdown_pct": 3.26,
+          "sortino_ratio": -0.03782851653958158
+        },
+        "val": {
+          "total_trades": 809,
+          "win_rate": 29.9,
+          "profit_factor": 0.84,
+          "total_return_pct": -5.06,
+          "max_drawdown_pct": 2.77,
+          "sortino_ratio": -0.1191231431083798
+        },
+        "fitness_score": 0.3186
+      }
+    },
+    "reasoning": "The current weights show a strong emphasis on orderflow and momentum, with trend and structure also being significant. However, the sentiment and macro agents are underweighted. Given the recent improvement in fitness scores when the trend and momentum weights were increased, it's reasonable to maintain or slightly increase these. The orderflow weight is already high, so a slight reduction might be beneficial to avoid over-reliance. Increasing the weights of underweighted agents like sentiment and macro could provide a more balanced approach, potentially improving the overall fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 42,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.4,
+      "volume": 1.0,
+      "orderflow": 1.5,
+      "volatility": 1.4,
+      "structure": 1.4,
+      "sentiment": 1.1,
+      "macro": 0.9
+    },
+    "fitness": 0.3302,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1499,
+          "win_rate": 30.2,
+          "profit_factor": 0.94,
+          "total_return_pct": -7.38,
+          "max_drawdown_pct": 3.39,
+          "sortino_ratio": -0.03909841050502793
+        },
+        "val": {
+          "total_trades": 777,
+          "win_rate": 30.4,
+          "profit_factor": 0.87,
+          "total_return_pct": -4.35,
+          "max_drawdown_pct": 2.31,
+          "sortino_ratio": -0.09147027399605868
+        },
+        "fitness_score": 0.3302
+      }
+    },
+    "reasoning": "The current weights show a high reliance on orderflow and momentum, with trend and structure also being significantly weighted. However, the optimization history suggests that reducing the weight of trend and increasing the weight of volatility and sentiment could potentially lead to improved fitness scores. The win rate and profit factor are relatively low, indicating a need for more conservative trading strategies. Therefore, a slight increase in the weight of volatility and a moderate increase in the weight of sentiment, along with a reduction in the weight of trend, could help improve the overall performance.",
+    "improved": false
+  },
+  {
+    "iteration": 43,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.7,
+      "volume": 1.0,
+      "orderflow": 1.8,
+      "volatility": 1.2,
+      "structure": 1.4,
+      "sentiment": 0.9,
+      "macro": 0.9
+    },
+    "fitness": 0.3271,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1456,
+          "win_rate": 30.6,
+          "profit_factor": 0.95,
+          "total_return_pct": -6.69,
+          "max_drawdown_pct": 2.95,
+          "sortino_ratio": -0.02990460278180229
+        },
+        "val": {
+          "total_trades": 783,
+          "win_rate": 29.9,
+          "profit_factor": 0.85,
+          "total_return_pct": -4.68,
+          "max_drawdown_pct": 2.55,
+          "sortino_ratio": -0.10697656915834942
+        },
+        "fitness_score": 0.3271
+      }
+    },
+    "reasoning": "The current weights have trend, momentum, orderflow, and structure as the most influential agents. However, the optimization history shows that reducing the weight of trend and increasing the weight of momentum and orderflow can lead to improved fitness scores. The sentiment and macro agents are underweighted, but increasing their weights has not shown significant improvements in the past. Therefore, a new set of weights will slightly reduce the trend weight, increase the momentum and orderflow weights, and maintain the other weights relatively stable.",
+    "improved": false
+  },
+  {
+    "iteration": 44,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.6,
+      "volume": 1.1,
+      "orderflow": 1.7,
+      "volatility": 1.3,
+      "structure": 1.6,
+      "sentiment": 1.1,
+      "macro": 1.1
+    },
+    "fitness": 0.3303,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1494,
+          "win_rate": 30.5,
+          "profit_factor": 0.95,
+          "total_return_pct": -6.97,
+          "max_drawdown_pct": 2.85,
+          "sortino_ratio": -0.03206888885283017
+        },
+        "val": {
+          "total_trades": 798,
+          "win_rate": 29.9,
+          "profit_factor": 0.86,
+          "total_return_pct": -4.61,
+          "max_drawdown_pct": 2.6,
+          "sortino_ratio": -0.09941388062613166
+        },
+        "fitness_score": 0.3303
+      }
+    },
+    "reasoning": "The current weights seem to be slightly imbalanced, with trend, momentum, orderflow, and structure being overweighted, while sentiment and macro are underweighted. The optimization history suggests that increasing the weights of trend, momentum, and orderflow can lead to improved fitness scores. However, it's also important to note that over-weighting these agents can lead to decreased performance. A balanced approach is needed. The proposed weights aim to strike a balance between the over-weighted and under-weighted agents, while also considering the optimization history.",
+    "improved": false
+  },
+  {
+    "iteration": 45,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.3,
+      "volume": 1.1,
+      "orderflow": 1.5,
+      "volatility": 1.1,
+      "structure": 1.6,
+      "sentiment": 1.2,
+      "macro": 1.2
+    },
+    "fitness": 0.3218,
+    "metrics": {
+      "BNB/USDT": {
+        "train": {
+          "total_trades": 1516,
+          "win_rate": 30.7,
+          "profit_factor": 0.96,
+          "total_return_pct": -6.79,
+          "max_drawdown_pct": 3.16,
+          "sortino_ratio": -0.027230952726802034
+        },
+        "val": {
+          "total_trades": 815,
+          "win_rate": 29.7,
+          "profit_factor": 0.83,
+          "total_return_pct": -5.16,
+          "max_drawdown_pct": 2.97,
+          "sortino_ratio": -0.12321543311600458
+        },
+        "fitness_score": 0.3218
+      }
+    },
+    "reasoning": "The current weights show a high emphasis on orderflow and momentum, with trend and structure also being significant. However, the sentiment and macro agents are underweighted. The optimization history suggests that iterations with higher trend and structure weights, along with a balanced approach to other agents, tend to perform better. Therefore, a new set of weights will slightly increase the trend and structure weights, while also giving more importance to sentiment and macro, and adjusting other weights for balance.",
+    "improved": false
+  }
+]

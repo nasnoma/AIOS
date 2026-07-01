@@ -1,0 +1,1704 @@
+[
+  {
+    "iteration": 0,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.3,
+      "volatility": 0.8,
+      "structure": 1.2,
+      "sentiment": 0.9,
+      "macro": 1.0
+    },
+    "fitness": 0.286,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1679,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -15.85,
+          "max_drawdown_pct": 10.67,
+          "sortino_ratio": -0.1270597492852562
+        },
+        "val": {
+          "total_trades": 844,
+          "win_rate": 28.6,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.62,
+          "max_drawdown_pct": 3.52,
+          "sortino_ratio": -0.08202881178315378
+        },
+        "fitness_score": 0.286
+      }
+    },
+    "reasoning": "Baseline configuration",
+    "improved": true
+  },
+  {
+    "iteration": 1,
+    "weights": {
+      "trend": 1.0,
+      "momentum": 1.3,
+      "volume": 1.2,
+      "orderflow": 1.1,
+      "volatility": 1.5,
+      "structure": 1.2,
+      "sentiment": 1.4,
+      "macro": 1.1
+    },
+    "fitness": 0.2879,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1685,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.14,
+          "max_drawdown_pct": 10.95,
+          "sortino_ratio": -0.13022866457151894
+        },
+        "val": {
+          "total_trades": 843,
+          "win_rate": 28.7,
+          "profit_factor": 0.9,
+          "total_return_pct": -5.49,
+          "max_drawdown_pct": 3.39,
+          "sortino_ratio": -0.07848870186612582
+        },
+        "fitness_score": 0.2879
+      }
+    },
+    "reasoning": "The current weights show trend and orderflow as the most heavily weighted, while volatility and sentiment are underweighted. Given the low win rate and negative total return, it's likely that the strategy is overemphasizing trend following and order flow, leading to poor performance in volatile markets. To improve, I will reduce the weights of trend and orderflow, increase the weights of volatility and sentiment to better capture market nuances, and slightly adjust other weights for balance.",
+    "improved": true
+  },
+  {
+    "iteration": 2,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.1,
+      "volatility": 1.2,
+      "structure": 1.1,
+      "sentiment": 1.2,
+      "macro": 1.3
+    },
+    "fitness": 0.2856,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1686,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.16,
+          "max_drawdown_pct": 10.97,
+          "sortino_ratio": -0.13048618918831387
+        },
+        "val": {
+          "total_trades": 844,
+          "win_rate": 28.7,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.53,
+          "max_drawdown_pct": 3.42,
+          "sortino_ratio": -0.07948339977862766
+        },
+        "fitness_score": 0.2856
+      }
+    },
+    "reasoning": "The current weights show a slight overweighting in volatility and sentiment, while trend and macro are underweighted. Given the low profit factor and high max drawdown, increasing the weights of trend and macro, which are more stable indicators, might improve the overall performance. Decreasing the weight of volatility, which has the highest current weight, could also help reduce risk.",
+    "improved": false
+  },
+  {
+    "iteration": 3,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.1,
+      "volume": 1.2,
+      "orderflow": 1.0,
+      "volatility": 1.2,
+      "structure": 1.1,
+      "sentiment": 1.3,
+      "macro": 1.2
+    },
+    "fitness": 0.2856,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1686,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.16,
+          "max_drawdown_pct": 10.97,
+          "sortino_ratio": -0.13048618918831387
+        },
+        "val": {
+          "total_trades": 844,
+          "win_rate": 28.7,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.53,
+          "max_drawdown_pct": 3.42,
+          "sortino_ratio": -0.07948339977862766
+        },
+        "fitness_score": 0.2856
+      }
+    },
+    "reasoning": "The current weights show a slight overweighting of sentiment and volatility, which may be contributing to the low win rate and negative total return. The optimization history suggests that reducing volatility's weight and increasing trend's weight may lead to improvement. Additionally, the low profit factor and high max drawdown suggest that the strategy may be over-trading, so reducing the weight of momentum and orderflow may help. The new weights aim to balance these factors and improve overall performance.",
+    "improved": false
+  },
+  {
+    "iteration": 4,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.4,
+      "volume": 1.1,
+      "orderflow": 1.3,
+      "volatility": 1.2,
+      "structure": 1.1,
+      "sentiment": 1.2,
+      "macro": 1.2
+    },
+    "fitness": 0.2824,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1689,
+          "win_rate": 27.4,
+          "profit_factor": 0.81,
+          "total_return_pct": -16.5,
+          "max_drawdown_pct": 11.3,
+          "sortino_ratio": -0.1347732628588146
+        },
+        "val": {
+          "total_trades": 844,
+          "win_rate": 28.7,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.53,
+          "max_drawdown_pct": 3.42,
+          "sortino_ratio": -0.07950405508548988
+        },
+        "fitness_score": 0.2824
+      }
+    },
+    "reasoning": "The current set of weights seems to favor sentiment and volatility, which may be contributing to the low win rate and profit factor. To improve the composite fitness score, I propose reducing the weights of sentiment and volatility and increasing the weights of trend and momentum, which have shown improvement in previous iterations. Additionally, I will slightly increase the weight of orderflow, which has been underweighted in previous iterations.",
+    "improved": false
+  },
+  {
+    "iteration": 5,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.5,
+      "volume": 1.1,
+      "orderflow": 1.2,
+      "volatility": 1.2,
+      "structure": 1.1,
+      "sentiment": 1.3,
+      "macro": 1.2
+    },
+    "fitness": 0.2824,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1689,
+          "win_rate": 27.4,
+          "profit_factor": 0.81,
+          "total_return_pct": -16.5,
+          "max_drawdown_pct": 11.3,
+          "sortino_ratio": -0.1347732628588146
+        },
+        "val": {
+          "total_trades": 844,
+          "win_rate": 28.7,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.53,
+          "max_drawdown_pct": 3.42,
+          "sortino_ratio": -0.07950405508548988
+        },
+        "fitness_score": 0.2824
+      }
+    },
+    "reasoning": "The current weights seem to overemphasize volatility and sentiment, while underemphasizing trend and momentum. The optimization history suggests that reducing volatility and increasing trend and momentum weights may lead to improved fitness scores. Therefore, I propose reducing the volatility weight and increasing the trend and momentum weights, while making minor adjustments to other agents to maintain a balanced approach.",
+    "improved": false
+  },
+  {
+    "iteration": 6,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.2,
+      "volatility": 1.2,
+      "structure": 1.1,
+      "sentiment": 1.2,
+      "macro": 1.3
+    },
+    "fitness": 0.2856,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1686,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.16,
+          "max_drawdown_pct": 10.97,
+          "sortino_ratio": -0.13048618918831387
+        },
+        "val": {
+          "total_trades": 844,
+          "win_rate": 28.7,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.53,
+          "max_drawdown_pct": 3.42,
+          "sortino_ratio": -0.07948339977862766
+        },
+        "fitness_score": 0.2856
+      }
+    },
+    "reasoning": "The current weights seem to overemphasize volatility and sentiment, while underemphasizing trend and macro. The optimization history suggests that reducing volatility's weight and increasing trend's weight may lead to improvement. Additionally, the performance metrics indicate a low win rate and profit factor, suggesting a need for more conservative weights. The new weights aim to balance these factors, with a slight emphasis on trend and macro, while reducing the impact of volatility and sentiment.",
+    "improved": false
+  },
+  {
+    "iteration": 7,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.6,
+      "volume": 1.1,
+      "orderflow": 1.2,
+      "volatility": 1.1,
+      "structure": 1.1,
+      "sentiment": 1.2,
+      "macro": 1.2
+    },
+    "fitness": 0.2823,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1688,
+          "win_rate": 27.4,
+          "profit_factor": 0.81,
+          "total_return_pct": -16.34,
+          "max_drawdown_pct": 11.14,
+          "sortino_ratio": -0.13281131626717102
+        },
+        "val": {
+          "total_trades": 844,
+          "win_rate": 28.6,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.63,
+          "max_drawdown_pct": 3.52,
+          "sortino_ratio": -0.08227953010691003
+        },
+        "fitness_score": 0.2823
+      }
+    },
+    "reasoning": "The current weights show a high value for volatility and sentiment, which may be overemphasizing these factors. The optimization history suggests that reducing the weight of volatility and increasing the weight of trend and momentum may lead to improvement. The win rate and profit factor are relatively low, indicating a need for more aggressive trading strategies. Therefore, increasing the weight of trend and momentum while decreasing the weight of volatility may help improve the composite fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 8,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.2,
+      "volatility": 1.1,
+      "structure": 1.2,
+      "sentiment": 1.2,
+      "macro": 1.3
+    },
+    "fitness": 0.2856,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1686,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.16,
+          "max_drawdown_pct": 10.97,
+          "sortino_ratio": -0.13048618918831387
+        },
+        "val": {
+          "total_trades": 844,
+          "win_rate": 28.7,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.53,
+          "max_drawdown_pct": 3.42,
+          "sortino_ratio": -0.07948339977862766
+        },
+        "fitness_score": 0.2856
+      }
+    },
+    "reasoning": "The current weights seem to overemphasize volatility and sentiment, while underemphasizing trend and macro. The optimization history suggests that reducing volatility and increasing trend may lead to improved fitness scores. Additionally, the performance metrics indicate that the strategy struggles with win rate and profit factor, suggesting a need for a more balanced approach. Therefore, I propose reducing the weights of volatility and sentiment, while increasing the weights of trend and macro.",
+    "improved": false
+  },
+  {
+    "iteration": 9,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.5,
+      "volume": 1.1,
+      "orderflow": 1.3,
+      "volatility": 1.2,
+      "structure": 1.1,
+      "sentiment": 1.2,
+      "macro": 1.2
+    },
+    "fitness": 0.2863,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1692,
+          "win_rate": 27.5,
+          "profit_factor": 0.81,
+          "total_return_pct": -16.4,
+          "max_drawdown_pct": 11.17,
+          "sortino_ratio": -0.13317701438261628
+        },
+        "val": {
+          "total_trades": 833,
+          "win_rate": 28.9,
+          "profit_factor": 0.9,
+          "total_return_pct": -5.29,
+          "max_drawdown_pct": 3.25,
+          "sortino_ratio": -0.07346638765401835
+        },
+        "fitness_score": 0.2863
+      }
+    },
+    "reasoning": "The current weights show a high emphasis on volatility and sentiment, which may be contributing to the low profit factor and high max drawdown. Reducing the weight on volatility and increasing the weight on trend and momentum may help improve the profit factor and reduce drawdown. Additionally, increasing the weight on orderflow may help improve the win rate. The new weights aim to strike a balance between these factors to improve the overall fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 10,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.6,
+      "volume": 1.0,
+      "orderflow": 1.3,
+      "volatility": 1.1,
+      "structure": 1.1,
+      "sentiment": 1.2,
+      "macro": 0.9
+    },
+    "fitness": 0.2895,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1663,
+          "win_rate": 27.8,
+          "profit_factor": 0.82,
+          "total_return_pct": -15.69,
+          "max_drawdown_pct": 10.62,
+          "sortino_ratio": -0.12638578265462366
+        },
+        "val": {
+          "total_trades": 817,
+          "win_rate": 28.6,
+          "profit_factor": 0.9,
+          "total_return_pct": -5.32,
+          "max_drawdown_pct": 3.26,
+          "sortino_ratio": -0.0769225548046024
+        },
+        "fitness_score": 0.2895
+      }
+    },
+    "reasoning": "The current weights show a high value for volatility and sentiment, which may be overemphasizing these factors. The optimization history suggests that reducing the weight of volatility and increasing the weight of trend and momentum may lead to improved performance. Additionally, the win rate and profit factor in the validation set are higher than in the training set, indicating potential overfitting to the training data. Reducing the weight of macro and increasing the weight of orderflow may help to mitigate this issue.",
+    "improved": true
+  },
+  {
+    "iteration": 11,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.4,
+      "volume": 1.3,
+      "orderflow": 1.3,
+      "volatility": 1.0,
+      "structure": 1.2,
+      "sentiment": 1.1,
+      "macro": 1.2
+    },
+    "fitness": 0.286,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1687,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.07,
+          "max_drawdown_pct": 10.87,
+          "sortino_ratio": -0.1292753101414118
+        },
+        "val": {
+          "total_trades": 844,
+          "win_rate": 28.7,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.53,
+          "max_drawdown_pct": 3.42,
+          "sortino_ratio": -0.07948339977862766
+        },
+        "fitness_score": 0.286
+      }
+    },
+    "reasoning": "The current weights have a trend weight of 1.4 and momentum weight of 1.6, which are relatively high. The volume and macro weights are low at 1.0 and 0.9 respectively. The optimization history suggests that increasing the momentum weight has not led to consistent improvement. The sentiment and orderflow weights are moderate. To improve the composite fitness score, I propose reducing the trend and momentum weights, increasing the volume and macro weights, and adjusting the other weights slightly.",
+    "improved": false
+  },
+  {
+    "iteration": 12,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.3,
+      "volume": 1.2,
+      "orderflow": 1.4,
+      "volatility": 1.3,
+      "structure": 1.2,
+      "sentiment": 1.1,
+      "macro": 1.4
+    },
+    "fitness": 0.2879,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1685,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.14,
+          "max_drawdown_pct": 10.95,
+          "sortino_ratio": -0.13019406106880108
+        },
+        "val": {
+          "total_trades": 843,
+          "win_rate": 28.7,
+          "profit_factor": 0.9,
+          "total_return_pct": -5.49,
+          "max_drawdown_pct": 3.39,
+          "sortino_ratio": -0.07848870186612582
+        },
+        "fitness_score": 0.2879
+      }
+    },
+    "reasoning": "The current weights have a high momentum and trend, but low macro. The optimization history suggests that reducing trend and increasing macro can lead to improvement. The detailed performance metrics show a low win rate and profit factor, indicating a need for more conservative agents like volatility and structure. Therefore, I propose reducing trend and momentum, increasing macro, and adjusting other weights for balance.",
+    "improved": false
+  },
+  {
+    "iteration": 13,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.5,
+      "volume": 1.1,
+      "orderflow": 1.4,
+      "volatility": 1.2,
+      "structure": 1.1,
+      "sentiment": 1.2,
+      "macro": 0.8
+    },
+    "fitness": 0.2894,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1666,
+          "win_rate": 27.5,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.0,
+          "max_drawdown_pct": 10.93,
+          "sortino_ratio": -0.13036902634622366
+        },
+        "val": {
+          "total_trades": 812,
+          "win_rate": 28.8,
+          "profit_factor": 0.9,
+          "total_return_pct": -5.15,
+          "max_drawdown_pct": 3.07,
+          "sortino_ratio": -0.07255396093839178
+        },
+        "fitness_score": 0.2894
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on momentum and trend, but overall, the weights are relatively balanced. However, the optimization history suggests that reducing the weight of macro and increasing the weight of orderflow and volatility might lead to improved performance. The best iteration so far (iteration 10) had a lower weight for macro and a higher weight for orderflow, which could indicate that these adjustments are beneficial. Therefore, the proposed weights will slightly reduce the macro weight, increase the orderflow and volatility weights, and make minor adjustments to other agents to maintain a balanced approach.",
+    "improved": false
+  },
+  {
+    "iteration": 14,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.4,
+      "volume": 1.2,
+      "orderflow": 1.3,
+      "volatility": 1.1,
+      "structure": 1.1,
+      "sentiment": 1.1,
+      "macro": 1.1
+    },
+    "fitness": 0.2883,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1685,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.03,
+          "max_drawdown_pct": 10.84,
+          "sortino_ratio": -0.12885151013553675
+        },
+        "val": {
+          "total_trades": 843,
+          "win_rate": 28.7,
+          "profit_factor": 0.9,
+          "total_return_pct": -5.49,
+          "max_drawdown_pct": 3.39,
+          "sortino_ratio": -0.0785151771207705
+        },
+        "fitness_score": 0.2883
+      }
+    },
+    "reasoning": "The current weights have a trend weight of 1.4 and momentum weight of 1.6, which are both relatively high. The volume weight is at 1.0, which is the lowest. The optimization history suggests that reducing the trend and momentum weights while increasing the volume weight may lead to improvement. The macro weight is currently at 0.9, which is underweighted, and increasing it may also be beneficial. The orderflow and volatility weights seem to be relatively stable, and the structure and sentiment weights are close to 1.1, which is a moderate weight. Based on this analysis, a new set of weights is proposed to balance the contributions of each agent.",
+    "improved": false
+  },
+  {
+    "iteration": 15,
+    "weights": {
+      "trend": 1.5,
+      "momentum": 1.7,
+      "volume": 0.8,
+      "orderflow": 1.1,
+      "volatility": 1.2,
+      "structure": 1.1,
+      "sentiment": 1.2,
+      "macro": 0.8
+    },
+    "fitness": 0.2791,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1667,
+          "win_rate": 27.3,
+          "profit_factor": 0.8,
+          "total_return_pct": -16.68,
+          "max_drawdown_pct": 11.37,
+          "sortino_ratio": -0.13939780091101162
+        },
+        "val": {
+          "total_trades": 802,
+          "win_rate": 28.7,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.37,
+          "max_drawdown_pct": 3.4,
+          "sortino_ratio": -0.08148091259387928
+        },
+        "fitness_score": 0.2791
+      }
+    },
+    "reasoning": "The current best weights from iteration 10 had a trend weight of 1.4, momentum weight of 1.6, and macro weight of 0.9, which suggests that trend and momentum are important, while macro is less so. The fact that the win rate and profit factor are relatively low suggests that the system may be over-trading, so reducing the weights of volume and orderflow could help. The optimization history also shows that reducing the macro weight has led to improvements in the past. Therefore, the new weights will reduce volume and orderflow, keep trend and momentum high, and reduce macro.",
+    "improved": false
+  },
+  {
+    "iteration": 16,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.4,
+      "volume": 1.4,
+      "orderflow": 1.3,
+      "volatility": 1.2,
+      "structure": 1.1,
+      "sentiment": 1.2,
+      "macro": 1.1
+    },
+    "fitness": 0.2884,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1681,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -15.98,
+          "max_drawdown_pct": 10.81,
+          "sortino_ratio": -0.12850450201102742
+        },
+        "val": {
+          "total_trades": 843,
+          "win_rate": 28.7,
+          "profit_factor": 0.9,
+          "total_return_pct": -5.49,
+          "max_drawdown_pct": 3.39,
+          "sortino_ratio": -0.07845929694103045
+        },
+        "fitness_score": 0.2884
+      }
+    },
+    "reasoning": "The current set of weights has a relatively high fitness score of 0.2895. Analyzing the performance metrics, the trend agent has a moderate weight of 1.4, while the momentum agent is overweighted at 1.6. The volume agent is underweighted at 1.0. The orderflow agent has a moderate weight of 1.3, and the volatility agent is slightly underweighted at 1.1. The structure and sentiment agents have moderate weights, while the macro agent is underweighted at 0.9. To improve the composite fitness score, we can adjust the weights to balance the contributions of each agent. Increasing the weight of the volume agent and decreasing the weight of the momentum agent may help. Additionally, increasing the weight of the macro agent may provide more diverse insights.",
+    "improved": false
+  },
+  {
+    "iteration": 17,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.4,
+      "volume": 1.1,
+      "orderflow": 1.2,
+      "volatility": 1.2,
+      "structure": 1.2,
+      "sentiment": 1.1,
+      "macro": 1.1
+    },
+    "fitness": 0.2857,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1686,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.18,
+          "max_drawdown_pct": 10.98,
+          "sortino_ratio": -0.13063472228627415
+        },
+        "val": {
+          "total_trades": 843,
+          "win_rate": 28.7,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.5,
+          "max_drawdown_pct": 3.4,
+          "sortino_ratio": -0.07878265126059565
+        },
+        "fitness_score": 0.2857
+      }
+    },
+    "reasoning": "The current weights have a trend weight of 1.4 and momentum weight of 1.6, which are relatively high. The volume weight is 1.0, which is neutral. The orderflow weight is 1.3, which is slightly high. The volatility and structure weights are 1.1, which are slightly low. The sentiment weight is 1.2, which is slightly high. The macro weight is 0.9, which is low. Based on the metrics, the trend and momentum agents seem to be overweighted, while the macro agent seems to be underweighted. To improve the composite fitness score, I propose reducing the trend and momentum weights, increasing the macro weight, and adjusting the other weights slightly.",
+    "improved": false
+  },
+  {
+    "iteration": 18,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.4,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.1,
+      "structure": 1.2,
+      "sentiment": 1.2,
+      "macro": 1.1
+    },
+    "fitness": 0.285,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1686,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.16,
+          "max_drawdown_pct": 10.97,
+          "sortino_ratio": -0.13048618918831387
+        },
+        "val": {
+          "total_trades": 844,
+          "win_rate": 28.6,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.63,
+          "max_drawdown_pct": 3.52,
+          "sortino_ratio": -0.08225949091999012
+        },
+        "fitness_score": 0.285
+      }
+    },
+    "reasoning": "The current best weights were found at iteration 10 with a fitness score of 0.2895. Momentum and trend agents are overweighted, while macro is underweighted. To improve the composite fitness score, adjust the momentum and trend weights downward and increase the macro weight. Also, reduce the orderflow weight and increase the structure weight to better balance the agents.",
+    "improved": false
+  },
+  {
+    "iteration": 19,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.4,
+      "volume": 1.1,
+      "orderflow": 1.3,
+      "volatility": 1.1,
+      "structure": 1.1,
+      "sentiment": 1.2,
+      "macro": 1.2
+    },
+    "fitness": 0.2856,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1686,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.16,
+          "max_drawdown_pct": 10.97,
+          "sortino_ratio": -0.13048618918831387
+        },
+        "val": {
+          "total_trades": 844,
+          "win_rate": 28.7,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.53,
+          "max_drawdown_pct": 3.42,
+          "sortino_ratio": -0.07948339977862766
+        },
+        "fitness_score": 0.2856
+      }
+    },
+    "reasoning": "The current weights show momentum and trend are overweighted, while macro is underweighted. Given the recent improvement in fitness score with the current weights, a slight adjustment to balance the overweighted agents and increase the underweighted macro agent is proposed. The new weights aim to enhance the overall performance by allocating more weight to macro and slightly reducing the weights of momentum and trend.",
+    "improved": false
+  },
+  {
+    "iteration": 20,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.3,
+      "volume": 1.2,
+      "orderflow": 1.4,
+      "volatility": 1.1,
+      "structure": 1.0,
+      "sentiment": 1.1,
+      "macro": 1.3
+    },
+    "fitness": 0.2877,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1687,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.22,
+          "max_drawdown_pct": 11.02,
+          "sortino_ratio": -0.13095562482051668
+        },
+        "val": {
+          "total_trades": 843,
+          "win_rate": 28.7,
+          "profit_factor": 0.9,
+          "total_return_pct": -5.49,
+          "max_drawdown_pct": 3.39,
+          "sortino_ratio": -0.07845929694103045
+        },
+        "fitness_score": 0.2877
+      }
+    },
+    "reasoning": "Analyzing the provided metrics, it appears that 'momentum' and 'trend' are overweighted, while 'macro' is underweighted. The optimization history suggests that reducing 'momentum' and 'trend' while increasing 'macro' could lead to improved performance. Additionally, 'volume' and 'orderflow' seem to have a positive impact when slightly increased. The new weights aim to balance these factors to potentially improve the composite fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 21,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.4,
+      "volume": 1.1,
+      "orderflow": 1.3,
+      "volatility": 1.2,
+      "structure": 1.1,
+      "sentiment": 1.2,
+      "macro": 1.2
+    },
+    "fitness": 0.2856,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1686,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.16,
+          "max_drawdown_pct": 10.97,
+          "sortino_ratio": -0.13048618918831387
+        },
+        "val": {
+          "total_trades": 844,
+          "win_rate": 28.7,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.53,
+          "max_drawdown_pct": 3.42,
+          "sortino_ratio": -0.07953921791508385
+        },
+        "fitness_score": 0.2856
+      }
+    },
+    "reasoning": "The current weights seem to be slightly overemphasizing momentum and underemphasizing macro. The optimization history suggests that minor adjustments to the weights have not led to significant improvements. To potentially improve the composite fitness score, I propose increasing the weight of macro and slightly decreasing the weights of momentum and trend, while also making minor adjustments to other agents to maintain a balanced approach.",
+    "improved": false
+  },
+  {
+    "iteration": 22,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.3,
+      "volume": 1.1,
+      "orderflow": 1.4,
+      "volatility": 1.3,
+      "structure": 1.0,
+      "sentiment": 1.1,
+      "macro": 1.2
+    },
+    "fitness": 0.2914,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1682,
+          "win_rate": 27.5,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.24,
+          "max_drawdown_pct": 11.04,
+          "sortino_ratio": -0.1318745344068766
+        },
+        "val": {
+          "total_trades": 830,
+          "win_rate": 29.0,
+          "profit_factor": 0.91,
+          "total_return_pct": -5.17,
+          "max_drawdown_pct": 3.13,
+          "sortino_ratio": -0.07040143812760458
+        },
+        "fitness_score": 0.2914
+      }
+    },
+    "reasoning": "The current weights seem to be slightly biased towards momentum and trend, while macro is underweighted. Given the similar performance across different iterations, a slight adjustment towards a more balanced approach with a focus on volatility and orderflow, which have shown some promise in the validation set, might yield better results. The proposed weights aim to balance the influence of each agent while slightly emphasizing factors that have shown potential for improvement in the validation metrics.",
+    "improved": true
+  },
+  {
+    "iteration": 23,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.1,
+      "volume": 1.0,
+      "orderflow": 1.3,
+      "volatility": 1.2,
+      "structure": 1.2,
+      "sentiment": 1.0,
+      "macro": 1.1
+    },
+    "fitness": 0.2802,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1680,
+          "win_rate": 27.3,
+          "profit_factor": 0.81,
+          "total_return_pct": -16.76,
+          "max_drawdown_pct": 11.62,
+          "sortino_ratio": -0.1391833255381057
+        },
+        "val": {
+          "total_trades": 839,
+          "win_rate": 28.5,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.64,
+          "max_drawdown_pct": 3.61,
+          "sortino_ratio": -0.08356186077495825
+        },
+        "fitness_score": 0.2802
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on orderflow and momentum, with trend, volatility, and macro also being significant. However, the optimization history suggests that reducing the weight of momentum and increasing the weight of trend and structure could lead to improved performance. The win rate and profit factor in the validation set are higher than in the training set, indicating potential overfitting. Therefore, a more balanced approach with a slight emphasis on trend and structure could help improve the composite fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 24,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.2,
+      "volume": 1.3,
+      "orderflow": 1.2,
+      "volatility": 1.1,
+      "structure": 1.2,
+      "sentiment": 1.0,
+      "macro": 1.1
+    },
+    "fitness": 0.2858,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1685,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.14,
+          "max_drawdown_pct": 10.95,
+          "sortino_ratio": -0.1302169077451977
+        },
+        "val": {
+          "total_trades": 844,
+          "win_rate": 28.7,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.52,
+          "max_drawdown_pct": 3.38,
+          "sortino_ratio": -0.07912598019943484
+        },
+        "fitness_score": 0.2858
+      }
+    },
+    "reasoning": "The current weights have a trend weight of 1.2 and momentum weight of 1.3, which are relatively high. However, the optimization history shows that increasing these weights further does not necessarily lead to improvement. The orderflow agent has a high weight of 1.4, which may be contributing to the relatively high win rate but low profit factor. The volatility agent has a weight of 1.3, which may be contributing to the high max drawdown. To improve the composite fitness score, I propose decreasing the trend and momentum weights, increasing the volume and structure weights, and adjusting the orderflow and volatility weights to find a better balance between win rate and profit factor.",
+    "improved": false
+  },
+  {
+    "iteration": 25,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.5,
+      "volatility": 1.3,
+      "structure": 1.1,
+      "sentiment": 1.2,
+      "macro": 1.2
+    },
+    "fitness": 0.2828,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1683,
+          "win_rate": 27.5,
+          "profit_factor": 0.81,
+          "total_return_pct": -16.37,
+          "max_drawdown_pct": 11.19,
+          "sortino_ratio": -0.13356839098218334
+        },
+        "val": {
+          "total_trades": 844,
+          "win_rate": 28.7,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.53,
+          "max_drawdown_pct": 3.42,
+          "sortino_ratio": -0.07950405508548988
+        },
+        "fitness_score": 0.2828
+      }
+    },
+    "reasoning": "The current best weights were found in iteration 22 with a fitness score of 0.2914. The optimization history suggests that slight adjustments around these weights could lead to further improvement. Notably, the trend and momentum agents have shown varied performance, suggesting a potential for adjustment. The orderflow agent has consistently been overweighted in better-performing iterations, indicating its importance. Given this, a slight increase in the trend and a decrease in momentum, while maintaining or slightly increasing the weight of orderflow, could potentially improve the fitness score. Additionally, the structure and sentiment agents, being underweighted, might benefit from a slight increase to explore their potential impact.",
+    "improved": false
+  },
+  {
+    "iteration": 26,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.3,
+      "volume": 1.1,
+      "orderflow": 1.5,
+      "volatility": 1.4,
+      "structure": 1.0,
+      "sentiment": 1.1,
+      "macro": 1.2
+    },
+    "fitness": 0.2942,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1669,
+          "win_rate": 27.7,
+          "profit_factor": 0.82,
+          "total_return_pct": -15.76,
+          "max_drawdown_pct": 10.63,
+          "sortino_ratio": -0.12671680540892333
+        },
+        "val": {
+          "total_trades": 819,
+          "win_rate": 29.2,
+          "profit_factor": 0.91,
+          "total_return_pct": -4.95,
+          "max_drawdown_pct": 2.83,
+          "sortino_ratio": -0.06514493021587814
+        },
+        "fitness_score": 0.2942
+      }
+    },
+    "reasoning": "Based on the optimization history, the best fitness score was achieved at iteration 22 with a score of 0.2914. The corresponding weights had a trend of 1.2, momentum of 1.3, volume of 1.1, orderflow of 1.4, volatility of 1.3, structure of 1.0, sentiment of 1.1, and macro of 1.2. To improve the composite fitness score, we should build upon this successful combination. Noting that orderflow and volatility had higher weights in the best iteration, and considering the overall performance metrics, we will slightly increase the weights of orderflow and volatility while making minor adjustments to other agents to maintain a balanced approach.",
+    "improved": true
+  },
+  {
+    "iteration": 27,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.6,
+      "volatility": 1.3,
+      "structure": 1.1,
+      "sentiment": 1.0,
+      "macro": 1.2
+    },
+    "fitness": 0.2854,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1674,
+          "win_rate": 27.4,
+          "profit_factor": 0.81,
+          "total_return_pct": -16.44,
+          "max_drawdown_pct": 11.28,
+          "sortino_ratio": -0.13521730533478082
+        },
+        "val": {
+          "total_trades": 847,
+          "win_rate": 28.8,
+          "profit_factor": 0.9,
+          "total_return_pct": -5.43,
+          "max_drawdown_pct": 3.06,
+          "sortino_ratio": -0.0758630365682717
+        },
+        "fitness_score": 0.2854
+      }
+    },
+    "reasoning": "The current weights have a trend weight of 1.2 and a momentum weight of 1.3, which may be slightly overweighted given the low win rates and profit factors. The orderflow weight of 1.5 seems justified given its relatively high impact on the fitness score. The volatility weight of 1.4 and structure weight of 1.0 may need adjustment as the sortino ratio and max drawdown suggest room for improvement in risk management. A slight decrease in trend and momentum weights, and a slight increase in structure weight may lead to better overall performance.",
+    "improved": false
+  },
+  {
+    "iteration": 28,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.6,
+      "volatility": 1.5,
+      "structure": 1.2,
+      "sentiment": 1.0,
+      "macro": 1.1
+    },
+    "fitness": 0.2836,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1608,
+          "win_rate": 27.1,
+          "profit_factor": 0.8,
+          "total_return_pct": -16.32,
+          "max_drawdown_pct": 11.11,
+          "sortino_ratio": -0.1406166912698807
+        },
+        "val": {
+          "total_trades": 794,
+          "win_rate": 29.0,
+          "profit_factor": 0.9,
+          "total_return_pct": -5.01,
+          "max_drawdown_pct": 2.78,
+          "sortino_ratio": -0.07168537068211159
+        },
+        "fitness_score": 0.2836
+      }
+    },
+    "reasoning": "The current weights have orderflow and volatility with higher values, indicating their potential importance. However, the recent improvements in fitness score were seen with adjustments to trend, momentum, and structure. Given the mixed performance metrics, a balanced approach with slight emphasis on orderflow and volatility, while adjusting trend and momentum to moderate levels, could yield better results.",
+    "improved": false
+  },
+  {
+    "iteration": 29,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.4,
+      "volume": 1.1,
+      "orderflow": 1.4,
+      "volatility": 1.3,
+      "structure": 1.1,
+      "sentiment": 1.1,
+      "macro": 1.2
+    },
+    "fitness": 0.2892,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1686,
+          "win_rate": 27.5,
+          "profit_factor": 0.81,
+          "total_return_pct": -16.29,
+          "max_drawdown_pct": 11.08,
+          "sortino_ratio": -0.13232634037272714
+        },
+        "val": {
+          "total_trades": 830,
+          "win_rate": 29.0,
+          "profit_factor": 0.91,
+          "total_return_pct": -5.17,
+          "max_drawdown_pct": 3.13,
+          "sortino_ratio": -0.07043141347405976
+        },
+        "fitness_score": 0.2892
+      }
+    },
+    "reasoning": "The current weights show orderflow and volatility with higher values, indicating potential over-reliance. The optimization history suggests that slight adjustments around the current values can lead to improvements. Notably, iteration 26 showed an improvement with weights close to the current set. To further optimize, a slight reduction in orderflow and volatility, while maintaining or slightly increasing trend and momentum, could balance the system and potentially improve the fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 30,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.6,
+      "volatility": 1.5,
+      "structure": 1.0,
+      "sentiment": 1.1,
+      "macro": 1.2
+    },
+    "fitness": 0.2971,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1660,
+          "win_rate": 27.4,
+          "profit_factor": 0.82,
+          "total_return_pct": -15.89,
+          "max_drawdown_pct": 10.56,
+          "sortino_ratio": -0.12941343760426757
+        },
+        "val": {
+          "total_trades": 815,
+          "win_rate": 29.2,
+          "profit_factor": 0.92,
+          "total_return_pct": -4.74,
+          "max_drawdown_pct": 2.61,
+          "sortino_ratio": -0.05940599615493612
+        },
+        "fitness_score": 0.2971
+      }
+    },
+    "reasoning": "Based on the optimization history, the highest fitness score of 0.2942 was achieved with weights trend=1.2, momentum=1.3, volume=1.1, orderflow=1.5, volatility=1.4, structure=1.0, sentiment=1.1, and macro=1.2. The agents with the highest weights (orderflow and volatility) seem to contribute positively to the fitness score. To further improve the score, a slight increase in the weights of orderflow and volatility, while maintaining or slightly adjusting the other weights, could be beneficial.",
+    "improved": true
+  },
+  {
+    "iteration": 31,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.2,
+      "volume": 1.2,
+      "orderflow": 1.7,
+      "volatility": 1.6,
+      "structure": 1.2,
+      "sentiment": 1.3,
+      "macro": 1.3
+    },
+    "fitness": 0.2812,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1659,
+          "win_rate": 27.2,
+          "profit_factor": 0.81,
+          "total_return_pct": -16.64,
+          "max_drawdown_pct": 11.56,
+          "sortino_ratio": -0.13950334610615667
+        },
+        "val": {
+          "total_trades": 848,
+          "win_rate": 28.7,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.57,
+          "max_drawdown_pct": 3.3,
+          "sortino_ratio": -0.08015209878650907
+        },
+        "fitness_score": 0.2812
+      }
+    },
+    "reasoning": "The current weights show orderflow and volatility being overweighted, while structure and sentiment are underweighted. Given the improvement in fitness score when orderflow and volatility weights were increased in previous iterations, it's reasonable to maintain or slightly increase their weights. Meanwhile, increasing the weights of underweighted agents like structure and sentiment could potentially improve the overall performance by diversifying the decision-making process. The trend and momentum weights seem balanced and can be adjusted slightly based on their historical impact. Macro and volume weights are also relatively balanced but can be fine-tuned for optimal performance.",
+    "improved": false
+  },
+  {
+    "iteration": 32,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.3,
+      "volume": 1.2,
+      "orderflow": 1.7,
+      "volatility": 1.3,
+      "structure": 1.2,
+      "sentiment": 1.2,
+      "macro": 1.3
+    },
+    "fitness": 0.2829,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1683,
+          "win_rate": 27.5,
+          "profit_factor": 0.81,
+          "total_return_pct": -16.37,
+          "max_drawdown_pct": 11.19,
+          "sortino_ratio": -0.13356982928190322
+        },
+        "val": {
+          "total_trades": 843,
+          "win_rate": 28.7,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.52,
+          "max_drawdown_pct": 3.41,
+          "sortino_ratio": -0.07913623024028456
+        },
+        "fitness_score": 0.2829
+      }
+    },
+    "reasoning": "The current weights show orderflow and volatility being overweighted, while structure and sentiment are underweighted. The optimization history suggests that increasing trend and momentum weights can improve the fitness score. The latest improved iteration (30) had a lower volatility weight and a higher orderflow weight. To further improve, I will decrease volatility, increase trend, and adjust other weights to balance the system.",
+    "improved": false
+  },
+  {
+    "iteration": 33,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.3,
+      "volume": 1.2,
+      "orderflow": 1.7,
+      "volatility": 1.4,
+      "structure": 1.2,
+      "sentiment": 1.2,
+      "macro": 1.2
+    },
+    "fitness": 0.2855,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1679,
+          "win_rate": 27.5,
+          "profit_factor": 0.81,
+          "total_return_pct": -16.37,
+          "max_drawdown_pct": 11.2,
+          "sortino_ratio": -0.13383326143214572
+        },
+        "val": {
+          "total_trades": 841,
+          "win_rate": 28.8,
+          "profit_factor": 0.9,
+          "total_return_pct": -5.42,
+          "max_drawdown_pct": 3.28,
+          "sortino_ratio": -0.07647825271824019
+        },
+        "fitness_score": 0.2855
+      }
+    },
+    "reasoning": "The current weights show orderflow and volatility being overweighted, while structure and sentiment are underweighted. Given the improvement in fitness score when trend and momentum weights were closer to 1.2 and orderflow was at 1.6, and considering the recent iterations, a balanced approach with slight emphasis on trend, momentum, and orderflow could potentially improve the composite fitness score. Thus, adjusting the weights to reflect a more balanced yet slightly emphasized approach on trend, momentum, and orderflow, while ensuring all other agents contribute meaningfully, could lead to an improved fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 34,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.4,
+      "volume": 1.1,
+      "orderflow": 1.4,
+      "volatility": 1.3,
+      "structure": 1.0,
+      "sentiment": 1.0,
+      "macro": 1.2
+    },
+    "fitness": 0.2906,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1658,
+          "win_rate": 27.8,
+          "profit_factor": 0.82,
+          "total_return_pct": -15.56,
+          "max_drawdown_pct": 10.51,
+          "sortino_ratio": -0.12508665886764453
+        },
+        "val": {
+          "total_trades": 816,
+          "win_rate": 28.8,
+          "profit_factor": 0.9,
+          "total_return_pct": -5.19,
+          "max_drawdown_pct": 3.14,
+          "sortino_ratio": -0.07347968658335952
+        },
+        "fitness_score": 0.2906
+      }
+    },
+    "reasoning": "Analyzing the optimization history and performance metrics, it appears that the trend and momentum agents are slightly underweighted, while the orderflow and volatility agents are overweighted. The structure and sentiment agents seem to have minimal impact. To improve the composite fitness score, I propose adjusting the weights to give more emphasis to trend and momentum, while reducing the weights of orderflow and volatility. The new weights should be within the range of 0.1 to 3.0.",
+    "improved": false
+  },
+  {
+    "iteration": 35,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.4,
+      "volume": 1.1,
+      "orderflow": 1.5,
+      "volatility": 1.4,
+      "structure": 1.2,
+      "sentiment": 1.2,
+      "macro": 1.2
+    },
+    "fitness": 0.2894,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1688,
+          "win_rate": 27.4,
+          "profit_factor": 0.81,
+          "total_return_pct": -16.5,
+          "max_drawdown_pct": 11.29,
+          "sortino_ratio": -0.13495646941208292
+        },
+        "val": {
+          "total_trades": 826,
+          "win_rate": 29.2,
+          "profit_factor": 0.91,
+          "total_return_pct": -5.02,
+          "max_drawdown_pct": 3.0,
+          "sortino_ratio": -0.06642572993430615
+        },
+        "fitness_score": 0.2894
+      }
+    },
+    "reasoning": "The current weights show orderflow and volatility with higher weights, indicating their significant impact on the fitness score. However, the optimization history suggests that increasing trend and momentum weights while slightly decreasing orderflow and volatility could lead to improvement. The structure and sentiment weights are relatively low, suggesting they might be underutilized. Given the last improved iteration, a balanced approach with slight adjustments to trend, momentum, and structure could enhance the overall performance.",
+    "improved": false
+  },
+  {
+    "iteration": 36,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.4,
+      "volume": 1.2,
+      "orderflow": 1.3,
+      "volatility": 1.2,
+      "structure": 1.1,
+      "sentiment": 1.2,
+      "macro": 1.3
+    },
+    "fitness": 0.2856,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1686,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.16,
+          "max_drawdown_pct": 10.97,
+          "sortino_ratio": -0.13048618918831387
+        },
+        "val": {
+          "total_trades": 844,
+          "win_rate": 28.7,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.53,
+          "max_drawdown_pct": 3.42,
+          "sortino_ratio": -0.07953921791508385
+        },
+        "fitness_score": 0.2856
+      }
+    },
+    "reasoning": "The current set of weights seems to overemphasize orderflow and volatility, while underemphasizing trend and momentum. Given the recent performance metrics, it appears that a more balanced approach could yield better results. The new set of weights aims to reduce the reliance on orderflow and volatility, while increasing the importance of trend and momentum. This adjustment is based on the observation that the highest fitness scores were achieved when these agents had more balanced weights.",
+    "improved": false
+  },
+  {
+    "iteration": 37,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.1,
+      "volume": 1.2,
+      "orderflow": 1.4,
+      "volatility": 1.2,
+      "structure": 1.3,
+      "sentiment": 1.0,
+      "macro": 1.2
+    },
+    "fitness": 0.2857,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1674,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.09,
+          "max_drawdown_pct": 10.93,
+          "sortino_ratio": -0.13051538494718504
+        },
+        "val": {
+          "total_trades": 844,
+          "win_rate": 28.7,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.51,
+          "max_drawdown_pct": 3.42,
+          "sortino_ratio": -0.0790235894367223
+        },
+        "fitness_score": 0.2857
+      }
+    },
+    "reasoning": "The current weights seem to be overemphasizing orderflow and volatility, while underemphasizing trend and structure. The optimization history suggests that reducing the weights of orderflow and volatility, while increasing the weights of trend and structure, may lead to improved performance. Additionally, the win rate and profit factor metrics suggest that the strategy is struggling to generate consistent profits, so a more balanced approach may be necessary.",
+    "improved": false
+  },
+  {
+    "iteration": 38,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.1,
+      "volume": 1.2,
+      "orderflow": 1.4,
+      "volatility": 1.3,
+      "structure": 1.3,
+      "sentiment": 0.9,
+      "macro": 1.1
+    },
+    "fitness": 0.2786,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1621,
+          "win_rate": 27.4,
+          "profit_factor": 0.82,
+          "total_return_pct": -15.62,
+          "max_drawdown_pct": 10.53,
+          "sortino_ratio": -0.12991428684896694
+        },
+        "val": {
+          "total_trades": 827,
+          "win_rate": 28.1,
+          "profit_factor": 0.87,
+          "total_return_pct": -5.95,
+          "max_drawdown_pct": 3.69,
+          "sortino_ratio": -0.09588013792915658
+        },
+        "fitness_score": 0.2786
+      }
+    },
+    "reasoning": "The current weights seem to overemphasize orderflow and volatility, while underemphasizing trend and structure. Given the recent performance metrics, it appears that increasing the weight of trend and structure, while slightly decreasing the weight of orderflow and volatility, could lead to improved overall performance. Momentum and volume seem to be relatively balanced, so their weights will be adjusted slightly. Sentiment and macro weights will be decreased to balance out the increased weights of trend and structure.",
+    "improved": false
+  },
+  {
+    "iteration": 39,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.4,
+      "volume": 1.2,
+      "orderflow": 1.4,
+      "volatility": 1.3,
+      "structure": 1.2,
+      "sentiment": 1.3,
+      "macro": 1.3
+    },
+    "fitness": 0.2856,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1686,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.16,
+          "max_drawdown_pct": 10.97,
+          "sortino_ratio": -0.13048618918831387
+        },
+        "val": {
+          "total_trades": 844,
+          "win_rate": 28.7,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.53,
+          "max_drawdown_pct": 3.42,
+          "sortino_ratio": -0.07953921791508385
+        },
+        "fitness_score": 0.2856
+      }
+    },
+    "reasoning": "The current weights show orderflow and volatility with higher weights, indicating their potential importance. However, the optimization history suggests that increasing trend and momentum weights while slightly decreasing orderflow and volatility could lead to improvement. The sentiment and macro weights seem underutilized and could be increased for better diversification. The goal is to balance the weights to maximize the composite fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 40,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.4,
+      "volume": 1.2,
+      "orderflow": 1.3,
+      "volatility": 1.2,
+      "structure": 1.1,
+      "sentiment": 1.2,
+      "macro": 1.3
+    },
+    "fitness": 0.2856,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1686,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.16,
+          "max_drawdown_pct": 10.97,
+          "sortino_ratio": -0.13048618918831387
+        },
+        "val": {
+          "total_trades": 844,
+          "win_rate": 28.7,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.53,
+          "max_drawdown_pct": 3.42,
+          "sortino_ratio": -0.07953921791508385
+        },
+        "fitness_score": 0.2856
+      }
+    },
+    "reasoning": "The current weights seem to overemphasize orderflow and volatility, while underemphasizing trend and momentum. The optimization history suggests that increasing trend and momentum weights, while decreasing orderflow and volatility weights, may lead to improved fitness scores. The new weights aim to balance the contributions of each agent, with a slight emphasis on trend and momentum.",
+    "improved": false
+  },
+  {
+    "iteration": 41,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.3,
+      "volume": 1.1,
+      "orderflow": 1.2,
+      "volatility": 1.1,
+      "structure": 1.3,
+      "sentiment": 1.4,
+      "macro": 1.2
+    },
+    "fitness": 0.2856,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1686,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.16,
+          "max_drawdown_pct": 10.97,
+          "sortino_ratio": -0.13048618918831387
+        },
+        "val": {
+          "total_trades": 844,
+          "win_rate": 28.7,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.53,
+          "max_drawdown_pct": 3.42,
+          "sortino_ratio": -0.07948339977862766
+        },
+        "fitness_score": 0.2856
+      }
+    },
+    "reasoning": "The current weights show orderflow and volatility being overweighted, while structure and sentiment are underweighted. Given the optimization history, it seems that reducing orderflow and increasing structure and sentiment could lead to improvement. The new weights aim to balance the agents, with a slight emphasis on trend and momentum, which have shown potential in previous iterations.",
+    "improved": false
+  },
+  {
+    "iteration": 42,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.2,
+      "volume": 1.2,
+      "orderflow": 1.3,
+      "volatility": 1.2,
+      "structure": 1.4,
+      "sentiment": 1.4,
+      "macro": 1.2
+    },
+    "fitness": 0.2856,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1686,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.16,
+          "max_drawdown_pct": 10.97,
+          "sortino_ratio": -0.13048618918831387
+        },
+        "val": {
+          "total_trades": 844,
+          "win_rate": 28.7,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.53,
+          "max_drawdown_pct": 3.42,
+          "sortino_ratio": -0.07948339977862766
+        },
+        "fitness_score": 0.2856
+      }
+    },
+    "reasoning": "Based on the provided metrics, it appears that the orderflow and volatility agents are overweighted, while the structure and sentiment agents are underweighted. The trend and momentum agents seem to be performing neutrally. To improve the composite fitness score, I propose reducing the weights of orderflow and volatility, and increasing the weights of structure and sentiment. The new set of weights should strike a balance between these agents to maximize the overall performance.",
+    "improved": false
+  },
+  {
+    "iteration": 43,
+    "weights": {
+      "trend": 0.9,
+      "momentum": 0.9,
+      "volume": 1.2,
+      "orderflow": 1.4,
+      "volatility": 1.3,
+      "structure": 1.4,
+      "sentiment": 1.4,
+      "macro": 1.1
+    },
+    "fitness": 0.2785,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1699,
+          "win_rate": 27.4,
+          "profit_factor": 0.81,
+          "total_return_pct": -16.57,
+          "max_drawdown_pct": 11.3,
+          "sortino_ratio": -0.13492468483534156
+        },
+        "val": {
+          "total_trades": 872,
+          "win_rate": 28.2,
+          "profit_factor": 0.88,
+          "total_return_pct": -5.98,
+          "max_drawdown_pct": 3.53,
+          "sortino_ratio": -0.08856563794206236
+        },
+        "fitness_score": 0.2785
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on orderflow and volatility, but the optimization history suggests that these weights have not led to significant improvements. The win rate and profit factor are low, indicating that the system may be over-trading. To address this, I propose reducing the weights of trend and momentum, which may be contributing to over-trading, and increasing the weights of structure and sentiment, which may help identify more profitable trades. I also reduce the weight of orderflow slightly, as its high value may be over-emphasizing short-term market movements.",
+    "improved": false
+  },
+  {
+    "iteration": 44,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.4,
+      "volume": 1.1,
+      "orderflow": 1.2,
+      "volatility": 1.2,
+      "structure": 1.3,
+      "sentiment": 1.0,
+      "macro": 1.2
+    },
+    "fitness": 0.2852,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1685,
+          "win_rate": 27.6,
+          "profit_factor": 0.82,
+          "total_return_pct": -16.1,
+          "max_drawdown_pct": 10.91,
+          "sortino_ratio": -0.1297501239199887
+        },
+        "val": {
+          "total_trades": 844,
+          "win_rate": 28.6,
+          "profit_factor": 0.89,
+          "total_return_pct": -5.63,
+          "max_drawdown_pct": 3.52,
+          "sortino_ratio": -0.0823151013066618
+        },
+        "fitness_score": 0.2852
+      }
+    },
+    "reasoning": "Analyzing the provided metrics, it appears that orderflow and volatility are overweighted, while trend and momentum are underweighted. The optimization history suggests that reducing the weights of orderflow and volatility, and increasing the weights of trend and momentum could lead to improved performance. Additionally, increasing the weight of structure may also be beneficial. The proposed weights aim to strike a balance between these factors.",
+    "improved": false
+  },
+  {
+    "iteration": 45,
+    "weights": {
+      "trend": 0.9,
+      "momentum": 0.9,
+      "volume": 1.2,
+      "orderflow": 1.4,
+      "volatility": 1.3,
+      "structure": 1.6,
+      "sentiment": 1.1,
+      "macro": 1.2
+    },
+    "fitness": 0.2714,
+    "metrics": {
+      "IOTA/USDT": {
+        "train": {
+          "total_trades": 1670,
+          "win_rate": 27.5,
+          "profit_factor": 0.81,
+          "total_return_pct": -16.32,
+          "max_drawdown_pct": 11.15,
+          "sortino_ratio": -0.134515047842782
+        },
+        "val": {
+          "total_trades": 856,
+          "win_rate": 27.9,
+          "profit_factor": 0.86,
+          "total_return_pct": -6.33,
+          "max_drawdown_pct": 4.03,
+          "sortino_ratio": -0.10251620401114087
+        },
+        "fitness_score": 0.2714
+      }
+    },
+    "reasoning": "The current weights seem to be slightly biased towards orderflow and volatility, which have the highest weights. However, the optimization history suggests that reducing the weights of trend and momentum, while increasing the weight of structure, may lead to improved performance. The win rate and profit factor are relatively low, indicating a need for more conservative trading. Therefore, a more balanced approach with a slight emphasis on structure and a reduction in trend and momentum weights may yield better results.",
+    "improved": false
+  }
+]

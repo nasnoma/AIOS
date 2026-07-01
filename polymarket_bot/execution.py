@@ -1,385 +1,290 @@
 """
 polymarket_bot/execution.py
 
-CEX-DEX Dual-Execution Engine.
-Handles simulated split-balance swaps in Paper Mode and live market orders/on-chain swaps in Live Mode.
+Trade executor — paper and live modes.
+
+Paper mode:
+  - Fills at current mid-price instantly (zero latency).
+  - Tracks virtual portfolio in state.py (JSON).
+  - Resolves positions at window close by fetching winning side.
+
+Live mode:
+  - Places FOK/GTC limit orders via clob_client.
+  - Cancels any unfilled orders 30s before window close.
+  - Redemption of winning shares handled post-resolution (Web3).
 """
 from __future__ import annotations
 import asyncio
 import uuid
-import base64
-import random
-import aiohttp
 from datetime import datetime, timezone
+from typing import Optional
+
 from loguru import logger
 
+from polymarket_bot.clob_client import clob_cache
 from polymarket_bot.config import settings
+from polymarket_bot.market import MarketTokens
+from polymarket_bot.risk import RiskDecision
 from polymarket_bot.state import (
-    load_state, save_state, ArbTradeCycle,
-    reset_daily_pnl_if_new_day
+    OpenPosition, PortfolioState, load_state, reset_daily_pnl_if_new_day, save_state
 )
-from polymarket_bot.alerts import arbitrage_executed, arbitrage_failed
-from polymarket_bot.slippage import calculate_slippage, calculate_solana_priority_fee
+from polymarket_bot.strategy import Signal, SignalType
 
-import ccxt.async_support as ccxt
-
-# Optional Solana imports (with graceful fallback if not installed)
-try:
-    from solana.rpc.async_api import AsyncClient
-    from solders.keypair import Keypair
-    from solders.transaction import VersionedTransaction
-    _HAS_SOLANA_SDK = True
-except ImportError:
-    _HAS_SOLANA_SDK = False
-
-_exchange = None
+# Polymarket charges ~1–2¢ per USDC in fees; model conservatively
+_FEE_RATE = 0.02   # 2% of position size (includes slippage estimate)
 
 
-def get_bybit_client() -> ccxt.bybit:
-    global _exchange
-    if _exchange is None:
-        _exchange = ccxt.bybit({
-            'apiKey': settings.bybit_api_key,
-            'secret': settings.bybit_api_secret,
-            'enableRateLimit': True,
-            'options': {
-                'defaultType': 'spot',
-            }
-        })
-        if settings.bybit_testnet:
-            _exchange.set_sandbox_mode(True)
-    return _exchange
-
-
-async def close_bybit_client() -> None:
-    global _exchange
-    if _exchange is not None:
-        await _exchange.close()
-        _exchange = None
-
-
-async def execute_arbitrage(opportunity: dict, price_feed=None, scanner=None) -> None:
+async def execute(
+    signal: Signal,
+    risk: RiskDecision,
+    market: MarketTokens,
+) -> Optional[OpenPosition]:
     """
-    Executes CEX-DEX arbitrage opportunity.
-    Supports both simulated (paper) and live execution.
+    Execute a trade for an approved signal.
+    Returns the opened OpenPosition, or None if execution fails.
     """
-    route = opportunity["route"]
-    net_spread = opportunity["net_spread"]
-    size_usdt = opportunity["size_usdt"]
-    size_asset = opportunity["size_asset"]
-    buy_price = opportunity["buy_price"]
-    sell_price = opportunity["sell_price"]
+    if not risk.approved:
+        return None
 
-    # Extract base/quote assets from opportunity
-    base = opportunity.get("base", "SOL")
-    quote = opportunity.get("quote", "USDT")
-    base_mint = opportunity.get("base_mint", "So11111111111111111111111111111111111111112")
-    quote_mint = opportunity.get("quote_mint", "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB")
+    if settings.is_live:
+        return await _execute_live(signal, risk, market)
+    else:
+        return await _execute_paper(signal, risk, market)
 
+
+async def _execute_paper(
+    signal: Signal,
+    risk: RiskDecision,
+    market: MarketTokens,
+) -> Optional[OpenPosition]:
+    """
+    Paper mode: instantly fill at current mid-price, no network call.
+    """
     state = load_state()
     state = reset_daily_pnl_if_new_day(state)
-    cycle_id = uuid.uuid4().hex[:8]
-    now_iso = datetime.now(timezone.utc).isoformat()
 
-    logger.info(f"⚡ [Arb Trigger] Executing {route} for {base}/{quote} | Expected Net: {net_spread:.2%}")
+    # Determine which side(s) we are buying
+    if signal.signal_type == SignalType.SPREAD_ARB:
+        side = "BOTH"
+    elif signal.signal_type == SignalType.MOMENTUM_LONG:
+        side = "YES"
+    else:
+        side = "NO"
 
-    if settings.trading_mode == "paper":
-        # ── PAPER SIMULATION MODE ──
-        if state.max_drawdown_paused:
-            logger.warning(f"❌ Paper execution blocked: Max Drawdown Guard active.")
-            arbitrage_failed(cycle_id, route, size_usdt, net_spread, buy_price, mode="PAPER")
-            return
+    total_cost = risk.total_size_usd * (1 + _FEE_RATE)
+    if state.cash < total_cost:
+        logger.warning(f"Paper exec blocked: insufficient cash ({state.cash:.2f} < {total_cost:.2f})")
+        return None
 
-        # Get volatility from price_feed
-        bybit_ticker_symbol = f"{base}{quote}"
-        volatility = price_feed.get_volatility(bybit_ticker_symbol) if (price_feed and hasattr(price_feed, 'get_volatility')) else 0.0015
-        
-        # Parallel Leg Simulation
-        async def simulate_cex_leg():
-            await asyncio.sleep(0.12)  # ~120ms Bybit latency
-            rechecked_price = sell_price if route == "DEX-BUY_CEX-SELL" else buy_price
-            if price_feed:
-                bid, ask, _, _ = price_feed.get_best_bid_ask(bybit_ticker_symbol)
-                if route == "DEX-BUY_CEX-SELL":
-                    if bid > 0: rechecked_price = bid
-                else:
-                    if ask > 0: rechecked_price = ask
-            
-            cex_slippage = calculate_slippage(size_usdt, volatility, is_solana_leg=False)
-            if route == "DEX-BUY_CEX-SELL":
-                realized_price = rechecked_price * (1.0 - cex_slippage)
-            else:
-                realized_price = rechecked_price * (1.0 + cex_slippage)
-            return realized_price, cex_slippage
+    pos = OpenPosition(
+        position_id=str(uuid.uuid4())[:8],
+        asset=signal.asset,
+        token_id_yes=market.token_id_up,
+        token_id_no=market.token_id_down,
+        signal_type=signal.signal_type.value,
+        side=side,
+        entry_price_yes=signal.entry_price_yes,
+        entry_price_no=signal.entry_price_no,
+        size_usd=risk.total_size_usd,
+        window_start=market.window_start,
+        window_end=market.window_end,
+        opened_at=datetime.now(timezone.utc).isoformat(),
+    )
 
-        async def simulate_dex_leg():
-            # Solana leg delay
-            if settings.dedicated_rpc_url:
-                latency = random.uniform(0.3, 0.7)  # Dedicated RPC speedup
-            else:
-                latency = random.uniform(0.6, 1.4)  # Public RPC
-            await asyncio.sleep(latency)
+    state.cash -= total_cost
+    state.positions.append(_pos_to_dict(pos))
+    save_state(state)
 
-            rechecked_price = buy_price if route == "DEX-BUY_CEX-SELL" else sell_price
-            if scanner and price_feed:
-                bid, ask, _, _ = price_feed.get_best_bid_ask(bybit_ticker_symbol)
-                mid_price = (bid + ask) / 2.0 if (bid and ask) else rechecked_price
-                base_in = size_asset
-                dex_buy, _, dex_sell, _ = await scanner.get_latest_dex_prices(base, quote, base_mint, quote_mint, mid_price, size_usdt, base_in)
-                rechecked_price = dex_buy if route == "DEX-BUY_CEX-SELL" else dex_sell
+    logger.success(
+        f"📝 PAPER {signal.signal_type.value} | {signal.asset} | side={side} | "
+        f"size=${risk.total_size_usd:.2f} | "
+        f"YES={signal.entry_price_yes} NO={signal.entry_price_no}"
+    )
+    return pos
 
-            dex_slippage = calculate_slippage(size_usdt, volatility, is_solana_leg=True)
-            if route == "DEX-BUY_CEX-SELL":
-                realized_price = rechecked_price * (1.0 + dex_slippage)
-            else:
-                realized_price = rechecked_price * (1.0 - dex_slippage)
-            return realized_price, dex_slippage
 
-        (cex_realized_price, cex_slip), (dex_realized_price, dex_slip) = await asyncio.gather(
-            simulate_cex_leg(), simulate_dex_leg()
+async def _execute_live(
+    signal: Signal,
+    risk: RiskDecision,
+    market: MarketTokens,
+) -> Optional[OpenPosition]:
+    """
+    Live mode: place real limit orders via CLOB.
+    """
+    placed_orders = []
+
+    if signal.buy_yes and risk.size_usd_yes > 0:
+        order_id = await clob_cache.place_limit_order(
+            token_id=market.token_id_up,
+            side="BUY",
+            price=signal.entry_price_yes,
+            size=risk.size_usd_yes / signal.entry_price_yes,  # shares = USD / price
+            order_type="FOK",
         )
+        if order_id:
+            placed_orders.append(("YES", order_id))
 
-        priority_fee_usd = calculate_solana_priority_fee(volatility)
-        # Convert priority fee to asset using DEX realized price
-        sol_priority_fee = priority_fee_usd / dex_realized_price
+    if signal.buy_no and risk.size_usd_no > 0:
+        order_id = await clob_cache.place_limit_order(
+            token_id=market.token_id_down,
+            side="BUY",
+            price=signal.entry_price_no,
+            size=risk.size_usd_no / signal.entry_price_no,
+            order_type="FOK",
+        )
+        if order_id:
+            placed_orders.append(("NO", order_id))
 
-        # Update local balances
-        cex_asset_val = state.cex_assets.get(base, 0.0)
-        dex_asset_val = state.dex_assets.get(base, 0.0)
+    if not placed_orders:
+        logger.error(f"Live execution: no orders placed for {signal.asset}")
+        return None
 
-        if route == "DEX-BUY_CEX-SELL":
-            # Buy Asset on DEX: cost = size_usdt, receive asset based on dex_realized_price
-            # Subtract priority fee from DEX asset balance
-            size_asset_realized = size_usdt / dex_realized_price
-            state.dex_cash -= size_usdt
-            state.dex_assets[base] = dex_asset_val + size_asset_realized - sol_priority_fee
+    side = "BOTH" if len(placed_orders) == 2 else placed_orders[0][0]
+    pos = OpenPosition(
+        position_id=str(uuid.uuid4())[:8],
+        asset=signal.asset,
+        token_id_yes=market.token_id_up,
+        token_id_no=market.token_id_down,
+        signal_type=signal.signal_type.value,
+        side=side,
+        entry_price_yes=signal.entry_price_yes,
+        entry_price_no=signal.entry_price_no,
+        size_usd=risk.total_size_usd,
+        window_start=market.window_start,
+        window_end=market.window_end,
+        opened_at=datetime.now(timezone.utc).isoformat(),
+    )
 
-            # Sell Asset on CEX: sell size_asset, receive cash based on cex_realized_price and Bybit 0.1% taker fee
-            cex_proceeds = (size_asset * cex_realized_price) * (1.0 - 0.0010)
-            state.cex_cash += cex_proceeds
-            state.cex_assets[base] = cex_asset_val - size_asset
+    state = load_state()
+    state.positions.append(_pos_to_dict(pos))
+    save_state(state)
 
-            # P&L
-            pnl = cex_proceeds - size_usdt - priority_fee_usd
-            expected_pnl = (size_asset * sell_price) * (1.0 - 0.0010) - size_usdt - 0.05
-        else:
-            # Buy Asset on CEX: cost = size_usdt * (1 + 0.1% fee), receive size_asset
-            cex_cost = size_usdt * (1.0 + 0.0010)
-            state.cex_cash -= cex_cost
-            state.cex_assets[base] = cex_asset_val + size_asset
+    logger.success(f"🟢 LIVE {signal.signal_type.value} | {signal.asset} | orders={placed_orders}")
+    return pos
 
-            # Sell Asset on DEX: sell size_asset, receive cash based on dex_realized_price
-            # Subtract priority fee from DEX SOL asset balance
-            dex_proceeds = (size_asset * dex_realized_price)
-            state.dex_cash += dex_proceeds
-            state.dex_assets[base] = dex_asset_val - (size_asset + sol_priority_fee)
 
-            # P&L
-            pnl = dex_proceeds - cex_cost - priority_fee_usd
-            expected_pnl = (size_asset * sell_price) - cex_cost - 0.05
+async def resolve_expired_positions(current_window_start: int, feed: PriceFeed) -> None:
+    """
+    Check all open positions. Resolve (close) those whose window has ended.
+    Calculates P&L based on the winning side from actual Binance spot strike price resolution.
+    """
+    state = load_state()
+    state = reset_daily_pnl_if_new_day(state)
+    changed = False
 
-        # Update stats
-        state.total_pnl += pnl
-        state.daily_pnl += pnl
-        state.cycle_count += 1
-        state.total_expected_pnl += expected_pnl
-        state.total_actual_pnl += pnl
-        state.total_slippage_usd += (expected_pnl - pnl)
-        state.total_priority_fees_usd += priority_fee_usd
-        state.total_volume_usdt += (size_usdt * 2.0)
+    for pos_dict in list(state.positions):
+        if pos_dict.get("status") != "open":
+            continue
+        window_end = pos_dict.get("window_end", 0)
+        if current_window_start < window_end:
+            continue  # Window not yet finished
 
-        is_win = pnl >= 0
-        if is_win:
+        # Window is over — determine which side won
+        pnl = await _compute_resolution_pnl(pos_dict, feed)
+        pos_dict["pnl_usd"] = round(pnl, 4)
+        pos_dict["status"] = "closed"
+        pos_dict["closed_at"] = datetime.now(timezone.utc).isoformat()
+
+        size = pos_dict.get("size_usd", 0)
+        if pnl > 0:
             state.win_count += 1
-            state.avg_win_usd = (
-                (state.avg_win_usd * (state.win_count - 1) + pnl) / state.win_count
-                if state.win_count > 0 else pnl
+            # Cumulative moving average for avg win
+            state.avg_win_usd = round(
+                state.avg_win_usd + (pnl - state.avg_win_usd) / state.win_count, 4
             )
         else:
             state.loss_count += 1
-            state.avg_loss_usd = (
-                (state.avg_loss_usd * (state.loss_count - 1) + pnl) / state.loss_count
-                if state.loss_count > 0 else pnl
+            # Cumulative moving average for avg loss (stored as negative)
+            state.avg_loss_usd = round(
+                state.avg_loss_usd + (pnl - state.avg_loss_usd) / state.loss_count, 4
             )
 
-        if route not in state.route_stats:
-            state.route_stats[route] = {"win_count": 0, "loss_count": 0, "total_pnl": 0.0}
-        state.route_stats[route]["total_pnl"] += pnl
-        if is_win:
-            state.route_stats[route]["win_count"] += 1
-        else:
-            state.route_stats[route]["loss_count"] += 1
+        state.total_pnl += pnl
+        state.daily_pnl += pnl
+        # Return capital to cash (net of fees already deducted at entry)
+        state.cash += size + pnl
 
-        # Re-value account size dynamically
-        total_assets_value = 0.0
-        if price_feed:
-            for asset_name in ["SOL", "BTC", "ETH"]:
-                bid_p, ask_p, _, _ = price_feed.get_best_bid_ask(f"{asset_name}USDT")
-                mid_p = (bid_p + ask_p) / 2.0 if (bid_p and ask_p) else (140.0 if asset_name == "SOL" else (60000.0 if asset_name == "BTC" else 3000.0))
-                asset_qty = state.cex_assets.get(asset_name, 0.0) + state.dex_assets.get(asset_name, 0.0)
-                total_assets_value += asset_qty * mid_p
-        else:
-            mid_price = (cex_realized_price + dex_realized_price) / 2.0
-            total_assets_value = (state.cex_asset + state.dex_asset) * mid_price
-            
-        state.account_size = state.cex_cash + state.dex_cash + total_assets_value
+        state.positions.remove(pos_dict)
+        state.closed_trades.append(pos_dict)
+        changed = True
 
-        # Drawdown guard check
-        if state.account_size > state.peak_account_size:
-            state.peak_account_size = state.account_size
-        drawdown_pct = (state.peak_account_size - state.account_size) / state.peak_account_size
-        if drawdown_pct >= settings.max_paper_drawdown_pct:
-            state.max_drawdown_paused = True
-            logger.warning(
-                f"🚨 [Max Drawdown Guard] Breached! Drawdown: {drawdown_pct:.2%} (Limit: {settings.max_paper_drawdown_pct:.2%}). "
-                f"Paper trading paused."
-            )
-
-        # Log history
-        actual_spread = pnl / size_usdt
-        slippage_pct = (cex_slip + dex_slip) / 2.0
-        cycle_record = ArbTradeCycle(
-            cycle_id=cycle_id,
-            direction=route,
-            started_at=now_iso,
-            completed_at=datetime.now(timezone.utc).isoformat(),
-            est_edge_pct=net_spread,
-            actual_edge_pct=actual_spread,
-            size_usdt=size_usdt,
-            pnl_usdt=pnl,
-            status="completed",
-            leg1_price=buy_price if route == "CEX-BUY_DEX-SELL" else dex_realized_price,
-            leg2_price=cex_realized_price if route == "CEX-BUY_DEX-SELL" else sell_price,
-            expected_pnl=expected_pnl,
-            actual_pnl=pnl,
-            slippage_pct=slippage_pct,
-            priority_fee_usd=priority_fee_usd
+        emoji = "✅" if pnl >= 0 else "❌"
+        logger.info(
+            f"{emoji} Resolved {pos_dict['asset']} | side={pos_dict['side']} | "
+            f"size=${size:.2f} | P&L=${pnl:+.2f} | total=${state.total_pnl:+.2f}"
         )
-        state.closed_trades.append(cycle_record.to_dict())
+
+    state.cycle_count += 1
+    if changed:
         save_state(state)
 
-        logger.success(f"🎉 [Paper Arb Completed] {route} ({base}/{quote}) | Size: ${size_usdt:.2f} USDT | Realized PnL: ${pnl:+.4f} USDT | Slippage: {slippage_pct:.3%}")
-        arbitrage_executed(cycle_id, route, size_usdt, pnl, buy_price, mode="PAPER")
 
+async def compute_unrealized_pnl(pos_dict: dict, feed: PriceFeed) -> float:
+    """Public helper to compute current unrealized P&L for open positions."""
+    return await _compute_resolution_pnl(pos_dict, feed, is_resolution=False)
+
+
+async def _compute_resolution_pnl(pos_dict: dict, feed: PriceFeed, is_resolution: bool = True) -> float:
+    """
+    Compute P&L using Binance spot strike prices for deterministic paper resolution (if is_resolution=True)
+    or current mid prices for mark-to-market unrealized evaluation (if is_resolution=False).
+    """
+    side = pos_dict.get("side", "YES")
+    size_usd = pos_dict.get("size_usd", 0.0)
+    entry_yes = pos_dict.get("entry_price_yes") or 0.5
+    entry_no = pos_dict.get("entry_price_no") or 0.5
+    asset = pos_dict.get("asset", "")
+    window_start = pos_dict.get("window_start", 0)
+    window_end = pos_dict.get("window_end", 0)
+
+    token_id_yes = pos_dict.get("token_id_yes", "")
+    token_id_no = pos_dict.get("token_id_no", "")
+    mid_yes = await clob_cache.get_mid_price(token_id_yes) if token_id_yes else None
+    mid_no = await clob_cache.get_mid_price(token_id_no) if token_id_no else None
+
+    # Determine resolution outcome from actual spot feed strike prices
+    strike = feed.get_strike(asset, window_start)
+    final = feed.get_strike(asset, window_end)
+
+    if strike is not None and final is not None:
+        yes_won = final >= strike
     else:
-        # ── LIVE TRADING MODE ──
-        if not settings.solana_wallet_private_key or not settings.bybit_api_key:
-            logger.error("❌ Live execution credentials not configured! Skipping trade.")
-            arbitrage_failed(cycle_id, route, size_usdt, net_spread, buy_price, mode="LIVE")
-            return
+        # Fallback to current mid-prices if strike capture missed (e.g. on startup)
+        if mid_yes is not None and mid_no is not None:
+            yes_won = mid_yes > mid_no
+        else:
+            yes_won = entry_yes > 0.5  # Last resort fallback
 
-        exchange = get_bybit_client()
-        logger.info(f"🚀 Launching simultaneous Live CEX-DEX executions...")
+    if side == "BOTH":
+        # Spread arb: one leg wins, one leg loses.
+        shares = (size_usd / 2) / ((entry_yes + entry_no) / 2)
+        if is_resolution:
+            guaranteed_pnl = (1.0 - entry_yes - entry_no) * shares
+        else:
+            val_yes = mid_yes if mid_yes is not None else entry_yes
+            val_no = mid_no if mid_no is not None else entry_no
+            guaranteed_pnl = (val_yes + val_no - entry_yes - entry_no) * shares
+        return guaranteed_pnl * (1 - _FEE_RATE)
 
-        try:
-            # 1. Prepare CEX Spot Market Order
-            side = "sell" if route == "DEX-BUY_CEX-SELL" else "buy"
-            cex_order_task = None
-            if settings.live_tx_simulation_only:
-                logger.info(f"🧪 [Dry-Run] Skipping real Bybit order to {side.upper()} {size_asset:.4f} {base}.")
-            else:
-                logger.info(f"Submitting Bybit Spot Market order to {side.upper()} {size_asset:.4f} {base}...")
-                cex_order_task = asyncio.create_task(
-                    exchange.create_order(
-                        symbol=f"{base}/{quote}",
-                        type="market",
-                        side=side,
-                        amount=size_asset
-                    )
-                )
+    if side == "YES":
+        if is_resolution:
+            exit_price = 1.0 if yes_won else 0.0
+        else:
+            exit_price = mid_yes if mid_yes is not None else entry_yes
+        shares = (size_usd / entry_yes) if entry_yes > 0 else 0
+        return (exit_price - entry_yes) * shares * (1 - _FEE_RATE)
 
-            # 2. Build & Sign On-Chain Swap transaction via Jupiter Swap API
-            if not _HAS_SOLANA_SDK:
-                raise RuntimeError("Solana Python SDK is not installed in the environment.")
+    if side == "NO":
+        if is_resolution:
+            exit_price = 0.0 if yes_won else 1.0
+        else:
+            exit_price = mid_no if mid_no is not None else entry_no
+        shares = (size_usd / entry_no) if entry_no > 0 else 0
+        return (exit_price - entry_no) * shares * (1 - _FEE_RATE)
 
-            # Load Solana Keypair
-            private_bytes = base64.b64decode(settings.solana_wallet_private_key)
-            keypair = Keypair.from_bytes(private_bytes)
-            user_pubkey = str(keypair.pubkey())
+    return 0.0
 
-            logger.info(f"Requesting Jupiter swap payload for wallet: {user_pubkey}...")
-            quote_response = opportunity.get("quote_response")
-            if not quote_response:
-                raise ValueError("Opportunity dictionary is missing quote_response JSON payload.")
 
-            swap_payload = {
-                "quoteResponse": quote_response,
-                "userPublicKey": user_pubkey,
-                "wrapAndUnwrapSol": True,
-                "dynamicComputeUnitLimit": True,
-                "prioritizationFeeLamports": "auto"
-            }
-
-            swap_url = "https://api.jup.ag/swap/v1/swap"
-            headers = {}
-            if settings.jupiter_api_key:
-                headers["x-api-key"] = settings.jupiter_api_key
-
-            async with aiohttp.ClientSession() as session:
-                async with session.post(swap_url, json=swap_payload, headers=headers) as resp:
-                    if resp.status != 200:
-                        err_text = await resp.text()
-                        raise RuntimeError(f"Jupiter swap API returned HTTP {resp.status}: {err_text}")
-                    swap_data = await resp.json()
-
-            swap_tx_base64 = swap_data.get("swapTransaction")
-            if not swap_tx_base64:
-                raise ValueError("Jupiter swap API response did not contain swapTransaction base64 data.")
-
-            # Deserialize the transaction and sign it
-            tx_bytes = base64.b64decode(swap_tx_base64)
-            tx = VersionedTransaction.from_bytes(tx_bytes)
-            tx = VersionedTransaction(tx.message, [keypair])
-
-            solana_client = AsyncClient(settings.solana_rpc_url)
-
-            if settings.live_tx_simulation_only:
-                # ── SIMULATION DRY-RUN MODE ──
-                logger.info("🧪 [Dry-Run] Simulating transaction on-chain via Solana RPC...")
-                sim_resp = await solana_client.simulate_transaction(tx)
-                if sim_resp.value.err:
-                    logs_str = "\n".join(sim_resp.value.logs or [])
-                    logger.error(f"❌ [Simulated Tx Failure] Logs:\n{logs_str}")
-                    raise RuntimeError(f"Solana transaction simulation failed: {sim_resp.value.err}")
-                else:
-                    logs_str = "\n".join(sim_resp.value.logs or [])
-                    logger.success(f"🟢 [Simulated Tx Success] Compute Units: {sim_resp.value.units_consumed}")
-                    logger.info(f"Simulated Tx Logs:\n{logs_str}")
-                await solana_client.close()
-            else:
-                # ── REAL EXECUTION MODE ──
-                async def execute_solana_swap():
-                    logger.info("Broadcasting signed raw transaction to Solana mainnet...")
-                    tx_resp = await solana_client.send_raw_transaction(bytes(tx))
-                    tx_sig = tx_resp.value
-                    logger.info(f"Transaction broadcasted. Signature: {tx_sig}. Confirming...")
-                    
-                    confirmed = False
-                    for _ in range(30):
-                        status_resp = await solana_client.get_signature_statuses([tx_sig])
-                        if status_resp.value and status_resp.value[0]:
-                            status = status_resp.value[0]
-                            if status.confirmations is not None or status.confirmation_status == "confirmed":
-                                confirmed = True
-                                break
-                        await asyncio.sleep(1)
-                    
-                    if not confirmed:
-                        raise RuntimeError(f"Transaction confirmation timed out. Signature: {tx_sig}")
-                    logger.success(f"🟢 Solana transaction confirmed successfully! Sig: {tx_sig}")
-
-                # Run both Bybit Spot and Solana swap concurrently
-                await asyncio.gather(cex_order_task, execute_solana_swap())
-
-                # Sync balances after real trade
-                balances = await exchange.fetch_balance()
-                state.cex_cash = float(balances.get(quote, {}).get('free', 0.0))
-                state.cex_assets[base] = float(balances.get(base, {}).get('free', 0.0))
-                save_state(state)
-                await solana_client.close()
-            
-            logger.success(f"🟢 Live CEX-DEX Execution step completed! Cycle ID: {cycle_id}")
-
-        except Exception as e:
-            logger.error(f"❌ Live Execution failure: {e}")
-            arbitrage_failed(cycle_id, route, size_usdt, net_spread, buy_price, mode="LIVE")
+def _pos_to_dict(pos: OpenPosition) -> dict:
+    from dataclasses import asdict
+    return asdict(pos)

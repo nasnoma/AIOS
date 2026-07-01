@@ -1,0 +1,1667 @@
+[
+  {
+    "iteration": 0,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.3,
+      "volatility": 0.8,
+      "structure": 1.2,
+      "sentiment": 0.9,
+      "macro": 1.0
+    },
+    "fitness": 0.3471,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1632,
+          "win_rate": 30.1,
+          "profit_factor": 0.97,
+          "total_return_pct": -7.21,
+          "max_drawdown_pct": 4.03,
+          "sortino_ratio": -0.021828926699200786
+        },
+        "val": {
+          "total_trades": 726,
+          "win_rate": 29.5,
+          "profit_factor": 0.9,
+          "total_return_pct": -4.42,
+          "max_drawdown_pct": 3.5,
+          "sortino_ratio": -0.07481052048282308
+        },
+        "fitness_score": 0.3471
+      }
+    },
+    "reasoning": "Baseline configuration",
+    "improved": true
+  },
+  {
+    "iteration": 1,
+    "weights": {
+      "trend": 1.0,
+      "momentum": 1.4,
+      "volume": 1.1,
+      "orderflow": 1.1,
+      "volatility": 1.4,
+      "structure": 1.4,
+      "sentiment": 1.2,
+      "macro": 1.0
+    },
+    "fitness": 0.3465,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1616,
+          "win_rate": 30.4,
+          "profit_factor": 0.98,
+          "total_return_pct": -6.55,
+          "max_drawdown_pct": 4.15,
+          "sortino_ratio": -0.013125454210962253
+        },
+        "val": {
+          "total_trades": 747,
+          "win_rate": 29.6,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.77,
+          "max_drawdown_pct": 3.81,
+          "sortino_ratio": -0.08432925152039052
+        },
+        "fitness_score": 0.3465
+      }
+    },
+    "reasoning": "The current weights seem to overemphasize trend and orderflow while underemphasizing volatility and sentiment. Given the low profit factor and win rate across both train and validation sets, it suggests that the strategy may be over-trading or not capturing trends effectively. Reducing the weight on trend and orderflow while increasing the weight on volatility to better manage risk and sentiment to potentially improve win rate could lead to a more balanced performance. Increasing the weight on momentum and structure could also help in capturing trends more effectively.",
+    "improved": false
+  },
+  {
+    "iteration": 2,
+    "weights": {
+      "trend": 1.0,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.1,
+      "volatility": 1.4,
+      "structure": 1.2,
+      "sentiment": 1.2,
+      "macro": 1.0
+    },
+    "fitness": 0.3414,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1641,
+          "win_rate": 30.0,
+          "profit_factor": 0.97,
+          "total_return_pct": -7.55,
+          "max_drawdown_pct": 4.48,
+          "sortino_ratio": -0.026200959939726234
+        },
+        "val": {
+          "total_trades": 729,
+          "win_rate": 29.4,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.7,
+          "max_drawdown_pct": 3.8,
+          "sortino_ratio": -0.08531247222354023
+        },
+        "fitness_score": 0.3414
+      }
+    },
+    "reasoning": "The current weights show trend and orderflow are overweighted, while volatility and sentiment are underweighted. Given the poor performance metrics, particularly the low win rate and negative total return, a rebalancing is necessary. Increasing the weight of volatility and sentiment, while decreasing trend and orderflow, may help improve the overall fitness score by incorporating more diverse market perspectives.",
+    "improved": false
+  },
+  {
+    "iteration": 3,
+    "weights": {
+      "trend": 1.0,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.1,
+      "volatility": 1.4,
+      "structure": 1.2,
+      "sentiment": 1.4,
+      "macro": 1.0
+    },
+    "fitness": 0.3421,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1645,
+          "win_rate": 30.1,
+          "profit_factor": 0.97,
+          "total_return_pct": -7.34,
+          "max_drawdown_pct": 4.24,
+          "sortino_ratio": -0.022926935232444125
+        },
+        "val": {
+          "total_trades": 728,
+          "win_rate": 29.3,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.71,
+          "max_drawdown_pct": 3.81,
+          "sortino_ratio": -0.0862588719317185
+        },
+        "fitness_score": 0.3421
+      }
+    },
+    "reasoning": "The current weights show trend and orderflow are overweighted, while volatility and sentiment are underweighted. Given the low profit factor and high max drawdown, increasing the weights of volatility and sentiment, which are more risk-averse, may help improve the overall fitness score. Meanwhile, decreasing the weights of trend and orderflow, which are more aggressive, may also contribute to a better risk-reward ratio.",
+    "improved": false
+  },
+  {
+    "iteration": 4,
+    "weights": {
+      "trend": 1.0,
+      "momentum": 1.0,
+      "volume": 1.1,
+      "orderflow": 1.2,
+      "volatility": 1.4,
+      "structure": 1.0,
+      "sentiment": 1.4,
+      "macro": 1.0
+    },
+    "fitness": 0.3425,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1644,
+          "win_rate": 30.1,
+          "profit_factor": 0.97,
+          "total_return_pct": -7.3,
+          "max_drawdown_pct": 4.2,
+          "sortino_ratio": -0.022355825690008352
+        },
+        "val": {
+          "total_trades": 726,
+          "win_rate": 29.3,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.68,
+          "max_drawdown_pct": 3.79,
+          "sortino_ratio": -0.08524106365607857
+        },
+        "fitness_score": 0.3425
+      }
+    },
+    "reasoning": "The trend agent is overweighted with a weight of 1.4, while the volatility agent is underweighted with a weight of 0.8. The momentum and structure agents have similar weights to trend, but their performance metrics do not justify such high weights. The sentiment agent is underweighted, but its performance is not significantly better than the others. To improve the composite fitness score, I propose reducing the weights of trend, momentum, and structure, and increasing the weights of volatility and sentiment. The new weights should be trend: 1.0, momentum: 1.0, volume: 1.1, orderflow: 1.2, volatility: 1.4, structure: 1.0, sentiment: 1.4, macro: 1.0.",
+    "improved": false
+  },
+  {
+    "iteration": 5,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 0.9,
+      "volume": 1.2,
+      "orderflow": 1.1,
+      "volatility": 1.1,
+      "structure": 0.9,
+      "sentiment": 1.0,
+      "macro": 1.0
+    },
+    "fitness": 0.3459,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1635,
+          "win_rate": 30.0,
+          "profit_factor": 0.97,
+          "total_return_pct": -7.33,
+          "max_drawdown_pct": 4.15,
+          "sortino_ratio": -0.02335939675344919
+        },
+        "val": {
+          "total_trades": 714,
+          "win_rate": 29.6,
+          "profit_factor": 0.9,
+          "total_return_pct": -4.43,
+          "max_drawdown_pct": 3.71,
+          "sortino_ratio": -0.07787308960536943
+        },
+        "fitness_score": 0.3459
+      }
+    },
+    "reasoning": "The current agent weights show a mix of over and underweighted agents. Trend and orderflow are overweighted, while volatility is underweighted. The optimization history suggests that reducing trend and increasing volatility could lead to improved fitness scores. Momentum and structure have shown no improvement with increased weights, so reducing them could be beneficial. The new set of weights aims to balance these factors and improve the composite fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 6,
+    "weights": {
+      "trend": 1.0,
+      "momentum": 1.3,
+      "volume": 1.2,
+      "orderflow": 1.1,
+      "volatility": 1.5,
+      "structure": 1.1,
+      "sentiment": 1.2,
+      "macro": 1.1
+    },
+    "fitness": 0.3455,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1633,
+          "win_rate": 30.3,
+          "profit_factor": 0.98,
+          "total_return_pct": -6.87,
+          "max_drawdown_pct": 4.28,
+          "sortino_ratio": -0.0168459044503071
+        },
+        "val": {
+          "total_trades": 729,
+          "win_rate": 29.4,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.69,
+          "max_drawdown_pct": 3.83,
+          "sortino_ratio": -0.0852109876898502
+        },
+        "fitness_score": 0.3455
+      }
+    },
+    "reasoning": "The current weights show that trend and orderflow are overweighted, while volatility and sentiment are underweighted. The optimization history suggests that reducing trend and increasing volatility may lead to improvement. The detailed performance metrics indicate a low win rate and profit factor, suggesting a need for a more balanced approach. Therefore, I propose reducing trend and orderflow, increasing volatility, and adjusting other weights to achieve a more balanced composite.",
+    "improved": false
+  },
+  {
+    "iteration": 7,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.4,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 0.9,
+      "structure": 1.1,
+      "sentiment": 1.3,
+      "macro": 1.0
+    },
+    "fitness": 0.3423,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1645,
+          "win_rate": 30.1,
+          "profit_factor": 0.97,
+          "total_return_pct": -7.34,
+          "max_drawdown_pct": 4.24,
+          "sortino_ratio": -0.022926935232444125
+        },
+        "val": {
+          "total_trades": 723,
+          "win_rate": 29.3,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.66,
+          "max_drawdown_pct": 3.78,
+          "sortino_ratio": -0.08527072768456073
+        },
+        "fitness_score": 0.3423
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on trend and orderflow, but the performance metrics indicate a need for improvement in win rate and profit factor. The optimization history suggests that increasing volatility and structure weights may not be beneficial. A more balanced approach with a slight increase in momentum and sentiment, which have shown some promise in previous iterations, may lead to better overall performance. Decreasing the trend weight, which has been high in some previous iterations without significant improvement, could also be beneficial.",
+    "improved": false
+  },
+  {
+    "iteration": 8,
+    "weights": {
+      "trend": 0.9,
+      "momentum": 1.5,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.6,
+      "structure": 1.0,
+      "sentiment": 1.1,
+      "macro": 1.2
+    },
+    "fitness": 0.3496,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1585,
+          "win_rate": 31.0,
+          "profit_factor": 1.01,
+          "total_return_pct": -5.2,
+          "max_drawdown_pct": 3.85,
+          "sortino_ratio": 0.005063777291372768
+        },
+        "val": {
+          "total_trades": 734,
+          "win_rate": 29.2,
+          "profit_factor": 0.87,
+          "total_return_pct": -5.01,
+          "max_drawdown_pct": 4.11,
+          "sortino_ratio": -0.09729911648241883
+        },
+        "fitness_score": 0.3496
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on trend and orderflow, but the performance metrics indicate a need for improvement in win rate and profit factor. The optimization history suggests that reducing trend and increasing momentum and volatility could lead to better outcomes. Additionally, the low win rate and profit factor in the AVAX/USDT metrics suggest that the model may be over-relying on trend and under-utilizing other factors. Therefore, a new set of weights is proposed to balance the contributions of each agent and improve overall performance.",
+    "improved": true
+  },
+  {
+    "iteration": 9,
+    "weights": {
+      "trend": 0.8,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.3,
+      "volatility": 1.4,
+      "structure": 1.2,
+      "sentiment": 1.0,
+      "macro": 1.3
+    },
+    "fitness": 0.3535,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1597,
+          "win_rate": 30.6,
+          "profit_factor": 1.0,
+          "total_return_pct": -5.73,
+          "max_drawdown_pct": 4.24,
+          "sortino_ratio": -0.0020814984426301263
+        },
+        "val": {
+          "total_trades": 744,
+          "win_rate": 29.8,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.67,
+          "max_drawdown_pct": 3.57,
+          "sortino_ratio": -0.08156192746228048
+        },
+        "fitness_score": 0.3535
+      }
+    },
+    "reasoning": "The current weights show a high value for momentum and volatility, which could be contributing to the low win rate and high drawdown. The optimization history suggests that reducing the weight of trend and increasing the weight of orderflow and macro could improve the fitness score. Additionally, the low profit factor and high max drawdown in the validation set indicate that the model may be over-trading, so reducing the weight of momentum and increasing the weight of structure could help to mitigate this.",
+    "improved": true
+  },
+  {
+    "iteration": 10,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.1,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.2,
+      "structure": 1.3,
+      "sentiment": 1.2,
+      "macro": 1.4
+    },
+    "fitness": 0.3423,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1645,
+          "win_rate": 30.1,
+          "profit_factor": 0.97,
+          "total_return_pct": -7.34,
+          "max_drawdown_pct": 4.24,
+          "sortino_ratio": -0.022926935232444125
+        },
+        "val": {
+          "total_trades": 723,
+          "win_rate": 29.3,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.66,
+          "max_drawdown_pct": 3.78,
+          "sortino_ratio": -0.08527072768456073
+        },
+        "fitness_score": 0.3423
+      }
+    },
+    "reasoning": "The current weights seem to be slightly imbalanced, with trend and sentiment being underweighted and volatility being overweighted. The optimization history suggests that reducing volatility and increasing trend and sentiment weights could lead to improved fitness scores. Additionally, the win rate and profit factor are relatively low, indicating a need for more conservative trading strategies, which could be achieved by increasing the weights of structure and macro. The new weights aim to balance these factors and improve overall performance.",
+    "improved": false
+  },
+  {
+    "iteration": 11,
+    "weights": {
+      "trend": 0.9,
+      "momentum": 1.1,
+      "volume": 1.0,
+      "orderflow": 1.4,
+      "volatility": 1.5,
+      "structure": 1.1,
+      "sentiment": 0.9,
+      "macro": 1.2
+    },
+    "fitness": 0.3418,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1595,
+          "win_rate": 30.2,
+          "profit_factor": 0.99,
+          "total_return_pct": -6.12,
+          "max_drawdown_pct": 4.05,
+          "sortino_ratio": -0.008101949860676942
+        },
+        "val": {
+          "total_trades": 740,
+          "win_rate": 29.1,
+          "profit_factor": 0.87,
+          "total_return_pct": -5.15,
+          "max_drawdown_pct": 4.07,
+          "sortino_ratio": -0.10231829273510029
+        },
+        "fitness_score": 0.3418
+      }
+    },
+    "reasoning": "Analyzing the optimization history, the best fitness score was achieved with weights trend=0.8, momentum=1.2, volume=1.1, orderflow=1.3, volatility=1.4, structure=1.2, sentiment=1.0, and macro=1.3. The metrics suggest that orderflow and volatility have been beneficial, while sentiment has been underperforming. To improve, I will slightly increase the weight of orderflow and volatility, decrease the weight of sentiment, and adjust other weights to maintain a balanced approach.",
+    "improved": false
+  },
+  {
+    "iteration": 12,
+    "weights": {
+      "trend": 0.9,
+      "momentum": 1.3,
+      "volume": 1.0,
+      "orderflow": 1.4,
+      "volatility": 1.6,
+      "structure": 1.3,
+      "sentiment": 0.9,
+      "macro": 1.1
+    },
+    "fitness": 0.3609,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1540,
+          "win_rate": 30.0,
+          "profit_factor": 0.98,
+          "total_return_pct": -6.56,
+          "max_drawdown_pct": 4.25,
+          "sortino_ratio": -0.017899815120031175
+        },
+        "val": {
+          "total_trades": 685,
+          "win_rate": 30.8,
+          "profit_factor": 0.93,
+          "total_return_pct": -3.6,
+          "max_drawdown_pct": 3.19,
+          "sortino_ratio": -0.05053809014546817
+        },
+        "fitness_score": 0.3609
+      }
+    },
+    "reasoning": "The current weights show a relatively balanced distribution, but the recent improvements in fitness score were observed when the trend weight was at 0.8 or 0.9, suggesting that a slightly lower trend weight might be beneficial. The momentum and orderflow weights have also shown positive correlations with improved fitness scores when they were at or above 1.2. Given the negative win rates and profit factors across the board, it might be beneficial to slightly overweight the volatility and structure agents, which could help in risk management and identifying more profitable trades. The sentiment and macro weights can be adjusted to maintain a balanced approach.",
+    "improved": true
+  },
+  {
+    "iteration": 14,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.2,
+      "volume": 1.0,
+      "orderflow": 1.4,
+      "volatility": 1.4,
+      "structure": 1.3,
+      "sentiment": 1.1,
+      "macro": 1.2
+    },
+    "fitness": 0.3318,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1632,
+          "win_rate": 29.8,
+          "profit_factor": 0.96,
+          "total_return_pct": -7.74,
+          "max_drawdown_pct": 4.54,
+          "sortino_ratio": -0.02960383858547035
+        },
+        "val": {
+          "total_trades": 731,
+          "win_rate": 29.0,
+          "profit_factor": 0.87,
+          "total_return_pct": -5.03,
+          "max_drawdown_pct": 4.05,
+          "sortino_ratio": -0.09825984901977253
+        },
+        "fitness_score": 0.3318
+      }
+    },
+    "reasoning": "The current weights show a mix of over and underweighting across agents. Trend and sentiment are underweighted at 0.9, while volatility is overweighted at 1.6. Momentum, orderflow, and structure are moderately weighted. To improve the composite fitness score, adjustments will be made to balance the weights, increasing trend and sentiment, and slightly decreasing volatility and momentum to find an optimal balance.",
+    "improved": false
+  },
+  {
+    "iteration": 15,
+    "weights": {
+      "trend": 0.9,
+      "momentum": 1.5,
+      "volume": 1.0,
+      "orderflow": 1.4,
+      "volatility": 1.6,
+      "structure": 1.4,
+      "sentiment": 0.8,
+      "macro": 1.1
+    },
+    "fitness": 0.3579,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1522,
+          "win_rate": 29.9,
+          "profit_factor": 0.97,
+          "total_return_pct": -6.76,
+          "max_drawdown_pct": 4.41,
+          "sortino_ratio": -0.022061854198474066
+        },
+        "val": {
+          "total_trades": 678,
+          "win_rate": 30.8,
+          "profit_factor": 0.93,
+          "total_return_pct": -3.58,
+          "max_drawdown_pct": 3.13,
+          "sortino_ratio": -0.050782040984031926
+        },
+        "fitness_score": 0.3579
+      }
+    },
+    "reasoning": "The current best iteration (12) has a high fitness score of 0.3609. The agents trend, momentum, orderflow, volatility, and structure have higher weights in this iteration, indicating their importance. The sentiment and macro agents have lower weights, suggesting they may be less critical. To further improve the fitness score, I will slightly adjust the weights to emphasize the stronger agents while maintaining a balance. I will increase the weight of momentum and structure, decrease the weight of sentiment, and keep the other agents relatively stable.",
+    "improved": false
+  },
+  {
+    "iteration": 16,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.2,
+      "volume": 1.0,
+      "orderflow": 1.3,
+      "volatility": 1.4,
+      "structure": 1.2,
+      "sentiment": 1.1,
+      "macro": 1.1
+    },
+    "fitness": 0.3341,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1643,
+          "win_rate": 29.7,
+          "profit_factor": 0.96,
+          "total_return_pct": -7.99,
+          "max_drawdown_pct": 4.61,
+          "sortino_ratio": -0.032531700169438314
+        },
+        "val": {
+          "total_trades": 727,
+          "win_rate": 29.2,
+          "profit_factor": 0.88,
+          "total_return_pct": -4.91,
+          "max_drawdown_pct": 3.99,
+          "sortino_ratio": -0.09420921038659155
+        },
+        "fitness_score": 0.3341
+      }
+    },
+    "reasoning": "The current weights seem to be slightly over-emphasizing volatility and structure, while under-emphasizing trend and sentiment. The optimization history suggests that iterations with higher trend weights and lower volatility weights tend to perform better. Therefore, I propose to increase the trend weight, decrease the volatility weight, and make slight adjustments to other weights to achieve a better balance.",
+    "improved": false
+  },
+  {
+    "iteration": 17,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.2,
+      "volume": 1.0,
+      "orderflow": 1.5,
+      "volatility": 1.4,
+      "structure": 1.2,
+      "sentiment": 1.0,
+      "macro": 1.1
+    },
+    "fitness": 0.3459,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1595,
+          "win_rate": 30.1,
+          "profit_factor": 0.98,
+          "total_return_pct": -6.61,
+          "max_drawdown_pct": 4.39,
+          "sortino_ratio": -0.01509109787587844
+        },
+        "val": {
+          "total_trades": 741,
+          "win_rate": 29.4,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.73,
+          "max_drawdown_pct": 3.87,
+          "sortino_ratio": -0.08433766605050413
+        },
+        "fitness_score": 0.3459
+      }
+    },
+    "reasoning": "The current weights show a mix of over and underweighted agents. Trend and sentiment are underweighted at 0.9, while volatility is overweighted at 1.6. The optimization history suggests that reducing volatility and increasing trend and sentiment weights could improve the fitness score. Additionally, orderflow has shown improvement with higher weights, so increasing it slightly could be beneficial. The new weights aim to balance these factors while keeping the overall distribution reasonable.",
+    "improved": false
+  },
+  {
+    "iteration": 18,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.3,
+      "volume": 1.1,
+      "orderflow": 1.5,
+      "volatility": 1.4,
+      "structure": 1.2,
+      "sentiment": 1.1,
+      "macro": 1.2
+    },
+    "fitness": 0.3389,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1641,
+          "win_rate": 29.9,
+          "profit_factor": 0.96,
+          "total_return_pct": -7.63,
+          "max_drawdown_pct": 4.48,
+          "sortino_ratio": -0.027396200795593177
+        },
+        "val": {
+          "total_trades": 732,
+          "win_rate": 29.4,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.76,
+          "max_drawdown_pct": 3.8,
+          "sortino_ratio": -0.08687457748911198
+        },
+        "fitness_score": 0.3389
+      }
+    },
+    "reasoning": "The current weights have trend and sentiment underweighted at 0.9, while volatility is overweighted at 1.6. Momentum and orderflow are also significant contributors. To improve the composite fitness score, adjustments will be made to balance these weights. Trend will be increased to 1.2 to capture more of the market direction, and sentiment will be increased to 1.1 to incorporate more market opinion. Volatility will be reduced to 1.4 to mitigate risk, and orderflow will be adjusted to 1.5 to enhance trade timing. Momentum will be kept at 1.3 to maintain its current contribution. Volume, structure, and macro will be adjusted slightly to ensure a balanced approach.",
+    "improved": false
+  },
+  {
+    "iteration": 19,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.1,
+      "volume": 1.0,
+      "orderflow": 1.5,
+      "volatility": 1.3,
+      "structure": 1.4,
+      "sentiment": 1.0,
+      "macro": 1.2
+    },
+    "fitness": 0.3303,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1592,
+          "win_rate": 29.6,
+          "profit_factor": 0.95,
+          "total_return_pct": -8.28,
+          "max_drawdown_pct": 4.97,
+          "sortino_ratio": -0.03997357372331102
+        },
+        "val": {
+          "total_trades": 728,
+          "win_rate": 28.8,
+          "profit_factor": 0.88,
+          "total_return_pct": -4.93,
+          "max_drawdown_pct": 3.75,
+          "sortino_ratio": -0.0950399957103625
+        },
+        "fitness_score": 0.3303
+      }
+    },
+    "reasoning": "The current weights have a mix of over and underweighted agents. Trend and sentiment are underweighted at 0.9, while volatility is overweighted at 1.6. Momentum and orderflow are also overweighted at 1.3 and 1.4 respectively. To improve the composite fitness score, we should aim to balance these weights while increasing the influence of agents with better performance metrics, such as orderflow and structure. The optimization history suggests that increasing trend and structure while decreasing momentum and volatility could lead to improved results.",
+    "improved": false
+  },
+  {
+    "iteration": 20,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.4,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.4,
+      "structure": 1.2,
+      "sentiment": 1.1,
+      "macro": 1.1
+    },
+    "fitness": 0.3385,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1628,
+          "win_rate": 30.0,
+          "profit_factor": 0.97,
+          "total_return_pct": -7.25,
+          "max_drawdown_pct": 4.47,
+          "sortino_ratio": -0.02264522382903401
+        },
+        "val": {
+          "total_trades": 739,
+          "win_rate": 29.1,
+          "profit_factor": 0.88,
+          "total_return_pct": -4.93,
+          "max_drawdown_pct": 4.07,
+          "sortino_ratio": -0.09215418560430973
+        },
+        "fitness_score": 0.3385
+      }
+    },
+    "reasoning": "The current weights show a high emphasis on volatility and orderflow, which could be contributing to the low win rate and negative total return. The optimization history suggests that decreasing the weight of volatility and increasing the weight of trend and momentum could lead to improved performance. Additionally, the sentiment agent is underweighted and could be increased to provide more diverse signals.",
+    "improved": false
+  },
+  {
+    "iteration": 21,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.2,
+      "volume": 1.0,
+      "orderflow": 1.3,
+      "volatility": 1.4,
+      "structure": 1.3,
+      "sentiment": 1.1,
+      "macro": 1.1
+    },
+    "fitness": 0.3354,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1624,
+          "win_rate": 29.7,
+          "profit_factor": 0.96,
+          "total_return_pct": -7.85,
+          "max_drawdown_pct": 4.61,
+          "sortino_ratio": -0.03164398580613907
+        },
+        "val": {
+          "total_trades": 726,
+          "win_rate": 29.2,
+          "profit_factor": 0.88,
+          "total_return_pct": -4.78,
+          "max_drawdown_pct": 3.77,
+          "sortino_ratio": -0.08936439317340739
+        },
+        "fitness_score": 0.3354
+      }
+    },
+    "reasoning": "The current weights have trend and sentiment underweighted at 0.9, while volatility is overweighted at 1.6. Momentum and orderflow are also relatively high. Given the recent iteration history, reducing volatility's weight and increasing trend's weight may improve the composite fitness score. Momentum and orderflow can be adjusted slightly downward to balance the weights.",
+    "improved": false
+  },
+  {
+    "iteration": 22,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.1,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.4,
+      "structure": 1.3,
+      "sentiment": 1.1,
+      "macro": 1.1
+    },
+    "fitness": 0.3378,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1635,
+          "win_rate": 29.6,
+          "profit_factor": 0.96,
+          "total_return_pct": -8.07,
+          "max_drawdown_pct": 4.67,
+          "sortino_ratio": -0.03411841456926543
+        },
+        "val": {
+          "total_trades": 724,
+          "win_rate": 29.3,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.66,
+          "max_drawdown_pct": 3.73,
+          "sortino_ratio": -0.08470075294097411
+        },
+        "fitness_score": 0.3378
+      }
+    },
+    "reasoning": "Analyzing the provided metrics, it appears that the momentum, orderflow, and volatility agents are overweighted, while the trend and sentiment agents are underweighted. The volume and macro agents seem to be at a neutral position. To improve the composite fitness score, I propose adjusting the weights to give more emphasis to the trend and sentiment agents, while reducing the weights of the momentum and volatility agents. The orderflow agent's weight will be slightly reduced as well. This adjustment aims to strike a better balance among the agents and potentially improve the overall performance.",
+    "improved": false
+  },
+  {
+    "iteration": 23,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.2,
+      "volume": 1.0,
+      "orderflow": 1.3,
+      "volatility": 1.2,
+      "structure": 1.2,
+      "sentiment": 1.2,
+      "macro": 1.1
+    },
+    "fitness": 0.3423,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1645,
+          "win_rate": 30.1,
+          "profit_factor": 0.97,
+          "total_return_pct": -7.34,
+          "max_drawdown_pct": 4.24,
+          "sortino_ratio": -0.022926935232444125
+        },
+        "val": {
+          "total_trades": 723,
+          "win_rate": 29.3,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.66,
+          "max_drawdown_pct": 3.78,
+          "sortino_ratio": -0.08527072768456073
+        },
+        "fitness_score": 0.3423
+      }
+    },
+    "reasoning": "The current weights show a mix of over and underweighted agents. Trend and sentiment are underweighted at 0.9, while volatility is overweighted at 1.6. Momentum and structure are moderately weighted. Given the low win rates and negative total return percentages across train and val sets, it seems that the system is overly reliant on volatility. To improve, I propose reducing volatility's weight and increasing trend and sentiment's weights to better balance the system and potentially improve win rates and returns.",
+    "improved": false
+  },
+  {
+    "iteration": 24,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.4,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.3,
+      "structure": 1.2,
+      "sentiment": 1.1,
+      "macro": 1.1
+    },
+    "fitness": 0.3392,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1641,
+          "win_rate": 29.9,
+          "profit_factor": 0.96,
+          "total_return_pct": -7.64,
+          "max_drawdown_pct": 4.48,
+          "sortino_ratio": -0.027447988640378094
+        },
+        "val": {
+          "total_trades": 728,
+          "win_rate": 29.4,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.7,
+          "max_drawdown_pct": 3.8,
+          "sortino_ratio": -0.08536026390191784
+        },
+        "fitness_score": 0.3392
+      }
+    },
+    "reasoning": "The current agent weights show a relatively high weight for volatility and orderflow, while trend and sentiment are underweighted. The optimization history suggests that increasing the weight of trend and momentum, while decreasing the weight of volatility, may lead to improved performance. The new weights aim to balance the contributions of each agent, with a focus on trend and momentum, which have shown potential for improvement in previous iterations.",
+    "improved": false
+  },
+  {
+    "iteration": 25,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.2,
+      "volume": 1.0,
+      "orderflow": 1.3,
+      "volatility": 1.2,
+      "structure": 1.1,
+      "sentiment": 1.2,
+      "macro": 1.0
+    },
+    "fitness": 0.3423,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1643,
+          "win_rate": 30.1,
+          "profit_factor": 0.97,
+          "total_return_pct": -7.36,
+          "max_drawdown_pct": 4.2,
+          "sortino_ratio": -0.023298953991844815
+        },
+        "val": {
+          "total_trades": 723,
+          "win_rate": 29.3,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.66,
+          "max_drawdown_pct": 3.78,
+          "sortino_ratio": -0.08527072768456073
+        },
+        "fitness_score": 0.3423
+      }
+    },
+    "reasoning": "The current weights seem to be slightly overemphasizing volatility and underemphasizing trend and sentiment. Given the recent performance metrics, it appears that a more balanced approach could yield better results. The optimization history suggests that slight adjustments to the weights have not significantly improved the fitness score, indicating a need for a more nuanced approach. Therefore, I propose reducing the weight on volatility, increasing the weight on trend and sentiment, and making slight adjustments to other agents to achieve a more balanced composite.",
+    "improved": false
+  },
+  {
+    "iteration": 26,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.5,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.1,
+      "structure": 1.2,
+      "sentiment": 1.3,
+      "macro": 1.1
+    },
+    "fitness": 0.3422,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1640,
+          "win_rate": 30.1,
+          "profit_factor": 0.97,
+          "total_return_pct": -7.33,
+          "max_drawdown_pct": 4.2,
+          "sortino_ratio": -0.023076649108496394
+        },
+        "val": {
+          "total_trades": 724,
+          "win_rate": 29.3,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.69,
+          "max_drawdown_pct": 3.8,
+          "sortino_ratio": -0.0860301992338135
+        },
+        "fitness_score": 0.3422
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on volatility and orderflow, but the optimization history suggests that adjustments to these weights have not led to significant improvements. The win rate and profit factor are relatively low, indicating a need for a more balanced approach. I propose reducing the weight on volatility and increasing the weight on trend and momentum to capture more consistent market movements. Additionally, a slight increase in the weight on sentiment may help in making more informed trading decisions.",
+    "improved": false
+  },
+  {
+    "iteration": 27,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.2,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.2,
+      "structure": 1.3,
+      "sentiment": 1.3,
+      "macro": 1.1
+    },
+    "fitness": 0.342,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1645,
+          "win_rate": 30.1,
+          "profit_factor": 0.97,
+          "total_return_pct": -7.34,
+          "max_drawdown_pct": 4.24,
+          "sortino_ratio": -0.022952603037291647
+        },
+        "val": {
+          "total_trades": 724,
+          "win_rate": 29.3,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.71,
+          "max_drawdown_pct": 3.78,
+          "sortino_ratio": -0.08675846874586982
+        },
+        "fitness_score": 0.342
+      }
+    },
+    "reasoning": "The current weights seem to be slightly overemphasizing volatility and orderflow, while underemphasizing trend and sentiment. The optimization history suggests that small changes to the weights have not led to significant improvements. To improve the composite fitness score, I propose increasing the weight of trend and sentiment, while decreasing the weight of volatility and orderflow. This should help to balance the system and potentially lead to better performance.",
+    "improved": false
+  },
+  {
+    "iteration": 28,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.5,
+      "volume": 0.9,
+      "orderflow": 1.1,
+      "volatility": 1.1,
+      "structure": 1.2,
+      "sentiment": 1.2,
+      "macro": 1.0
+    },
+    "fitness": 0.3416,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1632,
+          "win_rate": 30.3,
+          "profit_factor": 0.98,
+          "total_return_pct": -6.88,
+          "max_drawdown_pct": 4.13,
+          "sortino_ratio": -0.017053849396423647
+        },
+        "val": {
+          "total_trades": 731,
+          "win_rate": 29.0,
+          "profit_factor": 0.88,
+          "total_return_pct": -4.94,
+          "max_drawdown_pct": 3.97,
+          "sortino_ratio": -0.09438756658209577
+        },
+        "fitness_score": 0.3416
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on volatility and structure, but the overall performance metrics indicate a need for adjustment. The win rates are low, and the profit factors are below 1, suggesting that the system is not effectively capturing profitable trades. The optimization history shows minimal changes in weights with no significant improvement in fitness score. To improve, I propose reducing the weight on volatility, which might be introducing noise, and increasing the weight on trend and momentum, which could help in capturing more profitable trades. Also, a slight increase in the weight on sentiment could help in better market analysis.",
+    "improved": false
+  },
+  {
+    "iteration": 29,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.1,
+      "volume": 1.0,
+      "orderflow": 1.3,
+      "volatility": 1.4,
+      "structure": 1.1,
+      "sentiment": 1.3,
+      "macro": 1.0
+    },
+    "fitness": 0.3415,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1643,
+          "win_rate": 29.9,
+          "profit_factor": 0.97,
+          "total_return_pct": -7.51,
+          "max_drawdown_pct": 4.2,
+          "sortino_ratio": -0.025430850577934073
+        },
+        "val": {
+          "total_trades": 724,
+          "win_rate": 29.3,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.71,
+          "max_drawdown_pct": 3.78,
+          "sortino_ratio": -0.08692912646929159
+        },
+        "fitness_score": 0.3415
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on volatility and structure, while trend and sentiment are underweighted. The optimization history indicates that variations in weights have not led to significant improvements in fitness score. To improve, I propose increasing the weight on trend and sentiment, while slightly decreasing the weight on volatility and structure. Momentum and orderflow weights will be adjusted to balance the overall performance.",
+    "improved": false
+  },
+  {
+    "iteration": 30,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.0,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.2,
+      "structure": 1.1,
+      "sentiment": 1.0,
+      "macro": 1.3
+    },
+    "fitness": 0.3355,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1643,
+          "win_rate": 29.9,
+          "profit_factor": 0.96,
+          "total_return_pct": -7.64,
+          "max_drawdown_pct": 4.37,
+          "sortino_ratio": -0.027355384918086777
+        },
+        "val": {
+          "total_trades": 722,
+          "win_rate": 29.1,
+          "profit_factor": 0.88,
+          "total_return_pct": -4.86,
+          "max_drawdown_pct": 3.97,
+          "sortino_ratio": -0.09359263329766539
+        },
+        "fitness_score": 0.3355
+      }
+    },
+    "reasoning": "The current weights seem to be overemphasizing volatility and momentum, while underemphasizing trend and macro. The optimization history suggests that increasing trend and macro weights, while decreasing volatility and momentum weights, may lead to improved fitness scores. Additionally, the performance metrics indicate that the strategy is struggling with low win rates and negative total returns, suggesting a need for a more balanced approach.",
+    "improved": false
+  },
+  {
+    "iteration": 31,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.2,
+      "volume": 1.0,
+      "orderflow": 1.3,
+      "volatility": 1.3,
+      "structure": 1.2,
+      "sentiment": 1.2,
+      "macro": 1.2
+    },
+    "fitness": 0.3421,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1645,
+          "win_rate": 30.1,
+          "profit_factor": 0.97,
+          "total_return_pct": -7.34,
+          "max_drawdown_pct": 4.24,
+          "sortino_ratio": -0.022926935232444125
+        },
+        "val": {
+          "total_trades": 728,
+          "win_rate": 29.3,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.71,
+          "max_drawdown_pct": 3.81,
+          "sortino_ratio": -0.0862588719317185
+        },
+        "fitness_score": 0.3421
+      }
+    },
+    "reasoning": "Based on the optimization history and performance metrics, it appears that the trend and momentum agents have been overweighted in previous iterations without significant improvement in fitness score. The orderflow and volatility agents have shown some promise when weighted around 1.2-1.4. The sentiment agent has been inconsistent, but a slight increase may help. The macro agent's weight has been decreased in some iterations without improvement, suggesting it may be underweighted. Therefore, a new set of weights will aim to balance these observations.",
+    "improved": false
+  },
+  {
+    "iteration": 32,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.3,
+      "volume": 0.9,
+      "orderflow": 1.4,
+      "volatility": 1.1,
+      "structure": 1.1,
+      "sentiment": 1.1,
+      "macro": 1.2
+    },
+    "fitness": 0.3421,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1642,
+          "win_rate": 30.1,
+          "profit_factor": 0.97,
+          "total_return_pct": -7.28,
+          "max_drawdown_pct": 4.2,
+          "sortino_ratio": -0.022182809006355404
+        },
+        "val": {
+          "total_trades": 729,
+          "win_rate": 29.2,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.74,
+          "max_drawdown_pct": 3.83,
+          "sortino_ratio": -0.08700013809352823
+        },
+        "fitness_score": 0.3421
+      }
+    },
+    "reasoning": "Analyzing the provided metrics, it appears that the trend and sentiment agents are underweighted, while the volatility agent is overweighted. The momentum and orderflow agents seem to be performing relatively well. To improve the composite fitness score, I propose increasing the weights of trend and sentiment, decreasing the weight of volatility, and maintaining the weights of momentum and orderflow. The volume and structure agents will be adjusted slightly to balance the overall performance.",
+    "improved": false
+  },
+  {
+    "iteration": 33,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.3,
+      "volume": 0.9,
+      "orderflow": 1.4,
+      "volatility": 1.1,
+      "structure": 1.2,
+      "sentiment": 1.3,
+      "macro": 1.2
+    },
+    "fitness": 0.3422,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1640,
+          "win_rate": 30.1,
+          "profit_factor": 0.97,
+          "total_return_pct": -7.33,
+          "max_drawdown_pct": 4.2,
+          "sortino_ratio": -0.023076649108496394
+        },
+        "val": {
+          "total_trades": 724,
+          "win_rate": 29.3,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.69,
+          "max_drawdown_pct": 3.8,
+          "sortino_ratio": -0.0860301992338135
+        },
+        "fitness_score": 0.3422
+      }
+    },
+    "reasoning": "Analyzing the provided metrics, it appears that the trend and sentiment agents are underweighted, while the volatility agent is overweighted. The momentum and orderflow agents seem to be performing well. To improve the composite fitness score, I propose increasing the weights of trend and sentiment, decreasing the weight of volatility, and maintaining the weights of momentum and orderflow. The volume and structure agents will be adjusted slightly to balance the overall performance.",
+    "improved": false
+  },
+  {
+    "iteration": 34,
+    "weights": {
+      "trend": 1.5,
+      "momentum": 1.1,
+      "volume": 1.0,
+      "orderflow": 1.4,
+      "volatility": 1.2,
+      "structure": 1.1,
+      "sentiment": 1.4,
+      "macro": 1.2
+    },
+    "fitness": 0.3422,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1644,
+          "win_rate": 30.1,
+          "profit_factor": 0.97,
+          "total_return_pct": -7.3,
+          "max_drawdown_pct": 4.2,
+          "sortino_ratio": -0.02242267591016308
+        },
+        "val": {
+          "total_trades": 724,
+          "win_rate": 29.3,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.71,
+          "max_drawdown_pct": 3.78,
+          "sortino_ratio": -0.08675846874586982
+        },
+        "fitness_score": 0.3422
+      }
+    },
+    "reasoning": "The current weights seem to be overemphasizing volatility and underemphasizing trend and sentiment. The optimization history suggests that increasing trend and sentiment while decreasing volatility could lead to improved performance. Additionally, orderflow has shown promise in some iterations, so its weight will be maintained. Momentum and structure will be adjusted slightly downward to balance the portfolio.",
+    "improved": false
+  },
+  {
+    "iteration": 35,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.1,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.4,
+      "structure": 1.1,
+      "sentiment": 1.1,
+      "macro": 1.0
+    },
+    "fitness": 0.3354,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1641,
+          "win_rate": 29.9,
+          "profit_factor": 0.96,
+          "total_return_pct": -7.71,
+          "max_drawdown_pct": 4.27,
+          "sortino_ratio": -0.028557334811767317
+        },
+        "val": {
+          "total_trades": 726,
+          "win_rate": 29.1,
+          "profit_factor": 0.88,
+          "total_return_pct": -4.87,
+          "max_drawdown_pct": 4.02,
+          "sortino_ratio": -0.09319837047637157
+        },
+        "fitness_score": 0.3354
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on volatility and orderflow, while trend and sentiment are underweighted. Given the low win rates and negative profit factors across both train and validation sets, it's likely that the system is over-relying on short-term market movements rather than longer-term trends. To address this, I propose increasing the weight on trend and sentiment, while slightly decreasing the weight on volatility and orderflow to promote a more balanced approach.",
+    "improved": false
+  },
+  {
+    "iteration": 36,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.4,
+      "volume": 1.0,
+      "orderflow": 1.5,
+      "volatility": 1.2,
+      "structure": 1.1,
+      "sentiment": 0.8,
+      "macro": 1.1
+    },
+    "fitness": 0.354,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1576,
+          "win_rate": 30.8,
+          "profit_factor": 1.01,
+          "total_return_pct": -4.96,
+          "max_drawdown_pct": 3.83,
+          "sortino_ratio": 0.008248146944602037
+        },
+        "val": {
+          "total_trades": 748,
+          "win_rate": 29.5,
+          "profit_factor": 0.88,
+          "total_return_pct": -4.92,
+          "max_drawdown_pct": 3.82,
+          "sortino_ratio": -0.08977173924557193
+        },
+        "fitness_score": 0.354
+      }
+    },
+    "reasoning": "The current weights seem to be slightly overemphasizing volatility and sentiment, while underemphasizing trend and momentum. The optimization history suggests that slight adjustments to the weights have not led to significant improvements. To improve the composite fitness score, I propose reducing the weight on volatility and sentiment, and increasing the weights on trend and momentum. Additionally, a slight increase in the weight on orderflow may help, given its relatively high value in the optimization history. The new weights should be within the range of 0.1 to 3.0 and should reflect a more balanced approach.",
+    "improved": false
+  },
+  {
+    "iteration": 37,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.4,
+      "volume": 1.0,
+      "orderflow": 1.3,
+      "volatility": 1.1,
+      "structure": 1.2,
+      "sentiment": 1.1,
+      "macro": 1.1
+    },
+    "fitness": 0.3424,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1643,
+          "win_rate": 30.1,
+          "profit_factor": 0.97,
+          "total_return_pct": -7.23,
+          "max_drawdown_pct": 4.2,
+          "sortino_ratio": -0.021449890199511143
+        },
+        "val": {
+          "total_trades": 728,
+          "win_rate": 29.3,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.71,
+          "max_drawdown_pct": 3.81,
+          "sortino_ratio": -0.0862588719317185
+        },
+        "fitness_score": 0.3424
+      }
+    },
+    "reasoning": "Analyzing the optimization history and performance metrics, it appears that the trend and sentiment agents are underweighted, while the volatility agent is overweighted. The momentum and orderflow agents have shown varying levels of importance across different iterations. To improve the composite fitness score, I propose increasing the weights of trend and sentiment, while decreasing the weight of volatility. The momentum and orderflow agents will be adjusted to moderate levels, and the volume, structure, and macro agents will be kept relatively stable.",
+    "improved": false
+  },
+  {
+    "iteration": 38,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.5,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.3,
+      "structure": 1.1,
+      "sentiment": 1.1,
+      "macro": 1.2
+    },
+    "fitness": 0.3468,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1627,
+          "win_rate": 30.4,
+          "profit_factor": 0.99,
+          "total_return_pct": -6.21,
+          "max_drawdown_pct": 4.09,
+          "sortino_ratio": -0.007555523898058629
+        },
+        "val": {
+          "total_trades": 726,
+          "win_rate": 29.2,
+          "profit_factor": 0.88,
+          "total_return_pct": -4.77,
+          "max_drawdown_pct": 3.82,
+          "sortino_ratio": -0.08880439998456109
+        },
+        "fitness_score": 0.3468
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on volatility and orderflow, but the optimization history suggests that increasing trend and momentum weights while slightly decreasing volatility could improve performance. The sentiment weight is currently low, so a slight increase may help. Macro and structure weights seem relatively stable. Volume weight is neutral and can be kept as is.",
+    "improved": false
+  },
+  {
+    "iteration": 39,
+    "weights": {
+      "trend": 0.8,
+      "momentum": 1.1,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.3,
+      "structure": 1.1,
+      "sentiment": 1.4,
+      "macro": 1.2
+    },
+    "fitness": 0.3423,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1645,
+          "win_rate": 30.1,
+          "profit_factor": 0.97,
+          "total_return_pct": -7.34,
+          "max_drawdown_pct": 4.24,
+          "sortino_ratio": -0.022926935232444125
+        },
+        "val": {
+          "total_trades": 723,
+          "win_rate": 29.3,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.66,
+          "max_drawdown_pct": 3.78,
+          "sortino_ratio": -0.08527072768456073
+        },
+        "fitness_score": 0.3423
+      }
+    },
+    "reasoning": "Based on the optimization history, the trend and momentum agents have been overweighted in previous iterations, but the fitness score has not improved significantly. The orderflow and volatility agents have also been overweighted, but the profit factor and win rate have not increased substantially. The volume and structure agents have been relatively stable, while the sentiment agent has been underweighted in some iterations. To improve the composite fitness score, I propose reducing the weights of the trend and momentum agents, increasing the weight of the sentiment agent, and maintaining the weights of the other agents.",
+    "improved": false
+  },
+  {
+    "iteration": 40,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.4,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.4,
+      "structure": 1.1,
+      "sentiment": 1.1,
+      "macro": 1.2
+    },
+    "fitness": 0.342,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1632,
+          "win_rate": 30.3,
+          "profit_factor": 0.98,
+          "total_return_pct": -6.91,
+          "max_drawdown_pct": 4.19,
+          "sortino_ratio": -0.01746135822330303
+        },
+        "val": {
+          "total_trades": 730,
+          "win_rate": 29.0,
+          "profit_factor": 0.88,
+          "total_return_pct": -4.86,
+          "max_drawdown_pct": 3.9,
+          "sortino_ratio": -0.0918504052363795
+        },
+        "fitness_score": 0.342
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on volatility and orderflow, while trend and sentiment are underweighted. The optimization history suggests that increasing trend and momentum weights may lead to improvement. However, the most recent iterations with higher trend weights did not yield significant improvements. A balanced approach with a slight increase in trend and momentum, while reducing volatility and orderflow, may lead to a better composite fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 41,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.5,
+      "volume": 0.9,
+      "orderflow": 1.1,
+      "volatility": 1.2,
+      "structure": 1.0,
+      "sentiment": 1.0,
+      "macro": 1.1
+    },
+    "fitness": 0.3457,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1627,
+          "win_rate": 30.3,
+          "profit_factor": 0.98,
+          "total_return_pct": -6.62,
+          "max_drawdown_pct": 4.26,
+          "sortino_ratio": -0.013533375603419995
+        },
+        "val": {
+          "total_trades": 730,
+          "win_rate": 29.3,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.76,
+          "max_drawdown_pct": 3.87,
+          "sortino_ratio": -0.08741059586254717
+        },
+        "fitness_score": 0.3457
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on volatility and orderflow, but the overall performance is not significantly improving. The optimization history suggests that increasing trend and momentum weights while slightly decreasing others may lead to better performance. The low win rate and negative profit factor indicate a need for a more balanced approach, potentially with a slight increase in the trend and momentum weights to capture more profitable trades.",
+    "improved": false
+  },
+  {
+    "iteration": 42,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.1,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.3,
+      "structure": 1.1,
+      "sentiment": 1.1,
+      "macro": 1.1
+    },
+    "fitness": 0.3422,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1644,
+          "win_rate": 30.1,
+          "profit_factor": 0.97,
+          "total_return_pct": -7.3,
+          "max_drawdown_pct": 4.2,
+          "sortino_ratio": -0.02242267591016308
+        },
+        "val": {
+          "total_trades": 724,
+          "win_rate": 29.3,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.71,
+          "max_drawdown_pct": 3.78,
+          "sortino_ratio": -0.08675846874586982
+        },
+        "fitness_score": 0.3422
+      }
+    },
+    "reasoning": "The current weights show a mix of over and underweighting across agents. Trend and sentiment are underweighted, while volatility is overweighted. Momentum and orderflow have been consistently high in previous iterations but haven't led to significant improvements. Given the lack of improvement in recent iterations, a more balanced approach might be beneficial. The new weights aim to balance the contributions of each agent, slightly increasing the weight of trend and sentiment, and reducing the weight of volatility. Momentum and orderflow are adjusted downward to give more importance to other factors.",
+    "improved": false
+  },
+  {
+    "iteration": 43,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.5,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.3,
+      "structure": 1.1,
+      "sentiment": 1.0,
+      "macro": 1.2
+    },
+    "fitness": 0.3487,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1629,
+          "win_rate": 30.4,
+          "profit_factor": 0.99,
+          "total_return_pct": -6.36,
+          "max_drawdown_pct": 4.03,
+          "sortino_ratio": -0.009679469167653736
+        },
+        "val": {
+          "total_trades": 729,
+          "win_rate": 29.2,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.75,
+          "max_drawdown_pct": 3.86,
+          "sortino_ratio": -0.08737195587741824
+        },
+        "fitness_score": 0.3487
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on volatility and orderflow, but the overall performance is not significantly improved. Analyzing the optimization history, it seems that iterations with higher trend and momentum weights tend to have slightly better fitness scores. However, the win rate and profit factor are low, indicating a need for a more balanced approach. The new weights will slightly increase the importance of trend and momentum while maintaining a balanced distribution across other agents.",
+    "improved": false
+  },
+  {
+    "iteration": 44,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.4,
+      "volume": 1.0,
+      "orderflow": 1.3,
+      "volatility": 1.4,
+      "structure": 1.1,
+      "sentiment": 1.0,
+      "macro": 1.1
+    },
+    "fitness": 0.3414,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1618,
+          "win_rate": 30.0,
+          "profit_factor": 0.98,
+          "total_return_pct": -6.87,
+          "max_drawdown_pct": 4.44,
+          "sortino_ratio": -0.017680558228912787
+        },
+        "val": {
+          "total_trades": 736,
+          "win_rate": 29.2,
+          "profit_factor": 0.88,
+          "total_return_pct": -4.95,
+          "max_drawdown_pct": 4.0,
+          "sortino_ratio": -0.09330730108054956
+        },
+        "fitness_score": 0.3414
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on volatility and orderflow, but the performance metrics indicate a need for improvement in win rate and profit factor. The optimization history suggests that iterations with higher trend and momentum weights have shown some promise, but also indicate that over-emphasizing any single agent can be detrimental. A balanced approach with a slight increase in trend and momentum weights, while maintaining a strong emphasis on orderflow and volatility, may lead to improved performance.",
+    "improved": false
+  },
+  {
+    "iteration": 45,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.1,
+      "volume": 1.0,
+      "orderflow": 1.3,
+      "volatility": 1.2,
+      "structure": 1.2,
+      "sentiment": 1.3,
+      "macro": 1.1
+    },
+    "fitness": 0.3416,
+    "metrics": {
+      "AVAX/USDT": {
+        "train": {
+          "total_trades": 1642,
+          "win_rate": 30.0,
+          "profit_factor": 0.97,
+          "total_return_pct": -7.47,
+          "max_drawdown_pct": 4.24,
+          "sortino_ratio": -0.025027851157431804
+        },
+        "val": {
+          "total_trades": 724,
+          "win_rate": 29.3,
+          "profit_factor": 0.89,
+          "total_return_pct": -4.71,
+          "max_drawdown_pct": 3.78,
+          "sortino_ratio": -0.08687571213341429
+        },
+        "fitness_score": 0.3416
+      }
+    },
+    "reasoning": "The current weights and optimization history suggest that trend and sentiment are underweighted, while momentum and volatility are overweighted. The low win rates and negative profit factors across train and val sets indicate a need for a more balanced approach. Increasing the weights of trend and sentiment, while decreasing the weights of momentum and volatility, may improve the composite fitness score.",
+    "improved": false
+  }
+]

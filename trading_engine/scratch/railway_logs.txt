@@ -1,0 +1,1500 @@
+2026-06-16 06:04:33.972 | INFO     | trading_engine.market_hours:filter_open_symbols:380 - ⏸️  6 symbol(s) skipped (market closed): ['AAPL/USDT:USDT', 'TSLA/USDT:USDT', 'NVDA/USDT:USDT', 'MSFT/USDT:USDT', 'AMZN/USDT:USDT', 'GOOGL/USDT:USDT']
+2026-06-16 06:04:37.115 | INFO     | trading_engine.bounty_hunter:scan_bybit_cfds:228 - Selected Bybit CFD candidates: ['XAG/USDT:USDT', 'CL/USDT:USDT', 'XAU/USDT:USDT']
+2026-06-16 06:04:37.141 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:669 - 📐 Verifying anomalies and ranking candidates...
+2026-06-16 06:04:37.146 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: H/USDT 4h (limit=300)
+2026-06-16 06:04:40.527 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for H/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:04:40.586 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: H/USDT (crypto) | Close=0.3185 | RSI=44.1
+2026-06-16 06:04:44.109 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for H/USDT...
+2026-06-16 06:04:44.406 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 H/USDT anomaly check: RSI=44.1 | RelVol=0.01 | Imbalance=0.96 -> Score: 13.60
+2026-06-16 06:04:44.409 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: OPG/USDT 4h (limit=300)
+2026-06-16 06:04:48.145 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for OPG/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:04:48.193 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: OPG/USDT (crypto) | Close=0.1608 | RSI=44.5
+2026-06-16 06:04:50.538 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for OPG/USDT...
+2026-06-16 06:04:50.898 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 OPG/USDT anomaly check: RSI=44.5 | RelVol=0.26 | Imbalance=0.56 -> Score: 11.54
+2026-06-16 06:04:50.902 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: CHIP/USDT 4h (limit=300)
+2026-06-16 06:04:53.841 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for CHIP/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:04:53.877 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: CHIP/USDT (crypto) | Close=0.0359 | RSI=50.8
+2026-06-16 06:04:57.017 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for CHIP/USDT...
+2026-06-16 06:04:57.362 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 CHIP/USDT anomaly check: RSI=50.8 | RelVol=0.36 | Imbalance=0.56 -> Score: 3.51
+2026-06-16 06:04:57.366 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: MEGA/USDT 4h (limit=300)
+2026-06-16 06:05:00.072 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for MEGA/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:05:00.112 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: MEGA/USDT (crypto) | Close=0.0565 | RSI=48.5
+2026-06-16 06:05:02.607 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for MEGA/USDT...
+2026-06-16 06:05:02.899 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 MEGA/USDT anomaly check: RSI=48.5 | RelVol=0.17 | Imbalance=0.48 -> Score: 4.99
+2026-06-16 06:05:02.904 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: PUFFER/USDT 4h (limit=300)
+2026-06-16 06:05:05.663 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for PUFFER/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:05:05.709 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: PUFFER/USDT (crypto) | Close=0.0206 | RSI=58.7
+2026-06-16 06:05:08.567 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for PUFFER/USDT...
+2026-06-16 06:05:08.844 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 PUFFER/USDT anomaly check: RSI=58.7 | RelVol=0.64 | Imbalance=0.35 -> Score: 3.06
+2026-06-16 06:05:08.848 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: EDGE/USDT 4h (limit=300)
+2026-06-16 06:05:14.101 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for EDGE/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:05:14.140 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: EDGE/USDT (crypto) | Close=0.3442 | RSI=36.6
+2026-06-16 06:05:14.159 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:363 - 🚫 EDGE/USDT skipped (oversold in confirmed downtrend EMA20<50<200)
+2026-06-16 06:05:14.162 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: BILL/USDT 4h (limit=300)
+2026-06-16 06:05:19.799 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for BILL/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:05:19.835 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: BILL/USDT (crypto) | Close=0.0676 | RSI=42.3
+2026-06-16 06:05:19.852 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:363 - 🚫 BILL/USDT skipped (oversold in confirmed downtrend EMA20<50<200)
+2026-06-16 06:05:19.852 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  ICP/USDT is on cooldown — skipping this cycle
+2026-06-16 06:05:19.852 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  VIRTUAL/USDT is on cooldown — skipping this cycle
+2026-06-16 06:05:19.855 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: VVV/USDT 4h (limit=300)
+2026-06-16 06:05:24.282 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for VVV/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:05:24.317 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: VVV/USDT (crypto) | Close=15.4470 | RSI=46.8
+2026-06-16 06:05:26.643 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for VVV/USDT...
+2026-06-16 06:05:26.906 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 VVV/USDT anomaly check: RSI=46.8 | RelVol=0.51 | Imbalance=0.77 -> Score: 9.64
+2026-06-16 06:05:26.906 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  TRUMP/USDT is on cooldown — skipping this cycle
+2026-06-16 06:05:26.906 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  TON/USDT is on cooldown — skipping this cycle
+2026-06-16 06:05:26.906 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  OP/USDT is on cooldown — skipping this cycle
+2026-06-16 06:05:26.906 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  WCT/USDT is on cooldown — skipping this cycle
+2026-06-16 06:05:26.906 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  ONDO/USDT is on cooldown — skipping this cycle
+2026-06-16 06:05:26.910 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: FET/USDT 4h (limit=300)
+2026-06-16 06:05:31.901 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for FET/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:05:31.940 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: FET/USDT (crypto) | Close=0.2120 | RSI=54.8
+2026-06-16 06:05:36.925 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for FET/USDT...
+2026-06-16 06:05:37.212 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 FET/USDT anomaly check: RSI=54.8 | RelVol=0.23 | Imbalance=0.53 -> Score: 3.11
+2026-06-16 06:05:37.213 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  PUMP/USDT is on cooldown — skipping this cycle
+2026-06-16 06:05:37.213 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  WLFI/USDT is on cooldown — skipping this cycle
+2026-06-16 06:05:37.217 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: RENDER/USDT 4h (limit=300)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:05:41.484 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: RENDER/USDT (crypto) | Close=1.7940 | RSI=56.4
+2026-06-16 06:05:41.450 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for RENDER/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+2026-06-16 06:05:47.137 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for RENDER/USDT...
+2026-06-16 06:05:47.406 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 RENDER/USDT anomaly check: RSI=56.4 | RelVol=0.42 | Imbalance=0.50 -> Score: 3.37
+2026-06-16 06:05:47.411 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: IP/USDT 4h (limit=300)
+2026-06-16 06:05:52.852 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for IP/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:05:52.888 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: IP/USDT (crypto) | Close=0.3071 | RSI=53.2
+2026-06-16 06:05:52.906 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:363 - 🚫 IP/USDT skipped (oversold in confirmed downtrend EMA20<50<200)
+2026-06-16 06:05:52.910 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: SUI/USDT 4h (limit=300)
+2026-06-16 06:05:57.486 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for SUI/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:05:57.528 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: SUI/USDT (crypto) | Close=0.7855 | RSI=53.4
+2026-06-16 06:06:00.036 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for SUI/USDT...
+2026-06-16 06:06:00.480 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 SUI/USDT anomaly check: RSI=53.4 | RelVol=0.20 | Imbalance=0.53 -> Score: 3.05
+2026-06-16 06:06:00.484 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: ADA/USDT 4h (limit=300)
+2026-06-16 06:06:05.832 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for ADA/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:06:05.864 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: ADA/USDT (crypto) | Close=0.1776 | RSI=52.8
+2026-06-16 06:06:08.183 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for ADA/USDT...
+2026-06-16 06:06:08.547 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  DOGE/USDT is on cooldown — skipping this cycle
+2026-06-16 06:06:08.551 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: STRK/USDT 4h (limit=300)
+2026-06-16 06:06:08.547 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 ADA/USDT anomaly check: RSI=52.8 | RelVol=0.14 | Imbalance=0.52 -> Score: 2.87
+2026-06-16 06:06:11.615 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for STRK/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:06:11.650 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: STRK/USDT (crypto) | Close=0.0366 | RSI=58.0
+2026-06-16 06:06:16.770 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for STRK/USDT...
+2026-06-16 06:06:17.094 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 STRK/USDT anomaly check: RSI=58.0 | RelVol=0.29 | Imbalance=0.55 -> Score: 3.32
+2026-06-16 06:06:17.098 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: APT/USDT 4h (limit=300)
+2026-06-16 06:06:22.336 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for APT/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:06:22.372 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: APT/USDT (crypto) | Close=0.6772 | RSI=52.0
+2026-06-16 06:06:22.390 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:363 - 🚫 APT/USDT skipped (oversold in confirmed downtrend EMA20<50<200)
+2026-06-16 06:06:22.390 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  FLR/USDT is on cooldown — skipping this cycle
+2026-06-16 06:06:22.390 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  PIEVERSE/USDT is on cooldown — skipping this cycle
+2026-06-16 06:06:22.394 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: TRX/USDT 4h (limit=300)
+2026-06-16 06:06:25.824 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for TRX/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:06:25.858 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: TRX/USDT (crypto) | Close=0.3181 | RSI=47.0
+2026-06-16 06:06:25.875 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:363 - 🚫 TRX/USDT skipped (oversold in confirmed downtrend EMA20<50<200)
+2026-06-16 06:06:25.875 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  WLD/USDT is on cooldown — skipping this cycle
+2026-06-16 06:06:25.875 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  ENA/USDT is on cooldown — skipping this cycle
+2026-06-16 06:06:25.875 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  BNB/USDT is on cooldown — skipping this cycle
+2026-06-16 06:06:25.878 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: SHIB/USDT 4h (limit=300)
+2026-06-16 06:06:32.092 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for SHIB/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:06:32.124 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: SHIB/USDT (crypto) | Close=0.0000 | RSI=53.8
+2026-06-16 06:06:36.885 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for SHIB/USDT...
+2026-06-16 06:06:37.185 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 SHIB/USDT anomaly check: RSI=53.8 | RelVol=0.27 | Imbalance=0.59 -> Score: 3.52
+2026-06-16 06:06:37.185 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  ATH/USDT is on cooldown — skipping this cycle
+2026-06-16 06:06:37.188 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: RLUSD/USDT 4h (limit=300)
+2026-06-16 06:06:42.851 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for RLUSD/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:06:42.886 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: RLUSD/USDT (crypto) | Close=1.0004 | RSI=41.3
+2026-06-16 06:06:42.903 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:363 - 🚫 RLUSD/USDT skipped (oversold in confirmed downtrend EMA20<50<200)
+2026-06-16 06:06:42.907 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: USDE/USDT 4h (limit=300)
+2026-06-16 06:06:48.247 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for USDE/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:06:48.279 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: USDE/USDT (crypto) | Close=1.0001 | RSI=51.3
+2026-06-16 06:06:52.561 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for USDE/USDT...
+2026-06-16 06:06:52.861 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 USDE/USDT anomaly check: RSI=51.3 | RelVol=0.52 | Imbalance=0.31 -> Score: 2.61
+2026-06-16 06:06:52.865 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: USDC/USDT 4h (limit=300)
+2026-06-16 06:06:55.565 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for USDC/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:06:55.596 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: USDC/USDT (crypto) | Close=1.0003 | RSI=45.6
+2026-06-16 06:06:55.613 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:363 - 🚫 USDC/USDT skipped (oversold in confirmed downtrend EMA20<50<200)
+2026-06-16 06:06:55.613 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  USD1/USDT is on cooldown — skipping this cycle
+2026-06-16 06:06:55.613 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  LTC/USDT is on cooldown — skipping this cycle
+2026-06-16 06:06:55.794 | DEBUG    | trading_engine.data.cfd_data:fetch_cfd_ohlcv:155 - CFD OHLCV (Bybit): XAUT/USDT | 300 bars | close=4299.7000
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:06:55.825 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: XAUT/USDT (cfd) | Close=4299.7000 | RSI=61.0
+2026-06-16 06:07:01.565 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for XAUT/USDT...
+2026-06-16 06:07:01.946 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 XAUT/USDT anomaly check: RSI=61.0 | RelVol=0.42 | Imbalance=0.25 -> Score: 2.11
+2026-06-16 06:07:01.946 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  LINK/USDT is on cooldown — skipping this cycle
+2026-06-16 06:07:01.949 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: MNT/USDT 4h (limit=300)
+2026-06-16 06:07:05.640 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for MNT/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:07:05.676 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: MNT/USDT (crypto) | Close=0.5750 | RSI=66.1
+2026-06-16 06:07:08.184 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for MNT/USDT...
+2026-06-16 06:07:08.402 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 MNT/USDT anomaly check: RSI=66.1 | RelVol=0.36 | Imbalance=0.86 -> Score: 5.04
+2026-06-16 06:07:08.405 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: DEGEN/USDT 4h (limit=300)
+2026-06-16 06:07:12.635 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for DEGEN/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:07:12.672 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: DEGEN/USDT (crypto) | Close=0.0015 | RSI=47.4
+2026-06-16 06:07:15.661 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for DEGEN/USDT...
+2026-06-16 06:07:15.913 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 DEGEN/USDT anomaly check: RSI=47.4 | RelVol=2.41 | Imbalance=0.67 -> Score: 12.02
+2026-06-16 06:07:15.917 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: DOT/USDT 4h (limit=300)
+2026-06-16 06:07:21.262 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for DOT/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:07:21.294 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: DOT/USDT (crypto) | Close=1.0090 | RSI=56.5
+2026-06-16 06:07:25.405 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for DOT/USDT...
+2026-06-16 06:07:25.747 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 DOT/USDT anomaly check: RSI=56.5 | RelVol=0.26 | Imbalance=0.50 -> Score: 3.01
+2026-06-16 06:07:25.751 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: AVAX/USDT 4h (limit=300)
+2026-06-16 06:07:31.435 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for AVAX/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:07:31.469 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: AVAX/USDT (crypto) | Close=6.8210 | RSI=53.7
+2026-06-16 06:07:31.486 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:363 - 🚫 AVAX/USDT skipped (oversold in confirmed downtrend EMA20<50<200)
+2026-06-16 06:07:31.489 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: BTC/USDT 4h (limit=300)
+2026-06-16 06:07:34.238 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for BTC/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:07:34.272 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: BTC/USDT (crypto) | Close=66130.7000 | RSI=61.3
+2026-06-16 06:07:36.777 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for BTC/USDT...
+2026-06-16 06:07:37.084 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 BTC/USDT anomaly check: RSI=61.3 | RelVol=0.42 | Imbalance=0.22 -> Score: 1.94
+2026-06-16 06:07:37.084 | INFO     | trading_engine.data.market_data:fetch_ohlcv:232 - Fetching stock OHLCV: SPCQ 4h
+2026-06-16 06:07:37.384 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:263 - Alpaca returned insufficient bars (0 < 100) for SPCQ. Trying fallback.
+2026-06-16 06:07:37.669 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:291 - Massive returned insufficient bars (1 < 100) for SPCQ. Trying fallback.
+2026-06-16 06:07:37.669 | INFO     | trading_engine.data.market_data:fetch_ohlcv:313 - Yahoo Finance fallback for stock SPCQ (SPCQ) (interval=1h)
+/usr/local/lib/python3.11/site-packages/yfinance/scrapers/history.py:396: FutureWarning: The default dtype for empty Series will be 'object' instead of 'float64' in a future version. Specify a dtype explicitly to silence this warning.
+  self._capital_gains = pd.Series()
+2026-06-16 06:07:37.865 | INFO     | trading_engine.data.market_data:fetch_ohlcv:320 - Yahoo Finance: 7 bars for SPCQ
+2026-06-16 06:07:38.360 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: SPCQ (stock) | Close=12.1750 | RSI=50.0
+2026-06-16 06:07:38.657 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for SPCQ...
+2026-06-16 06:07:38.885 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 SPCQ anomaly check: RSI=50.0 | RelVol=1.00 | Imbalance=0.12 -> Score: 2.62
+2026-06-16 06:07:38.885 | INFO     | trading_engine.data.market_data:fetch_ohlcv:232 - Fetching stock OHLCV: SSPC 4h
+2026-06-16 06:07:39.158 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:263 - Alpaca returned insufficient bars (0 < 100) for SSPC. Trying fallback.
+2026-06-16 06:07:39.427 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:291 - Massive returned insufficient bars (1 < 100) for SSPC. Trying fallback.
+2026-06-16 06:07:39.427 | INFO     | trading_engine.data.market_data:fetch_ohlcv:313 - Yahoo Finance fallback for stock SSPC (SSPC) (interval=1h)
+/usr/local/lib/python3.11/site-packages/yfinance/scrapers/history.py:396: FutureWarning: The default dtype for empty Series will be 'object' instead of 'float64' in a future version. Specify a dtype explicitly to silence this warning.
+  self._capital_gains = pd.Series()
+2026-06-16 06:07:39.496 | INFO     | trading_engine.data.market_data:fetch_ohlcv:320 - Yahoo Finance: 7 bars for SSPC
+2026-06-16 06:07:39.981 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: SSPC (stock) | Close=9.1600 | RSI=50.0
+2026-06-16 06:07:40.270 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for SSPC...
+2026-06-16 06:07:40.641 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 SSPC anomaly check: RSI=50.0 | RelVol=1.00 | Imbalance=0.79 -> Score: 5.93
+2026-06-16 06:07:40.641 | INFO     | trading_engine.data.market_data:fetch_ohlcv:232 - Fetching stock OHLCV: SNK 4h
+2026-06-16 06:07:40.915 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:263 - Alpaca returned insufficient bars (0 < 100) for SNK. Trying fallback.
+2026-06-16 06:07:41.189 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:291 - Massive returned insufficient bars (1 < 100) for SNK. Trying fallback.
+2026-06-16 06:07:41.189 | INFO     | trading_engine.data.market_data:fetch_ohlcv:313 - Yahoo Finance fallback for stock SNK (SNK) (interval=1h)
+/usr/local/lib/python3.11/site-packages/yfinance/scrapers/history.py:396: FutureWarning: The default dtype for empty Series will be 'object' instead of 'float64' in a future version. Specify a dtype explicitly to silence this warning.
+  self._capital_gains = pd.Series()
+2026-06-16 06:07:41.254 | INFO     | trading_engine.data.market_data:fetch_ohlcv:320 - Yahoo Finance: 7 bars for SNK
+2026-06-16 06:07:41.775 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: SNK (stock) | Close=15.3100 | RSI=50.0
+2026-06-16 06:07:42.062 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for SNK...
+2026-06-16 06:07:42.390 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 SNK anomaly check: RSI=50.0 | RelVol=1.00 | Imbalance=0.50 -> Score: 4.50
+2026-06-16 06:07:42.390 | INFO     | trading_engine.data.market_data:fetch_ohlcv:232 - Fetching stock OHLCV: LFVN 4h
+2026-06-16 06:07:42.667 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:263 - Alpaca returned insufficient bars (0 < 100) for LFVN. Trying fallback.
+2026-06-16 06:07:42.946 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:291 - Massive returned insufficient bars (2 < 100) for LFVN. Trying fallback.
+2026-06-16 06:07:42.946 | INFO     | trading_engine.data.market_data:fetch_ohlcv:313 - Yahoo Finance fallback for stock LFVN (LFVN) (interval=1h)
+/usr/local/lib/python3.11/site-packages/yfinance/scrapers/history.py:396: FutureWarning: The default dtype for empty Series will be 'object' instead of 'float64' in a future version. Specify a dtype explicitly to silence this warning.
+  self._capital_gains = pd.Series()
+2026-06-16 06:07:43.009 | INFO     | trading_engine.data.market_data:fetch_ohlcv:320 - Yahoo Finance: 300 bars for LFVN
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:07:43.572 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: LFVN (stock) | Close=6.5900 | RSI=21.5
+2026-06-16 06:07:43.860 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for LFVN...
+2026-06-16 06:07:44.145 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 LFVN anomaly check: RSI=21.5 | RelVol=1.88 | Imbalance=1.00 -> Score: 51.48
+2026-06-16 06:07:44.145 | INFO     | trading_engine.data.market_data:fetch_ohlcv:232 - Fetching stock OHLCV: SPCG 4h
+2026-06-16 06:07:44.436 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:263 - Alpaca returned insufficient bars (0 < 100) for SPCG. Trying fallback.
+2026-06-16 06:07:44.717 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:291 - Massive returned insufficient bars (1 < 100) for SPCG. Trying fallback.
+2026-06-16 06:07:44.717 | INFO     | trading_engine.data.market_data:fetch_ohlcv:313 - Yahoo Finance fallback for stock SPCG (SPCG) (interval=1h)
+/usr/local/lib/python3.11/site-packages/yfinance/scrapers/history.py:396: FutureWarning: The default dtype for empty Series will be 'object' instead of 'float64' in a future version. Specify a dtype explicitly to silence this warning.
+  self._capital_gains = pd.Series()
+2026-06-16 06:07:44.780 | INFO     | trading_engine.data.market_data:fetch_ohlcv:320 - Yahoo Finance: 7 bars for SPCG
+2026-06-16 06:07:45.284 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: SPCG (stock) | Close=15.2900 | RSI=50.0
+2026-06-16 06:07:45.559 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for SPCG...
+2026-06-16 06:07:45.802 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 SPCG anomaly check: RSI=50.0 | RelVol=1.00 | Imbalance=0.50 -> Score: 4.50
+2026-06-16 06:07:45.802 | INFO     | trading_engine.data.market_data:fetch_ohlcv:232 - Fetching stock OHLCV: CUPR 4h
+2026-06-16 06:07:46.097 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:263 - Alpaca returned insufficient bars (0 < 100) for CUPR. Trying fallback.
+2026-06-16 06:07:46.336 | WARNING  | trading_engine.utils.http:get_with_retry:12 - Rate limit (429) hit on https://api.massive.com/v2/aggs/ticker/CUPR/range/4/hour/2023-01-01/2099-01-01. Waiting 2.0s before retry (attempt 1/5)...
+2026-06-16 06:07:48.604 | WARNING  | trading_engine.utils.http:get_with_retry:12 - Rate limit (429) hit on https://api.massive.com/v2/aggs/ticker/CUPR/range/4/hour/2023-01-01/2099-01-01. Waiting 4.0s before retry (attempt 2/5)...
+2026-06-16 06:07:52.847 | WARNING  | trading_engine.utils.http:get_with_retry:12 - Rate limit (429) hit on https://api.massive.com/v2/aggs/ticker/CUPR/range/4/hour/2023-01-01/2099-01-01. Waiting 8.0s before retry (attempt 3/5)...
+2026-06-16 06:08:01.139 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:291 - Massive returned insufficient bars (1 < 100) for CUPR. Trying fallback.
+2026-06-16 06:08:01.139 | INFO     | trading_engine.data.market_data:fetch_ohlcv:313 - Yahoo Finance fallback for stock CUPR (CUPR) (interval=1h)
+/usr/local/lib/python3.11/site-packages/yfinance/scrapers/history.py:396: FutureWarning: The default dtype for empty Series will be 'object' instead of 'float64' in a future version. Specify a dtype explicitly to silence this warning.
+  self._capital_gains = pd.Series()
+2026-06-16 06:08:01.228 | INFO     | trading_engine.data.market_data:fetch_ohlcv:320 - Yahoo Finance: 300 bars for CUPR
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:08:01.745 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: CUPR (stock) | Close=8.4600 | RSI=63.2
+2026-06-16 06:08:02.013 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for CUPR...
+2026-06-16 06:08:02.354 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 CUPR anomaly check: RSI=63.2 | RelVol=0.20 | Imbalance=1.00 -> Score: 5.40
+2026-06-16 06:08:02.354 | INFO     | trading_engine.data.market_data:fetch_ohlcv:232 - Fetching stock OHLCV: ASTC 4h
+2026-06-16 06:08:02.634 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:263 - Alpaca returned insufficient bars (0 < 100) for ASTC. Trying fallback.
+2026-06-16 06:08:02.920 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:291 - Massive returned insufficient bars (2 < 100) for ASTC. Trying fallback.
+2026-06-16 06:08:02.920 | INFO     | trading_engine.data.market_data:fetch_ohlcv:313 - Yahoo Finance fallback for stock ASTC (ASTC) (interval=1h)
+/usr/local/lib/python3.11/site-packages/yfinance/scrapers/history.py:396: FutureWarning: The default dtype for empty Series will be 'object' instead of 'float64' in a future version. Specify a dtype explicitly to silence this warning.
+  self._capital_gains = pd.Series()
+2026-06-16 06:08:02.984 | INFO     | trading_engine.data.market_data:fetch_ohlcv:320 - Yahoo Finance: 300 bars for ASTC
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:08:03.499 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: ASTC (stock) | Close=16.7600 | RSI=31.1
+2026-06-16 06:08:03.791 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for ASTC...
+2026-06-16 06:08:04.266 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 ASTC anomaly check: RSI=31.1 | RelVol=0.56 | Imbalance=0.50 -> Score: 31.95
+2026-06-16 06:08:04.266 | INFO     | trading_engine.data.market_data:fetch_ohlcv:232 - Fetching stock OHLCV: CODA 4h
+2026-06-16 06:08:04.537 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:263 - Alpaca returned insufficient bars (0 < 100) for CODA. Trying fallback.
+2026-06-16 06:08:04.812 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:291 - Massive returned insufficient bars (2 < 100) for CODA. Trying fallback.
+2026-06-16 06:08:04.812 | INFO     | trading_engine.data.market_data:fetch_ohlcv:313 - Yahoo Finance fallback for stock CODA (CODA) (interval=1h)
+/usr/local/lib/python3.11/site-packages/yfinance/scrapers/history.py:396: FutureWarning: The default dtype for empty Series will be 'object' instead of 'float64' in a future version. Specify a dtype explicitly to silence this warning.
+  self._capital_gains = pd.Series()
+2026-06-16 06:08:04.894 | INFO     | trading_engine.data.market_data:fetch_ohlcv:320 - Yahoo Finance: 300 bars for CODA
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:08:05.426 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: CODA (stock) | Close=9.3700 | RSI=24.3
+2026-06-16 06:08:05.426 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:363 - 🚫 CODA skipped (oversold in confirmed downtrend EMA20<50<200)
+2026-06-16 06:08:05.426 | INFO     | trading_engine.data.market_data:fetch_ohlcv:232 - Fetching stock OHLCV: ASTI 4h
+2026-06-16 06:08:05.696 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:263 - Alpaca returned insufficient bars (0 < 100) for ASTI. Trying fallback.
+2026-06-16 06:08:05.984 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:291 - Massive returned insufficient bars (2 < 100) for ASTI. Trying fallback.
+2026-06-16 06:08:05.984 | INFO     | trading_engine.data.market_data:fetch_ohlcv:313 - Yahoo Finance fallback for stock ASTI (ASTI) (interval=1h)
+/usr/local/lib/python3.11/site-packages/yfinance/scrapers/history.py:396: FutureWarning: The default dtype for empty Series will be 'object' instead of 'float64' in a future version. Specify a dtype explicitly to silence this warning.
+  self._capital_gains = pd.Series()
+2026-06-16 06:08:06.068 | INFO     | trading_engine.data.market_data:fetch_ohlcv:320 - Yahoo Finance: 300 bars for ASTI
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:08:06.577 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: ASTI (stock) | Close=6.7200 | RSI=40.8
+2026-06-16 06:08:06.846 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for ASTI...
+2026-06-16 06:08:07.280 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 ASTI anomaly check: RSI=40.8 | RelVol=0.22 | Imbalance=1.00 -> Score: 19.22
+2026-06-16 06:08:07.280 | INFO     | trading_engine.data.market_data:fetch_ohlcv:232 - Fetching stock OHLCV: MNTS 4h
+2026-06-16 06:08:07.572 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:263 - Alpaca returned insufficient bars (0 < 100) for MNTS. Trying fallback.
+2026-06-16 06:08:07.853 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:291 - Massive returned insufficient bars (1 < 100) for MNTS. Trying fallback.
+2026-06-16 06:08:07.853 | INFO     | trading_engine.data.market_data:fetch_ohlcv:313 - Yahoo Finance fallback for stock MNTS (MNTS) (interval=1h)
+/usr/local/lib/python3.11/site-packages/yfinance/scrapers/history.py:396: FutureWarning: The default dtype for empty Series will be 'object' instead of 'float64' in a future version. Specify a dtype explicitly to silence this warning.
+  self._capital_gains = pd.Series()
+2026-06-16 06:08:07.930 | INFO     | trading_engine.data.market_data:fetch_ohlcv:320 - Yahoo Finance: 300 bars for MNTS
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:08:08.445 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: MNTS (stock) | Close=10.2300 | RSI=36.7
+2026-06-16 06:08:08.713 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for MNTS...
+2026-06-16 06:08:09.184 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 MNTS anomaly check: RSI=36.7 | RelVol=0.28 | Imbalance=1.00 -> Score: 25.44
+2026-06-16 06:08:09.184 | INFO     | trading_engine.data.market_data:fetch_ohlcv:232 - Fetching stock OHLCV: VCX 4h
+2026-06-16 06:08:09.480 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:263 - Alpaca returned insufficient bars (0 < 100) for VCX. Trying fallback.
+2026-06-16 06:08:09.716 | WARNING  | trading_engine.utils.http:get_with_retry:12 - Rate limit (429) hit on https://api.massive.com/v2/aggs/ticker/VCX/range/4/hour/2023-01-01/2099-01-01. Waiting 2.0s before retry (attempt 1/5)...
+2026-06-16 06:08:11.970 | WARNING  | trading_engine.utils.http:get_with_retry:12 - Rate limit (429) hit on https://api.massive.com/v2/aggs/ticker/VCX/range/4/hour/2023-01-01/2099-01-01. Waiting 4.0s before retry (attempt 2/5)...
+2026-06-16 06:08:16.210 | WARNING  | trading_engine.utils.http:get_with_retry:12 - Rate limit (429) hit on https://api.massive.com/v2/aggs/ticker/VCX/range/4/hour/2023-01-01/2099-01-01. Waiting 8.0s before retry (attempt 3/5)...
+2026-06-16 06:08:24.447 | WARNING  | trading_engine.utils.http:get_with_retry:12 - Rate limit (429) hit on https://api.massive.com/v2/aggs/ticker/VCX/range/4/hour/2023-01-01/2099-01-01. Waiting 16.0s before retry (attempt 4/5)...
+2026-06-16 06:08:40.697 | WARNING  | trading_engine.utils.http:get_with_retry:12 - Rate limit (429) hit on https://api.massive.com/v2/aggs/ticker/VCX/range/4/hour/2023-01-01/2099-01-01. Waiting 32.0s before retry (attempt 5/5)...
+2026-06-16 06:09:12.983 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:291 - Massive returned insufficient bars (2 < 100) for VCX. Trying fallback.
+2026-06-16 06:09:12.983 | INFO     | trading_engine.data.market_data:fetch_ohlcv:313 - Yahoo Finance fallback for stock VCX (VCX) (interval=1h)
+/usr/local/lib/python3.11/site-packages/yfinance/scrapers/history.py:396: FutureWarning: The default dtype for empty Series will be 'object' instead of 'float64' in a future version. Specify a dtype explicitly to silence this warning.
+  self._capital_gains = pd.Series()
+2026-06-16 06:09:13.053 | INFO     | trading_engine.data.market_data:fetch_ohlcv:320 - Yahoo Finance: 300 bars for VCX
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:09:13.575 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: VCX (stock) | Close=109.7750 | RSI=34.9
+2026-06-16 06:09:13.575 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:363 - 🚫 VCX skipped (oversold in confirmed downtrend EMA20<50<200)
+2026-06-16 06:09:13.575 | INFO     | trading_engine.data.market_data:fetch_ohlcv:232 - Fetching stock OHLCV: AMPG 4h
+2026-06-16 06:09:13.870 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:263 - Alpaca returned insufficient bars (0 < 100) for AMPG. Trying fallback.
+2026-06-16 06:09:14.156 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:291 - Massive returned insufficient bars (1 < 100) for AMPG. Trying fallback.
+2026-06-16 06:09:14.156 | INFO     | trading_engine.data.market_data:fetch_ohlcv:313 - Yahoo Finance fallback for stock AMPG (AMPG) (interval=1h)
+/usr/local/lib/python3.11/site-packages/yfinance/scrapers/history.py:396: FutureWarning: The default dtype for empty Series will be 'object' instead of 'float64' in a future version. Specify a dtype explicitly to silence this warning.
+  self._capital_gains = pd.Series()
+2026-06-16 06:09:14.237 | INFO     | trading_engine.data.market_data:fetch_ohlcv:320 - Yahoo Finance: 300 bars for AMPG
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:09:14.773 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: AMPG (stock) | Close=7.5000 | RSI=46.8
+2026-06-16 06:09:15.069 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for AMPG...
+2026-06-16 06:09:15.402 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 AMPG anomaly check: RSI=46.8 | RelVol=0.41 | Imbalance=0.50 -> Score: 8.14
+2026-06-16 06:09:15.402 | INFO     | trading_engine.data.market_data:fetch_ohlcv:232 - Fetching stock OHLCV: VELO 4h
+2026-06-16 06:09:15.673 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:263 - Alpaca returned insufficient bars (0 < 100) for VELO. Trying fallback.
+2026-06-16 06:09:15.947 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:291 - Massive returned insufficient bars (2 < 100) for VELO. Trying fallback.
+2026-06-16 06:09:15.947 | INFO     | trading_engine.data.market_data:fetch_ohlcv:313 - Yahoo Finance fallback for stock VELO (VELO) (interval=1h)
+/usr/local/lib/python3.11/site-packages/yfinance/scrapers/history.py:396: FutureWarning: The default dtype for empty Series will be 'object' instead of 'float64' in a future version. Specify a dtype explicitly to silence this warning.
+  self._capital_gains = pd.Series()
+2026-06-16 06:09:16.038 | INFO     | trading_engine.data.market_data:fetch_ohlcv:320 - Yahoo Finance: 300 bars for VELO
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:09:16.588 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: VELO (stock) | Close=23.0950 | RSI=45.8
+2026-06-16 06:09:16.859 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for VELO...
+2026-06-16 06:09:17.416 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 VELO anomaly check: RSI=45.8 | RelVol=0.25 | Imbalance=0.50 -> Score: 9.24
+2026-06-16 06:09:17.417 | INFO     | trading_engine.data.market_data:fetch_ohlcv:232 - Fetching stock OHLCV: LUNL 4h
+2026-06-16 06:09:17.707 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:263 - Alpaca returned insufficient bars (0 < 100) for LUNL. Trying fallback.
+2026-06-16 06:09:17.979 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:291 - Massive returned insufficient bars (2 < 100) for LUNL. Trying fallback.
+2026-06-16 06:09:17.980 | INFO     | trading_engine.data.market_data:fetch_ohlcv:313 - Yahoo Finance fallback for stock LUNL (LUNL) (interval=1h)
+2026-06-16 06:09:18.082 | INFO     | trading_engine.data.market_data:fetch_ohlcv:320 - Yahoo Finance: 300 bars for LUNL
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:09:18.594 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: LUNL (stock) | Close=14.8650 | RSI=32.9
+2026-06-16 06:09:18.594 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:363 - 🚫 LUNL skipped (oversold in confirmed downtrend EMA20<50<200)
+2026-06-16 06:09:18.594 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  LRN is on cooldown — skipping this cycle
+2026-06-16 06:09:18.793 | DEBUG    | trading_engine.data.cfd_data:fetch_cfd_ohlcv:155 - CFD OHLCV (Bybit): XAG/USDT:USDT | 300 bars | close=69.4100
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:09:18.832 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: XAG/USDT:USDT (cfd) | Close=69.4100 | RSI=56.0
+2026-06-16 06:09:21.466 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for XAG/USDT:USDT...
+2026-06-16 06:09:21.789 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 XAG/USDT:USDT anomaly check: RSI=56.0 | RelVol=0.71 | Imbalance=0.48 -> Score: 3.85
+2026-06-16 06:09:21.970 | DEBUG    | trading_engine.data.cfd_data:fetch_cfd_ohlcv:155 - CFD OHLCV (Bybit): CL/USDT:USDT | 300 bars | close=79.2800
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:09:22.007 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: CL/USDT:USDT (cfd) | Close=79.2800 | RSI=33.2
+2026-06-16 06:09:22.007 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:363 - 🚫 CL/USDT:USDT skipped (oversold in confirmed downtrend EMA20<50<200)
+2026-06-16 06:09:22.228 | DEBUG    | trading_engine.data.cfd_data:fetch_cfd_ohlcv:155 - CFD OHLCV (Bybit): XAU/USDT:USDT | 300 bars | close=4316.9900
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:09:22.260 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: XAU/USDT:USDT (cfd) | Close=4316.9900 | RSI=60.3
+2026-06-16 06:09:26.196 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for XAU/USDT:USDT...
+2026-06-16 06:09:26.539 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 XAU/USDT:USDT anomaly check: RSI=60.3 | RelVol=0.94 | Imbalance=0.87 -> Score: 6.22
+2026-06-16 06:09:26.539 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: H/USDT ...
+2026-06-16 06:09:26.539 | WARNING  | trading_engine.bounty_hunter:run_bounty_hunt:690 - ⚠️ Pre-flight check rejected H/USDT: probability=0.0% | Veto: Extreme volatility (ATR%=32.7% > 8.0%)
+2026-06-16 06:09:26.540 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: DEGEN/USDT ...
+2026-06-16 06:09:26.540 | WARNING  | trading_engine.bounty_hunter:run_bounty_hunt:690 - ⚠️ Pre-flight check rejected DEGEN/USDT: probability=0.0% | Veto: Stop loss too wide (10.7% > 8.0%)
+2026-06-16 06:09:26.540 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: OPG/USDT ...
+2026-06-16 06:09:26.540 | WARNING  | trading_engine.bounty_hunter:run_bounty_hunt:690 - ⚠️ Pre-flight check rejected MNT/USDT: probability=50.0% | Pass probability 50.0% below 75% threshold. Details: Healthy volatility | Good Bollinger Band squeeze/structure | Overbought RSI (66.1) | Fear & Greed extreme fear
+2026-06-16 06:09:26.540 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: MEGA/USDT ...
+2026-06-16 06:09:26.540 | WARNING  | trading_engine.bounty_hunter:run_bounty_hunt:690 - ⚠️ Pre-flight check rejected OPG/USDT: probability=0.0% | Veto: Extreme volatility (ATR%=18.2% > 8.0%)
+2026-06-16 06:09:26.540 | WARNING  | trading_engine.bounty_hunter:run_bounty_hunt:690 - ⚠️ Pre-flight check rejected MEGA/USDT: probability=0.0% | Veto: Stop loss too wide (11.0% > 8.0%)
+2026-06-16 06:09:26.540 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: VVV/USDT ...
+2026-06-16 06:09:26.540 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: SHIB/USDT ...
+2026-06-16 06:09:26.540 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:704 - ✅ Candidate SHIB/USDT passed pre-flight (prob=85.0%)! Running deep analysis...
+2026-06-16 06:09:26.540 | WARNING  | trading_engine.bounty_hunter:run_bounty_hunt:690 - ⚠️ Pre-flight check rejected VVV/USDT: probability=0.0% | Veto: Stop loss too wide (8.5% > 8.0%)
+2026-06-16 06:09:26.540 | INFO     | trading_engine.orchestrator:run:87 - 
+2026-06-16 06:09:26.540 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: MNT/USDT ...
+============================================================
+2026-06-16 06:09:26.540 | INFO     | trading_engine.orchestrator:run:88 - TRADING ENGINE | SHIB/USDT | 4h
+2026-06-16 06:09:26.540 | INFO     | trading_engine.orchestrator:run:89 - ============================================================
+2026-06-16 06:09:26.540 | INFO     | trading_engine.orchestrator:run:92 - 📊 Fetching market data...
+2026-06-16 06:09:26.544 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: SHIB/USDT 4h (limit=300)
+Execution of job "Bounty Hunter Cycle (trigger: interval[0:05:00], next run at: 2026-06-16 06:09:27 UTC)" skipped: maximum number of running instances reached (1)
+2026-06-16 06:09:27.340 | INFO     | __main__:monitor_positions:110 - 🔍 Monitoring open positions...
+2026-06-16 06:09:31.700 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for SHIB/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:09:31.732 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: SHIB/USDT (crypto) | Close=0.0000 | RSI=53.8
+2026-06-16 06:09:31.748 | INFO     | trading_engine.orchestrator:run:94 -    Close=0.0000 | RSI=53.8 | ATR=0.0000
+2026-06-16 06:09:31.748 | INFO     | trading_engine.orchestrator:run:97 - 🤖 Running specialist agents...
+2026-06-16 06:09:31.751 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ volatility: BUY (100%)
+2026-06-16 06:09:31.751 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ structure: HOLD (58%)
+2026-06-16 06:09:31.751 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ volume: SELL (80%)
+2026-06-16 06:09:31.751 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ trend: HOLD (58%)
+2026-06-16 06:09:31.751 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ momentum: HOLD (58%)
+2026-06-16 06:09:31.751 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ orderflow: HOLD (50%)
+2026-06-16 06:09:31.752 | INFO     | trading_engine.agents.macro_agent:_update_macro_cache_if_expired:111 - Macro cache expired or empty. Fetching fresh indicators...
+2026-06-16 06:09:31.998 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ sentiment: BUY (75%)
+2026-06-16 06:09:33.553 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ macro: SELL (60%)
+2026-06-16 06:09:33.556 | INFO     | trading_engine.judge:evaluate:201 - Judge: HOLD | conf=27.5% | agree=4/8 | approved=False | avg_raw_conf=56.2% (min_conf=47)
+2026-06-16 06:09:33.555 | INFO     | trading_engine.orchestrator:run:101 - ⚖️  Judge evaluating...
+2026-06-16 06:09:33.555 | INFO     | trading_engine.orchestrator:run:130 -    Loaded dynamic optimized weights for crypto (optimized_weights_crypto.json).
+2026-06-16 06:09:40.222 | INFO     | trading_engine.orchestrator:run:137 -    Decision: HOLD | Conf=28% | Agreement=4/8
+2026-06-16 06:09:40.222 | INFO     | trading_engine.orchestrator:run:141 - 🛡️  Risk Agent evaluating...
+2026-06-16 06:09:40.223 | WARNING  | trading_engine.orchestrator:run:158 - ❌ TRADE REJECTED (SHIB/USDT): Judge did not approve trade (agreement=4, conf=28%)
+2026-06-16 06:09:40.223 | INFO     | trading_engine.orchestrator:run:196 - ============================================================
+
+2026-06-16 06:09:40.225 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: CHIP/USDT ...
+2026-06-16 06:09:40.225 | WARNING  | trading_engine.bounty_hunter:run_bounty_hunt:690 - ⚠️ Pre-flight check rejected CHIP/USDT: probability=0.0% | Veto: Stop loss too wide (10.8% > 8.0%)
+2026-06-16 06:09:40.225 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: RENDER/USDT ...
+2026-06-16 06:09:40.226 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:704 - ✅ Candidate RENDER/USDT passed pre-flight (prob=100.0%)! Running deep analysis...
+2026-06-16 06:09:40.226 | INFO     | trading_engine.orchestrator:run:87 - 
+============================================================
+2026-06-16 06:09:40.226 | INFO     | trading_engine.orchestrator:run:88 - TRADING ENGINE | RENDER/USDT | 4h
+2026-06-16 06:09:40.226 | INFO     | trading_engine.orchestrator:run:89 - ============================================================
+2026-06-16 06:09:40.226 | INFO     | trading_engine.orchestrator:run:92 - 📊 Fetching market data...
+2026-06-16 06:09:40.231 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: RENDER/USDT 4h (limit=300)
+2026-06-16 06:09:44.248 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for RENDER/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:09:44.284 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: RENDER/USDT (crypto) | Close=1.7940 | RSI=56.4
+2026-06-16 06:09:44.301 | INFO     | trading_engine.orchestrator:run:94 -    Close=1.7940 | RSI=56.4 | ATR=0.0456
+2026-06-16 06:09:44.302 | INFO     | trading_engine.orchestrator:run:97 - 🤖 Running specialist agents...
+2026-06-16 06:09:44.304 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ orderflow: HOLD (50%)
+2026-06-16 06:09:44.304 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ structure: HOLD (50%)
+2026-06-16 06:09:44.304 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ volume: HOLD (60%)
+2026-06-16 06:09:44.304 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ volatility: BUY (100%)
+2026-06-16 06:09:44.304 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ momentum: BUY (83%)
+2026-06-16 06:09:44.304 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ trend: HOLD (58%)
+2026-06-16 06:09:44.540 | DEBUG    | trading_engine.agents.sentiment_agent:_get_news_headlines:32 - News fetch rate-limited (429) for RENDER/USDT — skipping news headlines
+2026-06-16 06:09:44.541 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ sentiment: BUY (75%)
+2026-06-16 06:09:46.269 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ macro: HOLD (60%)
+2026-06-16 06:09:46.270 | INFO     | trading_engine.orchestrator:run:101 - ⚖️  Judge evaluating...
+2026-06-16 06:09:46.270 | INFO     | trading_engine.orchestrator:run:130 -    Loaded dynamic optimized weights for crypto (optimized_weights_crypto.json).
+2026-06-16 06:09:46.271 | INFO     | trading_engine.judge:evaluate:201 - Judge: HOLD | conf=34.5% | agree=5/8 | approved=False | avg_raw_conf=55.7% (min_conf=47)
+2026-06-16 06:09:52.185 | INFO     | trading_engine.orchestrator:run:137 -    Decision: HOLD | Conf=34% | Agreement=5/8
+2026-06-16 06:09:52.185 | INFO     | trading_engine.orchestrator:run:141 - 🛡️  Risk Agent evaluating...
+2026-06-16 06:09:52.185 | WARNING  | trading_engine.orchestrator:run:158 - ❌ TRADE REJECTED (RENDER/USDT): Judge did not approve trade (agreement=5, conf=34%)
+2026-06-16 06:09:52.185 | INFO     | trading_engine.orchestrator:run:196 - ============================================================
+
+2026-06-16 06:09:52.188 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: STRK/USDT ...
+2026-06-16 06:09:52.188 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:704 - ✅ Candidate STRK/USDT passed pre-flight (prob=85.0%)! Running deep analysis...
+2026-06-16 06:09:52.188 | INFO     | trading_engine.orchestrator:run:87 - 
+============================================================
+2026-06-16 06:09:52.188 | INFO     | trading_engine.orchestrator:run:88 - TRADING ENGINE | STRK/USDT | 4h
+2026-06-16 06:09:52.188 | INFO     | trading_engine.orchestrator:run:89 - ============================================================
+2026-06-16 06:09:52.188 | INFO     | trading_engine.orchestrator:run:92 - 📊 Fetching market data...
+2026-06-16 06:09:52.192 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: STRK/USDT 4h (limit=300)
+2026-06-16 06:09:56.075 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for STRK/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:09:56.109 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: STRK/USDT (crypto) | Close=0.0366 | RSI=58.2
+2026-06-16 06:09:56.127 | INFO     | trading_engine.orchestrator:run:94 -    Close=0.0366 | RSI=58.2 | ATR=0.0010
+2026-06-16 06:09:56.127 | INFO     | trading_engine.orchestrator:run:97 - 🤖 Running specialist agents...
+2026-06-16 06:09:56.130 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ volatility: BUY (100%)
+2026-06-16 06:09:56.130 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ trend: HOLD (58%)
+2026-06-16 06:09:56.130 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ structure: HOLD (50%)
+2026-06-16 06:09:56.130 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ momentum: BUY (75%)
+2026-06-16 06:09:56.130 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ orderflow: HOLD (50%)
+2026-06-16 06:09:56.130 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ volume: HOLD (60%)
+2026-06-16 06:09:56.372 | DEBUG    | trading_engine.agents.sentiment_agent:_get_news_headlines:32 - News fetch rate-limited (429) for STRK/USDT — skipping news headlines
+2026-06-16 06:09:56.373 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ sentiment: BUY (75%)
+2026-06-16 06:09:58.616 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ macro: HOLD (60%)
+2026-06-16 06:09:58.617 | INFO     | trading_engine.orchestrator:run:101 - ⚖️  Judge evaluating...
+2026-06-16 06:09:58.617 | INFO     | trading_engine.orchestrator:run:130 -    Loaded dynamic optimized weights for crypto (optimized_weights_crypto.json).
+2026-06-16 06:09:58.617 | INFO     | trading_engine.judge:evaluate:201 - Judge: HOLD | conf=34.5% | agree=5/8 | approved=False | avg_raw_conf=55.7% (min_conf=47)
+2026-06-16 06:10:07.037 | INFO     | trading_engine.orchestrator:run:137 -    Decision: HOLD | Conf=34% | Agreement=5/8
+2026-06-16 06:10:07.037 | INFO     | trading_engine.orchestrator:run:141 - 🛡️  Risk Agent evaluating...
+2026-06-16 06:10:07.037 | WARNING  | trading_engine.orchestrator:run:158 - ❌ TRADE REJECTED (STRK/USDT): Judge did not approve trade (agreement=5, conf=34%)
+2026-06-16 06:10:07.037 | INFO     | trading_engine.orchestrator:run:196 - ============================================================
+
+2026-06-16 06:10:07.040 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: FET/USDT ...
+2026-06-16 06:10:07.040 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:704 - ✅ Candidate FET/USDT passed pre-flight (prob=75.0%)! Running deep analysis...
+2026-06-16 06:10:07.040 | INFO     | trading_engine.orchestrator:run:87 - 
+============================================================
+2026-06-16 06:10:07.040 | INFO     | trading_engine.orchestrator:run:88 - TRADING ENGINE | FET/USDT | 4h
+2026-06-16 06:10:07.040 | INFO     | trading_engine.orchestrator:run:89 - ============================================================
+2026-06-16 06:10:07.040 | INFO     | trading_engine.orchestrator:run:92 - 📊 Fetching market data...
+2026-06-16 06:10:07.044 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: FET/USDT 4h (limit=300)
+2026-06-16 06:10:09.608 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for FET/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:10:09.646 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: FET/USDT (crypto) | Close=0.2127 | RSI=55.5
+2026-06-16 06:10:09.664 | INFO     | trading_engine.orchestrator:run:94 -    Close=0.2127 | RSI=55.5 | ATR=0.0077
+2026-06-16 06:10:09.664 | INFO     | trading_engine.orchestrator:run:97 - 🤖 Running specialist agents...
+2026-06-16 06:10:09.667 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ momentum: HOLD (67%)
+2026-06-16 06:10:09.667 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ trend: HOLD (58%)
+2026-06-16 06:10:09.667 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ volume: HOLD (60%)
+2026-06-16 06:10:09.667 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ structure: HOLD (58%)
+2026-06-16 06:10:09.667 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ volatility: BUY (75%)
+2026-06-16 06:10:09.667 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ orderflow: HOLD (50%)
+2026-06-16 06:10:11.356 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ macro: HOLD (60%)
+2026-06-16 06:10:11.430 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ sentiment: BUY (100%)
+2026-06-16 06:10:11.431 | INFO     | trading_engine.orchestrator:run:101 - ⚖️  Judge evaluating...
+2026-06-16 06:10:11.431 | INFO     | trading_engine.orchestrator:run:130 -    Loaded dynamic optimized weights for crypto (optimized_weights_crypto.json).
+2026-06-16 06:10:11.431 | INFO     | trading_engine.judge:evaluate:201 - Judge: HOLD | conf=43.5% | agree=6/8 | approved=False | avg_raw_conf=58.9% (min_conf=47)
+2026-06-16 06:10:17.951 | INFO     | trading_engine.orchestrator:run:137 -    Decision: HOLD | Conf=44% | Agreement=6/8
+2026-06-16 06:10:17.951 | INFO     | trading_engine.orchestrator:run:141 - 🛡️  Risk Agent evaluating...
+2026-06-16 06:10:17.951 | WARNING  | trading_engine.orchestrator:run:158 - ❌ TRADE REJECTED (FET/USDT): Judge did not approve trade (agreement=6, conf=44%)
+2026-06-16 06:10:17.951 | INFO     | trading_engine.orchestrator:run:196 - ============================================================
+
+2026-06-16 06:10:17.954 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: PUFFER/USDT ...
+2026-06-16 06:10:17.954 | WARNING  | trading_engine.bounty_hunter:run_bounty_hunt:690 - ⚠️ Pre-flight check rejected PUFFER/USDT: probability=0.0% | Veto: Extreme volatility (ATR%=15.0% > 8.0%)
+2026-06-16 06:10:17.954 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: SUI/USDT ...
+2026-06-16 06:10:17.954 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:704 - ✅ Candidate SUI/USDT passed pre-flight (prob=85.0%)! Running deep analysis...
+2026-06-16 06:10:17.954 | INFO     | trading_engine.orchestrator:run:87 - 
+============================================================
+2026-06-16 06:10:17.954 | INFO     | trading_engine.orchestrator:run:88 - TRADING ENGINE | SUI/USDT | 4h
+2026-06-16 06:10:17.954 | INFO     | trading_engine.orchestrator:run:89 - ============================================================
+2026-06-16 06:10:17.954 | INFO     | trading_engine.orchestrator:run:92 - 📊 Fetching market data...
+2026-06-16 06:10:17.959 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: SUI/USDT 4h (limit=300)
+2026-06-16 06:10:22.006 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for SUI/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:10:22.041 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: SUI/USDT (crypto) | Close=0.7860 | RSI=53.6
+2026-06-16 06:10:22.060 | INFO     | trading_engine.orchestrator:run:94 -    Close=0.7860 | RSI=53.6 | ATR=0.0187
+2026-06-16 06:10:22.060 | INFO     | trading_engine.orchestrator:run:97 - 🤖 Running specialist agents...
+2026-06-16 06:10:22.063 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ structure: HOLD (50%)
+2026-06-16 06:10:22.064 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ volume: SELL (80%)
+2026-06-16 06:10:22.064 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ volatility: BUY (100%)
+2026-06-16 06:10:22.064 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ trend: HOLD (58%)
+2026-06-16 06:10:22.064 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ orderflow: HOLD (50%)
+2026-06-16 06:10:22.064 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ momentum: HOLD (67%)
+2026-06-16 06:10:22.564 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ macro: HOLD (60%)
+2026-06-16 06:10:22.891 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ sentiment: BUY (75%)
+2026-06-16 06:10:22.891 | INFO     | trading_engine.orchestrator:run:101 - ⚖️  Judge evaluating...
+2026-06-16 06:10:22.892 | INFO     | trading_engine.orchestrator:run:130 -    Loaded dynamic optimized weights for crypto (optimized_weights_crypto.json).
+2026-06-16 06:10:22.892 | INFO     | trading_engine.judge:evaluate:201 - Judge: HOLD | conf=34.6% | agree=5/8 | approved=False | avg_raw_conf=57.0% (min_conf=47)
+2026-06-16 06:10:27.028 | INFO     | trading_engine.orchestrator:run:137 -    Decision: HOLD | Conf=35% | Agreement=5/8
+2026-06-16 06:10:27.028 | INFO     | trading_engine.orchestrator:run:141 - 🛡️  Risk Agent evaluating...
+2026-06-16 06:10:27.029 | WARNING  | trading_engine.orchestrator:run:158 - ❌ TRADE REJECTED (SUI/USDT): Judge did not approve trade (agreement=5, conf=35%)
+2026-06-16 06:10:27.029 | INFO     | trading_engine.orchestrator:run:196 - ============================================================
+
+2026-06-16 06:10:27.031 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: DOT/USDT ...
+2026-06-16 06:10:27.031 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:704 - ✅ Candidate DOT/USDT passed pre-flight (prob=85.0%)! Running deep analysis...
+2026-06-16 06:10:27.031 | INFO     | trading_engine.orchestrator:run:87 - 
+============================================================
+2026-06-16 06:10:27.031 | INFO     | trading_engine.orchestrator:run:88 - TRADING ENGINE | DOT/USDT | 4h
+2026-06-16 06:10:27.031 | INFO     | trading_engine.orchestrator:run:89 - ============================================================
+2026-06-16 06:10:27.031 | INFO     | trading_engine.orchestrator:run:92 - 📊 Fetching market data...
+2026-06-16 06:10:27.035 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: DOT/USDT 4h (limit=300)
+2026-06-16 06:10:34.049 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for DOT/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:10:34.090 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: DOT/USDT (crypto) | Close=1.0100 | RSI=56.9
+2026-06-16 06:10:34.108 | INFO     | trading_engine.orchestrator:run:94 -    Close=1.0100 | RSI=56.9 | ATR=0.0207
+2026-06-16 06:10:34.108 | INFO     | trading_engine.orchestrator:run:97 - 🤖 Running specialist agents...
+2026-06-16 06:10:34.111 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ volume: HOLD (60%)
+2026-06-16 06:10:34.111 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ trend: HOLD (58%)
+2026-06-16 06:10:34.111 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ orderflow: HOLD (50%)
+2026-06-16 06:10:34.111 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ structure: HOLD (58%)
+2026-06-16 06:10:34.111 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ volatility: BUY (100%)
+2026-06-16 06:10:34.111 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ momentum: BUY (75%)
+2026-06-16 06:10:34.378 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ sentiment: BUY (75%)
+2026-06-16 06:10:36.455 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ macro: SELL (60%)
+2026-06-16 06:10:36.455 | INFO     | trading_engine.orchestrator:run:101 - ⚖️  Judge evaluating...
+2026-06-16 06:10:36.455 | INFO     | trading_engine.orchestrator:run:130 -    Loaded dynamic optimized weights for crypto (optimized_weights_crypto.json).
+2026-06-16 06:10:36.456 | INFO     | trading_engine.judge:evaluate:201 - Judge: BUY | conf=32.3% | agree=3/8 | approved=False | avg_raw_conf=83.3% (min_conf=47)
+2026-06-16 06:10:39.438 | INFO     | trading_engine.orchestrator:run:137 -    Decision: BUY | Conf=32% | Agreement=3/8
+2026-06-16 06:10:39.438 | INFO     | trading_engine.orchestrator:run:141 - 🛡️  Risk Agent evaluating...
+2026-06-16 06:10:39.438 | WARNING  | trading_engine.orchestrator:run:158 - ❌ TRADE REJECTED (DOT/USDT): Judge did not approve trade (agreement=3, conf=32%)
+2026-06-16 06:10:39.438 | INFO     | trading_engine.orchestrator:run:196 - ============================================================
+
+2026-06-16 06:10:39.480 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: ADA/USDT ...
+2026-06-16 06:10:39.480 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:704 - ✅ Candidate ADA/USDT passed pre-flight (prob=85.0%)! Running deep analysis...
+2026-06-16 06:10:39.480 | INFO     | trading_engine.orchestrator:run:87 - 
+============================================================
+2026-06-16 06:10:39.481 | INFO     | trading_engine.orchestrator:run:88 - TRADING ENGINE | ADA/USDT | 4h
+2026-06-16 06:10:39.481 | INFO     | trading_engine.orchestrator:run:89 - ============================================================
+2026-06-16 06:10:39.481 | INFO     | trading_engine.orchestrator:run:92 - 📊 Fetching market data...
+2026-06-16 06:10:39.484 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: ADA/USDT 4h (limit=300)
+2026-06-16 06:10:42.523 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for ADA/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:10:42.559 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: ADA/USDT (crypto) | Close=0.1779 | RSI=53.2
+2026-06-16 06:10:42.578 | INFO     | trading_engine.orchestrator:run:94 -    Close=0.1779 | RSI=53.2 | ATR=0.0050
+2026-06-16 06:10:42.578 | INFO     | trading_engine.orchestrator:run:97 - 🤖 Running specialist agents...
+2026-06-16 06:10:42.580 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ trend: HOLD (58%)
+2026-06-16 06:10:42.580 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ volume: SELL (80%)
+2026-06-16 06:10:42.581 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ momentum: HOLD (67%)
+2026-06-16 06:10:42.581 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ orderflow: HOLD (50%)
+2026-06-16 06:10:42.581 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ structure: HOLD (50%)
+2026-06-16 06:10:42.581 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ volatility: BUY (100%)
+2026-06-16 06:10:42.847 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ sentiment: BUY (75%)
+2026-06-16 06:10:45.067 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ macro: SELL (60%)
+2026-06-16 06:10:45.068 | INFO     | trading_engine.orchestrator:run:101 - ⚖️  Judge evaluating...
+2026-06-16 06:10:45.068 | INFO     | trading_engine.orchestrator:run:130 -    Loaded dynamic optimized weights for crypto (optimized_weights_crypto.json).
+2026-06-16 06:10:45.068 | INFO     | trading_engine.judge:evaluate:201 - Judge: HOLD | conf=27.4% | agree=4/8 | approved=False | avg_raw_conf=56.2% (min_conf=47)
+2026-06-16 06:10:48.050 | INFO     | trading_engine.orchestrator:run:137 -    Decision: HOLD | Conf=27% | Agreement=4/8
+2026-06-16 06:10:48.050 | INFO     | trading_engine.orchestrator:run:141 - 🛡️  Risk Agent evaluating...
+2026-06-16 06:10:48.051 | WARNING  | trading_engine.orchestrator:run:158 - ❌ TRADE REJECTED (ADA/USDT): Judge did not approve trade (agreement=4, conf=27%)
+2026-06-16 06:10:48.051 | INFO     | trading_engine.orchestrator:run:196 - ============================================================
+
+2026-06-16 06:10:48.053 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: LFVN ...
+2026-06-16 06:10:48.053 | WARNING  | trading_engine.bounty_hunter:run_bounty_hunt:690 - ⚠️ Pre-flight check rejected LFVN: probability=0.0% | Veto: Extreme volatility (ATR%=8.5% > 8.0%)
+2026-06-16 06:10:48.053 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: ASTC ...
+2026-06-16 06:10:48.053 | WARNING  | trading_engine.bounty_hunter:run_bounty_hunt:690 - ⚠️ Pre-flight check rejected ASTC: probability=0.0% | Veto: Extreme volatility (ATR%=9.2% > 8.0%)
+2026-06-16 06:10:48.053 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: MNTS ...
+2026-06-16 06:10:48.053 | WARNING  | trading_engine.bounty_hunter:run_bounty_hunt:690 - ⚠️ Pre-flight check rejected MNTS: probability=0.0% | Veto: Stop loss too wide (10.9% > 8.0%)
+2026-06-16 06:10:48.053 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: ASTI ...
+2026-06-16 06:10:48.053 | WARNING  | trading_engine.bounty_hunter:run_bounty_hunt:690 - ⚠️ Pre-flight check rejected ASTI: probability=0.0% | Veto: Stop loss too wide (9.0% > 8.0%)
+2026-06-16 06:10:48.053 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: VELO ...
+2026-06-16 06:10:48.053 | WARNING  | trading_engine.bounty_hunter:run_bounty_hunt:690 - ⚠️ Pre-flight check rejected VELO: probability=0.0% | Veto: Stop loss too wide (8.3% > 8.0%)
+2026-06-16 06:10:48.053 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: XAU/USDT:USDT ...
+2026-06-16 06:10:48.054 | WARNING  | trading_engine.bounty_hunter:run_bounty_hunt:690 - ⚠️ Pre-flight check rejected XAU/USDT:USDT: probability=60.0% | Pass probability 60.0% below 75% threshold. Details: Good Bollinger Band squeeze/structure
+2026-06-16 06:10:48.054 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: XAG/USDT:USDT ...
+2026-06-16 06:10:48.054 | WARNING  | trading_engine.bounty_hunter:run_bounty_hunt:690 - ⚠️ Pre-flight check rejected XAG/USDT:USDT: probability=70.0% | Pass probability 70.0% below 75% threshold. Details: Healthy volatility | Good Bollinger Band squeeze/structure
+2026-06-16 06:10:48.054 | INFO     | __main__:run_bounty_hunter_cycle:221 - Bounty Hunter: no approved BUY candidates in this scan.
+2026-06-16 06:10:48.054 | INFO     | __main__:run_bounty_hunter_cycle:236 - Bounty Hunter: no approved SELL candidates in this scan.
+2026-06-16 06:14:27.340 | INFO     | __main__:run_bounty_hunter_cycle:183 - 
+⚔️ Scheduled Bounty Hunter scan cycle started: 2026-06-16 06:14 UTC
+2026-06-16 06:14:27.340 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:650 - ⚔️ Bounty Hunter Scan Cycle Triggered ⚔️
+2026-06-16 06:14:27.341 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:654 - 📈 Live win rate from paper state: 50.0%
+2026-06-16 06:14:27.341 | INFO     | trading_engine.bounty_hunter:scan_bybit_crypto:92 - 🔍 Starting Bybit Spot scan (mode=oversold, limit=45)...
+2026-06-16 06:14:29.834 | INFO     | trading_engine.bounty_hunter:scan_bybit_crypto:137 - Found 89 liquid Bybit spot pairs.
+2026-06-16 06:14:29.834 | INFO     | trading_engine.bounty_hunter:scan_bybit_crypto:147 - Selected Bybit crypto candidates: ['H/USDT', 'OPG/USDT', 'PUFFER/USDT', 'CHIP/USDT', 'MEGA/USDT', 'EDGE/USDT', 'BILL/USDT', 'ICP/USDT', 'VVV/USDT', 'TRUMP/USDT', 'WCT/USDT', 'TON/USDT', 'OP/USDT', 'VIRTUAL/USDT', 'WLFI/USDT', 'IP/USDT', 'SUI/USDT', 'ADA/USDT', 'ONDO/USDT', 'PUMP/USDT', 'FET/USDT', 'DOGE/USDT', 'STRK/USDT', 'RENDER/USDT', 'APT/USDT', 'FLR/USDT', 'TRX/USDT', 'BNB/USDT', 'DEGEN/USDT', 'SHIB/USDT', 'PIEVERSE/USDT', 'RLUSD/USDT', 'USDC/USDT', 'USD1/USDT', 'USDE/USDT', 'CC/USDT', 'GALA/USDT', 'LINK/USDT', 'HBAR/USDT', 'XAUT/USDT', 'HOODX/USDT', 'WLD/USDT', 'ATH/USDT', 'MNT/USDT', 'LTC/USDT']
+2026-06-16 06:14:30.932 | INFO     | trading_engine.bounty_hunter:get_latest_trading_date:75 - Found stock aggregates data for date: 2026-06-15
+2026-06-16 06:14:30.936 | INFO     | trading_engine.bounty_hunter:scan_massive_stocks:250 - 🔍 Starting Massive Grouped Stocks scan for 2026-06-15 (mode=oversold, limit=15)...
+2026-06-16 06:14:31.815 | INFO     | trading_engine.bounty_hunter:scan_massive_stocks:292 - Found 2973 liquid stocks.
+2026-06-16 06:14:31.815 | INFO     | trading_engine.bounty_hunter:scan_massive_stocks:303 - Selected stock candidates: ['SPCQ', 'SSPC', 'SNK', 'LFVN', 'SPCG', 'CUPR', 'ASTC', 'CODA', 'ASTI', 'MNTS', 'VCX', 'AMPG', 'VELO', 'LUNL', 'LRN']
+2026-06-16 06:14:31.819 | INFO     | trading_engine.bounty_hunter:scan_bybit_cfds:188 - 🏦 Bybit CFD scan: 9 candidate(s) — mode=oversold
+2026-06-16 06:14:31.820 | INFO     | trading_engine.market_hours:log:200 - Market ⏸️ | AAPL/USDT:USDT | Before US stock pre-market opens (13:00 UTC / EDT) | Opens: Tue 16 Jun 2026 14:00 WAT
+2026-06-16 06:14:31.820 | INFO     | trading_engine.market_hours:log:200 - Market ⏸️ | TSLA/USDT:USDT | Before US stock pre-market opens (13:00 UTC / EDT) | Opens: Tue 16 Jun 2026 14:00 WAT
+2026-06-16 06:14:31.820 | INFO     | trading_engine.market_hours:log:200 - Market ⏸️ | NVDA/USDT:USDT | Before US stock pre-market opens (13:00 UTC / EDT) | Opens: Tue 16 Jun 2026 14:00 WAT
+2026-06-16 06:14:31.820 | INFO     | trading_engine.market_hours:log:200 - Market ⏸️ | MSFT/USDT:USDT | Before US stock pre-market opens (13:00 UTC / EDT) | Opens: Tue 16 Jun 2026 14:00 WAT
+2026-06-16 06:14:31.820 | INFO     | trading_engine.market_hours:log:200 - Market ⏸️ | AMZN/USDT:USDT | Before US stock pre-market opens (13:00 UTC / EDT) | Opens: Tue 16 Jun 2026 14:00 WAT
+2026-06-16 06:14:31.820 | INFO     | trading_engine.market_hours:log:200 - Market ⏸️ | GOOGL/USDT:USDT | Before US stock pre-market opens (13:00 UTC / EDT) | Opens: Tue 16 Jun 2026 14:00 WAT
+2026-06-16 06:14:31.820 | INFO     | trading_engine.market_hours:filter_open_symbols:380 - ⏸️  6 symbol(s) skipped (market closed): ['AAPL/USDT:USDT', 'TSLA/USDT:USDT', 'NVDA/USDT:USDT', 'MSFT/USDT:USDT', 'AMZN/USDT:USDT', 'GOOGL/USDT:USDT']
+2026-06-16 06:14:37.149 | INFO     | trading_engine.bounty_hunter:scan_bybit_cfds:228 - Selected Bybit CFD candidates: ['XAG/USDT:USDT', 'CL/USDT:USDT', 'XAU/USDT:USDT']
+2026-06-16 06:14:37.165 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:669 - 📐 Verifying anomalies and ranking candidates...
+2026-06-16 06:14:37.169 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: H/USDT 4h (limit=300)
+2026-06-16 06:14:42.359 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for H/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:14:42.395 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: H/USDT (crypto) | Close=0.3180 | RSI=44.1
+2026-06-16 06:14:46.068 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for H/USDT...
+2026-06-16 06:14:46.359 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 H/USDT anomaly check: RSI=44.1 | RelVol=0.02 | Imbalance=0.94 -> Score: 13.59
+2026-06-16 06:14:46.363 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: OPG/USDT 4h (limit=300)
+2026-06-16 06:14:50.060 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for OPG/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:14:50.094 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: OPG/USDT (crypto) | Close=0.1592 | RSI=44.2
+2026-06-16 06:14:55.019 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for OPG/USDT...
+2026-06-16 06:14:55.297 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 OPG/USDT anomaly check: RSI=44.2 | RelVol=0.28 | Imbalance=0.58 -> Score: 12.25
+2026-06-16 06:14:55.301 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: PUFFER/USDT 4h (limit=300)
+2026-06-16 06:14:58.013 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for PUFFER/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:14:58.068 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: PUFFER/USDT (crypto) | Close=0.0208 | RSI=59.3
+2026-06-16 06:15:01.849 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for PUFFER/USDT...
+2026-06-16 06:15:02.080 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 PUFFER/USDT anomaly check: RSI=59.3 | RelVol=0.66 | Imbalance=0.47 -> Score: 3.66
+2026-06-16 06:15:02.084 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: CHIP/USDT 4h (limit=300)
+2026-06-16 06:15:06.120 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for CHIP/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:15:06.153 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: CHIP/USDT (crypto) | Close=0.0358 | RSI=50.7
+2026-06-16 06:15:13.760 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for CHIP/USDT...
+2026-06-16 06:15:14.055 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 CHIP/USDT anomaly check: RSI=50.7 | RelVol=0.41 | Imbalance=0.49 -> Score: 3.27
+2026-06-16 06:15:14.058 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: MEGA/USDT 4h (limit=300)
+2026-06-16 06:15:17.109 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for MEGA/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:15:17.141 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: MEGA/USDT (crypto) | Close=0.0567 | RSI=48.8
+2026-06-16 06:15:21.465 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for MEGA/USDT...
+2026-06-16 06:15:21.777 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 MEGA/USDT anomaly check: RSI=48.8 | RelVol=0.18 | Imbalance=0.46 -> Score: 4.44
+2026-06-16 06:15:21.781 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: EDGE/USDT 4h (limit=300)
+2026-06-16 06:15:27.809 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for EDGE/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:15:27.858 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: EDGE/USDT (crypto) | Close=0.3442 | RSI=36.6
+2026-06-16 06:15:27.878 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:363 - 🚫 EDGE/USDT skipped (oversold in confirmed downtrend EMA20<50<200)
+2026-06-16 06:15:27.884 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: BILL/USDT 4h (limit=300)
+2026-06-16 06:15:31.112 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for BILL/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:15:31.158 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: BILL/USDT (crypto) | Close=0.0677 | RSI=42.4
+2026-06-16 06:15:31.182 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:363 - 🚫 BILL/USDT skipped (oversold in confirmed downtrend EMA20<50<200)
+2026-06-16 06:15:31.182 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  ICP/USDT is on cooldown — skipping this cycle
+2026-06-16 06:15:31.185 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: VVV/USDT 4h (limit=300)
+2026-06-16 06:15:36.669 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for VVV/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:15:36.721 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: VVV/USDT (crypto) | Close=15.4910 | RSI=47.1
+2026-06-16 06:15:42.052 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for VVV/USDT...
+2026-06-16 06:15:42.347 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 VVV/USDT anomaly check: RSI=47.1 | RelVol=0.55 | Imbalance=0.49 -> Score: 7.82
+2026-06-16 06:15:42.347 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  TRUMP/USDT is on cooldown — skipping this cycle
+2026-06-16 06:15:42.347 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  WCT/USDT is on cooldown — skipping this cycle
+2026-06-16 06:15:42.347 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  TON/USDT is on cooldown — skipping this cycle
+2026-06-16 06:15:42.347 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  OP/USDT is on cooldown — skipping this cycle
+2026-06-16 06:15:42.347 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  VIRTUAL/USDT is on cooldown — skipping this cycle
+2026-06-16 06:15:42.347 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  WLFI/USDT is on cooldown — skipping this cycle
+2026-06-16 06:15:42.351 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: IP/USDT 4h (limit=300)
+2026-06-16 06:15:48.766 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for IP/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:15:48.801 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: IP/USDT (crypto) | Close=0.3075 | RSI=53.5
+2026-06-16 06:15:48.820 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  RENDER/USDT is on cooldown — skipping this cycle
+2026-06-16 06:15:48.820 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:363 - 🚫 IP/USDT skipped (oversold in confirmed downtrend EMA20<50<200)
+2026-06-16 06:15:48.820 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  SUI/USDT is on cooldown — skipping this cycle
+2026-06-16 06:15:48.820 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  ADA/USDT is on cooldown — skipping this cycle
+2026-06-16 06:15:48.820 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  ONDO/USDT is on cooldown — skipping this cycle
+2026-06-16 06:15:48.820 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  PUMP/USDT is on cooldown — skipping this cycle
+2026-06-16 06:15:48.820 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  FET/USDT is on cooldown — skipping this cycle
+2026-06-16 06:15:48.820 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  DOGE/USDT is on cooldown — skipping this cycle
+2026-06-16 06:15:48.820 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  STRK/USDT is on cooldown — skipping this cycle
+2026-06-16 06:15:48.824 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: APT/USDT 4h (limit=300)
+2026-06-16 06:15:51.524 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for APT/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:15:51.559 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: APT/USDT (crypto) | Close=0.6765 | RSI=51.8
+2026-06-16 06:15:51.578 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:363 - 🚫 APT/USDT skipped (oversold in confirmed downtrend EMA20<50<200)
+2026-06-16 06:15:51.578 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  FLR/USDT is on cooldown — skipping this cycle
+2026-06-16 06:15:51.582 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: TRX/USDT 4h (limit=300)
+2026-06-16 06:15:55.091 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for TRX/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:15:55.124 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: TRX/USDT (crypto) | Close=0.3183 | RSI=47.6
+2026-06-16 06:15:55.142 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:363 - 🚫 TRX/USDT skipped (oversold in confirmed downtrend EMA20<50<200)
+2026-06-16 06:15:55.142 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  BNB/USDT is on cooldown — skipping this cycle
+2026-06-16 06:15:55.146 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: DEGEN/USDT 4h (limit=300)
+2026-06-16 06:15:57.886 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for DEGEN/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:15:57.918 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: DEGEN/USDT (crypto) | Close=0.0015 | RSI=47.2
+2026-06-16 06:16:01.882 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for DEGEN/USDT...
+2026-06-16 06:16:02.223 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 DEGEN/USDT anomaly check: RSI=47.2 | RelVol=2.42 | Imbalance=0.65 -> Score: 12.21
+2026-06-16 06:16:02.223 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  SHIB/USDT is on cooldown — skipping this cycle
+2026-06-16 06:16:02.223 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  PIEVERSE/USDT is on cooldown — skipping this cycle
+2026-06-16 06:16:02.227 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: RLUSD/USDT 4h (limit=300)
+2026-06-16 06:16:04.780 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for RLUSD/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:16:04.813 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: RLUSD/USDT (crypto) | Close=1.0004 | RSI=41.3
+2026-06-16 06:16:04.829 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:363 - 🚫 RLUSD/USDT skipped (oversold in confirmed downtrend EMA20<50<200)
+2026-06-16 06:16:04.833 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: USDC/USDT 4h (limit=300)
+2026-06-16 06:16:10.540 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for USDC/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:16:10.575 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: USDC/USDT (crypto) | Close=1.0003 | RSI=45.6
+2026-06-16 06:16:10.593 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:363 - 🚫 USDC/USDT skipped (oversold in confirmed downtrend EMA20<50<200)
+2026-06-16 06:16:10.593 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  USD1/USDT is on cooldown — skipping this cycle
+2026-06-16 06:16:10.597 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: USDE/USDT 4h (limit=300)
+2026-06-16 06:16:16.321 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for USDE/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:16:16.357 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: USDE/USDT (crypto) | Close=1.0001 | RSI=51.3
+2026-06-16 06:16:19.858 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for USDE/USDT...
+2026-06-16 06:16:20.211 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 USDE/USDT anomaly check: RSI=51.3 | RelVol=0.52 | Imbalance=0.31 -> Score: 2.61
+2026-06-16 06:16:20.216 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: CC/USDT 4h (limit=300)
+2026-06-16 06:16:23.756 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for CC/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:16:23.789 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: CC/USDT (crypto) | Close=0.1650 | RSI=53.5
+2026-06-16 06:16:28.425 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for CC/USDT...
+2026-06-16 06:16:28.777 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 CC/USDT anomaly check: RSI=53.5 | RelVol=0.16 | Imbalance=0.51 -> Score: 2.89
+2026-06-16 06:16:28.788 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: GALA/USDT 4h (limit=300)
+2026-06-16 06:16:33.975 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for GALA/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:16:34.019 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: GALA/USDT (crypto) | Close=0.0027 | RSI=57.8
+2026-06-16 06:16:40.457 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for GALA/USDT...
+2026-06-16 06:16:40.768 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 GALA/USDT anomaly check: RSI=57.8 | RelVol=0.38 | Imbalance=0.48 -> Score: 3.16
+2026-06-16 06:16:40.768 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  LINK/USDT is on cooldown — skipping this cycle
+2026-06-16 06:16:40.771 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: HBAR/USDT 4h (limit=300)
+2026-06-16 06:16:48.147 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for HBAR/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:16:48.181 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: HBAR/USDT (crypto) | Close=0.0821 | RSI=57.9
+2026-06-16 06:16:51.655 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for HBAR/USDT...
+2026-06-16 06:16:51.987 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 HBAR/USDT anomaly check: RSI=57.9 | RelVol=0.45 | Imbalance=0.53 -> Score: 3.57
+2026-06-16 06:16:52.334 | DEBUG    | trading_engine.data.cfd_data:fetch_cfd_ohlcv:155 - CFD OHLCV (Bybit): XAUT/USDT | 300 bars | close=4299.1000
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:16:52.368 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: XAUT/USDT (cfd) | Close=4299.1000 | RSI=60.8
+2026-06-16 06:16:55.651 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for XAUT/USDT...
+2026-06-16 06:16:55.966 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 XAUT/USDT anomaly check: RSI=60.8 | RelVol=0.45 | Imbalance=0.31 -> Score: 2.46
+2026-06-16 06:16:55.969 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: HOODX/USDT 4h (limit=300)
+2026-06-16 06:17:00.518 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for HOODX/USDT: bybit fetchFundingRate() supports contract markets only
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:17:00.553 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: HOODX/USDT (crypto) | Close=97.4100 | RSI=63.5
+2026-06-16 06:17:04.675 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for HOODX/USDT...
+2026-06-16 06:17:04.926 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 HOODX/USDT anomaly check: RSI=63.5 | RelVol=0.08 | Imbalance=0.50 -> Score: 2.67
+2026-06-16 06:17:04.926 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  WLD/USDT is on cooldown — skipping this cycle
+2026-06-16 06:17:04.926 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  ATH/USDT is on cooldown — skipping this cycle
+2026-06-16 06:17:04.929 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: MNT/USDT 4h (limit=300)
+2026-06-16 06:17:08.291 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for MNT/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:17:08.324 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: MNT/USDT (crypto) | Close=0.5749 | RSI=65.9
+2026-06-16 06:17:10.970 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for MNT/USDT...
+2026-06-16 06:17:11.274 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 MNT/USDT anomaly check: RSI=65.9 | RelVol=0.39 | Imbalance=0.83 -> Score: 4.93
+2026-06-16 06:17:11.275 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  LTC/USDT is on cooldown — skipping this cycle
+2026-06-16 06:17:11.275 | INFO     | trading_engine.data.market_data:fetch_ohlcv:232 - Fetching stock OHLCV: SPCQ 4h
+2026-06-16 06:17:11.560 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:263 - Alpaca returned insufficient bars (0 < 100) for SPCQ. Trying fallback.
+2026-06-16 06:17:11.842 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:291 - Massive returned insufficient bars (1 < 100) for SPCQ. Trying fallback.
+2026-06-16 06:17:11.842 | INFO     | trading_engine.data.market_data:fetch_ohlcv:313 - Yahoo Finance fallback for stock SPCQ (SPCQ) (interval=1h)
+/usr/local/lib/python3.11/site-packages/yfinance/scrapers/history.py:396: FutureWarning: The default dtype for empty Series will be 'object' instead of 'float64' in a future version. Specify a dtype explicitly to silence this warning.
+  self._capital_gains = pd.Series()
+2026-06-16 06:17:11.921 | INFO     | trading_engine.data.market_data:fetch_ohlcv:320 - Yahoo Finance: 7 bars for SPCQ
+2026-06-16 06:17:12.419 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: SPCQ (stock) | Close=12.1750 | RSI=50.0
+2026-06-16 06:17:12.710 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for SPCQ...
+2026-06-16 06:17:12.956 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 SPCQ anomaly check: RSI=50.0 | RelVol=1.00 | Imbalance=0.12 -> Score: 2.62
+2026-06-16 06:17:12.956 | INFO     | trading_engine.data.market_data:fetch_ohlcv:232 - Fetching stock OHLCV: SSPC 4h
+2026-06-16 06:17:13.227 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:263 - Alpaca returned insufficient bars (0 < 100) for SSPC. Trying fallback.
+2026-06-16 06:17:13.498 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:291 - Massive returned insufficient bars (1 < 100) for SSPC. Trying fallback.
+2026-06-16 06:17:13.498 | INFO     | trading_engine.data.market_data:fetch_ohlcv:313 - Yahoo Finance fallback for stock SSPC (SSPC) (interval=1h)
+/usr/local/lib/python3.11/site-packages/yfinance/scrapers/history.py:396: FutureWarning: The default dtype for empty Series will be 'object' instead of 'float64' in a future version. Specify a dtype explicitly to silence this warning.
+  self._capital_gains = pd.Series()
+2026-06-16 06:17:13.562 | INFO     | trading_engine.data.market_data:fetch_ohlcv:320 - Yahoo Finance: 7 bars for SSPC
+2026-06-16 06:17:14.066 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: SSPC (stock) | Close=9.1600 | RSI=50.0
+2026-06-16 06:17:14.343 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for SSPC...
+2026-06-16 06:17:14.729 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 SSPC anomaly check: RSI=50.0 | RelVol=1.00 | Imbalance=0.79 -> Score: 5.93
+2026-06-16 06:17:14.729 | INFO     | trading_engine.data.market_data:fetch_ohlcv:232 - Fetching stock OHLCV: SNK 4h
+2026-06-16 06:17:15.002 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:263 - Alpaca returned insufficient bars (0 < 100) for SNK. Trying fallback.
+2026-06-16 06:17:15.273 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:291 - Massive returned insufficient bars (1 < 100) for SNK. Trying fallback.
+2026-06-16 06:17:15.273 | INFO     | trading_engine.data.market_data:fetch_ohlcv:313 - Yahoo Finance fallback for stock SNK (SNK) (interval=1h)
+/usr/local/lib/python3.11/site-packages/yfinance/scrapers/history.py:396: FutureWarning: The default dtype for empty Series will be 'object' instead of 'float64' in a future version. Specify a dtype explicitly to silence this warning.
+  self._capital_gains = pd.Series()
+2026-06-16 06:17:15.337 | INFO     | trading_engine.data.market_data:fetch_ohlcv:320 - Yahoo Finance: 7 bars for SNK
+2026-06-16 06:17:15.846 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: SNK (stock) | Close=15.3100 | RSI=50.0
+2026-06-16 06:17:16.138 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for SNK...
+2026-06-16 06:17:16.484 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 SNK anomaly check: RSI=50.0 | RelVol=1.00 | Imbalance=0.50 -> Score: 4.50
+2026-06-16 06:17:16.484 | INFO     | trading_engine.data.market_data:fetch_ohlcv:232 - Fetching stock OHLCV: LFVN 4h
+2026-06-16 06:17:16.754 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:263 - Alpaca returned insufficient bars (0 < 100) for LFVN. Trying fallback.
+2026-06-16 06:17:17.030 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:291 - Massive returned insufficient bars (2 < 100) for LFVN. Trying fallback.
+2026-06-16 06:17:17.030 | INFO     | trading_engine.data.market_data:fetch_ohlcv:313 - Yahoo Finance fallback for stock LFVN (LFVN) (interval=1h)
+/usr/local/lib/python3.11/site-packages/yfinance/scrapers/history.py:396: FutureWarning: The default dtype for empty Series will be 'object' instead of 'float64' in a future version. Specify a dtype explicitly to silence this warning.
+  self._capital_gains = pd.Series()
+2026-06-16 06:17:17.126 | INFO     | trading_engine.data.market_data:fetch_ohlcv:320 - Yahoo Finance: 300 bars for LFVN
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:17:17.676 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: LFVN (stock) | Close=6.5900 | RSI=21.5
+2026-06-16 06:17:17.948 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for LFVN...
+2026-06-16 06:17:18.252 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 LFVN anomaly check: RSI=21.5 | RelVol=1.88 | Imbalance=1.00 -> Score: 51.48
+2026-06-16 06:17:18.252 | INFO     | trading_engine.data.market_data:fetch_ohlcv:232 - Fetching stock OHLCV: SPCG 4h
+2026-06-16 06:17:18.522 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:263 - Alpaca returned insufficient bars (0 < 100) for SPCG. Trying fallback.
+2026-06-16 06:17:18.826 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:291 - Massive returned insufficient bars (1 < 100) for SPCG. Trying fallback.
+2026-06-16 06:17:18.826 | INFO     | trading_engine.data.market_data:fetch_ohlcv:313 - Yahoo Finance fallback for stock SPCG (SPCG) (interval=1h)
+/usr/local/lib/python3.11/site-packages/yfinance/scrapers/history.py:396: FutureWarning: The default dtype for empty Series will be 'object' instead of 'float64' in a future version. Specify a dtype explicitly to silence this warning.
+  self._capital_gains = pd.Series()
+2026-06-16 06:17:18.899 | INFO     | trading_engine.data.market_data:fetch_ohlcv:320 - Yahoo Finance: 7 bars for SPCG
+2026-06-16 06:17:19.395 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: SPCG (stock) | Close=15.2900 | RSI=50.0
+2026-06-16 06:17:19.673 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for SPCG...
+2026-06-16 06:17:19.967 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 SPCG anomaly check: RSI=50.0 | RelVol=1.00 | Imbalance=0.50 -> Score: 4.50
+2026-06-16 06:17:19.967 | INFO     | trading_engine.data.market_data:fetch_ohlcv:232 - Fetching stock OHLCV: CUPR 4h
+2026-06-16 06:17:20.240 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:263 - Alpaca returned insufficient bars (0 < 100) for CUPR. Trying fallback.
+2026-06-16 06:17:20.478 | WARNING  | trading_engine.utils.http:get_with_retry:12 - Rate limit (429) hit on https://api.massive.com/v2/aggs/ticker/CUPR/range/4/hour/2023-01-01/2099-01-01. Waiting 2.0s before retry (attempt 1/5)...
+2026-06-16 06:17:22.717 | WARNING  | trading_engine.utils.http:get_with_retry:12 - Rate limit (429) hit on https://api.massive.com/v2/aggs/ticker/CUPR/range/4/hour/2023-01-01/2099-01-01. Waiting 4.0s before retry (attempt 2/5)...
+2026-06-16 06:17:26.975 | WARNING  | trading_engine.utils.http:get_with_retry:12 - Rate limit (429) hit on https://api.massive.com/v2/aggs/ticker/CUPR/range/4/hour/2023-01-01/2099-01-01. Waiting 8.0s before retry (attempt 3/5)...
+2026-06-16 06:17:35.214 | WARNING  | trading_engine.utils.http:get_with_retry:12 - Rate limit (429) hit on https://api.massive.com/v2/aggs/ticker/CUPR/range/4/hour/2023-01-01/2099-01-01. Waiting 16.0s before retry (attempt 4/5)...
+2026-06-16 06:17:51.457 | WARNING  | trading_engine.utils.http:get_with_retry:12 - Rate limit (429) hit on https://api.massive.com/v2/aggs/ticker/CUPR/range/4/hour/2023-01-01/2099-01-01. Waiting 32.0s before retry (attempt 5/5)...
+2026-06-16 06:18:23.778 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:291 - Massive returned insufficient bars (1 < 100) for CUPR. Trying fallback.
+2026-06-16 06:18:23.778 | INFO     | trading_engine.data.market_data:fetch_ohlcv:313 - Yahoo Finance fallback for stock CUPR (CUPR) (interval=1h)
+/usr/local/lib/python3.11/site-packages/yfinance/scrapers/history.py:396: FutureWarning: The default dtype for empty Series will be 'object' instead of 'float64' in a future version. Specify a dtype explicitly to silence this warning.
+  self._capital_gains = pd.Series()
+2026-06-16 06:18:23.868 | INFO     | trading_engine.data.market_data:fetch_ohlcv:320 - Yahoo Finance: 300 bars for CUPR
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:18:24.425 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: CUPR (stock) | Close=8.4600 | RSI=63.2
+2026-06-16 06:18:24.722 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for CUPR...
+2026-06-16 06:18:25.110 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 CUPR anomaly check: RSI=63.2 | RelVol=0.20 | Imbalance=1.00 -> Score: 5.40
+2026-06-16 06:18:25.110 | INFO     | trading_engine.data.market_data:fetch_ohlcv:232 - Fetching stock OHLCV: ASTC 4h
+2026-06-16 06:18:25.418 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:263 - Alpaca returned insufficient bars (0 < 100) for ASTC. Trying fallback.
+2026-06-16 06:18:25.698 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:291 - Massive returned insufficient bars (2 < 100) for ASTC. Trying fallback.
+2026-06-16 06:18:25.698 | INFO     | trading_engine.data.market_data:fetch_ohlcv:313 - Yahoo Finance fallback for stock ASTC (ASTC) (interval=1h)
+/usr/local/lib/python3.11/site-packages/yfinance/scrapers/history.py:396: FutureWarning: The default dtype for empty Series will be 'object' instead of 'float64' in a future version. Specify a dtype explicitly to silence this warning.
+  self._capital_gains = pd.Series()
+2026-06-16 06:18:25.786 | INFO     | trading_engine.data.market_data:fetch_ohlcv:320 - Yahoo Finance: 300 bars for ASTC
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:18:26.315 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: ASTC (stock) | Close=16.7600 | RSI=31.1
+2026-06-16 06:18:26.585 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for ASTC...
+2026-06-16 06:18:26.933 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 ASTC anomaly check: RSI=31.1 | RelVol=0.56 | Imbalance=0.50 -> Score: 31.95
+2026-06-16 06:18:26.933 | INFO     | trading_engine.data.market_data:fetch_ohlcv:232 - Fetching stock OHLCV: CODA 4h
+2026-06-16 06:18:27.202 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:263 - Alpaca returned insufficient bars (0 < 100) for CODA. Trying fallback.
+2026-06-16 06:18:27.477 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:291 - Massive returned insufficient bars (2 < 100) for CODA. Trying fallback.
+2026-06-16 06:18:27.478 | INFO     | trading_engine.data.market_data:fetch_ohlcv:313 - Yahoo Finance fallback for stock CODA (CODA) (interval=1h)
+/usr/local/lib/python3.11/site-packages/yfinance/scrapers/history.py:396: FutureWarning: The default dtype for empty Series will be 'object' instead of 'float64' in a future version. Specify a dtype explicitly to silence this warning.
+  self._capital_gains = pd.Series()
+2026-06-16 06:18:27.566 | INFO     | trading_engine.data.market_data:fetch_ohlcv:320 - Yahoo Finance: 300 bars for CODA
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:18:28.100 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: CODA (stock) | Close=9.3700 | RSI=24.3
+2026-06-16 06:18:28.100 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:363 - 🚫 CODA skipped (oversold in confirmed downtrend EMA20<50<200)
+2026-06-16 06:18:28.100 | INFO     | trading_engine.data.market_data:fetch_ohlcv:232 - Fetching stock OHLCV: ASTI 4h
+2026-06-16 06:18:28.374 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:263 - Alpaca returned insufficient bars (0 < 100) for ASTI. Trying fallback.
+2026-06-16 06:18:28.672 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:291 - Massive returned insufficient bars (2 < 100) for ASTI. Trying fallback.
+2026-06-16 06:18:28.672 | INFO     | trading_engine.data.market_data:fetch_ohlcv:313 - Yahoo Finance fallback for stock ASTI (ASTI) (interval=1h)
+/usr/local/lib/python3.11/site-packages/yfinance/scrapers/history.py:396: FutureWarning: The default dtype for empty Series will be 'object' instead of 'float64' in a future version. Specify a dtype explicitly to silence this warning.
+  self._capital_gains = pd.Series()
+2026-06-16 06:18:28.750 | INFO     | trading_engine.data.market_data:fetch_ohlcv:320 - Yahoo Finance: 300 bars for ASTI
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:18:29.291 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: ASTI (stock) | Close=6.7200 | RSI=40.8
+2026-06-16 06:18:29.578 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for ASTI...
+2026-06-16 06:18:30.052 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 ASTI anomaly check: RSI=40.8 | RelVol=0.22 | Imbalance=1.00 -> Score: 19.22
+2026-06-16 06:18:30.052 | INFO     | trading_engine.data.market_data:fetch_ohlcv:232 - Fetching stock OHLCV: MNTS 4h
+2026-06-16 06:18:30.323 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:263 - Alpaca returned insufficient bars (0 < 100) for MNTS. Trying fallback.
+2026-06-16 06:18:30.617 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:291 - Massive returned insufficient bars (1 < 100) for MNTS. Trying fallback.
+2026-06-16 06:18:30.617 | INFO     | trading_engine.data.market_data:fetch_ohlcv:313 - Yahoo Finance fallback for stock MNTS (MNTS) (interval=1h)
+/usr/local/lib/python3.11/site-packages/yfinance/scrapers/history.py:396: FutureWarning: The default dtype for empty Series will be 'object' instead of 'float64' in a future version. Specify a dtype explicitly to silence this warning.
+  self._capital_gains = pd.Series()
+2026-06-16 06:18:30.711 | INFO     | trading_engine.data.market_data:fetch_ohlcv:320 - Yahoo Finance: 300 bars for MNTS
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:18:31.242 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: MNTS (stock) | Close=10.2300 | RSI=36.7
+2026-06-16 06:18:31.521 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for MNTS...
+2026-06-16 06:18:31.903 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 MNTS anomaly check: RSI=36.7 | RelVol=0.28 | Imbalance=1.00 -> Score: 25.44
+2026-06-16 06:18:31.903 | INFO     | trading_engine.data.market_data:fetch_ohlcv:232 - Fetching stock OHLCV: VCX 4h
+2026-06-16 06:18:32.192 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:263 - Alpaca returned insufficient bars (0 < 100) for VCX. Trying fallback.
+2026-06-16 06:18:32.430 | WARNING  | trading_engine.utils.http:get_with_retry:12 - Rate limit (429) hit on https://api.massive.com/v2/aggs/ticker/VCX/range/4/hour/2023-01-01/2099-01-01. Waiting 2.0s before retry (attempt 1/5)...
+2026-06-16 06:18:34.671 | WARNING  | trading_engine.utils.http:get_with_retry:12 - Rate limit (429) hit on https://api.massive.com/v2/aggs/ticker/VCX/range/4/hour/2023-01-01/2099-01-01. Waiting 4.0s before retry (attempt 2/5)...
+2026-06-16 06:18:38.913 | WARNING  | trading_engine.utils.http:get_with_retry:12 - Rate limit (429) hit on https://api.massive.com/v2/aggs/ticker/VCX/range/4/hour/2023-01-01/2099-01-01. Waiting 8.0s before retry (attempt 3/5)...
+2026-06-16 06:18:47.150 | WARNING  | trading_engine.utils.http:get_with_retry:12 - Rate limit (429) hit on https://api.massive.com/v2/aggs/ticker/VCX/range/4/hour/2023-01-01/2099-01-01. Waiting 16.0s before retry (attempt 4/5)...
+2026-06-16 06:19:03.432 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:291 - Massive returned insufficient bars (2 < 100) for VCX. Trying fallback.
+2026-06-16 06:19:03.432 | INFO     | trading_engine.data.market_data:fetch_ohlcv:313 - Yahoo Finance fallback for stock VCX (VCX) (interval=1h)
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:19:04.041 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:363 - 🚫 VCX skipped (oversold in confirmed downtrend EMA20<50<200)
+/usr/local/lib/python3.11/site-packages/yfinance/scrapers/history.py:396: FutureWarning: The default dtype for empty Series will be 'object' instead of 'float64' in a future version. Specify a dtype explicitly to silence this warning.
+  self._capital_gains = pd.Series()
+2026-06-16 06:19:03.518 | INFO     | trading_engine.data.market_data:fetch_ohlcv:320 - Yahoo Finance: 300 bars for VCX
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+2026-06-16 06:19:04.041 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: VCX (stock) | Close=109.7750 | RSI=34.9
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+2026-06-16 06:19:04.041 | INFO     | trading_engine.data.market_data:fetch_ohlcv:232 - Fetching stock OHLCV: AMPG 4h
+2026-06-16 06:19:04.312 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:263 - Alpaca returned insufficient bars (0 < 100) for AMPG. Trying fallback.
+2026-06-16 06:19:04.590 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:291 - Massive returned insufficient bars (1 < 100) for AMPG. Trying fallback.
+2026-06-16 06:19:04.590 | INFO     | trading_engine.data.market_data:fetch_ohlcv:313 - Yahoo Finance fallback for stock AMPG (AMPG) (interval=1h)
+/usr/local/lib/python3.11/site-packages/yfinance/scrapers/history.py:396: FutureWarning: The default dtype for empty Series will be 'object' instead of 'float64' in a future version. Specify a dtype explicitly to silence this warning.
+  self._capital_gains = pd.Series()
+2026-06-16 06:19:04.672 | INFO     | trading_engine.data.market_data:fetch_ohlcv:320 - Yahoo Finance: 300 bars for AMPG
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:19:05.198 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: AMPG (stock) | Close=7.5000 | RSI=46.8
+2026-06-16 06:19:06.451 | INFO     | trading_engine.data.market_data:fetch_ohlcv:320 - Yahoo Finance: 300 bars for VELO
+2026-06-16 06:19:05.469 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for AMPG...
+2026-06-16 06:19:05.803 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 AMPG anomaly check: RSI=46.8 | RelVol=0.41 | Imbalance=0.50 -> Score: 8.14
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+2026-06-16 06:19:05.803 | INFO     | trading_engine.data.market_data:fetch_ohlcv:232 - Fetching stock OHLCV: VELO 4h
+2026-06-16 06:19:06.082 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:263 - Alpaca returned insufficient bars (0 < 100) for VELO. Trying fallback.
+2026-06-16 06:19:06.361 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:291 - Massive returned insufficient bars (2 < 100) for VELO. Trying fallback.
+2026-06-16 06:19:06.361 | INFO     | trading_engine.data.market_data:fetch_ohlcv:313 - Yahoo Finance fallback for stock VELO (VELO) (interval=1h)
+/usr/local/lib/python3.11/site-packages/yfinance/scrapers/history.py:396: FutureWarning: The default dtype for empty Series will be 'object' instead of 'float64' in a future version. Specify a dtype explicitly to silence this warning.
+  self._capital_gains = pd.Series()
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:19:06.978 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: VELO (stock) | Close=23.0950 | RSI=45.8
+2026-06-16 06:19:07.247 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for VELO...
+2026-06-16 06:19:07.602 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 VELO anomaly check: RSI=45.8 | RelVol=0.25 | Imbalance=0.50 -> Score: 9.24
+2026-06-16 06:19:07.602 | INFO     | trading_engine.data.market_data:fetch_ohlcv:232 - Fetching stock OHLCV: LUNL 4h
+2026-06-16 06:19:07.893 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:263 - Alpaca returned insufficient bars (0 < 100) for LUNL. Trying fallback.
+2026-06-16 06:19:08.172 | WARNING  | trading_engine.data.market_data:fetch_ohlcv:291 - Massive returned insufficient bars (2 < 100) for LUNL. Trying fallback.
+2026-06-16 06:19:08.172 | INFO     | trading_engine.data.market_data:fetch_ohlcv:313 - Yahoo Finance fallback for stock LUNL (LUNL) (interval=1h)
+2026-06-16 06:19:08.250 | INFO     | trading_engine.data.market_data:fetch_ohlcv:320 - Yahoo Finance: 300 bars for LUNL
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:19:08.784 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: LUNL (stock) | Close=14.8650 | RSI=32.9
+2026-06-16 06:19:08.784 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:363 - 🚫 LUNL skipped (oversold in confirmed downtrend EMA20<50<200)
+2026-06-16 06:19:08.784 | DEBUG    | trading_engine.bounty_hunter:rank_and_enrich_candidates:350 - ⏭️  LRN is on cooldown — skipping this cycle
+2026-06-16 06:19:08.972 | DEBUG    | trading_engine.data.cfd_data:fetch_cfd_ohlcv:155 - CFD OHLCV (Bybit): XAG/USDT:USDT | 300 bars | close=69.5400
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:19:09.017 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: XAG/USDT:USDT (cfd) | Close=69.5400 | RSI=57.3
+2026-06-16 06:19:11.523 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for XAG/USDT:USDT...
+2026-06-16 06:19:11.966 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 XAG/USDT:USDT anomaly check: RSI=57.3 | RelVol=0.83 | Imbalance=0.48 -> Score: 4.08
+2026-06-16 06:19:12.146 | DEBUG    | trading_engine.data.cfd_data:fetch_cfd_ohlcv:155 - CFD OHLCV (Bybit): CL/USDT:USDT | 300 bars | close=79.3100
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:19:12.179 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: CL/USDT:USDT (cfd) | Close=79.3100 | RSI=33.4
+2026-06-16 06:19:12.179 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:363 - 🚫 CL/USDT:USDT skipped (oversold in confirmed downtrend EMA20<50<200)
+2026-06-16 06:19:12.361 | DEBUG    | trading_engine.data.cfd_data:fetch_cfd_ohlcv:155 - CFD OHLCV (Bybit): XAU/USDT:USDT | 300 bars | close=4317.0900
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:19:12.395 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: XAU/USDT:USDT (cfd) | Close=4317.0900 | RSI=60.3
+2026-06-16 06:19:14.862 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for XAU/USDT:USDT...
+2026-06-16 06:19:15.138 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:398 - 📊 XAU/USDT:USDT anomaly check: RSI=60.3 | RelVol=0.98 | Imbalance=0.74 -> Score: 5.67
+2026-06-16 06:19:15.138 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: H/USDT ...
+2026-06-16 06:19:15.138 | WARNING  | trading_engine.bounty_hunter:run_bounty_hunt:690 - ⚠️ Pre-flight check rejected H/USDT: probability=0.0% | Veto: Extreme volatility (ATR%=32.7% > 8.0%)
+2026-06-16 06:19:15.138 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: OPG/USDT ...
+2026-06-16 06:19:15.138 | WARNING  | trading_engine.bounty_hunter:run_bounty_hunt:690 - ⚠️ Pre-flight check rejected OPG/USDT: probability=0.0% | Veto: Extreme volatility (ATR%=18.4% > 8.0%)
+2026-06-16 06:19:15.138 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: DEGEN/USDT ...
+2026-06-16 06:19:15.138 | WARNING  | trading_engine.bounty_hunter:run_bounty_hunt:690 - ⚠️ Pre-flight check rejected DEGEN/USDT: probability=0.0% | Veto: Stop loss too wide (10.8% > 8.0%)
+2026-06-16 06:19:15.138 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: VVV/USDT ...
+2026-06-16 06:19:15.138 | WARNING  | trading_engine.bounty_hunter:run_bounty_hunt:690 - ⚠️ Pre-flight check rejected VVV/USDT: probability=0.0% | Veto: Stop loss too wide (8.5% > 8.0%)
+2026-06-16 06:19:15.138 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: MNT/USDT ...
+2026-06-16 06:19:15.138 | WARNING  | trading_engine.bounty_hunter:run_bounty_hunt:690 - ⚠️ Pre-flight check rejected MNT/USDT: probability=50.0% | Pass probability 50.0% below 75% threshold. Details: Healthy volatility | Good Bollinger Band squeeze/structure | Overbought RSI (65.9) | Fear & Greed extreme fear
+2026-06-16 06:19:15.138 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: MEGA/USDT ...
+2026-06-16 06:19:15.138 | WARNING  | trading_engine.bounty_hunter:run_bounty_hunt:690 - ⚠️ Pre-flight check rejected MEGA/USDT: probability=0.0% | Veto: Stop loss too wide (10.9% > 8.0%)
+2026-06-16 06:19:15.138 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: PUFFER/USDT ...
+2026-06-16 06:19:15.138 | WARNING  | trading_engine.bounty_hunter:run_bounty_hunt:690 - ⚠️ Pre-flight check rejected PUFFER/USDT: probability=0.0% | Veto: Extreme volatility (ATR%=14.9% > 8.0%)
+2026-06-16 06:19:15.139 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: HBAR/USDT ...
+2026-06-16 06:19:15.139 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:704 - ✅ Candidate HBAR/USDT passed pre-flight (prob=85.0%)! Running deep analysis...
+2026-06-16 06:19:15.139 | INFO     | trading_engine.orchestrator:run:87 - 
+============================================================
+2026-06-16 06:19:15.139 | INFO     | trading_engine.orchestrator:run:88 - TRADING ENGINE | HBAR/USDT | 4h
+2026-06-16 06:19:15.139 | INFO     | trading_engine.orchestrator:run:89 - ============================================================
+2026-06-16 06:19:15.139 | INFO     | trading_engine.orchestrator:run:92 - 📊 Fetching market data...
+2026-06-16 06:19:15.143 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: HBAR/USDT 4h (limit=300)
+2026-06-16 06:19:19.491 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for HBAR/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:19:19.531 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: HBAR/USDT (crypto) | Close=0.0821 | RSI=58.2
+2026-06-16 06:19:19.548 | INFO     | trading_engine.orchestrator:run:94 -    Close=0.0821 | RSI=58.2 | ATR=0.0015
+2026-06-16 06:19:19.548 | INFO     | trading_engine.orchestrator:run:97 - 🤖 Running specialist agents...
+2026-06-16 06:19:19.551 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ structure: HOLD (58%)
+2026-06-16 06:19:19.551 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ volume: HOLD (60%)
+2026-06-16 06:19:19.552 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ trend: HOLD (58%)
+2026-06-16 06:19:19.552 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ momentum: BUY (75%)
+2026-06-16 06:19:19.552 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ volatility: BUY (100%)
+2026-06-16 06:19:19.552 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ orderflow: HOLD (50%)
+2026-06-16 06:19:19.552 | INFO     | trading_engine.agents.macro_agent:_update_macro_cache_if_expired:111 - Macro cache expired or empty. Fetching fresh indicators...
+2026-06-16 06:19:19.799 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ sentiment: BUY (75%)
+2026-06-16 06:19:21.041 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ macro: HOLD (60%)
+2026-06-16 06:19:21.043 | INFO     | trading_engine.orchestrator:run:101 - ⚖️  Judge evaluating...
+2026-06-16 06:19:21.043 | INFO     | trading_engine.orchestrator:run:130 -    Loaded dynamic optimized weights for crypto (optimized_weights_crypto.json).
+2026-06-16 06:19:21.043 | INFO     | trading_engine.judge:evaluate:201 - Judge: HOLD | conf=35.6% | agree=5/8 | approved=False | avg_raw_conf=57.3% (min_conf=47)
+2026-06-16 06:19:25.609 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:704 - ✅ Candidate GALA/USDT passed pre-flight (prob=85.0%)! Running deep analysis...
+2026-06-16 06:19:25.606 | INFO     | trading_engine.orchestrator:run:137 -    Decision: HOLD | Conf=36% | Agreement=5/8
+2026-06-16 06:19:25.609 | INFO     | trading_engine.orchestrator:run:87 - 
+============================================================
+2026-06-16 06:19:25.609 | INFO     | trading_engine.orchestrator:run:88 - TRADING ENGINE | GALA/USDT | 4h
+2026-06-16 06:19:25.606 | INFO     | trading_engine.orchestrator:run:141 - 🛡️  Risk Agent evaluating...
+2026-06-16 06:19:25.609 | INFO     | trading_engine.orchestrator:run:89 - ============================================================
+2026-06-16 06:19:25.606 | WARNING  | trading_engine.orchestrator:run:158 - ❌ TRADE REJECTED (HBAR/USDT): Judge did not approve trade (agreement=5, conf=36%)
+2026-06-16 06:19:25.606 | INFO     | trading_engine.orchestrator:run:196 - ============================================================
+
+2026-06-16 06:19:25.609 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: CHIP/USDT ...
+2026-06-16 06:19:25.609 | WARNING  | trading_engine.bounty_hunter:run_bounty_hunt:690 - ⚠️ Pre-flight check rejected CHIP/USDT: probability=0.0% | Veto: Stop loss too wide (10.8% > 8.0%)
+2026-06-16 06:19:25.609 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: GALA/USDT ...
+2026-06-16 06:19:25.609 | INFO     | trading_engine.orchestrator:run:92 - 📊 Fetching market data...
+2026-06-16 06:19:25.613 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: GALA/USDT 4h (limit=300)
+Execution of job "Bounty Hunter Cycle (trigger: interval[0:05:00], next run at: 2026-06-16 06:19:27 UTC)" skipped: maximum number of running instances reached (1)
+2026-06-16 06:19:28.855 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for GALA/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:19:28.904 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: GALA/USDT (crypto) | Close=0.0027 | RSI=58.4
+2026-06-16 06:19:28.925 | INFO     | trading_engine.orchestrator:run:94 -    Close=0.0027 | RSI=58.4 | ATR=0.0001
+2026-06-16 06:19:28.925 | INFO     | trading_engine.orchestrator:run:97 - 🤖 Running specialist agents...
+2026-06-16 06:19:28.928 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ orderflow: HOLD (50%)
+2026-06-16 06:19:28.928 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ momentum: BUY (75%)
+2026-06-16 06:19:28.929 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ trend: HOLD (58%)
+2026-06-16 06:19:28.929 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ volume: HOLD (60%)
+2026-06-16 06:19:28.929 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ structure: HOLD (67%)
+2026-06-16 06:19:28.929 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ volatility: BUY (100%)
+2026-06-16 06:19:29.197 | DEBUG    | trading_engine.agents.sentiment_agent:_get_news_headlines:32 - News fetch rate-limited (429) for GALA/USDT — skipping news headlines
+2026-06-16 06:19:29.198 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ sentiment: BUY (75%)
+2026-06-16 06:19:31.612 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ macro: HOLD (60%)
+2026-06-16 06:19:31.613 | INFO     | trading_engine.orchestrator:run:101 - ⚖️  Judge evaluating...
+2026-06-16 06:19:31.613 | INFO     | trading_engine.orchestrator:run:130 -    Loaded dynamic optimized weights for crypto (optimized_weights_crypto.json).
+2026-06-16 06:19:31.613 | INFO     | trading_engine.judge:evaluate:201 - Judge: HOLD | conf=36.6% | agree=5/8 | approved=False | avg_raw_conf=59.0% (min_conf=47)
+2026-06-16 06:19:34.542 | INFO     | trading_engine.orchestrator:run:87 - 
+2026-06-16 06:19:34.539 | INFO     | trading_engine.orchestrator:run:137 -    Decision: HOLD | Conf=37% | Agreement=5/8
+2026-06-16 06:19:34.539 | INFO     | trading_engine.orchestrator:run:141 - 🛡️  Risk Agent evaluating...
+============================================================
+2026-06-16 06:19:34.542 | INFO     | trading_engine.orchestrator:run:88 - TRADING ENGINE | CC/USDT | 4h
+2026-06-16 06:19:34.540 | WARNING  | trading_engine.orchestrator:run:158 - ❌ TRADE REJECTED (GALA/USDT): Judge did not approve trade (agreement=5, conf=37%)
+2026-06-16 06:19:34.542 | INFO     | trading_engine.orchestrator:run:89 - ============================================================
+2026-06-16 06:19:34.540 | INFO     | trading_engine.orchestrator:run:196 - ============================================================
+2026-06-16 06:19:34.542 | INFO     | trading_engine.orchestrator:run:92 - 📊 Fetching market data...
+
+2026-06-16 06:19:34.542 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: CC/USDT ...
+2026-06-16 06:19:34.542 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:704 - ✅ Candidate CC/USDT passed pre-flight (prob=85.0%)! Running deep analysis...
+2026-06-16 06:19:34.547 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: CC/USDT 4h (limit=300)
+2026-06-16 06:19:41.205 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for CC/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:19:41.251 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: CC/USDT (crypto) | Close=0.1649 | RSI=53.2
+2026-06-16 06:19:41.268 | INFO     | trading_engine.orchestrator:run:94 -    Close=0.1649 | RSI=53.2 | ATR=0.0031
+2026-06-16 06:19:41.269 | INFO     | trading_engine.orchestrator:run:97 - 🤖 Running specialist agents...
+2026-06-16 06:19:41.271 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ orderflow: HOLD (50%)
+2026-06-16 06:19:41.271 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ momentum: BUY (75%)
+2026-06-16 06:19:41.272 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ volume: HOLD (60%)
+2026-06-16 06:19:41.272 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ trend: BUY (92%)
+2026-06-16 06:19:41.272 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ volatility: BUY (100%)
+2026-06-16 06:19:41.272 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ structure: HOLD (58%)
+2026-06-16 06:19:41.509 | DEBUG    | trading_engine.agents.sentiment_agent:_get_news_headlines:32 - News fetch rate-limited (429) for CC/USDT — skipping news headlines
+2026-06-16 06:19:41.510 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ sentiment: BUY (75%)
+2026-06-16 06:19:43.065 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ macro: BUY (60%)
+2026-06-16 06:19:43.065 | INFO     | trading_engine.orchestrator:run:101 - ⚖️  Judge evaluating...
+2026-06-16 06:19:43.065 | INFO     | trading_engine.orchestrator:run:130 -    Loaded dynamic optimized weights for crypto (optimized_weights_crypto.json).
+2026-06-16 06:19:43.065 | INFO     | trading_engine.judge:evaluate:201 - Judge: BUY | conf=50.5% | agree=5/8 | approved=True | avg_raw_conf=80.3% (min_conf=47)
+2026-06-16 06:19:46.482 | INFO     | trading_engine.orchestrator:run:137 -    Decision: BUY | Conf=50% | Agreement=5/8
+2026-06-16 06:19:46.482 | INFO     | trading_engine.orchestrator:run:141 - 🛡️  Risk Agent evaluating...
+2026-06-16 06:19:46.482 | SUCCESS  | trading_engine.risk_agent:evaluate:340 - Risk APPROVED | BUY CC/USDT | Size=5.9% ($594) | SL=4.2% | TP=10.5% | R:R=2.5 | Max loss=$25
+2026-06-16 06:19:46.482 | SUCCESS  | trading_engine.orchestrator:run:153 - ✅ TRADE APPROVED: BUY CC/USDT
+2026-06-16 06:19:46.482 | SUCCESS  | trading_engine.orchestrator:run:154 -    Entry: 0.1649 | SL: 0.1580 | TP: 0.1822 | Size: $594
+2026-06-16 06:19:46.482 | INFO     | trading_engine.orchestrator:run:196 - ============================================================
+
+2026-06-16 06:19:46.484 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: HOODX/USDT ...
+2026-06-16 06:19:46.485 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:704 - ✅ Candidate HOODX/USDT passed pre-flight (prob=85.0%)! Running deep analysis...
+2026-06-16 06:19:46.485 | INFO     | trading_engine.orchestrator:run:87 - 
+============================================================
+2026-06-16 06:19:46.485 | INFO     | trading_engine.orchestrator:run:88 - TRADING ENGINE | HOODX/USDT | 4h
+2026-06-16 06:19:46.485 | INFO     | trading_engine.orchestrator:run:89 - ============================================================
+2026-06-16 06:19:46.485 | INFO     | trading_engine.orchestrator:run:92 - 📊 Fetching market data...
+2026-06-16 06:19:46.488 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: HOODX/USDT 4h (limit=300)
+2026-06-16 06:19:51.503 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for HOODX/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:19:51.536 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: HOODX/USDT (crypto) | Close=97.4100 | RSI=63.5
+2026-06-16 06:19:51.553 | INFO     | trading_engine.orchestrator:run:94 -    Close=97.4100 | RSI=63.5 | ATR=1.4181
+2026-06-16 06:19:51.553 | INFO     | trading_engine.orchestrator:run:97 - 🤖 Running specialist agents...
+2026-06-16 06:19:51.555 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ momentum: BUY (75%)
+2026-06-16 06:19:51.556 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ volume: HOLD (60%)
+2026-06-16 06:19:51.556 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ orderflow: HOLD (50%)
+2026-06-16 06:19:51.556 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ volatility: BUY (100%)
+2026-06-16 06:19:51.556 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ structure: HOLD (58%)
+2026-06-16 06:19:51.556 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ trend: BUY (92%)
+2026-06-16 06:19:51.791 | DEBUG    | trading_engine.agents.sentiment_agent:_get_news_headlines:32 - News fetch rate-limited (429) for HOODX/USDT — skipping news headlines
+2026-06-16 06:19:51.792 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ sentiment: BUY (75%)
+2026-06-16 06:19:53.972 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ macro: BUY (70%)
+2026-06-16 06:19:53.974 | INFO     | trading_engine.orchestrator:run:101 - ⚖️  Judge evaluating...
+2026-06-16 06:19:53.975 | INFO     | trading_engine.orchestrator:run:130 -    Loaded dynamic optimized weights for crypto (optimized_weights_crypto.json).
+2026-06-16 06:19:53.975 | INFO     | trading_engine.judge:evaluate:201 - Judge: BUY | conf=51.7% | agree=5/8 | approved=True | avg_raw_conf=82.3% (min_conf=47)
+2026-06-16 06:19:55.346 | INFO     | trading_engine.orchestrator:run:137 -    Decision: BUY | Conf=52% | Agreement=5/8
+2026-06-16 06:19:55.347 | INFO     | trading_engine.orchestrator:run:141 - 🛡️  Risk Agent evaluating...
+2026-06-16 06:19:55.347 | SUCCESS  | trading_engine.risk_agent:evaluate:340 - Risk APPROVED | BUY HOODX/USDT | Size=5.9% ($594) | SL=3.2% | TP=8.0% | R:R=2.5 | Max loss=$19
+2026-06-16 06:19:55.347 | SUCCESS  | trading_engine.orchestrator:run:153 - ✅ TRADE APPROVED: BUY HOODX/USDT
+2026-06-16 06:19:55.347 | SUCCESS  | trading_engine.orchestrator:run:154 -    Entry: 97.4100 | SL: 94.2902 | TP: 105.2094 | Size: $594
+2026-06-16 06:19:55.347 | INFO     | trading_engine.orchestrator:run:196 - ============================================================
+
+2026-06-16 06:19:55.349 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:679 - Checking pre-flight checklist for candidate: USDE/USDT ...
+2026-06-16 06:19:55.350 | INFO     | trading_engine.bounty_hunter:run_bounty_hunt:704 - ✅ Candidate USDE/USDT passed pre-flight (prob=80.0%)! Running deep analysis...
+2026-06-16 06:19:55.350 | INFO     | trading_engine.orchestrator:run:87 - 
+============================================================
+2026-06-16 06:19:55.350 | INFO     | trading_engine.orchestrator:run:88 - TRADING ENGINE | USDE/USDT | 4h
+2026-06-16 06:19:55.350 | INFO     | trading_engine.orchestrator:run:89 - ============================================================
+2026-06-16 06:19:55.350 | INFO     | trading_engine.orchestrator:run:92 - 📊 Fetching market data...
+2026-06-16 06:19:55.353 | INFO     | trading_engine.data.market_data:fetch_ohlcv:126 - Fetching OHLCV: USDE/USDT 4h (limit=300)
+2026-06-16 06:19:58.385 | WARNING  | trading_engine.data.market_data:fetch_order_flow:219 - Order flow fetch failed for USDE/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:452: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:454: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-16 06:19:58.419 | SUCCESS  | trading_engine.data.market_data:build_snapshot:654 - Snapshot built: USDE/USDT (crypto) | Close=1.0001 | RSI=51.3
+2026-06-16 06:19:58.436 | INFO     | trading_engine.orchestrator:run:94 -    Close=1.0001 | RSI=51.3 | ATR=0.0003
+2026-06-16 06:19:58.437 | INFO     | trading_engine.orchestrator:run:97 - 🤖 Running specialist agents...
+2026-06-16 06:19:58.440 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ structure: HOLD (58%)
+2026-06-16 06:19:58.440 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ volume: SELL (80%)
+2026-06-16 06:19:58.440 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ trend: BUY (75%)
+2026-06-16 06:19:58.440 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ orderflow: HOLD (50%)
+2026-06-16 06:19:58.441 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ momentum: BUY (75%)
+2026-06-16 06:19:58.441 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ volatility: HOLD (62%)
+2026-06-16 06:19:58.687 | DEBUG    | trading_engine.agents.sentiment_agent:_get_news_headlines:32 - News fetch rate-limited (429) for USDE/USDT — skipping news headlines
+2026-06-16 06:19:58.688 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ sentiment: BUY (75%)
+2026-06-16 06:20:02.270 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ macro: HOLD (50%)
+2026-06-16 06:20:02.270 | INFO     | trading_engine.orchestrator:run:101 - ⚖️  Judge evaluating...
+2026-06-16 06:20:02.270 | INFO     | trading_engine.orchestrator:run:130 -    Loaded dynamic optimized weights for crypto (optimized_weights_crypto.json).
+2026-06-16 06:20:02.271 | INFO     | trading_engine.judge:evaluate:201 - Judge: HOLD | conf=29.1% | agree=4/8 | approved=False | avg_raw_conf=55.2% (min_conf=47)

@@ -1,0 +1,901 @@
+[
+  {
+    "iteration": 0,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.3,
+      "volatility": 0.8,
+      "structure": 1.2,
+      "sentiment": 0.9,
+      "macro": 1.0
+    },
+    "fitness": 0.6479,
+    "metrics": {
+      "AAPL": {
+        "train": {
+          "total_trades": 9,
+          "win_rate": 44.4,
+          "profit_factor": 2.04,
+          "total_return_pct": 0.55,
+          "max_drawdown_pct": 0.31,
+          "sortino_ratio": 0.7686826177822776
+        },
+        "val": {
+          "total_trades": 4,
+          "win_rate": 25.0,
+          "profit_factor": 0.69,
+          "total_return_pct": -0.12,
+          "max_drawdown_pct": 0.23,
+          "sortino_ratio": -0.2566996741249944
+        },
+        "fitness_score": 0.6479
+      }
+    },
+    "reasoning": "Baseline configuration",
+    "improved": true
+  },
+  {
+    "iteration": 1,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.2,
+      "volatility": 1.2,
+      "structure": 1.2,
+      "sentiment": 1.1,
+      "macro": 1.2
+    },
+    "fitness": 0.6341,
+    "metrics": {
+      "AAPL": {
+        "train": {
+          "total_trades": 9,
+          "win_rate": 44.4,
+          "profit_factor": 2.0,
+          "total_return_pct": 0.52,
+          "max_drawdown_pct": 0.31,
+          "sortino_ratio": 0.7397340079232222
+        },
+        "val": {
+          "total_trades": 4,
+          "win_rate": 25.0,
+          "profit_factor": 0.69,
+          "total_return_pct": -0.12,
+          "max_drawdown_pct": 0.23,
+          "sortino_ratio": -0.2566996741249944
+        },
+        "fitness_score": 0.6341
+      }
+    },
+    "reasoning": "The current weights show trend and orderflow as the most prominent agents, while volatility and sentiment are underweighted. Given the relatively low win rate and negative return in the validation set, it suggests overfitting to the training data. To address this, reducing the weights of trend and orderflow while increasing those of volatility and sentiment could help improve generalization. Additionally, increasing the weight of macro might help capture broader market trends.",
+    "improved": false
+  },
+  {
+    "iteration": 0,
+    "weights": {
+      "trend": 1.4,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.3,
+      "volatility": 0.8,
+      "structure": 1.2,
+      "sentiment": 0.9,
+      "macro": 1.0
+    },
+    "fitness": 0.3757,
+    "metrics": {
+      "AAPL": {
+        "train": {
+          "total_trades": 9,
+          "win_rate": 44.4,
+          "profit_factor": 2.04,
+          "total_return_pct": 0.55,
+          "max_drawdown_pct": 0.31,
+          "sortino_ratio": 0.7686826177822776
+        },
+        "val": {
+          "total_trades": 4,
+          "win_rate": 25.0,
+          "profit_factor": 0.69,
+          "total_return_pct": -0.12,
+          "max_drawdown_pct": 0.23,
+          "sortino_ratio": -0.2566996741249944
+        },
+        "fitness_score": 0.6479
+      },
+      "TSLA": {
+        "train": {
+          "total_trades": 13,
+          "win_rate": 23.1,
+          "profit_factor": 0.64,
+          "total_return_pct": -0.7,
+          "max_drawdown_pct": 1.21,
+          "sortino_ratio": -0.3146761107997231
+        },
+        "val": {
+          "total_trades": 6,
+          "win_rate": 16.7,
+          "profit_factor": 0.48,
+          "total_return_pct": -0.5,
+          "max_drawdown_pct": 0.58,
+          "sortino_ratio": -0.4693509129457409
+        },
+        "fitness_score": 0.0654
+      },
+      "NVDA": {
+        "train": {
+          "total_trades": 14,
+          "win_rate": 50.0,
+          "profit_factor": 2.22,
+          "total_return_pct": 1.23,
+          "max_drawdown_pct": 0.49,
+          "sortino_ratio": 0.854277670098679
+        },
+        "val": {
+          "total_trades": 5,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": -0.92,
+          "max_drawdown_pct": 0.9,
+          "sortino_ratio": -0.9988460518556752
+        },
+        "fitness_score": 0.4137
+      }
+    },
+    "reasoning": "Baseline configuration",
+    "improved": true
+  },
+  {
+    "iteration": 1,
+    "weights": {
+      "trend": 1.1,
+      "momentum": 1.2,
+      "volume": 1.1,
+      "orderflow": 1.1,
+      "volatility": 1.4,
+      "structure": 1.2,
+      "sentiment": 1.4,
+      "macro": 1.0
+    },
+    "fitness": 0.3863,
+    "metrics": {
+      "AAPL": {
+        "train": {
+          "total_trades": 9,
+          "win_rate": 44.4,
+          "profit_factor": 2.0,
+          "total_return_pct": 0.52,
+          "max_drawdown_pct": 0.31,
+          "sortino_ratio": 0.7397340079232222
+        },
+        "val": {
+          "total_trades": 4,
+          "win_rate": 25.0,
+          "profit_factor": 0.69,
+          "total_return_pct": -0.12,
+          "max_drawdown_pct": 0.23,
+          "sortino_ratio": -0.2566996741249944
+        },
+        "fitness_score": 0.6341
+      },
+      "NVDA": {
+        "train": {
+          "total_trades": 14,
+          "win_rate": 50.0,
+          "profit_factor": 2.22,
+          "total_return_pct": 1.23,
+          "max_drawdown_pct": 0.49,
+          "sortino_ratio": 0.854277670098679
+        },
+        "val": {
+          "total_trades": 5,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": -0.92,
+          "max_drawdown_pct": 0.9,
+          "sortino_ratio": -0.9988460518556752
+        },
+        "fitness_score": 0.4137
+      },
+      "TSLA": {
+        "train": {
+          "total_trades": 12,
+          "win_rate": 25.0,
+          "profit_factor": 0.76,
+          "total_return_pct": -0.44,
+          "max_drawdown_pct": 1.03,
+          "sortino_ratio": -0.20687183354234437
+        },
+        "val": {
+          "total_trades": 6,
+          "win_rate": 16.7,
+          "profit_factor": 0.48,
+          "total_return_pct": -0.5,
+          "max_drawdown_pct": 0.58,
+          "sortino_ratio": -0.4693509129457409
+        },
+        "fitness_score": 0.1111
+      }
+    },
+    "reasoning": "Analyzing the performance metrics, trend and orderflow agents seem to be overweighted with relatively high fitness scores for AAPL and NVDA. Meanwhile, volatility and sentiment agents appear underweighted given their low initial weights and the negative impact on TSLA's performance. To balance this, reducing trend and orderflow weights while increasing volatility and sentiment weights could lead to a more balanced and improved composite fitness score.",
+    "improved": true
+  },
+  {
+    "iteration": 2,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.1,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.1,
+      "structure": 1.1,
+      "sentiment": 1.2,
+      "macro": 1.2
+    },
+    "fitness": 0.3863,
+    "metrics": {
+      "AAPL": {
+        "train": {
+          "total_trades": 9,
+          "win_rate": 44.4,
+          "profit_factor": 2.0,
+          "total_return_pct": 0.52,
+          "max_drawdown_pct": 0.31,
+          "sortino_ratio": 0.7397340079232222
+        },
+        "val": {
+          "total_trades": 4,
+          "win_rate": 25.0,
+          "profit_factor": 0.69,
+          "total_return_pct": -0.12,
+          "max_drawdown_pct": 0.23,
+          "sortino_ratio": -0.2566996741249944
+        },
+        "fitness_score": 0.6341
+      },
+      "TSLA": {
+        "train": {
+          "total_trades": 12,
+          "win_rate": 25.0,
+          "profit_factor": 0.76,
+          "total_return_pct": -0.44,
+          "max_drawdown_pct": 1.03,
+          "sortino_ratio": -0.20687183354234437
+        },
+        "val": {
+          "total_trades": 6,
+          "win_rate": 16.7,
+          "profit_factor": 0.48,
+          "total_return_pct": -0.5,
+          "max_drawdown_pct": 0.58,
+          "sortino_ratio": -0.4693509129457409
+        },
+        "fitness_score": 0.1111
+      },
+      "NVDA": {
+        "train": {
+          "total_trades": 14,
+          "win_rate": 50.0,
+          "profit_factor": 2.22,
+          "total_return_pct": 1.23,
+          "max_drawdown_pct": 0.49,
+          "sortino_ratio": 0.854277670098679
+        },
+        "val": {
+          "total_trades": 5,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": -0.92,
+          "max_drawdown_pct": 0.9,
+          "sortino_ratio": -0.9988460518556752
+        },
+        "fitness_score": 0.4137
+      }
+    },
+    "reasoning": "The current weights seem to overemphasize sentiment and volatility, while underemphasizing trend and macro. The optimization history suggests that reducing volatility and increasing trend weights may lead to improvement. The detailed performance metrics show that AAPL and NVDA have the highest fitness scores, but their validation performance is inconsistent. A more balanced approach may help improve overall performance.",
+    "improved": false
+  },
+  {
+    "iteration": 3,
+    "weights": {
+      "trend": 1.5,
+      "momentum": 1.5,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.0,
+      "structure": 1.1,
+      "sentiment": 1.0,
+      "macro": 1.1
+    },
+    "fitness": 0.3863,
+    "metrics": {
+      "AAPL": {
+        "train": {
+          "total_trades": 9,
+          "win_rate": 44.4,
+          "profit_factor": 2.0,
+          "total_return_pct": 0.52,
+          "max_drawdown_pct": 0.31,
+          "sortino_ratio": 0.7397340079232222
+        },
+        "val": {
+          "total_trades": 4,
+          "win_rate": 25.0,
+          "profit_factor": 0.69,
+          "total_return_pct": -0.12,
+          "max_drawdown_pct": 0.23,
+          "sortino_ratio": -0.2566996741249944
+        },
+        "fitness_score": 0.6341
+      },
+      "TSLA": {
+        "train": {
+          "total_trades": 12,
+          "win_rate": 25.0,
+          "profit_factor": 0.76,
+          "total_return_pct": -0.44,
+          "max_drawdown_pct": 1.03,
+          "sortino_ratio": -0.20687183354234437
+        },
+        "val": {
+          "total_trades": 6,
+          "win_rate": 16.7,
+          "profit_factor": 0.48,
+          "total_return_pct": -0.5,
+          "max_drawdown_pct": 0.58,
+          "sortino_ratio": -0.4693509129457409
+        },
+        "fitness_score": 0.1111
+      },
+      "NVDA": {
+        "train": {
+          "total_trades": 14,
+          "win_rate": 50.0,
+          "profit_factor": 2.22,
+          "total_return_pct": 1.23,
+          "max_drawdown_pct": 0.49,
+          "sortino_ratio": 0.854277670098679
+        },
+        "val": {
+          "total_trades": 5,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": -0.92,
+          "max_drawdown_pct": 0.9,
+          "sortino_ratio": -0.9988460518556752
+        },
+        "fitness_score": 0.4137
+      }
+    },
+    "reasoning": "The current weights seem to favor sentiment and volatility, but the performance metrics indicate that these agents may be overweighted, particularly given the poor validation performance of NVDA and TSLA. The trend and momentum agents have relatively lower weights but show promise in the training metrics. A rebalancing towards trend and momentum while reducing the weights of sentiment and volatility may lead to improved overall performance.",
+    "improved": false
+  },
+  {
+    "iteration": 4,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.1,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.1,
+      "structure": 1.2,
+      "sentiment": 1.2,
+      "macro": 1.2
+    },
+    "fitness": 0.3863,
+    "metrics": {
+      "TSLA": {
+        "train": {
+          "total_trades": 12,
+          "win_rate": 25.0,
+          "profit_factor": 0.76,
+          "total_return_pct": -0.44,
+          "max_drawdown_pct": 1.03,
+          "sortino_ratio": -0.20687183354234437
+        },
+        "val": {
+          "total_trades": 6,
+          "win_rate": 16.7,
+          "profit_factor": 0.48,
+          "total_return_pct": -0.5,
+          "max_drawdown_pct": 0.58,
+          "sortino_ratio": -0.4693509129457409
+        },
+        "fitness_score": 0.1111
+      },
+      "NVDA": {
+        "train": {
+          "total_trades": 14,
+          "win_rate": 50.0,
+          "profit_factor": 2.22,
+          "total_return_pct": 1.23,
+          "max_drawdown_pct": 0.49,
+          "sortino_ratio": 0.854277670098679
+        },
+        "val": {
+          "total_trades": 5,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": -0.92,
+          "max_drawdown_pct": 0.9,
+          "sortino_ratio": -0.9988460518556752
+        },
+        "fitness_score": 0.4137
+      },
+      "AAPL": {
+        "train": {
+          "total_trades": 9,
+          "win_rate": 44.4,
+          "profit_factor": 2.0,
+          "total_return_pct": 0.52,
+          "max_drawdown_pct": 0.31,
+          "sortino_ratio": 0.7397340079232222
+        },
+        "val": {
+          "total_trades": 4,
+          "win_rate": 25.0,
+          "profit_factor": 0.69,
+          "total_return_pct": -0.12,
+          "max_drawdown_pct": 0.23,
+          "sortino_ratio": -0.2566996741249944
+        },
+        "fitness_score": 0.6341
+      }
+    },
+    "reasoning": "The current weights seem to overemphasize volatility and sentiment, while underemphasizing trend and macro. The optimization history suggests that reducing volatility and increasing trend may lead to improved fitness scores. The detailed performance metrics indicate that NVDA and AAPL have relatively high fitness scores, suggesting that the current weights may be suitable for these assets, but TSLA's low fitness score indicates a need for adjustment. A new set of weights that balances these factors may improve the composite fitness score.",
+    "improved": false
+  },
+  {
+    "iteration": 5,
+    "weights": {
+      "trend": 1.5,
+      "momentum": 1.5,
+      "volume": 0.8,
+      "orderflow": 1.0,
+      "volatility": 1.0,
+      "structure": 1.3,
+      "sentiment": 1.0,
+      "macro": 1.1
+    },
+    "fitness": 0.3863,
+    "metrics": {
+      "TSLA": {
+        "train": {
+          "total_trades": 12,
+          "win_rate": 25.0,
+          "profit_factor": 0.76,
+          "total_return_pct": -0.44,
+          "max_drawdown_pct": 1.03,
+          "sortino_ratio": -0.20687183354234437
+        },
+        "val": {
+          "total_trades": 6,
+          "win_rate": 16.7,
+          "profit_factor": 0.48,
+          "total_return_pct": -0.5,
+          "max_drawdown_pct": 0.58,
+          "sortino_ratio": -0.4693509129457409
+        },
+        "fitness_score": 0.1111
+      },
+      "AAPL": {
+        "train": {
+          "total_trades": 9,
+          "win_rate": 44.4,
+          "profit_factor": 2.0,
+          "total_return_pct": 0.52,
+          "max_drawdown_pct": 0.31,
+          "sortino_ratio": 0.7397340079232222
+        },
+        "val": {
+          "total_trades": 4,
+          "win_rate": 25.0,
+          "profit_factor": 0.69,
+          "total_return_pct": -0.12,
+          "max_drawdown_pct": 0.23,
+          "sortino_ratio": -0.2566996741249944
+        },
+        "fitness_score": 0.6341
+      },
+      "NVDA": {
+        "train": {
+          "total_trades": 14,
+          "win_rate": 50.0,
+          "profit_factor": 2.22,
+          "total_return_pct": 1.23,
+          "max_drawdown_pct": 0.49,
+          "sortino_ratio": 0.854277670098679
+        },
+        "val": {
+          "total_trades": 5,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": -0.92,
+          "max_drawdown_pct": 0.9,
+          "sortino_ratio": -0.9988460518556752
+        },
+        "fitness_score": 0.4137
+      }
+    },
+    "reasoning": "The current weights seem to be underutilizing the trend and momentum agents, which have shown promise in the optimization history. Meanwhile, the sentiment and volatility agents are overweighted but have not contributed significantly to the overall fitness score. The new weights aim to balance these agents and emphasize the trend and momentum, while also slightly increasing the weight of the structure agent, which has shown consistent performance across the stocks.",
+    "improved": false
+  },
+  {
+    "iteration": 6,
+    "weights": {
+      "trend": 1.5,
+      "momentum": 1.5,
+      "volume": 1.0,
+      "orderflow": 1.2,
+      "volatility": 1.2,
+      "structure": 1.1,
+      "sentiment": 1.1,
+      "macro": 1.2
+    },
+    "fitness": 0.3863,
+    "metrics": {
+      "AAPL": {
+        "train": {
+          "total_trades": 9,
+          "win_rate": 44.4,
+          "profit_factor": 2.0,
+          "total_return_pct": 0.52,
+          "max_drawdown_pct": 0.31,
+          "sortino_ratio": 0.7397340079232222
+        },
+        "val": {
+          "total_trades": 4,
+          "win_rate": 25.0,
+          "profit_factor": 0.69,
+          "total_return_pct": -0.12,
+          "max_drawdown_pct": 0.23,
+          "sortino_ratio": -0.2566996741249944
+        },
+        "fitness_score": 0.6341
+      },
+      "NVDA": {
+        "train": {
+          "total_trades": 14,
+          "win_rate": 50.0,
+          "profit_factor": 2.22,
+          "total_return_pct": 1.23,
+          "max_drawdown_pct": 0.49,
+          "sortino_ratio": 0.854277670098679
+        },
+        "val": {
+          "total_trades": 5,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": -0.92,
+          "max_drawdown_pct": 0.9,
+          "sortino_ratio": -0.9988460518556752
+        },
+        "fitness_score": 0.4137
+      },
+      "TSLA": {
+        "train": {
+          "total_trades": 12,
+          "win_rate": 25.0,
+          "profit_factor": 0.76,
+          "total_return_pct": -0.44,
+          "max_drawdown_pct": 1.03,
+          "sortino_ratio": -0.20687183354234437
+        },
+        "val": {
+          "total_trades": 6,
+          "win_rate": 16.7,
+          "profit_factor": 0.48,
+          "total_return_pct": -0.5,
+          "max_drawdown_pct": 0.58,
+          "sortino_ratio": -0.4693509129457409
+        },
+        "fitness_score": 0.1111
+      }
+    },
+    "reasoning": "The current weights seem to be over-emphasizing sentiment and volatility, while under-emphasizing trend and momentum. The optimization history suggests that increasing trend and momentum weights could lead to improvement. Additionally, the performance metrics indicate that NVDA and AAPL have higher fitness scores, suggesting that the model is performing well on these stocks. The new weights aim to balance the agents and increase the emphasis on trend and momentum.",
+    "improved": false
+  },
+  {
+    "iteration": 7,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.4,
+      "volume": 1.0,
+      "orderflow": 1.1,
+      "volatility": 1.1,
+      "structure": 1.2,
+      "sentiment": 1.1,
+      "macro": 1.2
+    },
+    "fitness": 0.3863,
+    "metrics": {
+      "TSLA": {
+        "train": {
+          "total_trades": 12,
+          "win_rate": 25.0,
+          "profit_factor": 0.76,
+          "total_return_pct": -0.44,
+          "max_drawdown_pct": 1.03,
+          "sortino_ratio": -0.20687183354234437
+        },
+        "val": {
+          "total_trades": 6,
+          "win_rate": 16.7,
+          "profit_factor": 0.48,
+          "total_return_pct": -0.5,
+          "max_drawdown_pct": 0.58,
+          "sortino_ratio": -0.4693509129457409
+        },
+        "fitness_score": 0.1111
+      },
+      "AAPL": {
+        "train": {
+          "total_trades": 9,
+          "win_rate": 44.4,
+          "profit_factor": 2.0,
+          "total_return_pct": 0.52,
+          "max_drawdown_pct": 0.31,
+          "sortino_ratio": 0.7397340079232222
+        },
+        "val": {
+          "total_trades": 4,
+          "win_rate": 25.0,
+          "profit_factor": 0.69,
+          "total_return_pct": -0.12,
+          "max_drawdown_pct": 0.23,
+          "sortino_ratio": -0.2566996741249944
+        },
+        "fitness_score": 0.6341
+      },
+      "NVDA": {
+        "train": {
+          "total_trades": 14,
+          "win_rate": 50.0,
+          "profit_factor": 2.22,
+          "total_return_pct": 1.23,
+          "max_drawdown_pct": 0.49,
+          "sortino_ratio": 0.854277670098679
+        },
+        "val": {
+          "total_trades": 5,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": -0.92,
+          "max_drawdown_pct": 0.9,
+          "sortino_ratio": -0.9988460518556752
+        },
+        "fitness_score": 0.4137
+      }
+    },
+    "reasoning": "The current weights seem to overemphasize sentiment and volatility, while underemphasizing trend and macro. The performance metrics show that AAPL and NVDA have relatively high fitness scores, but TSLA's performance is poor. To improve the composite fitness score, I propose reducing the weights of sentiment and volatility, and increasing the weights of trend and macro. I also suggest a slight increase in the weight of momentum, as it has shown relatively stable performance across the stocks.",
+    "improved": false
+  },
+  {
+    "iteration": 8,
+    "weights": {
+      "trend": 1.5,
+      "momentum": 1.6,
+      "volume": 1.2,
+      "orderflow": 1.3,
+      "volatility": 1.1,
+      "structure": 1.3,
+      "sentiment": 1.0,
+      "macro": 1.2
+    },
+    "fitness": 0.3909,
+    "metrics": {
+      "NVDA": {
+        "train": {
+          "total_trades": 14,
+          "win_rate": 50.0,
+          "profit_factor": 2.22,
+          "total_return_pct": 1.23,
+          "max_drawdown_pct": 0.49,
+          "sortino_ratio": 0.854277670098679
+        },
+        "val": {
+          "total_trades": 5,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": -0.92,
+          "max_drawdown_pct": 0.9,
+          "sortino_ratio": -0.9988460518556752
+        },
+        "fitness_score": 0.4137
+      },
+      "AAPL": {
+        "train": {
+          "total_trades": 9,
+          "win_rate": 44.4,
+          "profit_factor": 2.04,
+          "total_return_pct": 0.55,
+          "max_drawdown_pct": 0.31,
+          "sortino_ratio": 0.7686826177822776
+        },
+        "val": {
+          "total_trades": 4,
+          "win_rate": 25.0,
+          "profit_factor": 0.69,
+          "total_return_pct": -0.12,
+          "max_drawdown_pct": 0.23,
+          "sortino_ratio": -0.2566996741249944
+        },
+        "fitness_score": 0.6479
+      },
+      "TSLA": {
+        "train": {
+          "total_trades": 12,
+          "win_rate": 25.0,
+          "profit_factor": 0.76,
+          "total_return_pct": -0.44,
+          "max_drawdown_pct": 1.03,
+          "sortino_ratio": -0.20687183354234437
+        },
+        "val": {
+          "total_trades": 6,
+          "win_rate": 16.7,
+          "profit_factor": 0.48,
+          "total_return_pct": -0.5,
+          "max_drawdown_pct": 0.58,
+          "sortino_ratio": -0.4693509129457409
+        },
+        "fitness_score": 0.1111
+      }
+    },
+    "reasoning": "Analyzing the provided metrics, AAPL and NVDA show strong performance in training with high profit factors and sortino ratios, but struggle in validation. TSLA's performance is consistently poor. Agents with higher weights like sentiment and volatility seem to contribute to this discrepancy. To improve, I'll reduce sentiment and volatility, increase trend and momentum to leverage their stronger training performance, and adjust other agents for balance.",
+    "improved": true
+  },
+  {
+    "iteration": 9,
+    "weights": {
+      "trend": 1.3,
+      "momentum": 1.4,
+      "volume": 1.4,
+      "orderflow": 1.4,
+      "volatility": 1.2,
+      "structure": 1.2,
+      "sentiment": 0.9,
+      "macro": 1.1
+    },
+    "fitness": 0.3909,
+    "metrics": {
+      "AAPL": {
+        "train": {
+          "total_trades": 9,
+          "win_rate": 44.4,
+          "profit_factor": 2.04,
+          "total_return_pct": 0.55,
+          "max_drawdown_pct": 0.31,
+          "sortino_ratio": 0.7686826177822776
+        },
+        "val": {
+          "total_trades": 4,
+          "win_rate": 25.0,
+          "profit_factor": 0.69,
+          "total_return_pct": -0.12,
+          "max_drawdown_pct": 0.23,
+          "sortino_ratio": -0.2566996741249944
+        },
+        "fitness_score": 0.6479
+      },
+      "TSLA": {
+        "train": {
+          "total_trades": 12,
+          "win_rate": 25.0,
+          "profit_factor": 0.76,
+          "total_return_pct": -0.44,
+          "max_drawdown_pct": 1.03,
+          "sortino_ratio": -0.20687183354234437
+        },
+        "val": {
+          "total_trades": 6,
+          "win_rate": 16.7,
+          "profit_factor": 0.48,
+          "total_return_pct": -0.5,
+          "max_drawdown_pct": 0.58,
+          "sortino_ratio": -0.4693509129457409
+        },
+        "fitness_score": 0.1111
+      },
+      "NVDA": {
+        "train": {
+          "total_trades": 14,
+          "win_rate": 50.0,
+          "profit_factor": 2.22,
+          "total_return_pct": 1.23,
+          "max_drawdown_pct": 0.49,
+          "sortino_ratio": 0.854277670098679
+        },
+        "val": {
+          "total_trades": 5,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": -0.92,
+          "max_drawdown_pct": 0.9,
+          "sortino_ratio": -0.9988460518556752
+        },
+        "fitness_score": 0.4137
+      }
+    },
+    "reasoning": "The current weights show a slight emphasis on trend and momentum, which have performed relatively well in the train set for NVDA and AAPL. However, the validation set shows a significant decline in performance, indicating potential overfitting. To improve the composite fitness score, I propose reducing the weights of trend and momentum slightly, while increasing the weights of volume and orderflow, which have shown some promise in the validation set. Additionally, I will decrease the weight of sentiment, which has the lowest fitness score. The weights of volatility, structure, and macro will be adjusted to maintain a balance between the different agents.",
+    "improved": false
+  },
+  {
+    "iteration": 10,
+    "weights": {
+      "trend": 1.2,
+      "momentum": 1.4,
+      "volume": 1.5,
+      "orderflow": 1.6,
+      "volatility": 1.0,
+      "structure": 1.7,
+      "sentiment": 0.9,
+      "macro": 1.1
+    },
+    "fitness": 0.3943,
+    "metrics": {
+      "AAPL": {
+        "train": {
+          "total_trades": 9,
+          "win_rate": 44.4,
+          "profit_factor": 1.99,
+          "total_return_pct": 0.52,
+          "max_drawdown_pct": 0.31,
+          "sortino_ratio": 0.7324089840977058
+        },
+        "val": {
+          "total_trades": 4,
+          "win_rate": 25.0,
+          "profit_factor": 0.72,
+          "total_return_pct": -0.1,
+          "max_drawdown_pct": 0.23,
+          "sortino_ratio": -0.22850655132507436
+        },
+        "fitness_score": 0.6422
+      },
+      "NVDA": {
+        "train": {
+          "total_trades": 14,
+          "win_rate": 50.0,
+          "profit_factor": 2.22,
+          "total_return_pct": 1.23,
+          "max_drawdown_pct": 0.49,
+          "sortino_ratio": 0.854277670098679
+        },
+        "val": {
+          "total_trades": 5,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "total_return_pct": -0.92,
+          "max_drawdown_pct": 0.9,
+          "sortino_ratio": -0.999109477927111
+        },
+        "fitness_score": 0.4136
+      },
+      "TSLA": {
+        "train": {
+          "total_trades": 11,
+          "win_rate": 27.3,
+          "profit_factor": 0.8,
+          "total_return_pct": -0.33,
+          "max_drawdown_pct": 0.85,
+          "sortino_ratio": -0.17008236916091776
+        },
+        "val": {
+          "total_trades": 6,
+          "win_rate": 16.7,
+          "profit_factor": 0.48,
+          "total_return_pct": -0.5,
+          "max_drawdown_pct": 0.58,
+          "sortino_ratio": -0.46765518861549416
+        },
+        "fitness_score": 0.127
+      }
+    },
+    "reasoning": "The current weights seem to favor trend and momentum, which have higher weights. However, the performance metrics show that NVDA has a high win rate and profit factor in the training set but poor performance in the validation set, suggesting overfitting. AAPL has a relatively balanced performance. To improve the composite fitness score, I propose reducing the weights of trend and momentum, and increasing the weights of volume, orderflow, and structure, which could help improve the overall robustness of the model.",
+    "improved": true
+  }
+]

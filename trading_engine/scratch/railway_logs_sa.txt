@@ -1,0 +1,500 @@
+2026-06-19 01:40:32.110 | SUCCESS  | trading_engine.execution.live_trader:sync_with_broker:1260 - Reconstructed 9 open positions and 56 closed trades from DB and Bybit.
+2026-06-19 01:40:32.129 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:429 - 📊 BASED/USDT anomaly check: RSI=76.6 | RelVol=2.24 | Imbalance=0.44 -> Score: 48.75
+2026-06-19 01:40:32.135 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: OBT/USDT 4h (limit=300)
+2026-06-19 01:40:34.175 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for EIGEN (qty=0.039500, val=$0.01)
+2026-06-19 01:40:34.175 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for HMSTR (qty=0.078600, val=$0.00)
+2026-06-19 01:40:34.175 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for KAS (qty=0.003320, val=$0.00)
+2026-06-19 01:40:34.175 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for GRASS (qty=0.036800, val=$0.01)
+2026-06-19 01:40:34.175 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for LIT (qty=0.006970, val=$0.01)
+2026-06-19 01:40:34.175 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for INJ (qty=0.006620, val=$0.04)
+2026-06-19 01:40:34.175 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for JUP (qty=0.030500, val=$0.01)
+2026-06-19 01:40:34.175 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for HYPE (qty=0.000390, val=$0.03)
+2026-06-19 01:40:34.175 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for NEAR (qty=0.003800, val=$0.01)
+2026-06-19 01:40:34.175 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for RUNE (qty=0.001330, val=$0.00)
+2026-06-19 01:40:34.175 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for TRX (qty=0.002260, val=$0.00)
+2026-06-19 01:40:34.175 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for CRV (qty=0.076900, val=$0.02)
+2026-06-19 01:40:34.175 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for HOME (qty=0.093800, val=$0.00)
+2026-06-19 01:40:34.175 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for ONDO (qty=0.007200, val=$0.00)
+2026-06-19 01:40:34.175 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for APEX (qty=0.003190, val=$0.00)
+2026-06-19 01:40:34.183 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for OBT/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:460: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-19 01:40:34.269 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: OBT/USDT 1d (limit=300)
+2026-06-19 01:40:35.368 | WARNING  | trading_engine.execution.live_trader:sync_with_broker:1382 - Sync: BTC/USDT is open in live_state.json but closed on broker. Closing locally.
+2026-06-19 01:40:36.356 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for OBT/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:460: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-19 01:40:36.445 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: OBT/USDT (crypto) | Close=0.0004 | RSI=37.0
+2026-06-19 01:40:36.458 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: OBT/USDT (crypto) | Close=0.0004 | RSI=53.9
+2026-06-19 01:40:36.742 | INFO     | trading_engine.execution.live_trader:_finalize_closed_position:1599 - Self-Healing: BTC/USDT has 1 consecutive loss(es) (requires 2). Skipping optimization.
+2026-06-19 01:40:36.742 | INFO     | trading_engine.execution.live_trader:_finalize_closed_position:1613 - ❌ LIVE STOPPED: BTC/USDT | Gross P&L=$+0.00 | Fees=$38.61 | Net P&L=$-38.61 | Total P&L=$-1,030.05
+2026-06-19 01:40:36.743 | DEBUG    | trading_engine.alerts.telegram_bot:send_message:15 - Telegram not configured — skipping alert
+2026-06-19 01:40:36.743 | WARNING  | trading_engine.execution.live_trader:sync_with_broker:1382 - Sync: TRX/USDT is open in live_state.json but closed on broker. Closing locally.
+2026-06-19 01:40:37.851 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for OBT/USDT...
+2026-06-19 01:40:38.054 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:429 - 📊 OBT/USDT anomaly check: RSI=53.9 | RelVol=0.38 | Imbalance=0.52 -> Score: 9.67
+2026-06-19 01:40:38.059 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: EIGEN/USDT 4h (limit=300)
+2026-06-19 01:40:38.070 | INFO     | trading_engine.execution.live_trader:_finalize_closed_position:1599 - Self-Healing: TRX/USDT has 1 consecutive loss(es) (requires 2). Skipping optimization.
+2026-06-19 01:40:38.070 | INFO     | trading_engine.execution.live_trader:_finalize_closed_position:1613 - ❌ LIVE STOPPED: TRX/USDT | Gross P&L=$+0.00 | Fees=$0.01 | Net P&L=$-0.01 | Total P&L=$-1,030.06
+2026-06-19 01:40:38.070 | DEBUG    | trading_engine.alerts.telegram_bot:send_message:15 - Telegram not configured — skipping alert
+2026-06-19 01:40:38.070 | WARNING  | trading_engine.execution.live_trader:sync_with_broker:1382 - Sync: ETH/USDT is open in live_state.json but closed on broker. Closing locally.
+2026-06-19 01:40:39.534 | INFO     | trading_engine.execution.live_trader:_finalize_closed_position:1599 - Self-Healing: ETH/USDT has 1 consecutive loss(es) (requires 2). Skipping optimization.
+2026-06-19 01:40:39.534 | INFO     | trading_engine.execution.live_trader:_finalize_closed_position:1613 - ❌ LIVE STOPPED: ETH/USDT | Gross P&L=$+0.00 | Fees=$1.01 | Net P&L=$-1.01 | Total P&L=$-1,031.07
+2026-06-19 01:40:39.534 | DEBUG    | trading_engine.alerts.telegram_bot:send_message:15 - Telegram not configured — skipping alert
+2026-06-19 01:40:39.534 | WARNING  | trading_engine.execution.live_trader:sync_with_broker:1382 - Sync: HOME/USDT is open in live_state.json but closed on broker. Closing locally.
+2026-06-19 01:40:40.012 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for EIGEN/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:460: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-19 01:40:40.099 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: EIGEN/USDT 1d (limit=300)
+2026-06-19 01:40:40.761 | INFO     | trading_engine.execution.live_trader:_finalize_closed_position:1599 - Self-Healing: HOME/USDT has 1 consecutive loss(es) (requires 2). Skipping optimization.
+2026-06-19 01:40:40.761 | INFO     | trading_engine.execution.live_trader:_finalize_closed_position:1613 - ❌ LIVE STOPPED: HOME/USDT | Gross P&L=$+0.00 | Fees=$0.02 | Net P&L=$-0.02 | Total P&L=$-1,031.09
+2026-06-19 01:40:40.762 | DEBUG    | trading_engine.alerts.telegram_bot:send_message:15 - Telegram not configured — skipping alert
+2026-06-19 01:40:40.762 | WARNING  | trading_engine.execution.live_trader:sync_with_broker:1382 - Sync: HYPE/USDT is open in live_state.json but closed on broker. Closing locally.
+2026-06-19 01:40:42.063 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for EIGEN/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:460: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-19 01:40:42.198 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: EIGEN/USDT (crypto) | Close=0.2283 | RSI=59.2
+2026-06-19 01:40:42.211 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: EIGEN/USDT (crypto) | Close=0.2283 | RSI=67.0
+2026-06-19 01:40:42.224 | INFO     | trading_engine.execution.live_trader:_fetch_exit_details_from_broker:1673 - Sync: Found broker execution for HYPE/USDT at 71.1200 with fee $1.7505
+2026-06-19 01:40:42.242 | INFO     | trading_engine.execution.live_trader:_finalize_closed_position:1599 - Self-Healing: HYPE/USDT has 1 consecutive loss(es) (requires 2). Skipping optimization.
+2026-06-19 01:40:42.242 | INFO     | trading_engine.execution.live_trader:_finalize_closed_position:1613 - ❌ LIVE STOPPED: HYPE/USDT | Gross P&L=$-0.08 | Fees=$1.75 | Net P&L=$-1.83 | Total P&L=$-1,032.93
+2026-06-19 01:40:42.243 | DEBUG    | trading_engine.alerts.telegram_bot:send_message:15 - Telegram not configured — skipping alert
+2026-06-19 01:40:42.243 | WARNING  | trading_engine.execution.live_trader:sync_with_broker:1382 - Sync: HYPE/USDT is open in live_state.json but closed on broker. Closing locally.
+2026-06-19 01:40:43.554 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for EIGEN/USDT...
+2026-06-19 01:40:43.569 | INFO     | trading_engine.execution.live_trader:_fetch_exit_details_from_broker:1673 - Sync: Found broker execution for HYPE/USDT at 71.1200 with fee $1.7505
+2026-06-19 01:40:43.580 | INFO     | trading_engine.execution.live_trader:_finalize_closed_position:1594 - Self-Healing: HYPE/USDT skipped optimization — cooldown active (last optimized 3.7h ago).
+2026-06-19 01:40:43.580 | INFO     | trading_engine.execution.live_trader:_finalize_closed_position:1613 - ❌ LIVE STOPPED: HYPE/USDT | Gross P&L=$-1.75 | Fees=$1.75 | Net P&L=$-3.50 | Total P&L=$-1,036.43
+2026-06-19 01:40:43.580 | DEBUG    | trading_engine.alerts.telegram_bot:send_message:15 - Telegram not configured — skipping alert
+2026-06-19 01:40:43.580 | WARNING  | trading_engine.execution.live_trader:sync_with_broker:1382 - Sync: BTC/USDT:USDT is open in live_state.json but closed on broker. Closing locally.
+2026-06-19 01:40:43.954 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:429 - 📊 EIGEN/USDT anomaly check: RSI=67.0 | RelVol=0.79 | Imbalance=0.54 -> Score: 30.50
+2026-06-19 01:40:43.960 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: CHIP/USDT 4h (limit=300)
+2026-06-19 01:40:44.851 | INFO     | trading_engine.execution.live_trader:_finalize_closed_position:1594 - Self-Healing: BTC/USDT:USDT skipped optimization — cooldown active (last optimized 3.7h ago).
+2026-06-19 01:40:44.851 | INFO     | trading_engine.execution.live_trader:_finalize_closed_position:1613 - ❌ LIVE STOPPED: BTC/USDT:USDT | Gross P&L=$+0.00 | Fees=$0.57 | Net P&L=$-0.57 | Total P&L=$-1,036.99
+2026-06-19 01:40:44.851 | DEBUG    | trading_engine.alerts.telegram_bot:send_message:15 - Telegram not configured — skipping alert
+2026-06-19 01:40:45.641 | SUCCESS  | trading_engine.execution.live_trader:sync_with_broker:1260 - Reconstructed 9 open positions and 56 closed trades from DB and Bybit.
+2026-06-19 01:40:45.962 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for CHIP/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:460: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-19 01:40:46.037 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: CHIP/USDT 1d (limit=300)
+2026-06-19 01:40:47.648 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for JUP (qty=0.030500, val=$0.01)
+2026-06-19 01:40:47.648 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for HYPE (qty=0.000390, val=$0.03)
+2026-06-19 01:40:47.648 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for NEAR (qty=0.003800, val=$0.01)
+2026-06-19 01:40:47.648 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for RUNE (qty=0.001330, val=$0.00)
+2026-06-19 01:40:47.648 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for EIGEN (qty=0.039500, val=$0.01)
+2026-06-19 01:40:47.648 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for HMSTR (qty=0.078600, val=$0.00)
+2026-06-19 01:40:47.648 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for KAS (qty=0.003320, val=$0.00)
+2026-06-19 01:40:47.648 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for GRASS (qty=0.036800, val=$0.01)
+2026-06-19 01:40:47.648 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for LIT (qty=0.006970, val=$0.01)
+2026-06-19 01:40:47.648 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for INJ (qty=0.006620, val=$0.04)
+2026-06-19 01:40:47.648 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for TRX (qty=0.002260, val=$0.00)
+2026-06-19 01:40:47.648 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for CRV (qty=0.076900, val=$0.02)
+2026-06-19 01:40:47.648 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for HOME (qty=0.093800, val=$0.00)
+2026-06-19 01:40:47.648 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for ONDO (qty=0.007200, val=$0.00)
+2026-06-19 01:40:47.648 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for APEX (qty=0.003190, val=$0.00)
+2026-06-19 01:40:48.044 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for CHIP/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+2026-06-19 01:40:48.070 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: CHIP/USDT (crypto) | Close=0.0378 | RSI=62.7
+2026-06-19 01:40:48.083 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: CHIP/USDT (crypto) | Close=0.0378 | RSI=57.8
+2026-06-19 01:40:48.944 | WARNING  | trading_engine.execution.live_trader:sync_with_broker:1382 - Sync: BTC/USDT is open in live_state.json but closed on broker. Closing locally.
+2026-06-19 01:40:49.288 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for CHIP/USDT...
+2026-06-19 01:40:49.628 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:429 - 📊 CHIP/USDT anomaly check: RSI=57.8 | RelVol=0.50 | Imbalance=0.47 -> Score: 15.60
+2026-06-19 01:40:49.634 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: BLEND/USDT 4h (limit=300)
+2026-06-19 01:40:50.119 | INFO     | trading_engine.execution.live_trader:_finalize_closed_position:1599 - Self-Healing: BTC/USDT has 1 consecutive loss(es) (requires 2). Skipping optimization.
+2026-06-19 01:40:50.119 | INFO     | trading_engine.execution.live_trader:_finalize_closed_position:1613 - ❌ LIVE STOPPED: BTC/USDT | Gross P&L=$+0.00 | Fees=$38.61 | Net P&L=$-38.61 | Total P&L=$-1,030.05
+2026-06-19 01:40:50.119 | DEBUG    | trading_engine.alerts.telegram_bot:send_message:15 - Telegram not configured — skipping alert
+2026-06-19 01:40:50.119 | WARNING  | trading_engine.execution.live_trader:sync_with_broker:1382 - Sync: TRX/USDT is open in live_state.json but closed on broker. Closing locally.
+2026-06-19 01:40:51.286 | INFO     | trading_engine.execution.live_trader:_finalize_closed_position:1599 - Self-Healing: TRX/USDT has 1 consecutive loss(es) (requires 2). Skipping optimization.
+2026-06-19 01:40:51.286 | INFO     | trading_engine.execution.live_trader:_finalize_closed_position:1613 - ❌ LIVE STOPPED: TRX/USDT | Gross P&L=$+0.00 | Fees=$0.01 | Net P&L=$-0.01 | Total P&L=$-1,030.06
+2026-06-19 01:40:51.286 | DEBUG    | trading_engine.alerts.telegram_bot:send_message:15 - Telegram not configured — skipping alert
+2026-06-19 01:40:51.286 | WARNING  | trading_engine.execution.live_trader:sync_with_broker:1382 - Sync: ETH/USDT is open in live_state.json but closed on broker. Closing locally.
+2026-06-19 01:40:51.553 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for BLEND/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:460: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-19 01:40:51.631 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: BLEND/USDT 1d (limit=300)
+2026-06-19 01:40:52.621 | INFO     | trading_engine.execution.live_trader:_finalize_closed_position:1599 - Self-Healing: ETH/USDT has 1 consecutive loss(es) (requires 2). Skipping optimization.
+2026-06-19 01:40:52.621 | INFO     | trading_engine.execution.live_trader:_finalize_closed_position:1613 - ❌ LIVE STOPPED: ETH/USDT | Gross P&L=$+0.00 | Fees=$1.01 | Net P&L=$-1.01 | Total P&L=$-1,031.07
+2026-06-19 01:40:52.621 | DEBUG    | trading_engine.alerts.telegram_bot:send_message:15 - Telegram not configured — skipping alert
+2026-06-19 01:40:52.621 | WARNING  | trading_engine.execution.live_trader:sync_with_broker:1382 - Sync: HOME/USDT is open in live_state.json but closed on broker. Closing locally.
+2026-06-19 01:40:53.594 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for BLEND/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+2026-06-19 01:40:53.618 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: BLEND/USDT (crypto) | Close=0.0636 | RSI=37.3
+2026-06-19 01:40:53.630 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: BLEND/USDT (crypto) | Close=0.0636 | RSI=58.7
+2026-06-19 01:40:53.646 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:394 - 🚫 BLEND/USDT skipped (oversold in confirmed downtrend EMA20<50<200)
+2026-06-19 01:40:53.651 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: JTO/USDT 4h (limit=300)
+2026-06-19 01:40:53.803 | INFO     | trading_engine.execution.live_trader:_finalize_closed_position:1599 - Self-Healing: HOME/USDT has 1 consecutive loss(es) (requires 2). Skipping optimization.
+2026-06-19 01:40:53.803 | INFO     | trading_engine.execution.live_trader:_finalize_closed_position:1613 - ❌ LIVE STOPPED: HOME/USDT | Gross P&L=$+0.00 | Fees=$0.02 | Net P&L=$-0.02 | Total P&L=$-1,031.09
+2026-06-19 01:40:53.803 | DEBUG    | trading_engine.alerts.telegram_bot:send_message:15 - Telegram not configured — skipping alert
+2026-06-19 01:40:53.803 | WARNING  | trading_engine.execution.live_trader:sync_with_broker:1382 - Sync: HYPE/USDT is open in live_state.json but closed on broker. Closing locally.
+2026-06-19 01:40:55.118 | INFO     | trading_engine.execution.live_trader:_fetch_exit_details_from_broker:1673 - Sync: Found broker execution for HYPE/USDT at 71.1200 with fee $1.7505
+2026-06-19 01:40:55.129 | INFO     | trading_engine.execution.live_trader:_finalize_closed_position:1599 - Self-Healing: HYPE/USDT has 1 consecutive loss(es) (requires 2). Skipping optimization.
+2026-06-19 01:40:55.129 | INFO     | trading_engine.execution.live_trader:_finalize_closed_position:1613 - ❌ LIVE STOPPED: HYPE/USDT | Gross P&L=$-0.08 | Fees=$1.75 | Net P&L=$-1.83 | Total P&L=$-1,032.93
+2026-06-19 01:40:55.129 | DEBUG    | trading_engine.alerts.telegram_bot:send_message:15 - Telegram not configured — skipping alert
+2026-06-19 01:40:55.129 | WARNING  | trading_engine.execution.live_trader:sync_with_broker:1382 - Sync: HYPE/USDT is open in live_state.json but closed on broker. Closing locally.
+2026-06-19 01:40:55.518 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1403 - Sync complete. State updated.
+2026-06-19 01:40:55.556 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for JTO/USDT: bybit fetchFundingRate() supports contract markets only
+2026-06-19 01:40:55.592 | INFO     | trading_engine.market_hours:log:200 - Market ⏸️ | AAPL/USDT:USDT | NYSE holiday (2026-06-19) | Opens: Mon 22 Jun 2026 14:00 WAT
+2026-06-19 01:40:55.592 | INFO     | trading_engine.market_hours:log:200 - Market ⏸️ | TSLA/USDT:USDT | NYSE holiday (2026-06-19) | Opens: Mon 22 Jun 2026 14:00 WAT
+2026-06-19 01:40:55.592 | INFO     | trading_engine.market_hours:log:200 - Market ⏸️ | NVDA/USDT:USDT | NYSE holiday (2026-06-19) | Opens: Mon 22 Jun 2026 14:00 WAT
+2026-06-19 01:40:55.592 | INFO     | trading_engine.market_hours:filter_open_symbols:390 - ⏸️  3 symbol(s) skipped (market closed): ['AAPL/USDT:USDT', 'TSLA/USDT:USDT', 'NVDA/USDT:USDT']
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+2026-06-19 01:40:55.610 | INFO     | trading_engine.orchestrator:_get_daily_pnl:98 -   💰 Circuit breaker: today's realized PnL = $0.00
+2026-06-19 01:40:55.610 | INFO     | trading_engine.orchestrator:run:119 - 
+============================================================
+2026-06-19 01:40:55.610 | INFO     | trading_engine.orchestrator:run:120 - TRADING ENGINE | BTC/USDT | 4h
+2026-06-19 01:40:55.610 | INFO     | trading_engine.orchestrator:run:121 - ============================================================
+2026-06-19 01:40:55.610 | INFO     | trading_engine.orchestrator:run:124 - 📊 Fetching market data...
+2026-06-19 01:40:55.615 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: BTC/USDT 4h (limit=300)
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:460: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-19 01:40:55.664 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: JTO/USDT 1d (limit=300)
+2026-06-19 01:40:55.726 | DEBUG    | __main__:send_heartbeat:38 - Heartbeat failed: HTTPConnectionPool(host='localhost', port=8080): Read timed out. (read timeout=3)
+2026-06-19 01:40:56.306 | INFO     | trading_engine.execution.live_trader:_fetch_exit_details_from_broker:1673 - Sync: Found broker execution for HYPE/USDT at 71.1200 with fee $1.7505
+2026-06-19 01:40:56.317 | DEBUG    | trading_engine.alerts.telegram_bot:send_message:15 - Telegram not configured — skipping alert
+2026-06-19 01:40:56.317 | WARNING  | trading_engine.execution.live_trader:sync_with_broker:1382 - Sync: BTC/USDT:USDT is open in live_state.json but closed on broker. Closing locally.
+2026-06-19 01:40:56.316 | INFO     | trading_engine.execution.live_trader:_finalize_closed_position:1594 - Self-Healing: HYPE/USDT skipped optimization — cooldown active (last optimized 3.7h ago).
+2026-06-19 01:40:56.316 | INFO     | trading_engine.execution.live_trader:_finalize_closed_position:1613 - ❌ LIVE STOPPED: HYPE/USDT | Gross P&L=$-1.75 | Fees=$1.75 | Net P&L=$-3.50 | Total P&L=$-1,036.43
+2026-06-19 01:40:57.488 | INFO     | trading_engine.execution.live_trader:_finalize_closed_position:1594 - Self-Healing: BTC/USDT:USDT skipped optimization — cooldown active (last optimized 3.7h ago).
+2026-06-19 01:40:57.488 | INFO     | trading_engine.execution.live_trader:_finalize_closed_position:1613 - ❌ LIVE STOPPED: BTC/USDT:USDT | Gross P&L=$+0.00 | Fees=$0.57 | Net P&L=$-0.57 | Total P&L=$-1,036.99
+2026-06-19 01:40:57.489 | DEBUG    | trading_engine.alerts.telegram_bot:send_message:15 - Telegram not configured — skipping alert
+2026-06-19 01:40:57.696 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for BTC/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+2026-06-19 01:40:57.753 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for JTO/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:460: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:460: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-19 01:40:57.858 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: BTC/USDT 1d (limit=300)
+2026-06-19 01:40:57.868 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: JTO/USDT (crypto) | Close=0.7609 | RSI=64.1
+2026-06-19 01:40:57.881 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: JTO/USDT (crypto) | Close=0.7609 | RSI=59.7
+2026-06-19 01:40:59.265 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for JTO/USDT...
+2026-06-19 01:40:59.755 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:429 - 📊 JTO/USDT anomaly check: RSI=59.7 | RelVol=0.29 | Imbalance=0.64 -> Score: 18.60
+2026-06-19 01:40:59.761 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: STRK/USDT 4h (limit=300)
+2026-06-19 01:40:59.885 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for BTC/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:460: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-19 01:40:59.963 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: BTC/USDT (crypto) | Close=62886.5000 | RSI=34.8
+2026-06-19 01:40:59.976 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: BTC/USDT (crypto) | Close=62886.5000 | RSI=38.1
+2026-06-19 01:40:59.989 | INFO     | trading_engine.orchestrator:run:126 -    Close=62886.5000 | RSI=38.1 | ATR=870.1568
+2026-06-19 01:40:59.989 | INFO     | trading_engine.orchestrator:run:129 - 🤖 Running specialist agents...
+2026-06-19 01:40:59.993 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ orderflow: HOLD (50%)
+2026-06-19 01:40:59.993 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ volatility: BUY (100%)
+2026-06-19 01:40:59.993 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ volume: SELL (80%)
+2026-06-19 01:40:59.993 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ trend: SELL (92%)
+2026-06-19 01:40:59.993 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ momentum: SELL (75%)
+2026-06-19 01:40:59.993 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ structure: HOLD (58%)
+2026-06-19 01:40:59.994 | INFO     | trading_engine.agents.macro_agent:_update_macro_cache_if_expired:111 - Macro cache expired or empty. Fetching fresh indicators...
+2026-06-19 01:41:00.591 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ macro: HOLD (50%)
+2026-06-19 01:41:01.713 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for STRK/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:460: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-19 01:41:01.815 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: STRK/USDT 1d (limit=300)
+2026-06-19 01:41:03.812 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for STRK/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:460: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-19 01:41:03.879 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: STRK/USDT (crypto) | Close=0.0357 | RSI=47.7
+2026-06-19 01:41:03.889 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: STRK/USDT (crypto) | Close=0.0357 | RSI=54.4
+2026-06-19 01:41:03.904 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:394 - 🚫 STRK/USDT skipped (oversold in confirmed downtrend EMA20<50<200)
+2026-06-19 01:41:03.909 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: NIGHT/USDT 4h (limit=300)
+2026-06-19 01:41:04.222 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ sentiment: BUY (75%)
+2026-06-19 01:41:04.223 | INFO     | trading_engine.orchestrator:run:133 - ⚖️  Judge evaluating...
+2026-06-19 01:41:05.307 | INFO     | trading_engine.orchestrator:run:185 -    Loaded dynamic optimized weights for crypto (optimized_weights_crypto.json).
+2026-06-19 01:41:05.308 | INFO     | trading_engine.judge:evaluate:201 - Judge: SELL | conf=34.4% | agree=3/8 | approved=False | avg_raw_conf=82.2% (min_conf=52)
+2026-06-19 01:41:05.761 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for NIGHT/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:460: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-19 01:41:05.836 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: NIGHT/USDT 1d (limit=300)
+2026-06-19 01:41:07.702 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for NIGHT/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+2026-06-19 01:41:07.748 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: NIGHT/USDT (crypto) | Close=0.0309 | RSI=44.6
+2026-06-19 01:41:07.759 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: NIGHT/USDT (crypto) | Close=0.0309 | RSI=45.2
+2026-06-19 01:41:07.774 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:394 - 🚫 NIGHT/USDT skipped (oversold in confirmed downtrend EMA20<50<200)
+2026-06-19 01:41:07.779 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: AAVE/USDT 4h (limit=300)
+2026-06-19 01:41:07.849 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1403 - Sync complete. State updated.
+2026-06-19 01:41:09.799 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for AAVE/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:460: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-19 01:41:09.881 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: AAVE/USDT 1d (limit=300)
+2026-06-19 01:41:10.299 | INFO     | trading_engine.orchestrator:run:192 -    Decision: SELL | Conf=34% | Agreement=3/8
+2026-06-19 01:41:10.299 | INFO     | trading_engine.orchestrator:run:196 - 🛡️  Risk Agent evaluating...
+2026-06-19 01:41:10.304 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: BTC/USDT 5m (limit=300)
+2026-06-19 01:41:11.744 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for AAVE/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:460: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-19 01:41:11.811 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: AAVE/USDT (crypto) | Close=75.0200 | RSI=50.4
+2026-06-19 01:41:11.823 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: AAVE/USDT (crypto) | Close=75.0200 | RSI=56.9
+2026-06-19 01:41:12.220 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for BTC/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:460: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-19 01:41:12.293 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: BTC/USDT (crypto) | Close=62893.9000 | RSI=45.1
+2026-06-19 01:41:12.304 | INFO     | trading_engine.risk_agent:_get_5m_atr:215 -    [Stage 3] Precise 5m entry=62893.9000 and ATR=75.8344 (original tf=4h entry=62886.5000, ATR=870.1568)
+2026-06-19 01:41:12.304 | WARNING  | trading_engine.orchestrator:run:214 - ❌ TRADE REJECTED (BTC/USDT): Judge did not approve trade (agreement=3, conf=34%)
+2026-06-19 01:41:12.304 | INFO     | trading_engine.orchestrator:run:253 - ============================================================
+
+2026-06-19 01:41:12.308 | INFO     | trading_engine.data.market_data:build_snapshot:595 - Using cached market snapshot for BTC/USDT (4h)
+2026-06-19 01:41:12.308 | INFO     | trading_engine.orchestrator:run:119 - 
+============================================================
+2026-06-19 01:41:12.308 | INFO     | trading_engine.orchestrator:run:120 - TRADING ENGINE | ETH/USDT | 4h
+2026-06-19 01:41:12.308 | INFO     | trading_engine.orchestrator:run:121 - ============================================================
+2026-06-19 01:41:12.308 | INFO     | trading_engine.orchestrator:run:124 - 📊 Fetching market data...
+2026-06-19 01:41:12.313 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: ETH/USDT 4h (limit=300)
+2026-06-19 01:41:12.710 | INFO     | __main__:monitor_positions:110 - 🔍 Monitoring open positions...
+2026-06-19 01:41:13.193 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for AAVE/USDT...
+2026-06-19 01:41:13.650 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:429 - 📊 AAVE/USDT anomaly check: RSI=56.9 | RelVol=0.48 | Imbalance=0.60 -> Score: 14.84
+2026-06-19 01:41:13.656 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: ATH/USDT 4h (limit=300)
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-19 01:41:14.424 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for ETH/USDT: bybit fetchFundingRate() supports contract markets only
+2026-06-19 01:41:14.506 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: ETH/USDT 1d (limit=300)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:460: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+2026-06-19 01:41:15.663 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for ATH/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:460: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-19 01:41:15.790 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: ATH/USDT 1d (limit=300)
+2026-06-19 01:41:16.463 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for ETH/USDT: bybit fetchFundingRate() supports contract markets only
+  df.ta.ema(length=ema_trend, append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+2026-06-19 01:41:16.579 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: ETH/USDT (crypto) | Close=1708.9300 | RSI=38.2
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:460: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+2026-06-19 01:41:16.593 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: ETH/USDT (crypto) | Close=1708.9300 | RSI=44.2
+2026-06-19 01:41:16.609 | INFO     | trading_engine.orchestrator:run:126 -    Close=1708.9300 | RSI=44.2 | ATR=31.4944
+2026-06-19 01:41:16.609 | INFO     | trading_engine.orchestrator:run:129 - 🤖 Running specialist agents...
+2026-06-19 01:41:16.613 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ volume: SELL (80%)
+2026-06-19 01:41:16.613 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ momentum: SELL (75%)
+2026-06-19 01:41:16.613 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ volatility: BUY (100%)
+2026-06-19 01:41:16.613 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ structure: HOLD (50%)
+2026-06-19 01:41:16.613 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ trend: HOLD (58%)
+2026-06-19 01:41:16.613 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ orderflow: HOLD (50%)
+2026-06-19 01:41:16.614 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ macro: HOLD (50%)
+2026-06-19 01:41:16.664 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for INJ (qty=0.006620, val=$0.04)
+2026-06-19 01:41:16.664 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for JUP (qty=0.030500, val=$0.01)
+2026-06-19 01:41:16.664 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for HYPE (qty=0.000390, val=$0.03)
+2026-06-19 01:41:16.664 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for NEAR (qty=0.003800, val=$0.01)
+2026-06-19 01:41:16.664 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for RUNE (qty=0.001330, val=$0.00)
+2026-06-19 01:41:16.663 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for EIGEN (qty=0.039500, val=$0.01)
+2026-06-19 01:41:16.664 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for HMSTR (qty=0.078600, val=$0.00)
+2026-06-19 01:41:16.664 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for KAS (qty=0.003320, val=$0.00)
+2026-06-19 01:41:16.664 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for GRASS (qty=0.036800, val=$0.01)
+2026-06-19 01:41:16.664 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for LIT (qty=0.006970, val=$0.01)
+2026-06-19 01:41:16.664 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for TRX (qty=0.002260, val=$0.00)
+2026-06-19 01:41:16.664 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for CRV (qty=0.076900, val=$0.02)
+2026-06-19 01:41:16.664 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for HOME (qty=0.093800, val=$0.00)
+2026-06-19 01:41:16.664 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for ONDO (qty=0.007200, val=$0.00)
+2026-06-19 01:41:16.664 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for APEX (qty=0.003190, val=$0.00)
+2026-06-19 01:41:17.902 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for ATH/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:460: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-19 01:41:17.999 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: ATH/USDT (crypto) | Close=0.0048 | RSI=44.2
+2026-06-19 01:41:18.014 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: ATH/USDT (crypto) | Close=0.0048 | RSI=52.6
+2026-06-19 01:41:19.209 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for ATH/USDT...
+2026-06-19 01:41:19.520 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:429 - 📊 ATH/USDT anomaly check: RSI=52.6 | RelVol=1.20 | Imbalance=0.51 -> Score: 10.05
+2026-06-19 01:41:19.529 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: APE/USDT 4h (limit=300)
+2026-06-19 01:41:19.895 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ sentiment: BUY (88%)
+2026-06-19 01:41:19.896 | INFO     | trading_engine.orchestrator:run:133 - ⚖️  Judge evaluating...
+2026-06-19 01:41:20.979 | INFO     | trading_engine.orchestrator:run:185 -    Loaded dynamic optimized weights for crypto (optimized_weights_crypto.json).
+2026-06-19 01:41:20.979 | INFO     | trading_engine.judge:evaluate:201 - Judge: HOLD | conf=30.4% | agree=4/8 | approved=False | avg_raw_conf=52.1% (min_conf=52)
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-19 01:41:21.551 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for APE/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:460: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+2026-06-19 01:41:21.633 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: APE/USDT 1d (limit=300)
+2026-06-19 01:41:23.491 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for APE/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:460: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-19 01:41:23.559 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: APE/USDT (crypto) | Close=0.1345 | RSI=51.5
+2026-06-19 01:41:23.572 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: APE/USDT (crypto) | Close=0.1345 | RSI=57.6
+2026-06-19 01:41:24.768 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for APE/USDT...
+2026-06-19 01:41:25.069 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:429 - 📊 APE/USDT anomaly check: RSI=57.6 | RelVol=0.65 | Imbalance=0.44 -> Score: 15.60
+2026-06-19 01:41:25.075 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: RENDER/USDT 4h (limit=300)
+2026-06-19 01:41:27.032 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for RENDER/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:460: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-19 01:41:27.108 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: RENDER/USDT 1d (limit=300)
+2026-06-19 01:41:28.941 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for RENDER/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:460: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-19 01:41:29.010 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: RENDER/USDT (crypto) | Close=1.7310 | RSI=46.6
+2026-06-19 01:41:29.022 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: RENDER/USDT (crypto) | Close=1.7310 | RSI=51.7
+2026-06-19 01:41:29.037 | INFO     | trading_engine.orchestrator:run:192 -    Decision: HOLD | Conf=30% | Agreement=4/8
+2026-06-19 01:41:29.037 | INFO     | trading_engine.orchestrator:run:196 - 🛡️  Risk Agent evaluating...
+2026-06-19 01:41:29.042 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: ETH/USDT 5m (limit=300)
+2026-06-19 01:41:29.043 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:394 - 🚫 RENDER/USDT skipped (oversold in confirmed downtrend EMA20<50<200)
+2026-06-19 01:41:29.048 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: USDY/USDT 4h (limit=300)
+2026-06-19 01:41:29.943 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for EIGEN (qty=0.039500, val=$0.01)
+2026-06-19 01:41:29.943 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for HMSTR (qty=0.078600, val=$0.00)
+2026-06-19 01:41:29.943 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for KAS (qty=0.003320, val=$0.00)
+2026-06-19 01:41:29.943 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for GRASS (qty=0.036800, val=$0.01)
+2026-06-19 01:41:29.943 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for LIT (qty=0.006970, val=$0.01)
+2026-06-19 01:41:29.943 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for INJ (qty=0.006620, val=$0.04)
+2026-06-19 01:41:29.943 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for JUP (qty=0.030500, val=$0.01)
+2026-06-19 01:41:29.943 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for HYPE (qty=0.000390, val=$0.03)
+2026-06-19 01:41:29.943 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for NEAR (qty=0.003800, val=$0.01)
+2026-06-19 01:41:29.943 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for RUNE (qty=0.001330, val=$0.00)
+2026-06-19 01:41:29.943 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for TRX (qty=0.002260, val=$0.00)
+2026-06-19 01:41:29.943 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for CRV (qty=0.076900, val=$0.02)
+2026-06-19 01:41:29.943 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for HOME (qty=0.093800, val=$0.00)
+2026-06-19 01:41:29.943 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for ONDO (qty=0.007200, val=$0.00)
+2026-06-19 01:41:29.943 | INFO     | trading_engine.execution.live_trader:sync_with_broker:1317 - Sync: Ignoring dust balance for APEX (qty=0.003190, val=$0.00)
+2026-06-19 01:41:31.131 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for ETH/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:460: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-19 01:41:31.185 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for USDY/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:460: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-19 01:41:31.269 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: ETH/USDT (crypto) | Close=1708.6100 | RSI=44.8
+2026-06-19 01:41:31.287 | INFO     | trading_engine.risk_agent:_get_5m_atr:215 -    [Stage 3] Precise 5m entry=1708.6100 and ATR=3.1639 (original tf=4h entry=1708.9300, ATR=31.4944)
+2026-06-19 01:41:31.288 | WARNING  | trading_engine.orchestrator:run:214 - ❌ TRADE REJECTED (ETH/USDT): Judge did not approve trade (agreement=4, conf=30%)
+2026-06-19 01:41:31.288 | INFO     | trading_engine.orchestrator:run:253 - ============================================================
+
+2026-06-19 01:41:31.303 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: USDY/USDT 1d (limit=300)
+2026-06-19 01:41:31.306 | INFO     | trading_engine.data.market_data:build_snapshot:595 - Using cached market snapshot for ETH/USDT (4h)
+2026-06-19 01:41:31.306 | INFO     | trading_engine.orchestrator:run:119 - 
+============================================================
+2026-06-19 01:41:31.306 | INFO     | trading_engine.orchestrator:run:120 - TRADING ENGINE | SOL/USDT | 4h
+2026-06-19 01:41:31.306 | INFO     | trading_engine.orchestrator:run:121 - ============================================================
+2026-06-19 01:41:31.306 | INFO     | trading_engine.orchestrator:run:124 - 📊 Fetching market data...
+2026-06-19 01:41:31.312 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: SOL/USDT 4h (limit=300)
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:460: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-19 01:41:33.518 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for USDY/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+2026-06-19 01:41:33.548 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for SOL/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:460: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-19 01:41:33.664 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: USDY/USDT (crypto) | Close=1.1410 | RSI=83.4
+2026-06-19 01:41:33.682 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: USDY/USDT (crypto) | Close=1.1410 | RSI=67.5
+2026-06-19 01:41:33.720 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: SOL/USDT 1d (limit=300)
+2026-06-19 01:41:35.007 | INFO     | trading_engine.utils.scrapers:fetch_google_news:21 - 📰 Fetching RSS news headlines for USDY/USDT...
+2026-06-19 01:41:35.263 | INFO     | trading_engine.bounty_hunter:rank_and_enrich_candidates:429 - 📊 USDY/USDT anomaly check: RSI=67.5 | RelVol=0.42 | Imbalance=0.45 -> Score: 29.84
+2026-06-19 01:41:35.268 | INFO     | trading_engine.data.market_data:fetch_ohlcv:130 - Fetching OHLCV: APEX/USDT 4h (limit=300)
+2026-06-19 01:41:35.899 | WARNING  | trading_engine.data.market_data:fetch_order_flow:223 - Order flow fetch failed for SOL/USDT: bybit fetchFundingRate() supports contract markets only
+/app/trading_engine/data/market_data.py:456: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_fast,  append=True)
+/app/trading_engine/data/market_data.py:458: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_slow,  append=True)
+/app/trading_engine/data/market_data.py:460: FutureWarning: The series.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.
+  df.ta.ema(length=ema_trend, append=True)
+2026-06-19 01:41:35.970 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: SOL/USDT (crypto) | Close=69.6900 | RSI=41.9
+2026-06-19 01:41:35.987 | SUCCESS  | trading_engine.data.market_data:build_snapshot:698 - Snapshot built: SOL/USDT (crypto) | Close=69.6900 | RSI=44.1
+2026-06-19 01:41:36.000 | INFO     | trading_engine.orchestrator:run:126 -    Close=69.6900 | RSI=44.1 | ATR=1.4702
+2026-06-19 01:41:36.000 | INFO     | trading_engine.orchestrator:run:129 - 🤖 Running specialist agents...
+2026-06-19 01:41:36.003 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ trend: HOLD (58%)
+2026-06-19 01:41:36.003 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ volatility: BUY (100%)
+2026-06-19 01:41:36.003 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ momentum: SELL (75%)
+2026-06-19 01:41:36.003 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ orderflow: HOLD (50%)
+2026-06-19 01:41:36.003 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ structure: HOLD (58%)
+2026-06-19 01:41:36.003 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ volume: SELL (80%)
+2026-06-19 01:41:36.004 | INFO     | trading_engine.orchestrator:_run_agents_parallel:67 -   ✓ macro: HOLD (50%)
