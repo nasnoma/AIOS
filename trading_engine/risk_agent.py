@@ -201,10 +201,13 @@ def _kelly_fraction(win_rate: float, rr_ratio: float, kelly_fraction: float = 0.
 
 def _get_5m_atr(snap: MarketSnapshot) -> tuple[float, float]:
     """
-    Returns (entry_price, atr) on 5m timeframe if available, 
+    Returns (entry_price, atr) on 5m timeframe if available and configured, 
     otherwise falls back to (snap.close, snap.atr).
     """
     from trading_engine.market_hours import classify_symbol, AssetClass
+    if not settings.crypto_use_5m_atr:
+        return snap.close, snap.atr
+
     if classify_symbol(snap.symbol) != AssetClass.CRYPTO:
         logger.info(f"   [Stage 3] Asset class is not CRYPTO. Using native timeframe ATR for {snap.symbol} ({snap.timeframe})")
         return snap.close, snap.atr

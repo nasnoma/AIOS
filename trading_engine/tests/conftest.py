@@ -25,9 +25,11 @@ def use_test_database():
     original_regime = settings.regime_filter_enabled
     original_agreement = settings.min_agent_agreement
     original_confidence = settings.min_avg_confidence
+    original_use_5m = settings.crypto_use_5m_atr
     settings.regime_filter_enabled = True
     settings.min_agent_agreement = 5
     settings.min_avg_confidence = 52.0
+    settings.crypto_use_5m_atr = True
     
     yield
     
@@ -39,5 +41,6 @@ def use_test_database():
     settings.regime_filter_enabled = original_regime
     settings.min_agent_agreement = original_agreement
     settings.min_avg_confidence = original_confidence
+    settings.crypto_use_5m_atr = original_use_5m
     db._engine = None
     db._SessionLocal = None

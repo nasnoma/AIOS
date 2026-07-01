@@ -63,6 +63,7 @@ class Settings(BaseSettings):
     rr_ratio: float = 3.0
     stop_loss_pct_max: float = 0.10
     max_concurrent_positions: int = 6
+    crypto_use_5m_atr: bool = False
 
     # ── Self Healing ────────────────────────────────────────
     self_healing_consecutive_losses: int = Field(default=4, ge=2, le=4)
