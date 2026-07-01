@@ -245,12 +245,7 @@ def open_trade(symbol: str, direction: str, entry: float,
 def _apply_trailing_stop(pos: Position, price: float) -> None:
     """
     ATR trailing stop ratchet — called before SL/TP check.
-
-    Ratchet levels (long example, mirrored for short):
-      • Price reaches entry + 1×ATR → stop moves to entry (breakeven)
-      • Price reaches entry + 2×ATR → stop moves to entry + 1×ATR (lock profit)
-
-    The stop only ever moves in the profitable direction — never widens.
+    Tightened and progressively ratchets to protect profits and move to breakeven sooner.
     """
     if pos.atr <= 0:
         return   # ATR not stored — trailing stop not active for this position
@@ -263,20 +258,24 @@ def _apply_trailing_stop(pos: Position, price: float) -> None:
             pos.trailing_high = price
 
         profit_in_atr = (pos.trailing_high - pos.entry_price) / atr
-        if profit_in_atr >= 2.0:
-            # Lock in +1 ATR of profit
-            new_sl = pos.entry_price + atr
+        if profit_in_atr >= 2.5:
+            new_sl = pos.entry_price + 2.0 * atr
             if new_sl > pos.stop_loss:
-                logger.info(
-                    f"🔒 Trailing stop ratchet (2×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → {new_sl:.4f}"
-                )
+                logger.info(f"🔒 Trailing stop ratchet (2.5×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → {new_sl:.4f}")
                 pos.stop_loss = new_sl
-        elif profit_in_atr >= 1.0:
-            # Move to breakeven
+        elif profit_in_atr >= 2.0:
+            new_sl = pos.entry_price + 1.2 * atr
+            if new_sl > pos.stop_loss:
+                logger.info(f"🔒 Trailing stop ratchet (2×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → {new_sl:.4f}")
+                pos.stop_loss = new_sl
+        elif profit_in_atr >= 1.2:
+            new_sl = pos.entry_price + 0.5 * atr
+            if new_sl > pos.stop_loss:
+                logger.info(f"🔒 Trailing stop ratchet (1.2×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → {new_sl:.4f}")
+                pos.stop_loss = new_sl
+        elif profit_in_atr >= 0.6:
             if pos.entry_price > pos.stop_loss:
-                logger.info(
-                    f"🔒 Trailing stop ratchet (1×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → breakeven {pos.entry_price:.4f}"
-                )
+                logger.info(f"🔒 Trailing stop ratchet (0.6×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → breakeven {pos.entry_price:.4f}")
                 pos.stop_loss = pos.entry_price
 
     else:  # short
@@ -285,18 +284,24 @@ def _apply_trailing_stop(pos: Position, price: float) -> None:
             pos.trailing_low = price
 
         profit_in_atr = (pos.entry_price - pos.trailing_low) / atr
-        if profit_in_atr >= 2.0:
-            new_sl = pos.entry_price - atr
+        if profit_in_atr >= 2.5:
+            new_sl = pos.entry_price - 2.0 * atr
             if new_sl < pos.stop_loss:
-                logger.info(
-                    f"🔒 Trailing stop ratchet (2×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → {new_sl:.4f}"
-                )
+                logger.info(f"🔒 Trailing stop ratchet (2.5×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → {new_sl:.4f}")
                 pos.stop_loss = new_sl
-        elif profit_in_atr >= 1.0:
+        elif profit_in_atr >= 2.0:
+            new_sl = pos.entry_price - 1.2 * atr
+            if new_sl < pos.stop_loss:
+                logger.info(f"🔒 Trailing stop ratchet (2×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → {new_sl:.4f}")
+                pos.stop_loss = new_sl
+        elif profit_in_atr >= 1.2:
+            new_sl = pos.entry_price - 0.5 * atr
+            if new_sl < pos.stop_loss:
+                logger.info(f"🔒 Trailing stop ratchet (1.2×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → {new_sl:.4f}")
+                pos.stop_loss = new_sl
+        elif profit_in_atr >= 0.6:
             if pos.entry_price < pos.stop_loss:
-                logger.info(
-                    f"🔒 Trailing stop ratchet (1×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → breakeven {pos.entry_price:.4f}"
-                )
+                logger.info(f"🔒 Trailing stop ratchet (0.6×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → breakeven {pos.entry_price:.4f}")
                 pos.stop_loss = pos.entry_price
 
 
