@@ -300,6 +300,21 @@ def check_preflight_probability(snap: MarketSnapshot, mode: str) -> tuple[bool, 
     atr = snap.atr
     bb_width = snap.bb_width
     
+    # ── Fast Price Velocity Veto (Polymarket Style) ──
+    if settings.min_velocity_usd_30s > 0 and snap.df is not None and len(snap.df) >= 2 and os.environ.get("IS_TESTING") != "true":
+        try:
+            prev_close = float(snap.df["close"].iloc[-2])
+            price_move = abs(close - prev_close)
+            
+            # Scale the USD threshold proportionally to the asset price vs BTC (~$59,000 reference price)
+            ref_price = 59000.0
+            scaled_threshold = settings.min_velocity_usd_30s * (close / ref_price)
+            
+            if price_move < scaled_threshold:
+                return False, 0.0, f"Veto: Low price velocity ({price_move:.4f} < scaled threshold {scaled_threshold:.4f})"
+        except Exception as e:
+            logger.warning(f"Error checking preflight velocity for {snap.symbol}: {e}")
+    
     # ── Hard Vetoes ───────────────────────────────────
     if atr <= 0 or close <= 0:
         return False, 0.0, "Veto: ATR or price is zero (bad data)"
