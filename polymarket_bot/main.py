@@ -34,7 +34,7 @@ from polymarket_bot.strategy import Signal, SignalType, evaluate_signals
 
 # ── Globals ───────────────────────────────────────────────────────────────────
 _TRADE_LOOP_INTERVAL_S = 5    # Evaluate signals every 5s
-_MONITOR_INTERVAL_S = 10      # Check position resolution every 10s
+_MONITOR_INTERVAL_S = 2      # Check position resolution every 2s
 _DAILY_SUMMARY_HOUR = 23      # UTC hour to send daily Telegram summary
 _shutdown_event = asyncio.Event()
 
@@ -141,6 +141,7 @@ async def trade_loop(feed: PriceFeed) -> None:
                     elapsed_s=window.elapsed_s,
                     remaining_s=window.remaining_s,
                     cfg=settings,
+                    cvd_delta=feed.get_cvd_delta(asset, settings.momentum_lookback_s),
                 )
 
                 if signal.signal_type == SignalType.NO_SIGNAL:
@@ -309,6 +310,10 @@ def _handle_shutdown(signum, frame):
 # ── Entry Point ───────────────────────────────────────────────────────────────
 
 async def main() -> None:
+    from pathlib import Path
+    log_file = Path(__file__).parent / "bot.log"
+    logger.add(log_file, rotation="10 MB", retention="5 days", level="INFO")
+
     logger.info("=" * 60)
     logger.info("  POLYMARKET BOT")
     logger.info(f"  Mode:   {settings.trading_mode.upper()}")

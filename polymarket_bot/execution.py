@@ -209,9 +209,9 @@ async def resolve_expired_positions(current_window_start: int, feed) -> None:
 
         # --- Check if we should trigger resolution/close ---
         if settings.is_live:
-            # Live mode: close/sell 15 seconds BEFORE window_end
+            # Live mode: close/sell 25 seconds BEFORE window_end
             time_remaining = window_end - time.time()
-            if time_remaining > 15.0:
+            if time_remaining > 25.0:
                 continue  # Too early, keep position open
         else:
             # Paper mode: resolve only after the window has officially ended
@@ -229,8 +229,8 @@ async def resolve_expired_positions(current_window_start: int, feed) -> None:
                     "Cannot sell on CLOB. Falling back to binary resolution."
                 )
             else:
-                live_exit_price = await _sell_position_live(pos_dict)
-                if live_exit_price is None:
+                res = await _sell_position_live(pos_dict)
+                if res is None:
                     # Sell failed but there is still time before expiry — retry next cycle
                     time_remaining = window_end - time.time()
                     if time_remaining > 0:
@@ -244,6 +244,27 @@ async def resolve_expired_positions(current_window_start: int, feed) -> None:
                             f"⚠️  SELL failed at expiry for {pos_dict['asset']} pos {pos_dict.get('position_id')} "
                             "— falling back to binary resolution"
                         )
+                else:
+                    live_exit_price, sold_yes, sold_no = res
+                    
+                    # Update shares held in local position memory
+                    if pos_dict.get("shares_yes") is not None:
+                        pos_dict["shares_yes"] = max(0.0, round(pos_dict["shares_yes"] - sold_yes, 4))
+                    if pos_dict.get("shares_no") is not None:
+                        pos_dict["shares_no"] = max(0.0, round(pos_dict["shares_no"] - sold_no, 4))
+                        
+                    rem_yes = pos_dict.get("shares_yes") or 0.0
+                    rem_no = pos_dict.get("shares_no") or 0.0
+                    
+                    # If some shares are still left, update state and retry next cycle
+                    if rem_yes > 0.0 or rem_no > 0.0:
+                        logger.warning(
+                            f"⚠️ Partial fill on SELL for {pos_dict['asset']} pos {pos_dict.get('position_id')}: "
+                            f"sold yes={sold_yes} no={sold_no}. Remaining yes={rem_yes} no={rem_no}. Retrying next tick..."
+                        )
+                        state.positions = [p if p["position_id"] != pos_dict["position_id"] else pos_dict for p in state.positions]
+                        save_state(state)
+                        continue
 
         # Window is over — determine P&L
         pnl = await _compute_resolution_pnl(pos_dict, feed, live_exit_price=live_exit_price)
@@ -312,9 +333,11 @@ async def _sell_position_live(pos_dict: dict) -> Optional[float]:
 
     weighted_fill: float = 0.0
     total_usd: float = 0.0
+    sold_yes = 0.0
+    sold_no = 0.0
 
-    async def _do_sell(token_id: str, entry_price: float, leg_usd: float, exact_shares: Optional[float] = None) -> Optional[float]:
-        """Place IOC sell for one leg; return fill price or None."""
+    async def _do_sell(token_id: str, entry_price: float, leg_usd: float, exact_shares: Optional[float] = None) -> Optional[tuple[float, float]]:
+        """Place IOC sell for one leg; return (fill_price, filled_shares) or None."""
         if not token_id:
             return None
         book = await clob_cache.get_book(token_id)
@@ -335,30 +358,34 @@ async def _sell_position_live(pos_dict: dict) -> Optional[float]:
         )
         if res is None:
             return None
-        _order_id, _filled, fill_price = res
-        return fill_price
+        _order_id, filled, fill_price = res
+        return fill_price, filled
 
     if side in ("YES", "BOTH"):
         leg_usd = size_usd / 2 if side == "BOTH" else size_usd
-        fp = await _do_sell(token_id_yes, entry_yes, leg_usd, exact_shares=shares_yes)
-        if fp is not None:
-            weighted_fill += fp * leg_usd
-            total_usd += leg_usd
+        res = await _do_sell(token_id_yes, entry_yes, leg_usd, exact_shares=shares_yes)
+        if res is not None:
+            fp, filled = res
+            weighted_fill += fp * (filled * entry_yes)
+            total_usd += filled * entry_yes
+            sold_yes = filled
         elif side == "YES":
             return None  # Sell failed
 
     if side in ("NO", "BOTH"):
         leg_usd = size_usd / 2 if side == "BOTH" else size_usd
-        fp = await _do_sell(token_id_no, entry_no, leg_usd, exact_shares=shares_no)
-        if fp is not None:
-            weighted_fill += fp * leg_usd
-            total_usd += leg_usd
+        res = await _do_sell(token_id_no, entry_no, leg_usd, exact_shares=shares_no)
+        if res is not None:
+            fp, filled = res
+            weighted_fill += fp * (filled * entry_no)
+            total_usd += filled * entry_no
+            sold_no = filled
         elif side == "NO":
             return None  # Sell failed
 
     if total_usd <= 0:
         return None
-    return round(weighted_fill / total_usd, 6)  # USD-weighted avg fill price
+    return round(weighted_fill / total_usd, 6), sold_yes, sold_no  # USD-weighted avg fill price + sold shares
 
 
 
