@@ -15,6 +15,7 @@ Live mode:
 """
 from __future__ import annotations
 import asyncio
+import time
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
@@ -186,8 +187,9 @@ async def resolve_expired_positions(current_window_start: int, feed) -> None:
     """
     Check all open positions. Resolve (close) those whose window has ended.
 
-    Live mode: places a real SELL order on Polymarket first and uses the actual
-    fill price for P&L.  Position is only marked closed after the sell confirms.
+    Live mode: places a real SELL order on Polymarket 15s before window ends,
+    using the actual fill price for P&L. If the window has already ended or
+    the sell fails at/after expiration, falls back to binary resolution.
     Paper mode: computes P&L from binary Binance-spot outcome (unchanged).
     """
     state = load_state()
@@ -198,20 +200,44 @@ async def resolve_expired_positions(current_window_start: int, feed) -> None:
         if pos_dict.get("status") != "open":
             continue
         window_end = pos_dict.get("window_end", 0)
-        if current_window_start < window_end:
-            continue  # Window not yet finished
 
-        # --- Live mode: sell on Polymarket first ---
+        # --- Check if we should trigger resolution/close ---
+        if settings.is_live:
+            # Live mode: close/sell 15 seconds BEFORE window_end
+            time_remaining = window_end - time.time()
+            if time_remaining > 15.0:
+                continue  # Too early, keep position open
+        else:
+            # Paper mode: resolve only after the window has officially ended
+            if current_window_start < window_end:
+                continue
+
+        # --- Live mode: sell on Polymarket first if not expired ---
         live_exit_price: Optional[float] = None
         if settings.is_live:
-            live_exit_price = await _sell_position_live(pos_dict)
-            if live_exit_price is None:
-                # Sell failed — leave open, retry next cycle
+            time_remaining = window_end - time.time()
+            if time_remaining <= 0:
+                # Already expired, trading halted. Can't sell on CLOB.
                 logger.warning(
-                    f"⚠️  SELL failed for {pos_dict['asset']} pos {pos_dict.get('position_id')} "
-                    "— position stays open, will retry next cycle"
+                    f"⏳ Position {pos_dict.get('position_id')} for {pos_dict['asset']} has already expired on Polymarket. "
+                    "Cannot sell on CLOB. Falling back to binary resolution."
                 )
-                continue
+            else:
+                live_exit_price = await _sell_position_live(pos_dict)
+                if live_exit_price is None:
+                    # Sell failed but there is still time before expiry — retry next cycle
+                    time_remaining = window_end - time.time()
+                    if time_remaining > 0:
+                        logger.warning(
+                            f"⚠️  SELL failed for {pos_dict['asset']} pos {pos_dict.get('position_id')} "
+                            f"({time_remaining:.1f}s remaining) — will retry before expiry"
+                        )
+                        continue
+                    else:
+                        logger.warning(
+                            f"⚠️  SELL failed at expiry for {pos_dict['asset']} pos {pos_dict.get('position_id')} "
+                            "— falling back to binary resolution"
+                        )
 
         # Window is over — determine P&L
         pnl = await _compute_resolution_pnl(pos_dict, feed, live_exit_price=live_exit_price)
