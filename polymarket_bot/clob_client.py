@@ -380,8 +380,10 @@ class ClobBookCache:
                     if k <= 0:
                         continue
                     shares = round((k / 100.0) / price, 4)
-                    cost = shares * price
-                    if abs(round(cost, 2) - cost) < 1e-9 and abs(cost - (k / 100.0)) < 1e-9:
+                    # Check: shares × price rounds to exactly k/100 at 2 decimal places.
+                    # Use round() comparison, not exact float equality — prices like 0.525
+                    # produce floating-point residuals that would always fail a < 1e-9 test.
+                    if round(shares * price, 2) == round(k / 100.0, 2):
                         valid_shares = shares
                         break
                 if valid_shares is not None:

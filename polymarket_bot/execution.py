@@ -117,11 +117,14 @@ async def _execute_live(
     fill_price_no: Optional[float] = None
 
     if signal.buy_yes and risk.size_usd_yes > 0:
+        # IOC orders must be priced >= best_ask to fill; mid-price sits below ask and is always killed
+        book_yes = await clob_cache.get_book(market.token_id_up)
+        ioc_price_yes = (book_yes.best_ask if book_yes and book_yes.best_ask else signal.entry_price_yes)
         res = await clob_cache.place_limit_order(
             token_id=market.token_id_up,
             side="BUY",
-            price=signal.entry_price_yes,
-            size=risk.size_usd_yes / signal.entry_price_yes,  # shares = USD / price
+            price=ioc_price_yes,
+            size=risk.size_usd_yes / ioc_price_yes,
             order_type="IOC",
         )
         if res:
@@ -130,11 +133,13 @@ async def _execute_live(
             actual_size_usd += filled_shares * fill_price_yes  # use real fill price
 
     if signal.buy_no and risk.size_usd_no > 0:
+        book_no = await clob_cache.get_book(market.token_id_down)
+        ioc_price_no = (book_no.best_ask if book_no and book_no.best_ask else signal.entry_price_no)
         res = await clob_cache.place_limit_order(
             token_id=market.token_id_down,
             side="BUY",
-            price=signal.entry_price_no,
-            size=risk.size_usd_no / signal.entry_price_no,
+            price=ioc_price_no,
+            size=risk.size_usd_no / ioc_price_no,
             order_type="IOC",
         )
         if res:
