@@ -112,34 +112,42 @@ async def _execute_live(
     Live mode: place real limit orders via CLOB.
     """
     placed_orders = []
+    actual_size_usd = 0.0
+    fill_price_yes: Optional[float] = None
+    fill_price_no: Optional[float] = None
 
     if signal.buy_yes and risk.size_usd_yes > 0:
-        order_id = await clob_cache.place_limit_order(
+        res = await clob_cache.place_limit_order(
             token_id=market.token_id_up,
             side="BUY",
             price=signal.entry_price_yes,
             size=risk.size_usd_yes / signal.entry_price_yes,  # shares = USD / price
-            order_type="FOK",
+            order_type="IOC",
         )
-        if order_id:
+        if res:
+            order_id, filled_shares, fill_price_yes = res
             placed_orders.append(("YES", order_id))
+            actual_size_usd += filled_shares * fill_price_yes  # use real fill price
 
     if signal.buy_no and risk.size_usd_no > 0:
-        order_id = await clob_cache.place_limit_order(
+        res = await clob_cache.place_limit_order(
             token_id=market.token_id_down,
             side="BUY",
             price=signal.entry_price_no,
             size=risk.size_usd_no / signal.entry_price_no,
-            order_type="FOK",
+            order_type="IOC",
         )
-        if order_id:
+        if res:
+            order_id, filled_shares, fill_price_no = res
             placed_orders.append(("NO", order_id))
+            actual_size_usd += filled_shares * fill_price_no  # use real fill price
 
     if not placed_orders:
-        logger.error(f"Live execution: no orders placed for {signal.asset}")
+        logger.info(f"Live execution: no orders filled for {signal.asset} (signals cancelled or expired)")
         return None
 
     side = "BOTH" if len(placed_orders) == 2 else placed_orders[0][0]
+
     pos = OpenPosition(
         position_id=str(uuid.uuid4())[:8],
         asset=signal.asset,
@@ -149,7 +157,9 @@ async def _execute_live(
         side=side,
         entry_price_yes=signal.entry_price_yes,
         entry_price_no=signal.entry_price_no,
-        size_usd=risk.total_size_usd,
+        fill_price_yes=fill_price_yes,
+        fill_price_no=fill_price_no,
+        size_usd=actual_size_usd,
         window_start=market.window_start,
         window_end=market.window_end,
         opened_at=datetime.now(timezone.utc).isoformat(),
@@ -157,16 +167,23 @@ async def _execute_live(
 
     state = load_state()
     state.positions.append(_pos_to_dict(pos))
+    state.cash -= actual_size_usd
     save_state(state)
 
-    logger.success(f"🟢 LIVE {signal.signal_type.value} | {signal.asset} | orders={placed_orders}")
+    logger.success(
+        f"🟢 LIVE {signal.signal_type.value} | {signal.asset} | orders={placed_orders} "
+        f"| fill_yes={fill_price_yes} fill_no={fill_price_no} | actual_size_usd=${actual_size_usd:.2f}"
+    )
     return pos
 
 
-async def resolve_expired_positions(current_window_start: int, feed: PriceFeed) -> None:
+async def resolve_expired_positions(current_window_start: int, feed) -> None:
     """
     Check all open positions. Resolve (close) those whose window has ended.
-    Calculates P&L based on the winning side from actual Binance spot strike price resolution.
+
+    Live mode: places a real SELL order on Polymarket first and uses the actual
+    fill price for P&L.  Position is only marked closed after the sell confirms.
+    Paper mode: computes P&L from binary Binance-spot outcome (unchanged).
     """
     state = load_state()
     state = reset_daily_pnl_if_new_day(state)
@@ -179,9 +196,29 @@ async def resolve_expired_positions(current_window_start: int, feed: PriceFeed) 
         if current_window_start < window_end:
             continue  # Window not yet finished
 
-        # Window is over — determine which side won
-        pnl = await _compute_resolution_pnl(pos_dict, feed)
+        # --- Live mode: sell on Polymarket first ---
+        live_exit_price: Optional[float] = None
+        if settings.is_live:
+            live_exit_price = await _sell_position_live(pos_dict)
+            if live_exit_price is None:
+                # Sell failed — leave open, retry next cycle
+                logger.warning(
+                    f"⚠️  SELL failed for {pos_dict['asset']} pos {pos_dict.get('position_id')} "
+                    "— position stays open, will retry next cycle"
+                )
+                continue
+
+        # Window is over — determine P&L
+        pnl = await _compute_resolution_pnl(pos_dict, feed, live_exit_price=live_exit_price)
+        if pnl is None:
+            # Strike data missing and no live exit — skip, retry next cycle
+            logger.warning(
+                f"⏳ Strike data unavailable for {pos_dict['asset']} — deferring resolution"
+            )
+            continue
+
         pos_dict["pnl_usd"] = round(pnl, 4)
+        pos_dict["exit_price"] = live_exit_price  # None in paper mode
         pos_dict["status"] = "closed"
         pos_dict["closed_at"] = datetime.now(timezone.utc).isoformat()
 
@@ -219,20 +256,100 @@ async def resolve_expired_positions(current_window_start: int, feed: PriceFeed) 
         save_state(state)
 
 
-async def compute_unrealized_pnl(pos_dict: dict, feed: PriceFeed) -> float:
-    """Public helper to compute current unrealized P&L for open positions."""
-    return await _compute_resolution_pnl(pos_dict, feed, is_resolution=False)
-
-
-async def _compute_resolution_pnl(pos_dict: dict, feed: PriceFeed, is_resolution: bool = True) -> float:
+async def _sell_position_live(pos_dict: dict) -> Optional[float]:
     """
-    Compute P&L using Binance spot strike prices for deterministic paper resolution (if is_resolution=True)
-    or current mid prices for mark-to-market unrealized evaluation (if is_resolution=False).
+    Place an IOC SELL order on Polymarket for an expired position.
+    Returns the actual fill price on success, None on failure.
+
+    Strategy: sell the winning/primary leg at current best_bid - 0.01 to ensure
+    aggressive fill.  For BOTH positions we sell both legs.
     """
     side = pos_dict.get("side", "YES")
     size_usd = pos_dict.get("size_usd", 0.0)
-    entry_yes = pos_dict.get("entry_price_yes") or 0.5
-    entry_no = pos_dict.get("entry_price_no") or 0.5
+    entry_yes = pos_dict.get("fill_price_yes") or pos_dict.get("entry_price_yes") or 0.5
+    entry_no = pos_dict.get("fill_price_no") or pos_dict.get("entry_price_no") or 0.5
+    token_id_yes = pos_dict.get("token_id_yes", "")
+    token_id_no = pos_dict.get("token_id_no", "")
+
+    weighted_fill: float = 0.0
+    total_usd: float = 0.0
+
+    async def _do_sell(token_id: str, entry_price: float, leg_usd: float) -> Optional[float]:
+        """Place IOC sell for one leg; return fill price or None."""
+        if not token_id or leg_usd <= 0:
+            return None
+        book = await clob_cache.get_book(token_id)
+        if book is None:
+            book = await clob_cache.fetch_book_rest(token_id)
+        best_bid = book.best_bid if book else None
+        # Sell limit: at best_bid - 0.01 to be aggressive; floor at 0.01
+        limit_price = max(0.01, round((best_bid or entry_price) - 0.01, 4))
+        shares = round(leg_usd / entry_price, 4)
+        if shares <= 0:
+            return None
+        res = await clob_cache.place_limit_order(
+            token_id=token_id,
+            side="SELL",
+            price=limit_price,
+            size=shares,
+            order_type="IOC",
+        )
+        if res is None:
+            return None
+        _order_id, _filled, fill_price = res
+        return fill_price
+
+    if side in ("YES", "BOTH"):
+        leg_usd = size_usd / 2 if side == "BOTH" else size_usd
+        fp = await _do_sell(token_id_yes, entry_yes, leg_usd)
+        if fp is not None:
+            weighted_fill += fp * leg_usd
+            total_usd += leg_usd
+        elif side == "YES":
+            return None  # Sell failed
+
+    if side in ("NO", "BOTH"):
+        leg_usd = size_usd / 2 if side == "BOTH" else size_usd
+        fp = await _do_sell(token_id_no, entry_no, leg_usd)
+        if fp is not None:
+            weighted_fill += fp * leg_usd
+            total_usd += leg_usd
+        elif side == "NO":
+            return None  # Sell failed
+
+    if total_usd <= 0:
+        return None
+    return round(weighted_fill / total_usd, 6)  # USD-weighted avg fill price
+
+
+
+async def compute_unrealized_pnl(pos_dict: dict, feed) -> float:
+    """Public helper to compute current unrealized P&L for open positions."""
+    result = await _compute_resolution_pnl(pos_dict, feed, is_resolution=False)
+    return result if result is not None else 0.0
+
+
+async def _compute_resolution_pnl(
+    pos_dict: dict,
+    feed,
+    is_resolution: bool = True,
+    live_exit_price: Optional[float] = None,
+) -> Optional[float]:
+    """
+    Compute P&L for a position.
+
+    - live_exit_price: when provided (live mode), use it directly instead of the
+      binary 0/1 model.  This is the actual SELL fill price from the CLOB.
+    - is_resolution=True + no live_exit_price: paper mode binary outcome (0 or 1).
+    - is_resolution=False: mark-to-market unrealized (uses current mid prices).
+
+    Returns None if strike data is missing and we cannot make a reliable determination
+    (caller should defer resolution to the next cycle).
+    """
+    side = pos_dict.get("side", "YES")
+    size_usd = pos_dict.get("size_usd", 0.0)
+    entry_yes = pos_dict.get("fill_price_yes") or pos_dict.get("entry_price_yes") or 0.5
+    entry_no = pos_dict.get("fill_price_no") or pos_dict.get("entry_price_no") or 0.5
     asset = pos_dict.get("asset", "")
     window_start = pos_dict.get("window_start", 0)
     window_end = pos_dict.get("window_end", 0)
@@ -242,7 +359,21 @@ async def _compute_resolution_pnl(pos_dict: dict, feed: PriceFeed, is_resolution
     mid_yes = await clob_cache.get_mid_price(token_id_yes) if token_id_yes else None
     mid_no = await clob_cache.get_mid_price(token_id_no) if token_id_no else None
 
-    # Determine resolution outcome from actual spot feed strike prices
+    # ── Live mode: use the real SELL fill price ──────────────────────────────
+    if live_exit_price is not None:
+        # USD-weighted avg exit price; apply to each leg
+        if side == "BOTH":
+            shares = (size_usd / 2) / ((entry_yes + entry_no) / 2)
+            pnl = (live_exit_price * 2 - entry_yes - entry_no) * shares
+        elif side == "YES":
+            shares = (size_usd / entry_yes) if entry_yes > 0 else 0
+            pnl = (live_exit_price - entry_yes) * shares
+        else:  # NO
+            shares = (size_usd / entry_no) if entry_no > 0 else 0
+            pnl = (live_exit_price - entry_no) * shares
+        return pnl * (1 - _FEE_RATE)
+
+    # ── Determine binary resolution outcome (paper mode / unrealized) ────────
     strike = feed.get_strike(asset, window_start)
     final = feed.get_strike(asset, window_end)
 
@@ -253,7 +384,15 @@ async def _compute_resolution_pnl(pos_dict: dict, feed: PriceFeed, is_resolution
         if mid_yes is not None and mid_no is not None:
             yes_won = mid_yes > mid_no
         else:
-            yes_won = entry_yes > 0.5  # Last resort fallback
+            if is_resolution:
+                # Strike data missing and no live exit — refuse to guess
+                logger.warning(
+                    f"Strike data missing for {asset} (window_start={window_start}) "
+                    "and no live exit price — deferring resolution"
+                )
+                return None
+            # Unrealized mark-to-market: use entry side as neutral guess
+            yes_won = entry_yes > 0.5
 
     if side == "BOTH":
         # Spread arb: one leg wins, one leg loses.

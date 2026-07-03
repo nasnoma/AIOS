@@ -69,6 +69,8 @@ class OpenPosition:
     exit_price: Optional[float] = None
     pnl_usd: Optional[float] = None
     status: str = "open"      # open | closed | expired
+    fill_price_yes: Optional[float] = None   # actual fill price in live mode (vs signal mid)
+    fill_price_no: Optional[float] = None
 
 
 @dataclass

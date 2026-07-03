@@ -100,15 +100,58 @@ def _build_client():
         logger.debug("CLOB: No private key configured — REST auth disabled (OK for paper mode)")
         return None
     try:
-        from py_clob_client.client import ClobClient
+        from py_clob_client_v2.client import ClobClient
+        
+        # Instantiate a temporary client to derive the EOA address
+        temp_client = ClobClient(
+            CLOB_HOST,
+            key=settings.polymarket_private_key,
+            chain_id=137,
+            signature_type=settings.polymarket_signature_type,
+            funder=settings.polymarket_funder or None,
+        )
+        eoa = temp_client.get_address()
+        funder = settings.polymarket_funder or None
+        sig_type = settings.polymarket_signature_type
+        
+        # If funder is not set or set to EOA itself, attempt to resolve via Polymarket profile API
+        if not funder or funder.lower() == eoa.lower():
+            import urllib.request
+            import json
+            url = f"https://polymarket.com/api/profile/userData?address={eoa}"
+            try:
+                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req, timeout=5) as response:
+                    res_body = response.read().decode("utf-8")
+                    if res_body and res_body.strip() != "null":
+                        data = json.loads(res_body)
+                        if data and isinstance(data, dict):
+                            proxy_wallet = data.get("proxyWallet")
+                            if proxy_wallet and proxy_wallet.lower() != eoa.lower():
+                                logger.info(f"CLOB: Auto-detected Polymarket proxy wallet (Deposit Wallet): {proxy_wallet}")
+                                funder = proxy_wallet
+                                if sig_type == 0:
+                                    # Default to 1 (POLY_PROXY / Magic Link) or 3 (POLY_1271 / Privy)
+                                    sig_type = 1
+                                    logger.info("CLOB: Auto-switching signature type to 1 (Proxy/Magic Link)")
+            except Exception as ex:
+                logger.debug(f"CLOB: Failed to auto-detect proxy wallet: {ex}")
+        
+        # Proactively warn if using a proxy/smart wallet signature type but funder is not set
+        if sig_type > 0 and not funder:
+            logger.warning(
+                "CLOB: POLYMARKET_SIGNATURE_TYPE is set to proxy/deposit flow, but "
+                "no funder is configured! Order placement will likely fail."
+            )
+            
         client = ClobClient(
             CLOB_HOST,
             key=settings.polymarket_private_key,
             chain_id=137,  # Polygon Mainnet
-            signature_type=settings.polymarket_signature_type,
-            funder=settings.polymarket_funder or None,
+            signature_type=sig_type,
+            funder=funder,
         )
-        client.set_api_creds(client.create_or_derive_api_creds())
+        client.set_api_creds(client.create_or_derive_api_key())
         logger.info("CLOB: Authenticated successfully (L1+L2)")
         return client
     except Exception as e:
@@ -260,6 +303,17 @@ class ClobBookCache:
         """
         Fetch the current order book via REST (public endpoint, works in paper mode too).
         """
+        now = time.time()
+        if not hasattr(self, "_last_rest_fetch_time"):
+            self._last_rest_fetch_time = {}
+        
+        # Cooldown: limit REST fetches to once per 10 seconds per token to prevent HTTP 429
+        last_fetch = self._last_rest_fetch_time.get(token_id, 0.0)
+        if now - last_fetch < 10.0:
+            async with self._lock:
+                return self._books.get(token_id)
+                
+        self._last_rest_fetch_time[token_id] = now
         url = f"https://clob.polymarket.com/book?token_id={token_id}"
         headers = {
             "Accept": "application/json",
@@ -284,7 +338,8 @@ class ClobBookCache:
                 self._books[token_id] = book
             return book
         except Exception as e:
-            logger.warning(f"CLOB REST book fetch failed for {token_id}: {e}")
+            err_msg = str(e) or type(e).__name__
+            logger.warning(f"CLOB REST book fetch failed for {token_id}: {type(e).__name__} ({err_msg})")
             return None
 
     async def place_limit_order(
@@ -294,33 +349,108 @@ class ClobBookCache:
         price: float,
         size: float,
         order_type: str = "GTC",
-    ) -> Optional[str]:
+    ) -> Optional[tuple[str, float, float]]:
         """
-        Place a limit order. Returns order_id string or None on failure.
+        Place a limit order.
+        Returns (order_id, filled_shares, fill_price) or None on failure.
+        fill_price is the actual avg fill price reported by the CLOB; falls back
+        to the submitted limit price if the field is absent.
         Must only be called in live mode.
         """
         if not self.client:
             logger.error("CLOB: Cannot place order — client not authenticated")
             return None
         try:
-            from py_clob_client.clob_types import OrderArgs, OrderType
-            order_type_enum = OrderType.GTC if order_type == "GTC" else OrderType.FOK
-            args = OrderArgs(
+            from py_clob_client_v2.clob_types import OrderArgsV2, OrderType
+            if order_type == "GTC":
+                order_type_enum = OrderType.GTC
+            elif order_type in ("IOC", "FAK"):
+                order_type_enum = OrderType.FAK
+            else:
+                order_type_enum = OrderType.FOK
+            # Polymarket CLOB precision constraints:
+            # 1. Taker amount (shares) supports max 4 decimals.
+            # 2. Maker amount (cost in USD = size * price) supports max 2 decimals.
+            target_usd = size * price
+            target_k = int(round(target_usd * 100))
+            valid_shares = None
+            for i in range(200):
+                for sign in (1, -1):
+                    k = target_k + sign * i
+                    if k <= 0:
+                        continue
+                    shares = round((k / 100.0) / price, 4)
+                    cost = shares * price
+                    if abs(round(cost, 2) - cost) < 1e-9 and abs(cost - (k / 100.0)) < 1e-9:
+                        valid_shares = shares
+                        break
+                if valid_shares is not None:
+                    break
+
+            if valid_shares is not None:
+                size = valid_shares
+            else:
+                size = round(size, 4)
+            price = round(price, 4)
+
+            args = OrderArgsV2(
                 token_id=token_id,
                 price=price,
                 size=size,
                 side=side,
             )
             loop = asyncio.get_event_loop()
+            signed_order = await loop.run_in_executor(
+                None,
+                lambda: self.client.create_order(args)
+            )
             resp = await loop.run_in_executor(
                 None,
-                lambda: self.client.create_and_post_order(args, order_type=order_type_enum)
+                 lambda: self.client.post_order(signed_order, order_type_enum)
             )
             order_id = resp.get("orderID") or resp.get("order_id")
-            logger.success(f"CLOB: Order placed | {side} {size} @ {price} | token={token_id[:8]}... | id={order_id}")
-            return order_id
+            if not order_id:
+                return None
+
+            # Verify actual fill status for IOC/FAK orders
+            if order_type_enum == OrderType.FAK or order_type_enum == OrderType.FOK:
+                await asyncio.sleep(0.15)  # wait 150ms for order matching to process
+                order_details = await loop.run_in_executor(
+                    None,
+                    lambda: self.client.get_order(order_id)
+                )
+                size_matched = float(order_details.get("size_matched") or 0.0)
+                if size_matched <= 0.0:
+                    logger.info(f"CLOB: FOK/IOC order expired with 0 fills | {side} {size:.2f} shares @ {price:.3f} | id={order_id}")
+                    return None
+                # Capture actual avg fill price; fall back to limit price if field absent
+                fill_price = float(
+                    order_details.get("avg_price")
+                    or order_details.get("price")
+                    or price
+                )
+                logger.success(
+                    f"CLOB: Order filled | {side} {size_matched:.4f} shares "
+                    f"@ fill={fill_price:.4f} (limit={price:.3f}) | token={token_id[:8]}... | id={order_id}"
+                )
+                return order_id, size_matched, fill_price
+
+            # GTC: no immediate fill confirmation; assume filled at limit price
+            logger.success(f"CLOB: Order placed | {side} {size:.2f} shares @ {price:.3f} | token={token_id[:8]}... | id={order_id}")
+            return order_id, size, price
         except Exception as e:
-            logger.error(f"CLOB: Order placement failed: {e}")
+            err_msg = str(e)
+            if "maker address not allowed" in err_msg or "deposit wallet flow" in err_msg:
+                logger.error(
+                    f"CLOB: Order placement failed: {e}\n"
+                    "👉 Polymarket requires the deposit wallet flow for this account. Please update your environment variables (.env):\n"
+                    "  1. Set POLYMARKET_SIGNATURE_TYPE=1 (or 3 for POLY_1271 / Privy)\n"
+                    "  2. Set POLYMARKET_FUNDER=<your Polymarket deposit/proxy wallet address>"
+                )
+            elif any(x in err_msg for x in ("fully filled or killed", "couldn't be fully filled", "FAK", "IOC")):
+                logger.info(f"CLOB: FOK/IOC order not filled (price moved or spread changed) | {side} {size:.2f} shares @ {price:.3f}")
+            else:
+                logger.error(f"CLOB: Order placement failed: {e}")
             return None
 
     async def cancel_order(self, order_id: str) -> bool:
