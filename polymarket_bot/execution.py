@@ -116,6 +116,8 @@ async def _execute_live(
     actual_size_usd = 0.0
     fill_price_yes: Optional[float] = None
     fill_price_no: Optional[float] = None
+    shares_yes: Optional[float] = None
+    shares_no: Optional[float] = None
 
     if signal.buy_yes and risk.size_usd_yes > 0:
         # IOC orders must be priced >= best_ask to fill; mid-price sits below ask and is always killed
@@ -131,6 +133,7 @@ async def _execute_live(
         if res:
             order_id, filled_shares, fill_price_yes = res
             placed_orders.append(("YES", order_id))
+            shares_yes = filled_shares
             actual_size_usd += filled_shares * fill_price_yes  # use real fill price
 
     if signal.buy_no and risk.size_usd_no > 0:
@@ -146,6 +149,7 @@ async def _execute_live(
         if res:
             order_id, filled_shares, fill_price_no = res
             placed_orders.append(("NO", order_id))
+            shares_no = filled_shares
             actual_size_usd += filled_shares * fill_price_no  # use real fill price
 
     if not placed_orders:
@@ -165,6 +169,8 @@ async def _execute_live(
         entry_price_no=signal.entry_price_no,
         fill_price_yes=fill_price_yes,
         fill_price_no=fill_price_no,
+        shares_yes=shares_yes,
+        shares_no=shares_no,
         size_usd=actual_size_usd,
         window_start=market.window_start,
         window_end=market.window_end,
@@ -301,13 +307,15 @@ async def _sell_position_live(pos_dict: dict) -> Optional[float]:
     entry_no = pos_dict.get("fill_price_no") or pos_dict.get("entry_price_no") or 0.5
     token_id_yes = pos_dict.get("token_id_yes", "")
     token_id_no = pos_dict.get("token_id_no", "")
+    shares_yes = pos_dict.get("shares_yes")
+    shares_no = pos_dict.get("shares_no")
 
     weighted_fill: float = 0.0
     total_usd: float = 0.0
 
-    async def _do_sell(token_id: str, entry_price: float, leg_usd: float) -> Optional[float]:
+    async def _do_sell(token_id: str, entry_price: float, leg_usd: float, exact_shares: Optional[float] = None) -> Optional[float]:
         """Place IOC sell for one leg; return fill price or None."""
-        if not token_id or leg_usd <= 0:
+        if not token_id:
             return None
         book = await clob_cache.get_book(token_id)
         if book is None:
@@ -315,7 +323,7 @@ async def _sell_position_live(pos_dict: dict) -> Optional[float]:
         best_bid = book.best_bid if book else None
         # Sell limit: at best_bid - 0.01 to be aggressive; floor at 0.01
         limit_price = max(0.01, round((best_bid or entry_price) - 0.01, 4))
-        shares = round(leg_usd / entry_price, 4)
+        shares = exact_shares if exact_shares is not None else round(leg_usd / entry_price, 4)
         if shares <= 0:
             return None
         res = await clob_cache.place_limit_order(
@@ -332,7 +340,7 @@ async def _sell_position_live(pos_dict: dict) -> Optional[float]:
 
     if side in ("YES", "BOTH"):
         leg_usd = size_usd / 2 if side == "BOTH" else size_usd
-        fp = await _do_sell(token_id_yes, entry_yes, leg_usd)
+        fp = await _do_sell(token_id_yes, entry_yes, leg_usd, exact_shares=shares_yes)
         if fp is not None:
             weighted_fill += fp * leg_usd
             total_usd += leg_usd
@@ -341,7 +349,7 @@ async def _sell_position_live(pos_dict: dict) -> Optional[float]:
 
     if side in ("NO", "BOTH"):
         leg_usd = size_usd / 2 if side == "BOTH" else size_usd
-        fp = await _do_sell(token_id_no, entry_no, leg_usd)
+        fp = await _do_sell(token_id_no, entry_no, leg_usd, exact_shares=shares_no)
         if fp is not None:
             weighted_fill += fp * leg_usd
             total_usd += leg_usd

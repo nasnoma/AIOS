@@ -71,6 +71,8 @@ class OpenPosition:
     status: str = "open"      # open | closed | expired
     fill_price_yes: Optional[float] = None   # actual fill price in live mode (vs signal mid)
     fill_price_no: Optional[float] = None
+    shares_yes: Optional[float] = None       # actual filled shares (live mode) to prevent sell balance mismatch
+    shares_no: Optional[float] = None
 
 
 @dataclass
