@@ -374,16 +374,19 @@ class ClobBookCache:
             target_usd = size * price
             target_k = int(round(target_usd * 100))
             valid_shares = None
+            # Polymarket validates maker_amount using integer arithmetic:
+            # shares_units × price_units must be divisible by 1_000_000
+            # (where units = value × 10000). Float round() comparisons fail for
+            # prices like 0.51 or 0.525 due to floating-point residuals.
+            price_units = round(price * 10000)
             for i in range(200):
                 for sign in (1, -1):
                     k = target_k + sign * i
                     if k <= 0:
                         continue
                     shares = round((k / 100.0) / price, 4)
-                    # Check: shares × price rounds to exactly k/100 at 2 decimal places.
-                    # Use round() comparison, not exact float equality — prices like 0.525
-                    # produce floating-point residuals that would always fail a < 1e-9 test.
-                    if round(shares * price, 2) == round(k / 100.0, 2):
+                    shares_units = round(shares * 10000)
+                    if (shares_units * price_units) % 1_000_000 == 0:
                         valid_shares = shares
                         break
                 if valid_shares is not None:
