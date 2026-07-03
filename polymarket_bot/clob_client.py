@@ -371,32 +371,54 @@ class ClobBookCache:
             # Polymarket CLOB precision constraints:
             # 1. Taker amount (shares) supports max 4 decimals.
             # 2. Maker amount (cost in USD = size * price) supports max 2 decimals.
-            target_usd = size * price
-            target_k = int(round(target_usd * 100))
-            valid_shares = None
-            # Polymarket validates maker_amount using integer arithmetic:
-            # shares_units × price_units must be divisible by 1_000_000
-            # (where units = value × 10000). Float round() comparisons fail for
-            # prices like 0.51 or 0.525 due to floating-point residuals.
-            price_units = round(price * 10000)
-            for i in range(200):
-                for sign in (1, -1):
-                    k = target_k + sign * i
-                    if k <= 0:
-                        continue
-                    shares = round((k / 100.0) / price, 4)
-                    shares_units = round(shares * 10000)
-                    if (shares_units * price_units) % 1_000_000 == 0:
-                        valid_shares = shares
+            # (which means shares_units × price_units must be divisible by 1_000_000, where units = value × 10000).
+            
+            if side == "SELL":
+                # Sells: size (shares) is fixed to avoid leaving fractional shares behind.
+                # Adjust the limit price slightly to meet the 2dp maker amount constraint.
+                target_price_units = round(price * 10000)
+                shares_units = round(size * 10000)
+                valid_price = None
+                for i in range(500):
+                    for sign in (-1, 1):  # prefer slightly lower limit price to guarantee execution
+                        p_units = target_price_units + sign * i
+                        p = round(p_units / 10000.0, 4)
+                        if p <= 0:
+                            continue
+                        price_units = round(p * 10000)
+                        if (shares_units * price_units) % 1_000_000 == 0:
+                            valid_price = p
+                            break
+                    if valid_price is not None:
+                        break
+                if valid_price is not None:
+                    price = valid_price
+                else:
+                    price = round(price, 4)
+                size = round(size, 4)
+            else:
+                # Buys: price is fixed. Adjust the shares size to meet the 2dp maker amount constraint.
+                target_usd = size * price
+                target_k = int(round(target_usd * 100))
+                valid_shares = None
+                price_units = round(price * 10000)
+                for i in range(200):
+                    for sign in (1, -1):
+                        k = target_k + sign * i
+                        if k <= 0:
+                            continue
+                        shares = round((k / 100.0) / price, 4)
+                        shares_units = round(shares * 10000)
+                        if (shares_units * price_units) % 1_000_000 == 0:
+                            valid_shares = shares
+                            break
+                    if valid_shares is not None:
                         break
                 if valid_shares is not None:
-                    break
-
-            if valid_shares is not None:
-                size = valid_shares
-            else:
-                size = round(size, 4)
-            price = round(price, 4)
+                    size = valid_shares
+                else:
+                    size = round(size, 4)
+                price = round(price, 4)
 
             args = OrderArgsV2(
                 token_id=token_id,
