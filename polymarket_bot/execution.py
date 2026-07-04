@@ -208,10 +208,39 @@ async def resolve_expired_positions(current_window_start: int, feed) -> None:
         window_end = pos_dict.get("window_end", 0)
 
         # --- Check if we should trigger resolution/close ---
+        trigger_close = False
         if settings.is_live:
             # Live mode: close/sell 25 seconds BEFORE window_end
             time_remaining = window_end - time.time()
-            if time_remaining > 25.0:
+            if time_remaining <= 25.0:
+                trigger_close = True
+            else:
+                # Early Take Profit Check
+                side = pos_dict.get("side")
+                token_id = pos_dict.get("token_id_yes") if side == "YES" else pos_dict.get("token_id_no")
+                entry_price = pos_dict.get("fill_price_yes") if side == "YES" else pos_dict.get("fill_price_no")
+                
+                if token_id and entry_price:
+                    # Look up in-memory book first
+                    book = await clob_cache.get_book(token_id)
+                    if not book:
+                        try:
+                            book = await clob_cache.fetch_book_rest(token_id)
+                        except Exception:
+                            pass
+                    
+                    if book and book.best_bid:
+                        current_bid = book.best_bid
+                        profit_pct = (current_bid - entry_price) / entry_price
+                        if profit_pct >= settings.take_profit_pct:
+                            logger.success(
+                                f"🎯 Early profit-taking triggered for {pos_dict['asset']} {side}: "
+                                f"current_bid={current_bid:.3f} entry_price={entry_price:.3f} "
+                                f"({profit_pct:+.1%})"
+                            )
+                            trigger_close = True
+            
+            if not trigger_close:
                 continue  # Too early, keep position open
         else:
             # Paper mode: resolve only after the window has officially ended

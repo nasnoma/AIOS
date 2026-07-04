@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     max_daily_loss_usd: float = 100.0            # Circuit breaker: halt after $100 loss/day
     max_acceptable_slippage: float = 0.01
     min_pool_liquidity_usd: float = 2000.0
+    take_profit_pct: float = 0.12                # Take profit early if we reach 12% gain
 
     # ── Strategy Parameters ────────────────────────────────────────
     spread_arb_threshold: float = 0.98           # Buy both legs if YES+NO sum < this
