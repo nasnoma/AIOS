@@ -203,8 +203,8 @@ class TestRiskAgent:
             decision=Signal.BUY, confidence=85, agreement=7, disagreement=1,
             weighted_score=0.85, reasoning="Test", agent_reports=[], approved=True,
         )
-        # Use a high portfolio heat (e.g. 0.20) to exceed the max_portfolio_heat threshold (currently 0.15)
-        decision = evaluate(verdict, snap, current_portfolio_heat=0.20)  # above limit
+        # Use a high portfolio heat (e.g. 0.30) to exceed the max_portfolio_heat threshold (currently 0.25)
+        decision = evaluate(verdict, snap, current_portfolio_heat=0.30)  # above limit
         assert not decision.approved
 
     @patch("trading_engine.data.market_data.build_snapshot", side_effect=RuntimeError("Unit test fallback"))
@@ -705,7 +705,16 @@ class TestWalkForward:
         }, index=dates)
         
         # Base weights
-        base = DEFAULT_WEIGHTS.copy()
+        base = {
+            "trend": 1.0,
+            "momentum": 1.0,
+            "volume": 1.0,
+            "volatility": 1.0,
+            "structure": 1.0,
+            "orderflow": 1.0,
+            "sentiment": 1.0,
+            "macro": 1.0
+        }
         optimized = optimize_weights_for_window(df, "BTC/USDT", "crypto", "4h", 0, 30, base, forward_candles=5)
         
         # Verify optimization boundaries and existence of key quant weights

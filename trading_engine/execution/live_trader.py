@@ -1079,6 +1079,15 @@ def update_prices(current_prices: dict[str, float]):
             # Apply trailing stop ratchet
             _apply_trailing_stop(pos, price)
 
+            # Explicit 50% profit-taking check
+            profit_pct = (price - pos.entry_price) / pos.entry_price if pos.direction == "long" else (pos.entry_price - price) / pos.entry_price
+            if profit_pct >= 0.50:
+                logger.info(f"🎯 50% profit target hit for {pos.symbol} (current price={price:.4f}, entry={pos.entry_price:.4f})")
+                _cancel_broker_stop_loss(pos)
+                _cancel_broker_take_profit(pos)
+                _close_position(portfolio, pos, price, "closed")
+                continue
+
             if pos.direction == "long":
                 if price <= pos.stop_loss:
                     if not pos.sl_order_id:

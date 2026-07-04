@@ -307,15 +307,41 @@ def _apply_trailing_stop(pos: Position, price: float) -> None:
 
 @locked
 def update_prices(current_prices: dict[str, float]):
-    """Check if any open positions hit SL or TP. Applies ATR trailing stop ratchet first."""
+    """Check if any open positions hit SL or TP, or exceed max hold time. Applies ATR trailing stop ratchet first."""
     portfolio = _load_state()
-    for pos in portfolio.open_positions:
+    from datetime import datetime, timezone
+    
+    for pos in list(portfolio.open_positions):
         price = current_prices.get(pos.symbol)
         if not price:
             continue
 
+        # Check if position exceeded max hold time (time-based exit)
+        if settings.max_hold_time_minutes > 0 and pos.opened_at:
+            try:
+                # Remove Z and handle timezone
+                clean_str = pos.opened_at.replace("Z", "+00:00")
+                opened_dt = datetime.fromisoformat(clean_str)
+                if opened_dt.tzinfo is None:
+                    opened_dt = opened_dt.replace(tzinfo=timezone.utc)
+                now_dt = datetime.now(timezone.utc)
+                elapsed_min = (now_dt - opened_dt).total_seconds() / 60.0
+                if elapsed_min >= settings.max_hold_time_minutes:
+                    logger.info(f"⏳ Time-based exit triggered for {pos.symbol} (held {elapsed_min:.1f}m >= {settings.max_hold_time_minutes}m)")
+                    _close_position(portfolio, pos, price, "closed")
+                    continue
+            except Exception as e:
+                logger.warning(f"Error checking time-based exit for {pos.symbol}: {e}")
+
         # Apply trailing stop ratchet before SL/TP check
         _apply_trailing_stop(pos, price)
+
+        # Explicit 50% profit-taking check
+        profit_pct = (price - pos.entry_price) / pos.entry_price if pos.direction == "long" else (pos.entry_price - price) / pos.entry_price
+        if profit_pct >= 0.50:
+            logger.info(f"🎯 50% profit target hit for {pos.symbol} (current price={price:.4f}, entry={pos.entry_price:.4f})")
+            _close_position(portfolio, pos, price, "closed")
+            continue
 
         if pos.direction == "long":
             if price <= pos.stop_loss:

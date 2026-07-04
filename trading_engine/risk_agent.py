@@ -491,8 +491,9 @@ def evaluate(
     # Risk-based position size: never risk more than max_risk_per_trade
     risk_based_size = max_risk_per_trade / stop_loss_pct
     kelly_size = kelly
+    max_pos_pct = _rp.get("max_position_pct", 0.25)
     # Take the minimum of kelly and risk-based cap
-    position_size_pct = min(kelly_size, risk_based_size, 0.10)  # hard cap 10% of account
+    position_size_pct = min(kelly_size, risk_based_size, max_pos_pct)
 
     # ── Confidence-Weighted Position Sizing ────────────────
     # Scale size by judge confidence: high conviction → larger, borderline → smaller.
@@ -534,8 +535,8 @@ def evaluate(
         position_size_usd = account * position_size_pct
         max_loss_usd = position_size_usd * stop_loss_pct
 
-    # Enforce a minimum size of $20.0 to prevent $0 alerts/orders and maintain consistency
-    min_size_usd = 20.0
+    # Enforce a minimum size of $50.0 to prevent small/dust alerts/orders and maintain consistency
+    min_size_usd = 50.0
     if position_size_usd < min_size_usd:
         position_size_usd = min_size_usd
         position_size_pct = position_size_usd / account if account > 0 else 0.0
