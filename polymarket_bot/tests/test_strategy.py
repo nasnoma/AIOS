@@ -205,9 +205,9 @@ def test_no_signal_when_books_missing():
     assert signal.signal_type == SignalType.NO_SIGNAL
 
 
-def test_strong_momentum_override_triggers():
+def test_strong_momentum_override_no_longer_bypasses_prob_check():
     cfg = _cfg(momentum_threshold_usd=15.0, min_confidence=0.70)
-    # YES=0.60 (below min_confidence 0.70) but momentum=+35.0 (>= 2x threshold of 30.0) -> triggers!
+    # YES=0.60 (below min_confidence 0.70) but momentum=+35.0 (>= 2x threshold of 30.0) -> now blocked!
     signal = evaluate_signals(
         asset="BTC",
         book_yes=_make_book(0.60),
@@ -217,8 +217,7 @@ def test_strong_momentum_override_triggers():
         remaining_s=180,
         cfg=cfg,
     )
-    assert signal.signal_type == SignalType.MOMENTUM_LONG
-    assert signal.confidence > 0.0
+    assert signal.signal_type == SignalType.NO_SIGNAL
 
 
 def test_strong_momentum_override_fails_if_momentum_below_double_threshold():
@@ -253,10 +252,10 @@ def test_min_signal_confidence_blocks_trade():
     assert signal.signal_type == SignalType.NO_SIGNAL
 
 
-def test_min_signal_confidence_bypassed_by_strong_momentum():
-    cfg = _cfg(momentum_threshold_usd=10.0, min_confidence=0.55, min_signal_confidence=0.35)
-    # YES=0.56, but momentum is +25.0 (>= 2x threshold 20.0) -> strong momentum!
-    # combined_confidence = (0.833 + 0.02)/2 = 0.42 (which is > 0.35, but even if it was < 0.35 it would trigger)
+def test_min_signal_confidence_enforced_strictly_under_strong_momentum():
+    cfg = _cfg(momentum_threshold_usd=10.0, min_confidence=0.55, min_signal_confidence=0.50)
+    # YES=0.56, momentum is +25.0 (strong momentum!)
+    # combined_confidence = 0.4278 (< min_signal_confidence 0.50) -> blocked!
     signal = evaluate_signals(
         asset="BTC",
         book_yes=_make_book(0.56),
@@ -266,5 +265,4 @@ def test_min_signal_confidence_bypassed_by_strong_momentum():
         remaining_s=180,
         cfg=cfg,
     )
-    assert signal.signal_type == SignalType.MOMENTUM_LONG
-    assert signal.confidence < 0.35
+    assert signal.signal_type == SignalType.NO_SIGNAL

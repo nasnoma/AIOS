@@ -69,6 +69,7 @@ def evaluate_signals(
     elapsed_s: float,
     remaining_s: float,
     cfg: Settings,
+    cvd_delta: Optional[float] = None,
 ) -> Signal:
     """
     Main strategy evaluation function.
@@ -125,8 +126,15 @@ def evaluate_signals(
     if momentum_usd is None:
         return _no
 
+    # Scale momentum threshold based on the asset price (BTC vs ETH)
+    threshold = cfg.momentum_threshold_usd
+    if asset == "ETH":
+        # Scale proportionally (e.g. ~$2.13 for ETH if BTC threshold is $80.00)
+        threshold = round(cfg.momentum_threshold_usd * (1600.0 / 60000.0), 2)
+        threshold = max(5.00, threshold)  # Require at least $5.00 move on ETH
+
     abs_momentum = abs(momentum_usd)
-    if abs_momentum < cfg.momentum_threshold_usd:
+    if abs_momentum < threshold:
         return _no
 
     # ── Time-decay weight ───────────────────────────────────────────────────
@@ -135,49 +143,66 @@ def evaluate_signals(
     # Weight rises linearly from 0.3 at 10% elapsed → 1.0 at 80%+ elapsed.
     window_duration = elapsed_s + remaining_s
     pct_elapsed = elapsed_s / window_duration if window_duration > 0 else 0.0
-    if pct_elapsed < 0.10:
-        return _no  # Too early — insufficient price discovery
-    time_weight = min(1.0, max(0.3, (pct_elapsed - 0.10) / 0.70))
+    
+    if window_duration <= 600.0:
+        # Short windows (5-10m): no time-decay, early entries are better
+        time_weight = 1.0
+    else:
+        if pct_elapsed < 0.10:
+            return _no  # Too early — insufficient price discovery
+        time_weight = min(1.0, max(0.3, (pct_elapsed - 0.10) / 0.70))
 
     # Determine which side is favoured by momentum
     if momentum_usd > 0:
-        # Rising BTC → UP/YES leg favoured → check if YES is underpriced
+        # Rising asset → UP/YES leg favoured → check if YES is underpriced
         signal_type = SignalType.MOMENTUM_LONG
         entry_price = mid_yes
         implied_prob = mid_yes  # YES price ≈ implied probability of UP
     else:
-        # Falling BTC → DOWN/NO leg favoured → check if NO is underpriced
+        # Falling asset → DOWN/NO leg favoured → check if NO is underpriced
         signal_type = SignalType.MOMENTUM_SHORT
         entry_price = mid_no
         implied_prob = mid_no   # NO price ≈ implied probability of DOWN
 
     # Tighter Filters Live Guardrail:
-    # 1. For BTC, momentum must be at least 15.0
-    if asset == "BTC" and abs_momentum < 15.0:
-        return _no
-    # 2. Favoured leg price (implied prob) must be at least 0.56 (i.e. YES >= 0.56 or YES <= 0.44)
-    if implied_prob < 0.56:
+    # 1. Momentum must be at least the asset threshold (already filtered above)
+    # 2. Favoured leg price (implied prob) must be at least 0.50 (i.e. YES >= 0.50 or YES <= 0.50)
+    if implied_prob < 0.50:
         return _no
 
-    # Strong momentum override: bypass prob check if momentum is massive (>= 2x threshold)
-    is_strong_momentum = abs_momentum >= (cfg.momentum_threshold_usd * 2.0)
-    if implied_prob < cfg.min_confidence and not is_strong_momentum:
-        return _no  # Market doesn't agree strongly enough unless momentum is extreme
+    # Enforce minimum implied probability (min_confidence) strictly to filter out coin flips
+    if implied_prob < cfg.min_confidence:
+        return _no  # Market doesn't agree strongly enough
     if entry_price > cfg.max_entry_price:
         return _no  # Entry price too high — limited upside
 
     # Confidence: momentum strength × time-decay weight × probability alignment
-    momentum_confidence = min(1.0, abs_momentum / (cfg.momentum_threshold_usd * 3))
+    momentum_confidence = min(1.0, abs_momentum / (threshold * 3))
     if implied_prob >= cfg.min_confidence:
         prob_confidence = (implied_prob - cfg.min_confidence) / (1.0 - cfg.min_confidence)
     else:
         prob_confidence = 0.0
-    # Apply time_weight: early signals are penalised, late-window signals get full score
+    # Apply time_weight: early signals are penalised on hourly, but not on short windows
     combined_confidence = round(((momentum_confidence + prob_confidence) / 2) * time_weight, 4)
 
-    # Filter by minimum signal confidence unless strong momentum override is active
-    if combined_confidence < cfg.min_signal_confidence and not is_strong_momentum:
+    # Enforce minimum signal confidence strictly
+    if combined_confidence < cfg.min_signal_confidence:
         return _no
+
+    # ── CVD Confirmation (optional boost/penalty) ───────────────────────────
+    # CVD direction should agree with momentum. Agreement boosts confidence;
+    # strong disagreement penalises it.
+    if cvd_delta is not None and cvd_delta != 0.0:
+        cvd_agrees = (momentum_usd > 0 and cvd_delta > 0) or (momentum_usd < 0 and cvd_delta < 0)
+        if cvd_agrees:
+            combined_confidence = min(1.0, combined_confidence * 1.25)
+        else:
+            combined_confidence = combined_confidence * 0.85
+        combined_confidence = round(combined_confidence, 4)
+
+        # Re-check minimum after CVD adjustment
+        if combined_confidence < cfg.min_signal_confidence and not is_strong_momentum:
+            return _no
 
     buy_yes = signal_type == SignalType.MOMENTUM_LONG
     buy_no = signal_type == SignalType.MOMENTUM_SHORT

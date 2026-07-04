@@ -12,7 +12,7 @@ ROOT_DIR = Path(__file__).parent.parent
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=ROOT_DIR / ".env",
+        env_file=[ROOT_DIR / ".env", Path(__file__).parent / ".env"],
         env_file_encoding="utf-8",
         extra="ignore",
     )
@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     # ── Polymarket / Polygon Wallet ────────────────────────────────
     polymarket_private_key: str = ""
     polymarket_funder: str = ""
-    polymarket_signature_type: int = 0         # 0=EOA/MetaMask  1=Magic Link/Proxy
+    polymarket_signature_type: int = 0         # 0=EOA, 1=POLY_PROXY (Magic), 2=POLY_GNOSIS_SAFE, 3=POLY_1271 (Privy/New)
 
     # ── LLM (OpenRouter) ───────────────────────────────────────────
     openrouter_api_key: str = ""
@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     max_concurrent_positions: int = 3          # Max open positions at one time
     max_daily_loss_usd: float = 100.0            # Circuit breaker: halt after $100 loss/day
     max_acceptable_slippage: float = 0.01
+    min_pool_liquidity_usd: float = 2000.0
 
     # ── Strategy Parameters ────────────────────────────────────────
     spread_arb_threshold: float = 0.98           # Buy both legs if YES+NO sum < this
@@ -52,7 +53,7 @@ class Settings(BaseSettings):
     min_signal_confidence: float = 0.35          # Min combined confidence
     max_entry_price: float = 0.95                # Don't buy shares above 95¢
     entry_window_min_s: int = 45               # Don't enter before 45s into a 5-min window
-    entry_window_max_s: int = 270              # Don't enter after 270s into a 5-min window
+    entry_window_max_s: int = 150              # Don't enter after 150s into a 5-min window
     momentum_lookback_s: int = 30              # BTC price lookback window for momentum calc
 
     # ── Bybit settings (required for price feed) ──────────────────
