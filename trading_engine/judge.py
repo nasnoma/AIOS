@@ -104,7 +104,11 @@ highlighting the strongest agreeing agents and any notable disagreements.
 Be specific about indicator values where mentioned."""
 
     try:
-        return call_llm(prompt)
+        raw = call_llm(prompt)
+        # Strip stray backslashes and control chars produced by malformed LLM responses
+        import re as _re
+        clean = _re.sub(r'[\\]{2,}', '', raw).strip()
+        return clean[:400] if len(clean) > 400 else clean
     except Exception as e:
         logger.warning(f"Judge LLM explanation failed: {e}")
 

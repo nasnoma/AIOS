@@ -711,7 +711,7 @@
   </div>
 
   <!-- Row 3: Markets & Evolution -->
-  <div class="dashboard-row-markets">
+  <div class="dashboard-row-markets" style="grid-template-columns: 1fr;">
     <!-- Market Status -->
     <div class="panel">
       <div class="panel-hd">
@@ -724,7 +724,7 @@
     </div>
 
     <!-- Evolution Tracker -->
-    <div class="panel">
+    <div class="panel" style="display:none;">
       <div class="panel-hd">
         <span>⚗️ Evolution History</span>
         <div class="panel-hd-right">
@@ -1168,7 +1168,7 @@ function renderFeed() {
         <div class="feed-title">${sig.symbol} ${badge} ${tfStr} ${entryStr}
           <small style="color:var(--text-3)">conf ${conf.toFixed(0)}%</small>
         </div>
-        <div class="feed-sub">${sig.reasoning || '—'}</div>
+        <div class="feed-sub">${(sig.reasoning || '—').replace(/[\\]+/g, '').slice(0, 120)}</div>
       </div>
       <div class="feed-meta">${time}</div>
     </div>`;
