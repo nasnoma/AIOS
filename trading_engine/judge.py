@@ -195,6 +195,9 @@ def evaluate(agents: list[AgentSignal], agent_weights: dict[str, float] = None, 
         min_agreement = live_params.get("min_agreement", settings.min_agent_agreement)
         min_confidence = live_params.get("min_avg_confidence", settings.min_avg_confidence)
 
+    # Cap min_agreement by the number of active/running agents to prevent deadlock (e.g. in simple ensemble mode)
+    min_agreement = min(len(agents), min_agreement)
+
     # Only average confidence of agents that agree with the winning direction
     # (excluding HOLD voters — their 60% confidence dilutes directional signals)
     agreeing_agents = [a for a in agents if a.signal == decision]
