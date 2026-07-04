@@ -1044,7 +1044,7 @@ def _apply_trailing_stop(pos: Position, price: float) -> None:
 
 
 def update_prices(current_prices: dict[str, float]):
-    """Check if any open positions hit SL or TP. Applies trailing stop ratchet first."""
+    """Check if any open positions hit SL or TP, or exceed max hold time. Applies trailing stop ratchet first."""
     with state_lock():
         # Sync with broker first to handle stop-out detection
         try:
@@ -1053,10 +1053,28 @@ def update_prices(current_prices: dict[str, float]):
             logger.warning(f"Failed to sync with broker before checking prices: {e}")
             
         portfolio = _load_state()
-        for pos in portfolio.open_positions:
+        from datetime import datetime, timezone
+
+        for pos in list(portfolio.open_positions):
             price = current_prices.get(pos.symbol)
             if not price:
                 continue
+
+            # Check if position exceeded max hold time (time-based exit)
+            if settings.max_hold_time_minutes > 0 and pos.opened_at:
+                try:
+                    clean_str = pos.opened_at.replace("Z", "+00:00")
+                    opened_dt = datetime.fromisoformat(clean_str)
+                    if opened_dt.tzinfo is None:
+                        opened_dt = opened_dt.replace(tzinfo=timezone.utc)
+                    now_dt = datetime.now(timezone.utc)
+                    elapsed_min = (now_dt - opened_dt).total_seconds() / 60.0
+                    if elapsed_min >= settings.max_hold_time_minutes:
+                        logger.info(f"⏳ Time-based exit triggered for {pos.symbol} (held {elapsed_min:.1f}m >= {settings.max_hold_time_minutes}m)")
+                        _close_position(portfolio, pos, price, "closed")
+                        continue
+                except Exception as e:
+                    logger.warning(f"Error checking time-based exit for {pos.symbol}: {e}")
 
             # Apply trailing stop ratchet
             _apply_trailing_stop(pos, price)
@@ -1610,8 +1628,22 @@ def sync_with_broker() -> bool:
                     logger.warning(f"Failed to fetch Bamboo US breakdown during sync: {e_us}")
                     cash_us, equity_us = 0.0, 0.0
                     
-                bamboo_cash = cash_ng + cash_us
-                bamboo_equity = equity_ng + equity_us
+                # Convert NGN cash/equity from NGX to USD
+                ngn_to_usd_rate = 1.0 / 1500.0  # Fallback
+                try:
+                    import requests
+                    resp_rate = requests.get("https://open.er-api.com/v6/latest/USD", timeout=3)
+                    if resp_rate.status_code == 200:
+                        rates = resp_rate.json().get("rates", {})
+                        ngn_rate = rates.get("NGN")
+                        if ngn_rate:
+                            ngn_to_usd_rate = 1.0 / float(ngn_rate)
+                            logger.info(f"Sync: Fetched NGN/USD rate: {1.0/ngn_to_usd_rate:.2f} NGN per USD")
+                except Exception as e_rate:
+                    logger.warning(f"Sync: Failed to fetch NGN/USD exchange rate: {e_rate}. Using fallback 1500.0")
+
+                bamboo_cash = (cash_ng * ngn_to_usd_rate) + cash_us
+                bamboo_equity = (equity_ng * ngn_to_usd_rate) + equity_us
                 
                 # C. Fetch NGX active holdings
                 try:

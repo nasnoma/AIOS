@@ -534,6 +534,13 @@ def evaluate(
         position_size_usd = account * position_size_pct
         max_loss_usd = position_size_usd * stop_loss_pct
 
+    # Enforce a minimum size of $20.0 to prevent $0 alerts/orders and maintain consistency
+    min_size_usd = 20.0
+    if position_size_usd < min_size_usd:
+        position_size_usd = min_size_usd
+        position_size_pct = position_size_usd / account if account > 0 else 0.0
+        max_loss_usd = position_size_usd * stop_loss_pct
+
     # Session Sizing Check: Crypto Peak Sessions Size Reduction
     session_multiplier = 1.0
     if is_crypto and not in_peak and getattr(settings, "crypto_peak_sessions_reduce_size", True):

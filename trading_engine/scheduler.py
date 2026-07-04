@@ -119,8 +119,11 @@ def run_signal_cycle():
     allocated_sizes = {sig.symbol: size for sig, size in allocations}
 
     for sig in signals:
-        # Send Telegram alert for any actionable signal (original behavior)
-        if sig.final_action in ("BUY", "SELL"):
+        # Check if we already have an open position in this asset to prevent duplicate/spam alerts
+        is_already_open = any(p.symbol == sig.symbol for p in portfolio.open_positions)
+        
+        # Send Telegram alert for any actionable signal, but skip if already open to prevent duplicate spam
+        if sig.final_action in ("BUY", "SELL") and not is_already_open:
             try:
                 send_signal_alert(sig)
             except Exception as e:
