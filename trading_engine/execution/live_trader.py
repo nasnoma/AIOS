@@ -511,6 +511,13 @@ def open_trade(
       - Plain stock tickers (AAPL, TSLA)                             → place_alpaca_market_order
         • Long only
     """
+    # Guard: a zero/negative stop_loss causes immediate position close (price >= 0 always).
+    # Compute a 1% fallback stop if the risk_agent didn't supply one.
+    if stop_loss <= 0:
+        sl_pct = 0.01
+        stop_loss = entry * (1 + sl_pct) if direction == "short" else entry * (1 - sl_pct)
+        logger.warning(f"stop_loss was 0 for {symbol} {direction} — using 1% fallback: {stop_loss:.4f}")
+
     from trading_engine.market_hours import classify_symbol, AssetClass, market_status
 
     asset_class = classify_symbol(symbol)
@@ -970,13 +977,18 @@ def _update_broker_stop_loss(pos: Position) -> Optional[str]:
 def _apply_trailing_stop(pos: Position, price: float) -> None:
     """
     ATR trailing stop ratchet — called before SL/TP check.
-    Tightened and progressively ratchets to protect profits and move to breakeven sooner.
+    Progressively ratchets to protect profits and move to breakeven.
     Updates the broker-side Stop Loss order on ratchet trigger.
     """
     if pos.atr <= 0:
         return
 
-    atr = pos.atr
+    # Use the actual stop distance as the ratchet unit.
+    # Raw 5m ATR can be sub-penny (e.g. 0.05 SOL), causing 0.6*ATR = 0.03 SOL to
+    # trigger a breakeven move after normal price noise — killing trades before TP.
+    # The stop_distance (which is >= 1% of entry after our floor) gives proper scaling.
+    stop_dist = abs(pos.stop_loss - pos.entry_price)
+    atr = max(pos.atr, stop_dist)
     ratcheted = False
 
     if pos.direction == "long":
