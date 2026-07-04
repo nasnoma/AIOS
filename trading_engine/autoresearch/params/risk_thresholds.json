@@ -2,6 +2,7 @@
   "kelly_fraction": 0.198,
   "max_portfolio_heat": 0.25,
   "atr_stop_multiplier": 1.5,
+  "min_stop_pct": 0.01,
   "corr_soft_threshold": 0.73,
   "corr_hard_threshold": 0.9,
   "max_position_pct": 0.25

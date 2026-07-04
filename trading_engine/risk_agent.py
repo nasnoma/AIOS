@@ -462,6 +462,18 @@ def evaluate(
     atr_multiplier = _rp.get("atr_stop_multiplier", settings.atr_multiplier)
     stop_distance = atr * atr_multiplier
 
+    # Enforce minimum stop distance of 1% of entry price.
+    # ATR on 5m bars can be as low as 0.07%, which puts SL inside the spread
+    # and makes TP unreachably small. 1% floor gives meaningful SL/TP levels.
+    min_stop_pct = _rp.get("min_stop_pct", 0.01)  # default 1%
+    min_stop_distance = entry * min_stop_pct
+    if stop_distance < min_stop_distance:
+        logger.info(
+            f"ATR stop ({stop_distance:.4f}) below 1% minimum ({min_stop_distance:.4f}). "
+            f"Widening stop to {min_stop_pct:.1%} of entry."
+        )
+        stop_distance = min_stop_distance
+
     if verdict.decision == Signal.BUY:
         stop_loss = entry - stop_distance
         stop_loss_pct = stop_distance / entry
@@ -535,8 +547,8 @@ def evaluate(
         position_size_usd = account * position_size_pct
         max_loss_usd = position_size_usd * stop_loss_pct
 
-    # Enforce a minimum size of $50.0 to prevent small/dust alerts/orders and maintain consistency
-    min_size_usd = 50.0
+    # Enforce a minimum size of $100.0 so that wins at 3:1 R:R produce ~$3 per trade
+    min_size_usd = 100.0
     if position_size_usd < min_size_usd:
         position_size_usd = min_size_usd
         position_size_pct = position_size_usd / account if account > 0 else 0.0

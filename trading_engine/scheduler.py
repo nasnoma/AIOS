@@ -22,6 +22,11 @@ from trading_engine.alerts.telegram_bot import send_signal_alert
 
 scheduler = BlockingScheduler(timezone="UTC")
 
+# Tracks the UTC timestamp of the last stop-out per symbol.
+# Prevents re-entry into the same ranging market for 30 minutes.
+_stop_cooldowns: dict[str, datetime] = {}
+STOP_COOLDOWN_MINUTES = 30
+
 
 def send_heartbeat():
     """Send heartbeat to the API server."""
@@ -65,7 +70,7 @@ def _allocate_cash_proportionally(signals: list, available_cash: float) -> list[
         else:
             size = sig.position_size_usd or 0.0
         if size <= 0:
-            size = 20.0
+            size = 100.0
         requested_sizes.append(size)
 
     total_requested = sum(requested_sizes)
@@ -142,6 +147,13 @@ def run_signal_cycle():
             if any(p.symbol == sig.symbol for p in portfolio.open_positions):
                 logger.info(f"⏭️ Skipping execution for {sig.symbol}: position already open.")
                 continue
+
+            # Post-stopout cooldown: skip if last stop-out was within 30 minutes
+            cooldown_until = _stop_cooldowns.get(sig.symbol)
+            if cooldown_until and datetime.now(timezone.utc) < cooldown_until:
+                remaining = (cooldown_until - datetime.now(timezone.utc)).seconds // 60
+                logger.info(f"⏳ Skipping {sig.symbol}: on stop-out cooldown for {remaining}m more.")
+                continue
             
             max_positions = settings.max_concurrent_positions
             if len(portfolio.open_positions) >= max_positions:
@@ -203,7 +215,21 @@ def monitor_positions():
             logger.warning(f"Price monitor fetch error for crypto: {e}")
 
     if current_prices:
+        # Snapshot open symbols before price update to detect stop-outs
+        symbols_before = {pos.symbol for pos in open_positions}
         trader.update_prices(current_prices)
+        # Check which positions were stopped out (status "stopped") and impose cooldown
+        portfolio_after = trader._load_state()
+        symbols_after = {pos.symbol for pos in portfolio_after.open_positions}
+        closed_symbols = symbols_before - symbols_after
+        for sym in closed_symbols:
+            # Determine if it was a stop-out by checking closed trades history
+            recent_closed = [t for t in portfolio_after.closed_trades if t.get("symbol") == sym]
+            if recent_closed and recent_closed[-1].get("exit_reason") == "stopped":
+                cooldown_until = datetime.now(timezone.utc) + timedelta(minutes=STOP_COOLDOWN_MINUTES)
+                _stop_cooldowns[sym] = cooldown_until
+                logger.info(f"🛑 Stop-out cooldown set for {sym}: blocked for {STOP_COOLDOWN_MINUTES}m until {cooldown_until.strftime('%H:%M UTC')}")
+
 
 
 def run_bounty_hunter_cycle():
