@@ -92,7 +92,7 @@ class Settings(BaseSettings):
     # ── Session Awareness & Volatility Filters ──────
     crypto_peak_sessions_only: bool = False
     crypto_peak_sessions_reduce_size: bool = True
-    min_atr_pct: float = 0.15
+    min_atr_pct: float = 0.05
     min_bb_width: float = 0.015
 
     # ── Confidence-Weighted Position Sizing ──────────
