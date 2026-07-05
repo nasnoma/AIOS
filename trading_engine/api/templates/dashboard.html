@@ -1085,8 +1085,9 @@ function renderTrades(trades) {
     const dir    = t.direction === 'long'
       ? '<span style="color:var(--green)">Long</span>'
       : '<span style="color:var(--red)">Short</span>';
-    const rr = t.stop_loss && t.take_profit && t.entry_price
-      ? Math.abs((t.take_profit - t.entry_price) / (t.entry_price - t.stop_loss)).toFixed(1)
+    const initSL = t.initial_stop_loss || t.stop_loss;
+    const rr = initSL && t.take_profit && t.entry_price && Math.abs(t.entry_price - initSL) > 0.0001
+      ? Math.abs((t.take_profit - t.entry_price) / (t.entry_price - initSL)).toFixed(1)
       : '—';
     const statusMap = { closed:'✅ closed', stopped:'🛑 stopped', open:'🔄 open' };
     const opened    = t.opened_at ? new Date(t.opened_at).toLocaleDateString('en',{month:'short',day:'numeric'}) : '—';

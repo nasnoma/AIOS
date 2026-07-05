@@ -501,3 +501,79 @@ class TestNextSteps:
         # Cleanup
         if lock_file.exists():
             lock_file.unlink()
+
+
+class TestTrailingStopRatchet:
+    @patch("trading_engine.execution.live_trader._update_broker_stop_loss")
+    def test_apply_trailing_stop_long(self, mock_update_sl):
+        mock_update_sl.return_value = "new_sl_id"
+        from trading_engine.execution.live_trader import Position, _apply_trailing_stop
+
+        # Long position: Entry=100.0, Stop=90.0 (stop_dist=10.0), InitialStop=90.0, ATR=5.0
+        pos = Position(
+            symbol="BTC/USDT",
+            direction="long",
+            entry_price=100.0,
+            size_usd=1000.0,
+            stop_loss=90.0,
+            take_profit=130.0,
+            opened_at="2026-07-05T00:00:00+00:00",
+            atr=5.0,
+            initial_stop_loss=90.0,
+            trailing_high=100.0
+        )
+
+        # 1. Price moves to 104.0 (0.8×ATR profit). No ratchet (needs 1.0×ATR, which is 10.0 since stop_dist=10.0 > atr=5.0)
+        _apply_trailing_stop(pos, 104.0)
+        assert pos.stop_loss == 90.0
+        assert not mock_update_sl.called
+
+        # 2. Price moves to 111.0 (1.1×ATR profit). Moves to breakeven (100.0)
+        _apply_trailing_stop(pos, 111.0)
+        assert pos.stop_loss == 100.0
+        assert mock_update_sl.called
+        mock_update_sl.reset_mock()
+
+        # 3. Test that stop_dist doesn't shrink when stop_loss changes.
+        # Price moves to 116.0 (1.6×ATR profit). Moves to entry + 0.5×ATR (100.0 + 5.0 = 105.0)
+        _apply_trailing_stop(pos, 116.0)
+        assert pos.stop_loss == 105.0
+        assert mock_update_sl.called
+        mock_update_sl.reset_mock()
+
+    @patch("trading_engine.execution.live_trader._update_broker_stop_loss")
+    def test_apply_trailing_stop_short(self, mock_update_sl):
+        mock_update_sl.return_value = "new_sl_id"
+        from trading_engine.execution.live_trader import Position, _apply_trailing_stop
+
+        # Short position: Entry=100.0, Stop=110.0 (stop_dist=10.0), InitialStop=110.0, ATR=5.0
+        pos = Position(
+            symbol="BTC/USDT",
+            direction="short",
+            entry_price=100.0,
+            size_usd=1000.0,
+            stop_loss=110.0,
+            take_profit=70.0,
+            opened_at="2026-07-05T00:00:00+00:00",
+            atr=5.0,
+            initial_stop_loss=110.0,
+            trailing_low=100.0
+        )
+
+        # 1. Price moves to 96.0 (0.8×ATR profit). No ratchet
+        _apply_trailing_stop(pos, 96.0)
+        assert pos.stop_loss == 110.0
+        assert not mock_update_sl.called
+
+        # 2. Price moves to 89.0 (1.1×ATR profit). Moves to breakeven (100.0)
+        _apply_trailing_stop(pos, 89.0)
+        assert pos.stop_loss == 100.0
+        assert mock_update_sl.called
+        mock_update_sl.reset_mock()
+
+        # 3. Price moves to 84.0 (1.6×ATR profit). Moves to entry - 0.5×ATR (100.0 - 5.0 = 95.0)
+        _apply_trailing_stop(pos, 84.0)
+        assert pos.stop_loss == 95.0
+        assert mock_update_sl.called
+        mock_update_sl.reset_mock()
+

@@ -102,6 +102,8 @@ class Position:
     trailing_low: Optional[float] = None    # best price seen since entry (short)
     sl_order_id: Optional[str] = None       # ID of the stop loss order on the broker/exchange
     tp_order_id: Optional[str] = None       # ID of the take profit order on the broker/exchange
+    initial_stop_loss: Optional[float] = None
+
 
 
 @dataclass
@@ -742,6 +744,7 @@ def open_trade(
             trailing_low=fill_price if direction == "short" else None,
             sl_order_id=sl_order_id,
             tp_order_id=tp_order_id,
+            initial_stop_loss=stop_loss,
         )
         portfolio.positions.append(pos)
         portfolio.cash -= size_usd
@@ -983,11 +986,11 @@ def _apply_trailing_stop(pos: Position, price: float) -> None:
     if pos.atr <= 0:
         return
 
-    # Use the actual stop distance as the ratchet unit.
-    # Raw 5m ATR can be sub-penny (e.g. 0.05 SOL), causing 0.6*ATR = 0.03 SOL to
-    # trigger a breakeven move after normal price noise — killing trades before TP.
-    # The stop_distance (which is >= 1% of entry after our floor) gives proper scaling.
-    stop_dist = abs(pos.stop_loss - pos.entry_price)
+    # Use the stable initial stop distance as the ratchet unit.
+    # Raw 5m ATR can be sub-penny, causing a breakeven move after normal price noise.
+    # The initial_stop_loss ensures stop_dist remains constant and doesn't shrink when ratcheted.
+    init_sl = pos.initial_stop_loss if (getattr(pos, "initial_stop_loss", None) and pos.initial_stop_loss > 0) else pos.stop_loss
+    stop_dist = abs(init_sl - pos.entry_price)
     atr = max(pos.atr, stop_dist)
     ratcheted = False
 
@@ -1008,15 +1011,15 @@ def _apply_trailing_stop(pos: Position, price: float) -> None:
                 logger.info(f"🔒 Trailing stop ratchet (2×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → {new_sl:.4f}")
                 pos.stop_loss = new_sl
                 ratcheted = True
-        elif profit_in_atr >= 1.2:
+        elif profit_in_atr >= 1.5:
             new_sl = pos.entry_price + 0.5 * atr
             if new_sl > pos.stop_loss:
-                logger.info(f"🔒 Trailing stop ratchet (1.2×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → {new_sl:.4f}")
+                logger.info(f"🔒 Trailing stop ratchet (1.5×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → {new_sl:.4f}")
                 pos.stop_loss = new_sl
                 ratcheted = True
-        elif profit_in_atr >= 0.6:
+        elif profit_in_atr >= 1.0:
             if pos.entry_price > pos.stop_loss:
-                logger.info(f"🔒 Trailing stop ratchet (0.6×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → breakeven {pos.entry_price:.4f}")
+                logger.info(f"🔒 Trailing stop ratchet (1.0×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → breakeven {pos.entry_price:.4f}")
                 pos.stop_loss = pos.entry_price
                 ratcheted = True
 
@@ -1037,15 +1040,15 @@ def _apply_trailing_stop(pos: Position, price: float) -> None:
                 logger.info(f"🔒 Trailing stop ratchet (2×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → {new_sl:.4f}")
                 pos.stop_loss = new_sl
                 ratcheted = True
-        elif profit_in_atr >= 1.2:
+        elif profit_in_atr >= 1.5:
             new_sl = pos.entry_price - 0.5 * atr
             if new_sl < pos.stop_loss:
-                logger.info(f"🔒 Trailing stop ratchet (1.2×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → {new_sl:.4f}")
+                logger.info(f"🔒 Trailing stop ratchet (1.5×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → {new_sl:.4f}")
                 pos.stop_loss = new_sl
                 ratcheted = True
-        elif profit_in_atr >= 0.6:
+        elif profit_in_atr >= 1.0:
             if pos.entry_price < pos.stop_loss:
-                logger.info(f"🔒 Trailing stop ratchet (0.6×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → breakeven {pos.entry_price:.4f}")
+                logger.info(f"🔒 Trailing stop ratchet (1.0×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → breakeven {pos.entry_price:.4f}")
                 pos.stop_loss = pos.entry_price
                 ratcheted = True
 
@@ -1432,7 +1435,8 @@ def sync_with_broker() -> bool:
                                         atr=atr_val,
                                         trailing_high=price,
                                         sl_order_id=sl_order_id,
-                                        tp_order_id=tp_order_id
+                                        tp_order_id=tp_order_id,
+                                        initial_stop_loss=stop_loss,
                                     ))
                             elif side == "sell":
                                 # Check if it closes an open long run
@@ -1496,7 +1500,8 @@ def sync_with_broker() -> bool:
                                         atr=atr_val,
                                         trailing_low=price,
                                         sl_order_id=sl_order_id,
-                                        tp_order_id=tp_order_id
+                                        tp_order_id=tp_order_id,
+                                        initial_stop_loss=stop_loss,
                                     ))
                                     
                         reconstructed_positions.extend(open_runs)
