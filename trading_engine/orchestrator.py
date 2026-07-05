@@ -43,17 +43,23 @@ class TradeSignal:
 
 
 def _run_agents_parallel(snap: MarketSnapshot) -> list[AgentSignal]:
-    """Run all 8 agents concurrently using thread pool."""
-    agent_fns = [
-        trend_agent.analyze,
-        momentum_agent.analyze,
-        volume_agent.analyze,
-        orderflow_agent.analyze,
-        volatility_agent.analyze,
-        structure_agent.analyze,
-        sentiment_agent.analyze,
-        macro_agent.analyze,
-    ]
+    """Run agents concurrently using thread pool."""
+    if settings.simple_ensemble_enabled:
+        agent_fns = [
+            momentum_agent.analyze,
+            structure_agent.analyze,
+        ]
+    else:
+        agent_fns = [
+            trend_agent.analyze,
+            momentum_agent.analyze,
+            volume_agent.analyze,
+            orderflow_agent.analyze,
+            volatility_agent.analyze,
+            structure_agent.analyze,
+            sentiment_agent.analyze,
+            macro_agent.analyze,
+        ]
 
     signals = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
@@ -110,6 +116,7 @@ def run(
     win_rate: float = 0.50,
     open_position_snaps: dict = None,   # symbol -> MarketSnapshot for correlation check
     daily_pnl_usd: float = 0.0,         # today's realized PnL for circuit-breaker check
+    account_size: Optional[float] = None,
 ) -> TradeSignal:
     """
     Full pipeline execution for one symbol.
@@ -197,6 +204,7 @@ def run(
         open_positions=open_positions,
         open_position_snaps=open_position_snaps or {},
         daily_pnl_usd=daily_pnl_usd,
+        account_size=account_size,
     )
 
     # Step 5: Final decision
@@ -273,6 +281,7 @@ def run_all_assets() -> list[TradeSignal]:
     portfolio_heat = status["portfolio_heat"] / 100
     open_pos_count = status["open_positions"]
     win_rate = status.get("win_rate", 50) / 100
+    account_size = status.get("account_size", settings.account_size)
 
     # Compute today's realized PnL for the circuit breaker
     daily_pnl = _get_daily_pnl(trader)
@@ -290,6 +299,7 @@ def run_all_assets() -> list[TradeSignal]:
                 win_rate=win_rate,
                 open_position_snaps=snap_cache,
                 daily_pnl_usd=daily_pnl,
+                account_size=account_size,
             )
             results.append(signal)
 

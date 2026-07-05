@@ -57,7 +57,7 @@ def _load_live_win_rate() -> float:
     return 0.50
 
 
-def _load_live_portfolio_state() -> tuple[float, int]:
+def _load_live_portfolio_state() -> tuple[float, int, float]:
     """Reads portfolio_heat and open_positions count from the appropriate state file."""
     try:
         import json
@@ -82,10 +82,10 @@ def _load_live_portfolio_state() -> tuple[float, int]:
                 total_risk += size * abs(entry - sl) / entry
                 
             portfolio_heat = total_risk / account_size if account_size > 0 else 0.0
-            return portfolio_heat, open_count
+            return portfolio_heat, open_count, account_size
     except Exception as e:
         logger.warning(f"Failed to load live portfolio state: {e}")
-    return 0.0, 0
+    return 0.0, 0, settings.account_size
 
 
 def get_latest_trading_date() -> str:
@@ -546,7 +546,7 @@ def run_bounty_hunt(
 
     all_candidates = crypto_candidates
     snap_cache = {**crypto_snaps}
-    portfolio_heat, open_count = _load_live_portfolio_state()
+    portfolio_heat, open_count, account_size = _load_live_portfolio_state()
     running_heat = portfolio_heat
     running_open_count = open_count
     results = []
@@ -585,6 +585,7 @@ def run_bounty_hunt(
                 portfolio_heat=running_heat,
                 open_positions=running_open_count,
                 win_rate=live_win_rate,
+                account_size=account_size,
             )
 
             # Update simulated running open_positions and portfolio_heat if signal is approved

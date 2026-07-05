@@ -126,23 +126,71 @@ class TestTrendAgent:
 
 class TestMomentumAgent:
     def test_strong_bullish_momentum(self):
+        from unittest.mock import patch
+        from trading_engine.config import settings
         from trading_engine.agents import momentum_agent
         snap = make_snapshot(rsi=65, stoch_rsi_k=70, stoch_rsi_d=60, roc=4.0)
-        result = momentum_agent.analyze(snap)
+        with patch.object(settings, "scalping_mode", False):
+            result = momentum_agent.analyze(snap)
         assert result.signal == Signal.BUY
 
     def test_overbought_caution(self):
+        from unittest.mock import patch
+        from trading_engine.config import settings
         from trading_engine.agents import momentum_agent
         snap = make_snapshot(rsi=82, stoch_rsi_k=90, stoch_rsi_d=88, roc=1.0)
-        result = momentum_agent.analyze(snap)
+        with patch.object(settings, "scalping_mode", False):
+            result = momentum_agent.analyze(snap)
         # Overbought: should be HOLD or SELL
         assert result.signal in (Signal.HOLD, Signal.SELL)
 
     def test_bearish_momentum(self):
+        from unittest.mock import patch
+        from trading_engine.config import settings
         from trading_engine.agents import momentum_agent
         snap = make_snapshot(rsi=35, stoch_rsi_k=25, stoch_rsi_d=30, roc=-4.0)
-        result = momentum_agent.analyze(snap)
+        with patch.object(settings, "scalping_mode", False):
+            result = momentum_agent.analyze(snap)
         assert result.signal == Signal.SELL
+
+    def test_scalping_uptrend_pullback(self):
+        from unittest.mock import patch
+        from trading_engine.config import settings
+        from trading_engine.agents import momentum_agent
+        # In a strong uptrend (close > ema200) and RSI is oversold/pullback (<40)
+        snap = make_snapshot(
+            close=100.0,
+            ema200=90.0,
+            rsi=35.0,
+            stoch_rsi_k=15.0,
+            stoch_rsi_d=10.0,
+            roc=-2.0
+        )
+        with patch.object(settings, "scalping_mode", True):
+            result = momentum_agent.analyze(snap)
+        # In scalping mode, an oversold pullback in an uptrend should trigger a BUY signal
+        assert result.signal == Signal.BUY
+        assert "pullback" in result.reason.lower()
+
+    def test_scalping_downtrend_rally(self):
+        from unittest.mock import patch
+        from trading_engine.config import settings
+        from trading_engine.agents import momentum_agent
+        # In a strong downtrend (close < ema200) and RSI is overbought/rally (>60)
+        snap = make_snapshot(
+            close=80.0,
+            ema200=90.0,
+            rsi=65.0,
+            stoch_rsi_k=85.0,
+            stoch_rsi_d=90.0,
+            roc=2.0
+        )
+        with patch.object(settings, "scalping_mode", True):
+            result = momentum_agent.analyze(snap)
+        # In scalping mode, an overbought rally in a downtrend should trigger a SELL signal
+        assert result.signal == Signal.SELL
+        assert "rally" in result.reason.lower()
+
 
 
 # ── Volatility Agent ───────────────────────────────────────

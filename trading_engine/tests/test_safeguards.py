@@ -265,6 +265,56 @@ def test_confidence_weighted_sizing():
                 "Thin stock (TRANSEXPR) should not exceed thick stock (MBENEFIT) sizing")
 
 
+def test_dynamic_account_size_scaling():
+    """
+    Asserts that passing a custom account_size to risk_evaluate scales the position
+    size in USD proportionally.
+    """
+    from unittest.mock import patch, MagicMock
+    from trading_engine.risk_agent import evaluate as risk_evaluate
+    from trading_engine.judge import JudgeVerdict, Signal
+    from trading_engine.data.market_data import MarketSnapshot
+    import pandas as pd
+
+    snap = MagicMock(spec=MarketSnapshot)
+    snap.symbol    = "NEAR/USDT"
+    snap.close     = 2.0
+    snap.atr       = 0.05
+    snap.bb_width  = 0.04
+    snap.timeframe = "5m"
+    snap.asset_type = "crypto"
+    snap.df = pd.DataFrame({"close": [2.0] * 60},
+                           index=pd.date_range("2025-01-01", periods=60))
+
+    bull_df = pd.DataFrame({"close": [100.0] * 220},
+                           index=pd.date_range("2023-01-01", periods=220))
+    base = dict(current_portfolio_heat=0.0, historical_win_rate=0.50,
+                open_positions=0, open_position_snaps=None, daily_pnl_usd=0.0)
+
+    verdict = JudgeVerdict(
+        decision=Signal.BUY, confidence=80.0, agreement=4, disagreement=2,
+        weighted_score=0.80, reasoning="Crypto Buy", agent_reports=[], approved=True)
+
+    with patch("trading_engine.data.market_data.load_historical_data", return_value=bull_df), \
+         patch.object(settings, "regime_filter_enabled", False), \
+         patch.object(settings, "account_size", 10000.0):
+
+        # Evaluate with default settings account size (10,000)
+        dec_default = risk_evaluate(verdict, snap, **base)
+        assert dec_default.approved, "Should be approved"
+
+        # Evaluate with 10x larger account size (100,000)
+        dec_large = risk_evaluate(verdict, snap, account_size=100000.0, **base)
+        assert dec_large.approved, "Should be approved"
+
+        # The calculated risk percentage (position_size_pct) should be the same
+        assert abs(dec_default.position_size_pct - dec_large.position_size_pct) < 1e-5
+
+        # The absolute size in USD should scale exactly 10x
+        assert abs(dec_large.position_size_usd - (dec_default.position_size_usd * 10.0)) < 1e-2
+
+
+
 def test_concurrency_lock(tmp_path):
     """Asserts that concurrent calls to open_trade for the same symbol are serialized and only one position is opened."""
     import json

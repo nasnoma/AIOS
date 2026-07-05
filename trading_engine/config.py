@@ -64,6 +64,11 @@ class Settings(BaseSettings):
     stop_loss_pct_max: float = 0.10
     max_concurrent_positions: int = 6
     crypto_use_5m_atr: bool = False
+    max_hold_time_minutes: int = 120
+    min_velocity_usd_30s: float = 8.0
+    simple_ensemble_enabled: bool = True
+    scalping_mode: bool = True
+
 
     # ── Self Healing ────────────────────────────────────────
     self_healing_consecutive_losses: int = Field(default=4, ge=2, le=4)

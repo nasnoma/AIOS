@@ -267,14 +267,16 @@ def evaluate(
     open_positions: int = 0,
     open_position_snaps: dict[str, MarketSnapshot] = None,  # symbol → snapshot for correlation check
     daily_pnl_usd: float = 0.0,            # today's realized PnL (negative = loss)
+    account_size: Optional[float] = None,
 ) -> RiskDecision:
     """
     Run full risk assessment. Returns RiskDecision with approved=True/False.
     """
     # ── Stage 3: Precise 5M Entry & ATR stop loss calculation ───────
     entry, atr = _get_5m_atr(snap)
-    account = settings.account_size
+    account = account_size if account_size is not None else settings.account_size
     max_risk_per_trade = settings.max_risk_per_trade
+
 
     # Load risk thresholds live from param file (optimizer can update without restart)
     _rp = _load_risk_params()
