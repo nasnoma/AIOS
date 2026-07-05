@@ -268,6 +268,7 @@ def evaluate(
     open_position_snaps: dict[str, MarketSnapshot] = None,  # symbol → snapshot for correlation check
     daily_pnl_usd: float = 0.0,            # today's realized PnL (negative = loss)
     account_size: Optional[float] = None,
+    closed_trades: Optional[list] = None,
 ) -> RiskDecision:
     """
     Run full risk assessment. Returns RiskDecision with approved=True/False.
@@ -276,6 +277,55 @@ def evaluate(
     entry, atr = _get_5m_atr(snap)
     account = account_size if account_size is not None else settings.account_size
     max_risk_per_trade = settings.max_risk_per_trade
+
+    # ── Stage 3.5: Two-Strike Rule ───────────────────────
+    # If the user has been stopped out twice on the same side/direction for the same symbol
+    # within the last 2 hours, we reject the trade.
+    if closed_trades and getattr(settings, "scalping_mode", True):
+        from datetime import datetime, timezone
+        import dateutil.parser
+        
+        stopped_strikes = 0
+        symbol = snap.symbol
+        side = verdict.decision.value # "BUY" or "SELL"
+        now = datetime.now(timezone.utc)
+        
+        for pos in closed_trades:
+            is_dict = isinstance(pos, dict)
+            pos_symbol = pos.get("symbol") if is_dict else getattr(pos, "symbol", "")
+            pos_status = pos.get("status") if is_dict else getattr(pos, "status", "")
+            pos_side = pos.get("side") if is_dict else getattr(pos, "side", "")
+            pos_closed_at = pos.get("closed_at") if is_dict else getattr(pos, "closed_at", None)
+            
+            if pos_symbol == symbol and pos_status == "stopped" and pos_side == side:
+                if pos_closed_at:
+                    try:
+                        if isinstance(pos_closed_at, str):
+                            dt_closed = dateutil.parser.isoparse(pos_closed_at)
+                        else:
+                            dt_closed = pos_closed_at
+                        if dt_closed.tzinfo is None:
+                            dt_closed = dt_closed.replace(tzinfo=timezone.utc)
+                        diff_hours = (now - dt_closed).total_seconds() / 3600.0
+                        if diff_hours <= 2.0:
+                            stopped_strikes += 1
+                    except Exception as parse_err:
+                        logger.warning(f"Failed to parse closed_at: {parse_err}")
+                        
+        if stopped_strikes >= 2:
+            logger.warning(f"  🚦 Two-strike rule veto: stopped out {stopped_strikes} times on {side} for {symbol} within the last 2 hours.")
+            return RiskDecision(
+                approved=False,
+                reason=(
+                    f"Two-strike rule veto: stopped out {stopped_strikes} times "
+                    f"on {side} for {symbol} within the last 2 hours. Walking away."
+                ),
+                position_size_pct=0, position_size_usd=0,
+                entry_price=entry, stop_loss=0, take_profit=0,
+                stop_loss_pct=0, take_profit_pct=0, risk_reward=0,
+                max_loss_usd=0, atr=atr,
+            )
+
 
 
     # Load risk thresholds live from param file (optimizer can update without restart)

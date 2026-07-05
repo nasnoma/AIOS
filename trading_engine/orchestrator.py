@@ -117,6 +117,7 @@ def run(
     open_position_snaps: dict = None,   # symbol -> MarketSnapshot for correlation check
     daily_pnl_usd: float = 0.0,         # today's realized PnL for circuit-breaker check
     account_size: Optional[float] = None,
+    closed_trades: Optional[list] = None,
 ) -> TradeSignal:
     """
     Full pipeline execution for one symbol.
@@ -205,6 +206,7 @@ def run(
         open_position_snaps=open_position_snaps or {},
         daily_pnl_usd=daily_pnl_usd,
         account_size=account_size,
+        closed_trades=closed_trades,
     )
 
     # Step 5: Final decision

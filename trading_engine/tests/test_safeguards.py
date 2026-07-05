@@ -371,3 +371,58 @@ def test_concurrency_lock(tmp_path):
         assert len(final_portfolio.open_positions) == 1
         assert final_portfolio.open_positions[0].symbol == symbol
 
+
+
+def test_two_strike_rule():
+    from unittest.mock import patch, MagicMock
+    from trading_engine.risk_agent import evaluate as risk_evaluate
+    from trading_engine.judge import JudgeVerdict, Signal
+    from trading_engine.data.market_data import MarketSnapshot
+    from datetime import datetime, timezone, timedelta
+    from trading_engine.config import settings
+    import pandas as pd
+
+    snap = MagicMock(spec=MarketSnapshot)
+    snap.symbol = "BTC/USDT"
+    snap.close = 60000.0
+    snap.atr = 1000.0
+    snap.bb_width = 0.04
+    snap.timeframe = "5m"
+    snap.asset_type = "crypto"
+    
+    verdict = JudgeVerdict(
+        decision=Signal.BUY, confidence=80.0, agreement=4, disagreement=0,
+        weighted_score=0.80, reasoning="Test", agent_reports=[], approved=True
+    )
+    
+    # 2 stopped out trades on BUY/Long side within 2 hours
+    closed_trades = [
+        {
+            "symbol": "BTC/USDT",
+            "status": "stopped",
+            "side": "BUY",
+            "closed_at": (datetime.now(timezone.utc) - timedelta(minutes=30)).isoformat()
+        },
+        {
+            "symbol": "BTC/USDT",
+            "status": "stopped",
+            "side": "BUY",
+            "closed_at": (datetime.now(timezone.utc) - timedelta(minutes=60)).isoformat()
+        }
+    ]
+    
+    with patch.object(settings, "scalping_mode", True), \
+         patch.object(settings, "regime_filter_enabled", False):
+        # Matching symbol: should veto
+        snap.symbol = "BTC/USDT"
+        dec = risk_evaluate(verdict, snap, closed_trades=closed_trades)
+        assert not dec.approved
+        assert "Two-strike rule veto" in dec.reason
+
+        # Different symbol: should approve
+        snap.symbol = "ETH/USDT"
+        dec = risk_evaluate(verdict, snap, closed_trades=closed_trades)
+        assert dec.approved
+
+
+

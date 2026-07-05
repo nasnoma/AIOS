@@ -57,8 +57,8 @@ def _load_live_win_rate() -> float:
     return 0.50
 
 
-def _load_live_portfolio_state() -> tuple[float, int, float]:
-    """Reads portfolio_heat and open_positions count from the appropriate state file."""
+def _load_live_portfolio_state() -> tuple[float, int, float, list]:
+    """Reads portfolio_heat, open_positions count, account_size and closed_trades from the state file."""
     try:
         import json
         from pathlib import Path
@@ -71,6 +71,7 @@ def _load_live_portfolio_state() -> tuple[float, int, float]:
             positions = s.get("positions", [])
             open_positions = [p for p in positions if p.get("status") == "open"]
             open_count = len(open_positions)
+            closed_trades = s.get("closed_trades", [])
             
             account_size = float(s.get("account_size", settings.account_size))
             
@@ -82,10 +83,11 @@ def _load_live_portfolio_state() -> tuple[float, int, float]:
                 total_risk += size * abs(entry - sl) / entry
                 
             portfolio_heat = total_risk / account_size if account_size > 0 else 0.0
-            return portfolio_heat, open_count, account_size
+            return portfolio_heat, open_count, account_size, closed_trades
     except Exception as e:
         logger.warning(f"Failed to load live portfolio state: {e}")
-    return 0.0, 0, settings.account_size
+    return 0.0, 0, settings.account_size, []
+
 
 
 def get_latest_trading_date() -> str:
@@ -546,7 +548,7 @@ def run_bounty_hunt(
 
     all_candidates = crypto_candidates
     snap_cache = {**crypto_snaps}
-    portfolio_heat, open_count, account_size = _load_live_portfolio_state()
+    portfolio_heat, open_count, account_size, closed_trades = _load_live_portfolio_state()
     running_heat = portfolio_heat
     running_open_count = open_count
     results = []
@@ -586,6 +588,7 @@ def run_bounty_hunt(
                 open_positions=running_open_count,
                 win_rate=live_win_rate,
                 account_size=account_size,
+                closed_trades=closed_trades,
             )
 
             # Update simulated running open_positions and portfolio_heat if signal is approved

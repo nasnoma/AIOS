@@ -73,7 +73,86 @@ def _detect_fvg(df):
     return fvg_bullish, fvg_bearish
 
 
+def _get_ny_daily_range_bounds(df_4h) -> tuple[float, float] | None:
+    """
+    Finds the high and low of the first 4-hour candle of the current day (New York time).
+    """
+    import pytz
+    from datetime import datetime, timezone
+    try:
+        df_ny = df_4h.copy()
+        if df_ny.index.tz is None:
+            df_ny.index = df_ny.index.tz_localize("UTC")
+        df_ny.index = df_ny.index.tz_convert("America/New_York")
+        
+        ny_tz = pytz.timezone("America/New_York")
+        current_time_ny = datetime.now(timezone.utc).astimezone(ny_tz)
+        current_date_ny = current_time_ny.date()
+        
+        df_today = df_ny[df_ny.index.date == current_date_ny]
+        if len(df_today) == 0:
+            # Fallback to the latest date in the dataframe
+            latest_date = df_ny.index[-1].date()
+            df_today = df_ny[df_ny.index.date == latest_date]
+            
+        if len(df_today) > 0:
+            df_today = df_today.sort_index()
+            first_candle = df_today.iloc[0]
+            return float(first_candle["high"]), float(first_candle["low"])
+    except Exception as e:
+        import loguru
+        loguru.logger.warning(f"Error computing NY daily range bounds: {e}")
+    return None
+
+
 def analyze(snap: MarketSnapshot) -> AgentSignal:
+    from trading_engine.config import settings
+    
+    # Check if we are in scalping mode and timeframe is short (5m or 15m)
+    is_scalping = getattr(settings, "scalping_mode", True) and snap.timeframe in ("5m", "15m")
+    
+    if is_scalping and snap.htf_4h_snap:
+        bounds = _get_ny_daily_range_bounds(snap.htf_4h_snap.df)
+        if bounds:
+            range_high, range_low = bounds
+            df_5m = snap.df
+            
+            # Check the recent 3 candles (including the current incomplete/closed one) for sweeps
+            if len(df_5m) >= 4:
+                recent = df_5m.tail(4)
+                # Bullish Sweep: low of any of the last 3 candles went below range_low, and current close is above range_low
+                swept_low = any(recent["low"].iloc[i] < range_low for i in range(3))
+                closed_above_low = recent["close"].iloc[-1] > range_low
+                
+                # Bearish Sweep: high of any of the last 3 candles went above range_high, and current close is below range_high
+                swept_high = any(recent["high"].iloc[i] > range_high for i in range(3))
+                closed_below_high = recent["close"].iloc[-1] < range_high
+                
+                if swept_low and closed_above_low:
+                    return AgentSignal(
+                        agent="structure",
+                        signal=Signal.BUY,
+                        confidence=90.0,
+                        reason=f"Bullish range sweep: swept daily low ({range_low:.4f}) and closed back inside",
+                        raw_data={"range_high": range_high, "range_low": range_low, "sweep": "bullish"}
+                    )
+                elif swept_high and closed_below_high:
+                    return AgentSignal(
+                        agent="structure",
+                        signal=Signal.SELL,
+                        confidence=90.0,
+                        reason=f"Bearish range sweep: swept daily high ({range_high:.4f}) and closed back inside",
+                        raw_data={"range_high": range_high, "range_low": range_low, "sweep": "bearish"}
+                    )
+                else:
+                    return AgentSignal(
+                        agent="structure",
+                        signal=Signal.HOLD,
+                        confidence=85.0,
+                        reason=f"No daily range sweep detected (boundaries: High={range_high:.4f}, Low={range_low:.4f})",
+                        raw_data={"range_high": range_high, "range_low": range_low, "sweep": None}
+                    )
+
     score = 0
     max_score = 6
     reasons = []

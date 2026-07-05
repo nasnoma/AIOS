@@ -191,6 +191,29 @@ class TestMomentumAgent:
         assert result.signal == Signal.SELL
         assert "rally" in result.reason.lower()
 
+    def test_scalping_sma_macd_bullish(self):
+        from unittest.mock import patch
+        from trading_engine.config import settings
+        from trading_engine.agents import momentum_agent
+        
+        df = pd.DataFrame({
+            "close": [100.0, 101.0, 102.0, 103.0],
+            "MACD_12_26_9": [0.1, 0.2, 0.3, 0.4]
+        })
+        snap = make_snapshot(
+            close=103.0,
+            sma100=95.0,
+            macd=0.4,
+            macd_signal=0.2,
+            df=df,
+            timeframe="5m"
+        )
+        with patch.object(settings, "scalping_mode", True):
+            result = momentum_agent.analyze(snap)
+        assert result.signal == Signal.BUY
+        assert "Bullish momentum alignment" in result.reason
+
+
 
 
 # ── Volatility Agent ───────────────────────────────────────
@@ -841,6 +864,39 @@ class TestStructureAgent:
             # The signal should be boosted to BUY because of the proximity to HTF support
             assert result.signal == Signal.BUY
             assert "HTF Support nearby" in result.reason
+
+    def test_ny_range_sweep_bullish(self):
+        from trading_engine.agents import structure_agent
+        from trading_engine.config import settings
+        
+        # 4H HTF DataFrame representing the daily candle
+        idx_4h = pd.date_range("2026-07-05 04:00:00", periods=5, freq="4h", tz="UTC")
+        df_4h = pd.DataFrame({
+            "high": [100.0, 102.0, 101.0, 100.0, 99.0],
+            "low": [90.0, 91.0, 90.0, 89.0, 88.0],
+            "close": [95.0, 96.0, 95.0, 94.0, 93.0],
+        }, index=idx_4h)
+        htf_snap = make_snapshot(close=93.0, df=df_4h, timeframe="4h")
+        
+        # 5m timeframe data: low wicks below 90.0 (e.g. 89.5), then closes back above 90.0 (e.g. 91.0)
+        idx_5m = pd.date_range("2026-07-05 12:00:00", periods=4, freq="5m", tz="UTC")
+        df_5m = pd.DataFrame({
+            "open": [91.0, 91.0, 91.0, 91.0],
+            "high": [92.0, 92.0, 92.0, 92.0],
+            "low": [90.5, 89.5, 90.5, 90.5], # 2nd candle wicks below 90.0 range_low
+            "close": [91.0, 91.0, 91.0, 91.0],
+            "volume": [100.0, 100.0, 100.0, 100.0]
+        }, index=idx_5m)
+        
+        snap = make_snapshot(close=91.0, df=df_5m, timeframe="5m")
+        snap.htf_4h_snap = htf_snap
+        
+        with patch.object(settings, "scalping_mode", True):
+            result = structure_agent.analyze(snap)
+            
+        assert result.signal == Signal.BUY
+        assert "Bullish range sweep" in result.reason
+
 
 
 

@@ -41,10 +41,13 @@ class MarketSnapshot:
     close: float = 0.0
     volume: float = 0.0
 
-    # Trend indicators
     ema20: float = 0.0
     ema50: float = 0.0
     ema200: float = 0.0
+    sma100: float = 0.0
+    macd: float = 0.0
+    macd_signal: float = 0.0
+
 
     # Momentum
     rsi: float = 0.0
@@ -477,6 +480,35 @@ def compute_indicators(df: pd.DataFrame, overrides: dict | None = None) -> pd.Da
     df["EMA_50"]  = df.get(f"EMA_{ema_slow}",  df.get("EMA_50",  df["close"]))
     df["EMA_200"] = df.get(f"EMA_{ema_trend}", df.get("EMA_200", df["close"]))
 
+    # SMA 100
+    if len(df) >= 100:
+        df["SMA_100"] = df.ta.sma(length=100)
+    else:
+        df["SMA_100"] = df["close"]
+
+    # MACD
+    if len(df) >= 26:
+        try:
+            macd_df = df.ta.macd(fast=12, slow=26, signal=9)
+            if macd_df is not None:
+                df["MACD_12_26_9"] = macd_df["MACD_12_26_9"]
+                df["MACDs_12_26_9"] = macd_df["MACDs_12_26_9"]
+                df["MACDh_12_26_9"] = macd_df["MACDh_12_26_9"]
+            else:
+                df["MACD_12_26_9"] = 0.0
+                df["MACDs_12_26_9"] = 0.0
+                df["MACDh_12_26_9"] = 0.0
+        except Exception as macd_err:
+            logger.warning(f"Failed to calculate MACD: {macd_err}")
+            df["MACD_12_26_9"] = 0.0
+            df["MACDs_12_26_9"] = 0.0
+            df["MACDh_12_26_9"] = 0.0
+    else:
+        df["MACD_12_26_9"] = 0.0
+        df["MACDs_12_26_9"] = 0.0
+        df["MACDh_12_26_9"] = 0.0
+
+
     # Momentum
     if len(df) >= rsi_p:
         df.ta.rsi(length=rsi_p, append=True)
@@ -737,6 +769,10 @@ def build_snapshot(symbol: str, timeframe: str = None, is_htf: bool = False) -> 
         ema20=float(latest.get("EMA_20", 0) or 0),
         ema50=float(latest.get("EMA_50", 0) or 0),
         ema200=float(latest.get("EMA_200", 0) or 0),
+        sma100=float(latest.get("SMA_100", latest["close"]) or latest["close"]),
+        macd=float(latest.get("MACD_12_26_9", 0.0) or 0.0),
+        macd_signal=float(latest.get("MACDs_12_26_9", 0.0) or 0.0),
+
         rsi=float(latest.get("RSI_14", 50) or 50),
         stoch_rsi_k=float(latest.get("STOCHRSIk_14_14_3_3", 50) or 50),
         stoch_rsi_d=float(latest.get("STOCHRSId_14_14_3_3", 50) or 50),
