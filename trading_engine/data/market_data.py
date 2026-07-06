@@ -491,9 +491,27 @@ def compute_indicators(df: pd.DataFrame, overrides: dict | None = None) -> pd.Da
         try:
             macd_df = df.ta.macd(fast=12, slow=26, signal=9)
             if macd_df is not None:
-                df["MACD_12_26_9"] = macd_df["MACD_12_26_9"]
-                df["MACDs_12_26_9"] = macd_df["MACDs_12_26_9"]
-                df["MACDh_12_26_9"] = macd_df["MACDh_12_26_9"]
+                macd_col = None
+                signal_col = None
+                hist_col = None
+                for col in macd_df.columns:
+                    c_lower = str(col).lower()
+                    if "macds" in c_lower or "signal" in c_lower:
+                        signal_col = col
+                    elif "macdh" in c_lower or "hist" in c_lower:
+                        hist_col = col
+                    elif "macd" in c_lower:
+                        macd_col = col
+
+                if macd_col and signal_col and hist_col:
+                    df["MACD_12_26_9"] = macd_df[macd_col]
+                    df["MACDs_12_26_9"] = macd_df[signal_col]
+                    df["MACDh_12_26_9"] = macd_df[hist_col]
+                else:
+                    logger.warning(f"MACD column mismatch in pandas-ta output: {macd_df.columns.tolist()}")
+                    df["MACD_12_26_9"] = 0.0
+                    df["MACDs_12_26_9"] = 0.0
+                    df["MACDh_12_26_9"] = 0.0
             else:
                 df["MACD_12_26_9"] = 0.0
                 df["MACDs_12_26_9"] = 0.0
@@ -507,6 +525,7 @@ def compute_indicators(df: pd.DataFrame, overrides: dict | None = None) -> pd.Da
         df["MACD_12_26_9"] = 0.0
         df["MACDs_12_26_9"] = 0.0
         df["MACDh_12_26_9"] = 0.0
+
 
 
     # Momentum
