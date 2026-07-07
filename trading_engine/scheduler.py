@@ -124,18 +124,14 @@ def run_signal_cycle():
     allocated_sizes = {sig.symbol: size for sig, size in allocations}
 
     for sig in signals:
-        # Check if we already have an open position in this asset to prevent duplicate/spam alerts
-        is_already_open = any(p.symbol == sig.symbol for p in portfolio.open_positions)
-        
-        # Send Telegram alert for any actionable signal, but skip if already open to prevent duplicate spam
-        if sig.final_action in ("BUY", "SELL") and not is_already_open:
-            try:
-                send_signal_alert(sig)
-            except Exception as e:
-                logger.warning(f"Telegram alert failed: {e}")
-
         # Execute trade if it was approved and allocated
         if sig.final_action in ("BUY", "SELL") and settings.trading_mode != "signal_only":
+            # Check if we already have an open position in this asset
+            is_already_open = any(p.symbol == sig.symbol for p in portfolio.open_positions)
+            if is_already_open:
+                logger.info(f"⏭️ Skipping execution for {sig.symbol}: position already open.")
+                continue
+
             if sig.symbol not in allocated_sizes:
                 logger.info(f"⏭️ Skipping execution for {sig.symbol}: not allocated/scaled below minimum.")
                 continue
@@ -143,11 +139,6 @@ def run_signal_cycle():
             size_needed = allocated_sizes[sig.symbol]
             direction = "long" if sig.final_action == "BUY" else "short"
             
-            # Prevent duplicate concurrent positions on the same asset
-            if any(p.symbol == sig.symbol for p in portfolio.open_positions):
-                logger.info(f"⏭️ Skipping execution for {sig.symbol}: position already open.")
-                continue
-
             # Post-stopout cooldown: skip if last stop-out was within 30 minutes
             cooldown_until = _stop_cooldowns.get(sig.symbol)
             if cooldown_until and datetime.now(timezone.utc) < cooldown_until:
@@ -176,6 +167,21 @@ def run_signal_cycle():
             if pos:
                 # Reload portfolio to reflect new position & cash balance in subsequent iterations
                 portfolio = trader._load_state()
+                # Only send Telegram alert when a position was actually opened
+                try:
+                    send_signal_alert(sig)
+                except Exception as e:
+                    logger.warning(f"Telegram alert failed: {e}")
+
+        elif sig.final_action in ("BUY", "SELL") and settings.trading_mode == "signal_only":
+            # In signal_only mode: always alert (no execution path)
+            is_already_open = any(p.symbol == sig.symbol for p in portfolio.open_positions)
+            if not is_already_open:
+                try:
+                    send_signal_alert(sig)
+                except Exception as e:
+                    logger.warning(f"Telegram alert failed: {e}")
+
 
     logger.info(f"✅ Cycle complete. {sum(1 for s in signals if s.final_action != 'NO_TRADE')} actionable signals.")
 

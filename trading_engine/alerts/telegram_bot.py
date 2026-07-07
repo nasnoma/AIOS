@@ -33,6 +33,7 @@ def send_signal_alert(signal):
     emoji = "🟢" if action == "BUY" else "🔴"
     verdict = signal.verdict
     risk = signal.risk
+    total_agents = len(signal.agent_signals) if signal.agent_signals else 2
 
     text = (
         f"{emoji} <b>{action}: {signal.symbol}</b>\n"
@@ -44,12 +45,13 @@ def send_signal_alert(signal):
         f"📊 Risk/Reward: {risk.get('risk_reward', 0):.1f}:1\n"
         f"💼 Size: ${risk.get('position_size_usd', 0):,.0f}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"🤖 Agreement: {verdict.get('agreement', 0)}/8 agents\n"
+        f"🤖 Agreement: {verdict.get('agreement', 0)}/{total_agents} agents\n"
         f"📈 Confidence: {verdict.get('confidence', 0):.0f}%\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"💬 {signal.reasoning[:200]}..."
     )
     send_message(text)
+
 
 
 def send_portfolio_update(status: dict):
