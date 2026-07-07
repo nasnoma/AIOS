@@ -23,9 +23,9 @@ from trading_engine.utils.http import get_with_retry
 from trading_engine.data.market_data import MarketSnapshot
 
 
-# ── Symbol cooldown cache (fix #4: no duplicate scans within 30 min) ──────────
+# ── Symbol cooldown cache (fix #4: no duplicate scans within 5 min) ──────────
 _SCAN_COOLDOWN: dict[str, float] = {}   # symbol -> last_scan_timestamp
-_COOLDOWN_SECONDS = 30 * 60             # 30 minutes
+_COOLDOWN_SECONDS = 5 * 60             # 5 minutes (matches scan interval)
 
 
 def _is_on_cooldown(symbol: str) -> bool:

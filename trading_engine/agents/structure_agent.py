@@ -144,14 +144,8 @@ def analyze(snap: MarketSnapshot) -> AgentSignal:
                         reason=f"Bearish range sweep: swept daily high ({range_high:.4f}) and closed back inside",
                         raw_data={"range_high": range_high, "range_low": range_low, "sweep": "bearish"}
                     )
-                else:
-                    return AgentSignal(
-                        agent="structure",
-                        signal=Signal.HOLD,
-                        confidence=85.0,
-                        reason=f"No daily range sweep detected (boundaries: High={range_high:.4f}, Low={range_low:.4f})",
-                        raw_data={"range_high": range_high, "range_low": range_low, "sweep": None}
-                    )
+                # No sweep detected — fall through to normal structure analysis
+                # (range sweep is a high-conviction entry boost, not a hard gate)
 
     score = 0
     max_score = 6

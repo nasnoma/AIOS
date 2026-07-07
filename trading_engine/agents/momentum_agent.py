@@ -21,46 +21,31 @@ def analyze(snap: MarketSnapshot) -> AgentSignal:
         macd = snap.macd
         macd_signal = snap.macd_signal
         
-        # Check previous MACD value to determine direction of movement
-        macd_prev = 0.0
-        if "MACD_12_26_9" in snap.df.columns and len(snap.df) > 1:
-            macd_prev = float(snap.df["MACD_12_26_9"].iloc[-2])
-            
-        macd_rising = macd > macd_prev
-        macd_falling = macd < macd_prev
+        # Bullish confluence: price above SMA100 AND MACD above signal line
+        bullish_sma = sma100 and snap.close > sma100
+        bullish_macd = macd is not None and macd_signal is not None and macd > macd_signal
         
-        # Bullish confluence
-        bullish_sma = snap.close > sma100
-        bullish_macd = macd > macd_signal and macd_rising
-        
-        # Bearish confluence
-        bearish_sma = snap.close < sma100
-        bearish_macd = macd < macd_signal and macd_falling
+        # Bearish confluence: price below SMA100 AND MACD below signal line
+        bearish_sma = sma100 and snap.close < sma100
+        bearish_macd = macd is not None and macd_signal is not None and macd < macd_signal
         
         if bullish_sma and bullish_macd:
             return AgentSignal(
                 agent="momentum",
                 signal=Signal.BUY,
                 confidence=90.0,
-                reason=f"Bullish momentum alignment: price above SMA100 ({sma100:.2f}) & MACD > Signal and rising",
-                raw_data={"sma100": sma100, "macd": macd, "macd_signal": macd_signal, "macd_prev": macd_prev}
+                reason=f"Bullish momentum alignment: price above SMA100 ({sma100:.2f}) & MACD > Signal",
+                raw_data={"sma100": sma100, "macd": macd, "macd_signal": macd_signal}
             )
         elif bearish_sma and bearish_macd:
             return AgentSignal(
                 agent="momentum",
                 signal=Signal.SELL,
                 confidence=90.0,
-                reason=f"Bearish momentum alignment: price below SMA100 ({sma100:.2f}) & MACD < Signal and falling",
-                raw_data={"sma100": sma100, "macd": macd, "macd_signal": macd_signal, "macd_prev": macd_prev}
+                reason=f"Bearish momentum alignment: price below SMA100 ({sma100:.2f}) & MACD < Signal",
+                raw_data={"sma100": sma100, "macd": macd, "macd_signal": macd_signal}
             )
-        else:
-            return AgentSignal(
-                agent="momentum",
-                signal=Signal.HOLD,
-                confidence=85.0,
-                reason=f"Momentum filters not aligned (Bullish SMA: {bullish_sma}, MACD: {bullish_macd} | Bearish SMA: {bearish_sma}, MACD: {bearish_macd})",
-                raw_data={"sma100": sma100, "macd": macd, "macd_signal": macd_signal, "macd_prev": macd_prev}
-            )
+        # Partial alignment — fall through to standard RSI/StochRSI scoring below
 
     score = 0
     max_score = 6
