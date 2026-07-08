@@ -78,7 +78,8 @@ class Settings(BaseSettings):
     # ── Circuit Breaker ─────────────────────────────────────
     # Halt ALL new entries once daily realized losses exceed this amount (USD).
     # Set to 0 to disable.
-    daily_loss_limit_usd: float = 300.0
+    daily_loss_limit_usd: float = 150.0
+    max_position_usd: float = 3000.0    # hard cap per trade regardless of account size
 
     # ── Market Regime Filter ─────────────────────────────────
     # Only allow LONG crypto entries when BTC is above its N-period MA on the

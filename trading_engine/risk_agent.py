@@ -287,14 +287,16 @@ def evaluate(
         
         stopped_strikes = 0
         symbol = snap.symbol
-        side = verdict.decision.value # "BUY" or "SELL"
+        # Map BUY/SELL verdict to the direction strings stored in Position.direction
+        side = "long" if verdict.decision.value == "BUY" else "short"
         now = datetime.now(timezone.utc)
         
         for pos in closed_trades:
             is_dict = isinstance(pos, dict)
             pos_symbol = pos.get("symbol") if is_dict else getattr(pos, "symbol", "")
             pos_status = pos.get("status") if is_dict else getattr(pos, "status", "")
-            pos_side = pos.get("side") if is_dict else getattr(pos, "side", "")
+            # Position stores direction as 'long'/'short' (not 'BUY'/'SELL')
+            pos_side = pos.get("direction", pos.get("side", "")) if is_dict else getattr(pos, "direction", getattr(pos, "side", ""))
             pos_closed_at = pos.get("closed_at") if is_dict else getattr(pos, "closed_at", None)
             
             if pos_symbol == symbol and pos_status == "stopped" and pos_side == side:
@@ -649,6 +651,18 @@ def evaluate(
         position_size_pct *= session_multiplier
         position_size_usd *= session_multiplier
         max_loss_usd *= session_multiplier
+
+    # Hard USD cap: prevent oversized positions regardless of account size
+    # Default $3,000 per trade — keeps dollar losses manageable even on large accounts
+    max_pos_usd_hard = float(getattr(settings, "max_position_usd", 3000.0))
+    if position_size_usd > max_pos_usd_hard:
+        logger.info(
+            f"  💰 Hard USD cap: capping position from ${position_size_usd:,.0f} "
+            f"to ${max_pos_usd_hard:,.0f} (max_position_usd)"
+        )
+        position_size_usd = max_pos_usd_hard
+        position_size_pct = position_size_usd / account if account > 0 else 0.0
+        max_loss_usd = position_size_usd * stop_loss_pct
 
     session_tag = f" | Session×{session_multiplier:.1f}" if session_multiplier < 1.0 else ""
     corr_tag = f" | Corr×{corr_multiplier:.1f}" if corr_multiplier < 1.0 else ""
