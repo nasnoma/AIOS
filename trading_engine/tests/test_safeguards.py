@@ -400,13 +400,13 @@ def test_two_strike_rule():
         {
             "symbol": "BTC/USDT",
             "status": "stopped",
-            "side": "BUY",
+            "direction": "long",   # Position.direction is 'long'/'short' not 'BUY'/'SELL'
             "closed_at": (datetime.now(timezone.utc) - timedelta(minutes=30)).isoformat()
         },
         {
             "symbol": "BTC/USDT",
             "status": "stopped",
-            "side": "BUY",
+            "direction": "long",
             "closed_at": (datetime.now(timezone.utc) - timedelta(minutes=60)).isoformat()
         }
     ]
