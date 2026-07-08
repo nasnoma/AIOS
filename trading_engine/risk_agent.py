@@ -509,6 +509,41 @@ def evaluate(
             max_loss_usd=0, atr=atr,
         )
 
+    # ── Trend Alignment Sizing (TAS) ───────────────────────────────
+    # Read 1H EMA50 from the already-fetched HTF snapshot (zero extra API call).
+    # When the 5m signal opposes the 1H trend:
+    #   - Reduce position size to 50% (limits counter-trend losses)
+    #   - Raise the RR target from 3:1 to 4:1 (needs bigger move to pay off)
+    # When the 5m signal aligns with the 1H trend:
+    #   - Full size + normal RR (rewarded for trading with momentum)
+    # NEVER blocks a trade.
+    tas_multiplier = 1.0
+    tas_rr_boost = 0.0  # extra RR added for counter-trend trades
+    try:
+        htf = snap.htf_1h_snap
+        if htf is not None and htf.ema50 and htf.ema50 > 0:
+            htf_bullish = htf.close > htf.ema50
+            is_long = verdict.decision == Signal.BUY
+            trend_aligned = (is_long and htf_bullish) or (not is_long and not htf_bullish)
+            if trend_aligned:
+                tas_multiplier = 1.0
+                logger.info(
+                    f"  ✅ TAS: signal ALIGNED with 1H trend (HTF close={htf.close:.4f} "
+                    f"{'>' if htf_bullish else '<'} EMA50={htf.ema50:.4f}). Full size."
+                )
+            else:
+                tas_multiplier = 0.5
+                tas_rr_boost = 1.0  # raise RR from 3→4 for counter-trend
+                logger.warning(
+                    f"  ⚠️ TAS: signal COUNTER-TREND vs 1H (HTF close={htf.close:.4f} "
+                    f"{'>' if htf_bullish else '<'} EMA50={htf.ema50:.4f}). "
+                    f"Halving size, raising RR to {settings.rr_ratio + tas_rr_boost:.1f}:1."
+                )
+        else:
+            logger.debug("  TAS: no 1H snap available, using full size.")
+    except Exception as _tas_err:
+        logger.debug(f"  TAS: error reading HTF snap ({_tas_err}), using full size.")
+
     # ── ATR-Based Stop Loss ────────────────────────────
     # Stop = 1.5x ATR below entry (long), above entry (short)
     atr_multiplier = _rp.get("atr_stop_multiplier", settings.atr_multiplier)
@@ -529,13 +564,13 @@ def evaluate(
     if verdict.decision == Signal.BUY:
         stop_loss = entry - stop_distance
         stop_loss_pct = stop_distance / entry
-        rr_ratio = settings.rr_ratio  # target risk/reward
+        rr_ratio = settings.rr_ratio + tas_rr_boost  # boosted for counter-trend
         take_profit = entry + (stop_distance * rr_ratio)
         take_profit_pct = (take_profit - entry) / entry
     else:  # SELL (short)
         stop_loss = entry + stop_distance
         stop_loss_pct = stop_distance / entry
-        rr_ratio = settings.rr_ratio
+        rr_ratio = settings.rr_ratio + tas_rr_boost  # boosted for counter-trend
         take_profit = entry - (stop_distance * rr_ratio)
         take_profit_pct = (entry - take_profit) / entry
 
@@ -578,9 +613,10 @@ def evaluate(
             f" (range [{min_w}×–{max_w}×])"
         )
 
-    # Apply all sizing multipliers in order: confidence → correlation
+    # Apply all sizing multipliers in order: confidence → correlation → TAS
     position_size_pct *= confidence_weight
     position_size_pct *= corr_multiplier
+    position_size_pct *= tas_multiplier
 
     # Apply short multiplier for short positions (Signal.SELL) to protect capital against altcoin short squeezes
     short_multiplier = 1.0
