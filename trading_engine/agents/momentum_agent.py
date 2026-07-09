@@ -21,15 +21,17 @@ def analyze(snap: MarketSnapshot) -> AgentSignal:
         macd = snap.macd
         macd_signal = snap.macd_signal
         
-        # Bullish confluence: price above SMA100 AND MACD above signal line
+        # Bullish confluence: price above SMA100 AND MACD above signal line AND RSI not overbought (<70)
         bullish_sma = sma100 and snap.close > sma100
         bullish_macd = macd is not None and macd_signal is not None and macd > macd_signal
+        bullish_rsi = snap.rsi < 70
         
-        # Bearish confluence: price below SMA100 AND MACD below signal line
+        # Bearish confluence: price below SMA100 AND MACD below signal line AND RSI not oversold (>30)
         bearish_sma = sma100 and snap.close < sma100
         bearish_macd = macd is not None and macd_signal is not None and macd < macd_signal
+        bearish_rsi = snap.rsi > 30
         
-        if bullish_sma and bullish_macd:
+        if bullish_sma and bullish_macd and bullish_rsi:
             return AgentSignal(
                 agent="momentum",
                 signal=Signal.BUY,
@@ -37,7 +39,7 @@ def analyze(snap: MarketSnapshot) -> AgentSignal:
                 reason=f"Bullish momentum alignment: price above SMA100 ({sma100:.2f}) & MACD > Signal",
                 raw_data={"sma100": sma100, "macd": macd, "macd_signal": macd_signal}
             )
-        elif bearish_sma and bearish_macd:
+        elif bearish_sma and bearish_macd and bearish_rsi:
             return AgentSignal(
                 agent="momentum",
                 signal=Signal.SELL,

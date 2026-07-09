@@ -671,36 +671,39 @@ class TestPaperTraderFees:
         if paper_trader.STATE_FILE.exists():
             shutil.copy(paper_trader.STATE_FILE, backup_path)
 
+        from unittest.mock import patch
+        from trading_engine.config import settings
         try:
             # Delete active state to start fresh
             if paper_trader.STATE_FILE.exists():
                 paper_trader.STATE_FILE.unlink()
 
-            # Open a paper trade of $1000 size
-            pos = paper_trader.open_trade(
-                symbol="BTC/USDT",
-                direction="long",
-                entry=50000.0,
-                size_usd=1000.0,
-                stop_loss=48000.0,
-                take_profit=56000.0
-            )
+            with patch.object(settings, "crypto_use_perpetuals", False):
+                # Open a paper trade of $1000 size
+                pos = paper_trader.open_trade(
+                    symbol="BTC/USDT",
+                    direction="long",
+                    entry=50000.0,
+                    size_usd=1000.0,
+                    stop_loss=48000.0,
+                    take_profit=56000.0
+                )
 
-            status = paper_trader.get_status()
-            # Entry fee: 1000 * 0.0006 = 0.60
-            assert status["total_fees"] == 0.60
-            assert status["cash"] == 10000.0 - 1000.0 - 0.60  # Initial account size is 10000 by default
+                status = paper_trader.get_status()
+                # Entry fee: 1000 * 0.0006 = 0.60
+                assert status["total_fees"] == 0.60
+                assert status["cash"] == 10000.0 - 1000.0 - 0.60  # Initial account size is 10000 by default
 
-            # Update prices to trigger take profit (TP = 56000)
-            paper_trader.update_prices({"BTC/USDT": 57000.0})
+                # Update prices to trigger take profit (TP = 56000)
+                paper_trader.update_prices({"BTC/USDT": 57000.0})
 
-            status_closed = paper_trader.get_status()
-            # Gross profit: (57000 - 50000)/50000 * 1000 = 140.0
-            # Exit fee: 1000 * 0.0006 = 0.60
-            # Net profit: 140.0 - 0.60 = 139.40
-            # Total fees paid: 0.60 (entry) + 0.60 (exit) = 1.20
-            assert status_closed["total_fees"] == 1.20
-            assert status_closed["total_pnl"] == 139.40
+                status_closed = paper_trader.get_status()
+                # Gross profit: (57000 - 50000)/50000 * 1000 = 140.0
+                # Exit fee: 1000 * 0.0006 = 0.60
+                # Net profit: 140.0 - 0.60 = 139.40
+                # Total fees paid: 0.60 (entry) + 0.60 (exit) = 1.20
+                assert status_closed["total_fees"] == 1.20
+                assert status_closed["total_pnl"] == 139.40
 
         finally:
             # Restore state backup

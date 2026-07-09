@@ -8,6 +8,12 @@ from trading_engine.config import settings
 from trading_engine.storage import db
 from trading_engine.execution.live_trader import retry_and_log_order
 
+@pytest.fixture(autouse=True)
+def disable_perpetuals():
+    with patch.object(settings, "crypto_use_perpetuals", False):
+        yield
+
+
 def test_db_fallback_to_sqlite():
     """Asserts that database manager automatically falls back to SQLite on connection error."""
     # Temporarily set database_url to an unreachable postgres address

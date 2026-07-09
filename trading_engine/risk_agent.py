@@ -534,6 +534,20 @@ def evaluate(
                     f"{'>' if htf_bullish else '<'} EMA50={htf.ema50:.4f}). Full size."
                 )
             else:
+                # Require higher confidence for counter-trend trades to act as a quality gate
+                if verdict.confidence < 88.0:
+                    logger.warning(
+                        f"  🚦 TAS Veto: counter-trend trade confidence ({verdict.confidence:.1f}%) "
+                        f"is below the 88.0% minimum threshold. Trade rejected."
+                    )
+                    return RiskDecision(
+                        approved=False,
+                        reason=f"Counter-trend trade confidence ({verdict.confidence:.1f}%) is below 88.0% threshold.",
+                        position_size_pct=0, position_size_usd=0,
+                        entry_price=entry, stop_loss=0, take_profit=0,
+                        stop_loss_pct=0, take_profit_pct=0, risk_reward=0,
+                        max_loss_usd=0, atr=atr,
+                    )
                 tas_multiplier = 0.5
                 tas_rr_boost = 1.0  # raise RR from 3→4 for counter-trend
                 logger.warning(

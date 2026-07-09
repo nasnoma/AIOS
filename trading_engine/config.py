@@ -87,7 +87,7 @@ class Settings(BaseSettings):
     regime_filter_enabled: bool = False
     regime_btc_ma_period: int = 50
     regime_btc_timeframe: str = "1d"
-    crypto_use_perpetuals: bool = False
+    crypto_use_perpetuals: bool = True
     short_position_multiplier: float = 0.75
 
     # ── Session Awareness & Volatility Filters ──────

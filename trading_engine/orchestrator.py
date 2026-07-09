@@ -288,6 +288,8 @@ def run_all_assets() -> list[TradeSignal]:
     # Compute today's realized PnL for the circuit breaker
     daily_pnl = _get_daily_pnl(trader)
 
+    portfolio = trader._load_state()
+    closed_trades = portfolio.closed_trades
     running_heat = portfolio_heat
     running_open_count = open_pos_count
 
@@ -302,6 +304,7 @@ def run_all_assets() -> list[TradeSignal]:
                 open_position_snaps=snap_cache,
                 daily_pnl_usd=daily_pnl,
                 account_size=account_size,
+                closed_trades=closed_trades,
             )
             results.append(signal)
 

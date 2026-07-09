@@ -15,7 +15,8 @@ from trading_engine.agents.base import Signal
 def mock_state_file(tmp_path):
     """Isolate live_state.json storage to a temporary directory."""
     temp_file = tmp_path / "live_state_test.json"
-    with patch("trading_engine.execution.live_trader.STATE_FILE", temp_file):
+    with patch("trading_engine.execution.live_trader.STATE_FILE", temp_file), \
+         patch.object(settings, "crypto_use_perpetuals", False):
         yield temp_file
 
 
