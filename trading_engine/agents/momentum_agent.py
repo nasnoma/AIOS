@@ -21,31 +21,31 @@ def analyze(snap: MarketSnapshot) -> AgentSignal:
         macd = snap.macd
         macd_signal = snap.macd_signal
         
-        # Bullish confluence: price above SMA100 AND MACD above signal line AND RSI not overbought (<70)
-        bullish_sma = sma100 and snap.close > sma100
+        # Bullish confluence: EMA alignment (close > EMA20 > EMA50) AND MACD above signal line AND RSI not overbought (<70)
+        bullish_ma = snap.ema20 and snap.ema50 and snap.close > snap.ema20 and snap.ema20 > snap.ema50
         bullish_macd = macd is not None and macd_signal is not None and macd > macd_signal
         bullish_rsi = snap.rsi < 70
         
-        # Bearish confluence: price below SMA100 AND MACD below signal line AND RSI not oversold (>30)
-        bearish_sma = sma100 and snap.close < sma100
+        # Bearish confluence: EMA alignment (close < EMA20 < EMA50) AND MACD below signal line AND RSI not oversold (>30)
+        bearish_ma = snap.ema20 and snap.ema50 and snap.close < snap.ema20 and snap.ema20 < snap.ema50
         bearish_macd = macd is not None and macd_signal is not None and macd < macd_signal
         bearish_rsi = snap.rsi > 30
         
-        if bullish_sma and bullish_macd and bullish_rsi:
+        if bullish_ma and bullish_macd and bullish_rsi:
             return AgentSignal(
                 agent="momentum",
                 signal=Signal.BUY,
                 confidence=90.0,
-                reason=f"Bullish momentum alignment: price above SMA100 ({sma100:.2f}) & MACD > Signal",
-                raw_data={"sma100": sma100, "macd": macd, "macd_signal": macd_signal}
+                reason=f"Bullish momentum alignment: close > EMA20 ({snap.ema20:.2f}) > EMA50 ({snap.ema50:.2f}) & MACD > Signal",
+                raw_data={"ema20": snap.ema20, "ema50": snap.ema50, "macd": macd, "macd_signal": macd_signal}
             )
-        elif bearish_sma and bearish_macd and bearish_rsi:
+        elif bearish_ma and bearish_macd and bearish_rsi:
             return AgentSignal(
                 agent="momentum",
                 signal=Signal.SELL,
                 confidence=90.0,
-                reason=f"Bearish momentum alignment: price below SMA100 ({sma100:.2f}) & MACD < Signal",
-                raw_data={"sma100": sma100, "macd": macd, "macd_signal": macd_signal}
+                reason=f"Bearish momentum alignment: close < EMA20 ({snap.ema20:.2f}) < EMA50 ({snap.ema50:.2f}) & MACD < Signal",
+                raw_data={"ema20": snap.ema20, "ema50": snap.ema50, "macd": macd, "macd_signal": macd_signal}
             )
         # Partial alignment — fall through to standard RSI/StochRSI scoring below
 

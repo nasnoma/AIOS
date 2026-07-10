@@ -203,8 +203,11 @@ class TestMomentumAgent:
         snap = make_snapshot(
             close=103.0,
             sma100=95.0,
+            ema20=101.0,
+            ema50=99.0,
             macd=0.4,
             macd_signal=0.2,
+            rsi=50.0,
             df=df,
             timeframe="5m"
         )
