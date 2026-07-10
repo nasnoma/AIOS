@@ -511,54 +511,43 @@ def evaluate(
             max_loss_usd=0, atr=atr,
         )
 
-    # ── Trend Alignment Sizing (TAS) ───────────────────────────────
+    # ── Trend Alignment Filter (TAF) ───────────────────────────────
     # Read 1H EMA50 from the already-fetched HTF snapshot (zero extra API call).
-    # When the 5m signal opposes the 1H trend:
-    #   - Reduce position size to 50% (limits counter-trend losses)
-    #   - Raise the RR target from 3:1 to 4:1 (needs bigger move to pay off)
-    # When the 5m signal aligns with the 1H trend:
-    #   - Full size + normal RR (rewarded for trading with momentum)
-    # NEVER blocks a trade.
-    tas_multiplier = 1.0
-    tas_rr_boost = 0.0  # extra RR added for counter-trend trades
+    # We strictly enforce trend following:
+    #   - LONG trades are only approved if 1H Close > 1H EMA50
+    #   - SHORT trades are only approved if 1H Close < 1H EMA50
+    # Counter-trend trades are vetoed outright.
     try:
         htf = snap.htf_1h_snap
         if htf is not None and htf.ema50 and htf.ema50 > 0:
             htf_bullish = htf.close > htf.ema50
             is_long = verdict.decision == Signal.BUY
             trend_aligned = (is_long and htf_bullish) or (not is_long and not htf_bullish)
-            if trend_aligned:
-                tas_multiplier = 1.0
-                logger.info(
-                    f"  ✅ TAS: signal ALIGNED with 1H trend (HTF close={htf.close:.4f} "
-                    f"{'>' if htf_bullish else '<'} EMA50={htf.ema50:.4f}). Full size."
+            if not trend_aligned:
+                logger.warning(
+                    f"  🚦 Trend Veto: {verdict.decision.value} {snap.symbol} is counter-trend vs 1H "
+                    f"(HTF close={htf.close:.4f} is {'below' if is_long else 'above'} EMA50={htf.ema50:.4f})."
+                )
+                return RiskDecision(
+                    approved=False,
+                    reason=(
+                        f"Strict trend filter veto: {verdict.decision.value} is counter-trend. "
+                        f"1H Close ({htf.close:.4f}) is {'below' if is_long else 'above'} 1H EMA50 ({htf.ema50:.4f})."
+                    ),
+                    position_size_pct=0, position_size_usd=0,
+                    entry_price=entry, stop_loss=0, take_profit=0,
+                    stop_loss_pct=0, take_profit_pct=0, risk_reward=0,
+                    max_loss_usd=0, atr=atr,
                 )
             else:
-                # Require higher confidence for counter-trend trades to act as a quality gate
-                if verdict.confidence < 88.0:
-                    logger.warning(
-                        f"  🚦 TAS Veto: counter-trend trade confidence ({verdict.confidence:.1f}%) "
-                        f"is below the 88.0% minimum threshold. Trade rejected."
-                    )
-                    return RiskDecision(
-                        approved=False,
-                        reason=f"Counter-trend trade confidence ({verdict.confidence:.1f}%) is below 88.0% threshold.",
-                        position_size_pct=0, position_size_usd=0,
-                        entry_price=entry, stop_loss=0, take_profit=0,
-                        stop_loss_pct=0, take_profit_pct=0, risk_reward=0,
-                        max_loss_usd=0, atr=atr,
-                    )
-                tas_multiplier = 0.5
-                tas_rr_boost = 1.0  # raise RR from 3→4 for counter-trend
-                logger.warning(
-                    f"  ⚠️ TAS: signal COUNTER-TREND vs 1H (HTF close={htf.close:.4f} "
-                    f"{'>' if htf_bullish else '<'} EMA50={htf.ema50:.4f}). "
-                    f"Halving size, raising RR to {settings.rr_ratio + tas_rr_boost:.1f}:1."
+                logger.info(
+                    f"  ✅ Trend Filter: {verdict.decision.value} aligned with 1H trend "
+                    f"(HTF close={htf.close:.4f} {'>' if htf_bullish else '<'} EMA50={htf.ema50:.4f})."
                 )
         else:
-            logger.debug("  TAS: no 1H snap available, using full size.")
+            logger.debug("  Trend Filter: no 1H snap available, skipping trend check.")
     except Exception as _tas_err:
-        logger.debug(f"  TAS: error reading HTF snap ({_tas_err}), using full size.")
+        logger.debug(f"  Trend Filter: error reading HTF snap ({_tas_err}), skipping trend check.")
 
     # ── ATR-Based Stop Loss ────────────────────────────
     # Stop = 1.5x ATR below entry (long), above entry (short)
@@ -580,13 +569,13 @@ def evaluate(
     if verdict.decision == Signal.BUY:
         stop_loss = entry - stop_distance
         stop_loss_pct = stop_distance / entry
-        rr_ratio = settings.rr_ratio + tas_rr_boost  # boosted for counter-trend
+        rr_ratio = settings.rr_ratio
         take_profit = entry + (stop_distance * rr_ratio)
         take_profit_pct = (take_profit - entry) / entry
     else:  # SELL (short)
         stop_loss = entry + stop_distance
         stop_loss_pct = stop_distance / entry
-        rr_ratio = settings.rr_ratio + tas_rr_boost  # boosted for counter-trend
+        rr_ratio = settings.rr_ratio
         take_profit = entry - (stop_distance * rr_ratio)
         take_profit_pct = (entry - take_profit) / entry
 
@@ -629,10 +618,9 @@ def evaluate(
             f" (range [{min_w}×–{max_w}×])"
         )
 
-    # Apply all sizing multipliers in order: confidence → correlation → TAS
+    # Apply all sizing multipliers in order: confidence → correlation
     position_size_pct *= confidence_weight
     position_size_pct *= corr_multiplier
-    position_size_pct *= tas_multiplier
 
     # Apply short multiplier for short positions (Signal.SELL) to protect capital against altcoin short squeezes
     short_multiplier = 1.0
