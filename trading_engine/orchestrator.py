@@ -224,12 +224,7 @@ def run(
         asset_type=snap.asset_type,
         timeframe=tf,
         timestamp=datetime.now(timezone.utc).isoformat(),
-        agent_signals=[{
-            "agent": s.agent,
-            "signal": s.signal.value,
-            "confidence": s.confidence,
-            "reason": s.reason,
-        } for s in agent_signals],
+        agent_signals=verdict.agent_reports,
         verdict={
             "decision": verdict.decision.value,
             "confidence": verdict.confidence,

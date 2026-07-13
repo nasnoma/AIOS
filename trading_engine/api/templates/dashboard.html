@@ -1301,13 +1301,15 @@ function renderFeed() {
     const adxVal = sig.risk?.adx;
     const adxStr = adxVal ? `<span class="badge" style="font-size: 0.65rem; background: var(--surface3); border: 1px solid var(--border); color: var(--text-2); padding: 1px 4px; border-radius: 4px; margin-left: 4px; display: inline-block;">ADX ${adxVal.toFixed(0)}</span>` : '';
 
+    const subText = (action === 'NO_TRADE' && sig.risk?.reason) ? sig.risk.reason : (sig.reasoning || '—');
+
     return `<div class="feed-item ${activeClass} ${vetoedClass} ${i===0 && !selectedSignal ? 'new-signal' : ''}" onclick="inspectSignal(${i}, this)">
       <div class="feed-dot ${dotClass}" style="margin-top:5px"></div>
       <div>
         <div class="feed-title">${sig.symbol} ${badge} ${tfStr} ${entryStr}
           <small style="color:var(--text-3)">conf ${conf.toFixed(0)}%</small>${adxStr}
         </div>
-        <div class="feed-sub">${(sig.reasoning || '—').replace(/[\\]+/g, '').slice(0, 120)}</div>
+        <div class="feed-sub">${subText.replace(/[\\]+/g, '').slice(0, 120)}</div>
       </div>
       <div class="feed-meta">${time}</div>
     </div>`;
