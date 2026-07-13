@@ -247,6 +247,7 @@ def run(
             "risk_reward": risk.risk_reward,
             "max_loss_usd": risk.max_loss_usd,
             "atr": risk.atr,                    # passed to open_trade for trailing stop ratchet
+            "adx": float(getattr(snap, "adx", 0.0) or 0.0),
         },
         final_action=final_action,
         entry_price=risk.entry_price,

@@ -103,6 +103,7 @@ class Position:
     sl_order_id: Optional[str] = None       # ID of the stop loss order on the broker/exchange
     tp_order_id: Optional[str] = None       # ID of the take profit order on the broker/exchange
     initial_stop_loss: Optional[float] = None
+    agent_signals: list = field(default_factory=list)  # [{agent, signal, confidence}] stored at entry for ART
 
 
 
@@ -745,6 +746,7 @@ def open_trade(
             sl_order_id=sl_order_id,
             tp_order_id=tp_order_id,
             initial_stop_loss=stop_loss,
+            agent_signals=kwargs.get("agent_signals", []),  # stored for ART weight update on close
         )
         portfolio.positions.append(pos)
         portfolio.cash -= size_usd
@@ -2014,6 +2016,13 @@ def _finalize_closed_position(portfolio: LivePortfolio, pos: Position, fill_pric
         f"🏷️ Fees paid: ${pos.fee_usd:.2f}\n"
         f"📊 Total Portfolio P&L: <b>${portfolio.total_pnl:+,.2f}</b>"
     )
+
+    # ── ART: Update agent weights based on this trade outcome ──────────────
+    try:
+        from trading_engine.art_weight_updater import update_weights_from_outcome
+        update_weights_from_outcome(pos)
+    except Exception as _art_err:
+        logger.warning(f"ART weight update failed for {pos.symbol}: {_art_err}")
 
 
 def _fetch_exit_details_from_broker(pos: Position, asset_class) -> tuple[float, float, str]:

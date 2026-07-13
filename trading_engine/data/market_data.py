@@ -64,6 +64,7 @@ class MarketSnapshot:
     atr: float = 0.0
     bb_width: float = 0.0     # Bollinger Band width
     realized_vol: float = 0.0 # 14-period realized volatility
+    adx: float = 0.0          # Average Directional Index (14) — 0-100; <20 = ranging, >25 = trending
 
     # Order flow (crypto-specific, None for stocks)
     open_interest: Optional[float] = None
@@ -579,6 +580,26 @@ def compute_indicators(df: pd.DataFrame, overrides: dict | None = None) -> pd.Da
     df["REAL_VOL"] = df["close"].pct_change().rolling(atr_p).std() * (252 ** 0.5)
     df["REAL_VOL"] = df["REAL_VOL"].fillna(0.0)
 
+    # ADX — market regime strength indicator (not direction)
+    # ADX < 20 = choppy/ranging; ADX > 25 = trending (reliable for directional entries)
+    if len(df) >= 28:  # need 2× the period for accurate ADX
+        try:
+            adx_df = df.ta.adx(length=14)
+            if adx_df is not None:
+                adx_col = next((c for c in adx_df.columns if str(c).upper().startswith("ADX")), None)
+                if adx_col:
+                    df["ADX_14"] = adx_df[adx_col]
+                else:
+                    df["ADX_14"] = 0.0
+            else:
+                df["ADX_14"] = 0.0
+        except Exception as _adx_err:
+            logger.warning(f"ADX computation failed: {_adx_err}")
+            df["ADX_14"] = 0.0
+    else:
+        df["ADX_14"] = 0.0
+    df["ADX_14"] = df["ADX_14"].fillna(0.0)
+
     # Precompute pivots for Market Structure Agent
     df["is_pivot_high"] = (df["high"] > df["high"].shift(1)) & (df["high"] > df["high"].shift(2)) & \
                           (df["high"] > df["high"].shift(-1)) & (df["high"] > df["high"].shift(-2))
@@ -801,6 +822,7 @@ def build_snapshot(symbol: str, timeframe: str = None, is_htf: bool = False) -> 
         vwap=float(latest.get("VWAP_D", latest["close"]) or latest["close"]),
         atr=float(latest.get("ATR_14", 0) or 0),
         bb_width=float(bb_width),
+        adx=float(latest.get("ADX_14", 0) or 0),
         realized_vol=float(latest.get("REAL_VOL", 0) or 0),
         open_interest=order_flow.get("open_interest"),
         funding_rate=order_flow.get("funding_rate"),

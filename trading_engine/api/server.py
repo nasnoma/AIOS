@@ -97,6 +97,25 @@ async def get_evolution():
     return {"history": history, "count": len(history)}
 
 
+@app.get("/api/agent_weights")
+async def get_agent_weights():
+    """Return current ART agent weights for the dashboard weight panel."""
+    import json, os
+    from pathlib import Path
+    weights_path = Path(__file__).parent.parent / "autoresearch" / "params" / "judge_weights.json"
+    try:
+        with open(weights_path) as f:
+            data = json.load(f)
+        mtime = os.path.getmtime(weights_path)
+        from datetime import datetime
+        return {
+            "weights": data.get("weights", {}),
+            "last_updated": datetime.utcfromtimestamp(mtime).isoformat() + "Z",
+        }
+    except Exception as e:
+        return {"weights": {}, "last_updated": None, "error": str(e)}
+
+
 @app.get("/api/diagnostics/trades")
 async def get_diagnostics_trades():
     from trading_engine.storage import db

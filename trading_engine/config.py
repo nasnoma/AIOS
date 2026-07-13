@@ -96,6 +96,13 @@ class Settings(BaseSettings):
     min_atr_pct: float = 0.05
     min_bb_width: float = 0.015
 
+    # ── Per-Symbol High-Caution Controls ─────────────
+    # Symbols listed here require higher agent consensus and have a lower position cap.
+    # Use this for alts with erratic structure / low liquidity.
+    high_caution_symbols: str = "NEAR/USDT,NEAR/USDT:USDT"
+    high_caution_min_agreement: int = 7   # out of 8 agents
+    high_caution_max_position_usd: float = 1500.0
+
     # ── Confidence-Weighted Position Sizing ──────────
     # Scales position size proportionally to judge confidence score.
     # confidence=neutral (75) → 1.0× baseline size

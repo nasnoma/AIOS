@@ -163,6 +163,7 @@ def run_signal_cycle():
                 stop_loss=sig.stop_loss or 0,
                 take_profit=sig.take_profit or 0,
                 atr=float((sig.risk or {}).get("atr", 0.0)),
+                agent_signals=sig.agent_signals or [],  # stored on Position for ART grading on close
             )
             if pos:
                 # Reload portfolio to reflect new position & cash balance in subsequent iterations

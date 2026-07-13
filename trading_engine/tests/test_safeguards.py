@@ -303,6 +303,7 @@ def test_dynamic_account_size_scaling():
 
     with patch("trading_engine.data.market_data.load_historical_data", return_value=bull_df), \
          patch.object(settings, "regime_filter_enabled", False), \
+         patch.object(settings, "high_caution_symbols", ""), \
          patch.object(settings, "account_size", 10000.0):
 
         # Evaluate with default settings account size (10,000)

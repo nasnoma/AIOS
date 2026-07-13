@@ -318,6 +318,8 @@
     .feed-dot.buy  { background: var(--green); box-shadow: 0 0 8px var(--green); }
     .feed-dot.sell { background: var(--red);   box-shadow: 0 0 8px var(--red); }
     .feed-dot.notrade { background: var(--text-3); }
+    .feed-item.vetoed { opacity: 0.45; }
+    .feed-item.vetoed:hover { opacity: 0.85; background: rgba(255,255,255,0.01) !important; }
     .feed-title {
       font-size: 0.85rem; font-weight: 600;
       display: flex; align-items: center; gap: 8px;
@@ -602,6 +604,7 @@
       <div class="stat-label">💰 Portfolio P&amp;L</div>
       <div class="stat-val" id="s-pnl">$0.00</div>
       <div class="stat-sub" id="s-pnl-pct">0.00% return</div>
+      <div id="pnl-sparkline-wrap" style="height:28px; margin-top:10px; opacity:0.8;"></div>
     </div>
     <div class="stat-card">
       <div class="stat-label">📊 Open Positions</div>
@@ -711,7 +714,7 @@
   </div>
 
   <!-- Row 3: Markets & Evolution -->
-  <div class="dashboard-row-markets" style="grid-template-columns: 1fr;">
+  <div class="dashboard-row-markets">
     <!-- Market Status -->
     <div class="panel">
       <div class="panel-hd">
@@ -720,6 +723,17 @@
       </div>
       <div class="panel-body" id="mkt-status-body">
         <div class="empty"><p>Loading…</p></div>
+      </div>
+    </div>
+
+    <!-- ART Agent Weights -->
+    <div class="panel">
+      <div class="panel-hd">
+        <span>🧠 ART Agent Weights</span>
+        <span id="weights-last-updated" style="font-size:0.68rem;color:var(--text-3)">—</span>
+      </div>
+      <div class="panel-body" style="height:220px; position:relative; padding:10px 15px;">
+        <canvas id="weights-chart"></canvas>
       </div>
     </div>
 
@@ -791,8 +805,74 @@ const AGENT_ICONS = {
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let ws, signals = [], statusData = {}, evoHistory = [], selectedSignal = null;
-let equityChart;
+let equityChart, weightsChart;
 let evoAccepted = 0;
+
+// ── Weights Chart init ────────────────────────────────────────────────────────
+function initWeightsChart() {
+  const ctx = document.getElementById('weights-chart').getContext('2d');
+  weightsChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: [],
+      datasets: [{
+        label: 'Agent Weight',
+        data: [],
+        backgroundColor: 'rgba(79, 142, 247, 0.45)',
+        borderColor: '#4f8ef7',
+        borderWidth: 1.5,
+        borderRadius: 5,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#141928',
+          borderColor: '#1e2d45',
+          borderWidth: 1,
+          titleColor: '#94a3b8',
+          bodyColor: '#e2e8f0',
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: '#94a3b8', font: { size: 10 } }
+        },
+        y: {
+          min: 0,
+          max: 3.5,
+          grid: { color: 'rgba(30,45,69,0.3)', drawBorder: false },
+          ticks: { color: '#4a5568', font: { size: 9, family: 'JetBrains Mono' } }
+        }
+      }
+    }
+  });
+}
+
+function updateWeightsChart(weights, lastUpdated) {
+  if (!weightsChart) return;
+  const labels = Object.keys(weights).map(k => cap(k));
+  const data = Object.values(weights);
+  
+  weightsChart.data.labels = labels;
+  weightsChart.data.datasets[0].data = data;
+  weightsChart.update();
+  
+  const el = document.getElementById('weights-last-updated');
+  if (el) {
+    if (lastUpdated) {
+      const timeStr = new Date(lastUpdated).toLocaleTimeString();
+      el.textContent = 'Updated ' + timeStr;
+    } else {
+      el.textContent = 'Active';
+    }
+  }
+}
 
 // ── Equity Chart init ─────────────────────────────────────────────────────────
 function initChart() {
@@ -910,6 +990,10 @@ function connectWS() {
       if (msg.type === 'status') {
         updateStatus(msg.data);
         document.getElementById('last-upd').textContent = 'Updated ' + new Date().toLocaleTimeString();
+        fetch('/api/agent_weights')
+          .then(r => r.ok && r.json())
+          .then(w => w && w.weights && updateWeightsChart(w.weights, w.last_updated))
+          .catch(() => {});
       }
       if (msg.type === 'signal') addSignal(msg.data);
     };
@@ -934,14 +1018,20 @@ function setWS(ok) {
 
 async function refreshAll() {
   try {
-    const [stRes, sigRes, evoRes] = await Promise.all([
+    const [stRes, sigRes, evoRes, weightsRes] = await Promise.all([
       fetch('/api/status'),
       fetch('/api/signals'),
       fetch('/api/evolution').catch(() => ({ ok: false })),
+      fetch('/api/agent_weights').catch(() => ({ ok: false })),
     ]);
     const status = await stRes.json();
     const { signals: sigs, total_count } = await sigRes.json();
     updateStatus(status);
+
+    if (weightsRes && weightsRes.ok) {
+      const w = await weightsRes.json();
+      if (w && w.weights) updateWeightsChart(w.weights, w.last_updated);
+    }
 
     // Refresh signals array with latest from server, sorted newest first
     signals = sigs.slice().reverse();
@@ -1021,6 +1111,7 @@ function updateStatus(s) {
 
   // Trades table
   renderTrades(trades);
+  updatePnLSparkline(trades, s.account_size);
 
   // Mode pill
   const mode = s.trading_mode || 'paper';
@@ -1057,6 +1148,49 @@ function calcMaxDD(trades, start) {
     if (dd > maxDD) maxDD = dd;
   });
   return maxDD;
+}
+
+function updatePnLSparkline(trades, accountSize) {
+  const startBal = accountSize || 10000;
+  const wrap = document.getElementById('pnl-sparkline-wrap');
+  if (!wrap) return;
+  if (!trades || trades.length === 0) {
+    wrap.innerHTML = '';
+    return;
+  }
+
+  const closed = trades
+    .filter(t => t.status !== 'open')
+    .slice()
+    .sort((a, b) => new Date(a.closed_at || a.opened_at || 0) - new Date(b.closed_at || b.opened_at || 0));
+
+  if (closed.length === 0) {
+    wrap.innerHTML = '';
+    return;
+  }
+
+  let bal = startBal;
+  const history = [bal];
+  closed.forEach(t => {
+    bal += (t.pnl_usd || 0);
+    history.push(bal);
+  });
+
+  const min = Math.min(...history);
+  const max = Math.max(...history);
+  const range = max - min || 1;
+  const width = 120;
+  const height = 28;
+  const points = history.map((val, i) => {
+    const x = (i / (history.length - 1)) * width;
+    const y = height - 2 - ((val - min) / range) * (height - 4);
+    return `${x},${y}`;
+  }).join(' ');
+
+  const strokeColor = bal >= startBal ? '#00e5b0' : '#ff4d6d';
+  wrap.innerHTML = `<svg width="100%" height="28" viewBox="0 0 120 28" preserveAspectRatio="none">
+    <polyline fill="none" stroke="${strokeColor}" stroke-width="1.5" points="${points}" />
+  </svg>`;
 }
 
 // ── Trades table ──────────────────────────────────────────────────────────────
@@ -1162,12 +1296,16 @@ function renderFeed() {
     
     const isActive = selectedSignal && selectedSignal.timestamp === sig.timestamp && selectedSignal.symbol === sig.symbol;
     const activeClass = isActive ? 'active' : '';
+    const vetoedClass = action === 'NO_TRADE' ? 'vetoed' : '';
+    
+    const adxVal = sig.risk?.adx;
+    const adxStr = adxVal ? `<span class="badge" style="font-size: 0.65rem; background: var(--surface3); border: 1px solid var(--border); color: var(--text-2); padding: 1px 4px; border-radius: 4px; margin-left: 4px; display: inline-block;">ADX ${adxVal.toFixed(0)}</span>` : '';
 
-    return `<div class="feed-item ${activeClass} ${i===0 && !selectedSignal ? 'new-signal' : ''}" onclick="inspectSignal(${i}, this)">
+    return `<div class="feed-item ${activeClass} ${vetoedClass} ${i===0 && !selectedSignal ? 'new-signal' : ''}" onclick="inspectSignal(${i}, this)">
       <div class="feed-dot ${dotClass}" style="margin-top:5px"></div>
       <div>
         <div class="feed-title">${sig.symbol} ${badge} ${tfStr} ${entryStr}
-          <small style="color:var(--text-3)">conf ${conf.toFixed(0)}%</small>
+          <small style="color:var(--text-3)">conf ${conf.toFixed(0)}%</small>${adxStr}
         </div>
         <div class="feed-sub">${(sig.reasoning || '—').replace(/[\\]+/g, '').slice(0, 120)}</div>
       </div>
@@ -1453,6 +1591,7 @@ function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 initChart();
+initWeightsChart();
 connectWS();
 refreshAll();
 fetchMarketStatus();

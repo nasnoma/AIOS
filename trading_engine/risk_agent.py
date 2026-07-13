@@ -492,6 +492,29 @@ def evaluate(
         except Exception as _re:
             logger.warning(f"  Regime filter check failed ({_re}); allowing trade to proceed.")
 
+    # ── ADX Regime Gate ─────────────────────────────────────────────
+    # Block all new entries when the market is choppy/ranging (low ADX).
+    # ADX < 20 means price is oscillating without a clear trend —
+    # EMA crosses flip every few candles, stops get hunted, P&L is noise.
+    # Only trade when there is genuine directional momentum (ADX ≥ 20).
+    adx_regime_threshold = 20.0
+    _snap_adx = snap.adx if isinstance(snap.adx, (int, float)) else 0.0
+    if is_crypto and _snap_adx > 0 and _snap_adx < adx_regime_threshold:
+        logger.warning(
+            f"  🚦 ADX Regime Gate veto: {snap.symbol} ADX={_snap_adx:.1f} < {adx_regime_threshold} — market is ranging/choppy."
+        )
+        return RiskDecision(
+            approved=False,
+            reason=(
+                f"ADX Regime Gate: ADX={_snap_adx:.1f} is below {adx_regime_threshold} threshold. "
+                f"Market is ranging/choppy — no directional edge. Entry blocked."
+            ),
+            position_size_pct=0, position_size_usd=0,
+            entry_price=entry, stop_loss=0, take_profit=0,
+            stop_loss_pct=0, take_profit_pct=0, risk_reward=0,
+            max_loss_usd=0, atr=atr,
+        )
+
     # ── Asset Correlation Filter ───────────────────────
     corr_multiplier = 1.0
     corr_reason = "No correlation check (no existing positions)"
@@ -657,6 +680,34 @@ def evaluate(
     # Hard USD cap: prevent oversized positions regardless of account size
     # Default $3,000 per trade — keeps dollar losses manageable even on large accounts
     max_pos_usd_hard = float(getattr(settings, "max_position_usd", 3000.0))
+
+    # ── Per-Symbol High-Caution Override ─────────────────────────────
+    # Certain symbols (e.g. NEAR/USDT) have erratic structure and require
+    # much higher consensus before entering. Cap their position size.
+    high_caution_raw = getattr(settings, "high_caution_symbols", "NEAR/USDT,NEAR/USDT:USDT")
+    high_caution_set = {s.strip() for s in high_caution_raw.split(",") if s.strip()}
+    if snap.symbol in high_caution_set:
+        hc_min_agreement = int(getattr(settings, "high_caution_min_agreement", 7))
+        if verdict.agreement < hc_min_agreement:
+            logger.warning(
+                f"  ⚠️ High-caution veto: {snap.symbol} requires {hc_min_agreement} agreeing agents, "
+                f"got {verdict.agreement}."
+            )
+            return RiskDecision(
+                approved=False,
+                reason=(
+                    f"High-caution symbol {snap.symbol}: requires {hc_min_agreement}/8 agent agreement. "
+                    f"Only {verdict.agreement} agents agree — signal not strong enough."
+                ),
+                position_size_pct=0, position_size_usd=0,
+                entry_price=entry, stop_loss=0, take_profit=0,
+                stop_loss_pct=0, take_profit_pct=0, risk_reward=0,
+                max_loss_usd=0, atr=atr,
+            )
+        hc_max_usd = float(getattr(settings, "high_caution_max_position_usd", 1500.0))
+        max_pos_usd_hard = min(max_pos_usd_hard, hc_max_usd)
+        logger.info(f"  ⚠️ High-caution symbol {snap.symbol}: position capped at ${hc_max_usd:,.0f}")
+
     if position_size_usd > max_pos_usd_hard:
         logger.info(
             f"  💰 Hard USD cap: capping position from ${position_size_usd:,.0f} "

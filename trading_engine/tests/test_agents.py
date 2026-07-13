@@ -119,7 +119,8 @@ class TestTrendAgent:
         
         result = trend_agent.analyze(base_snap)
         assert result.signal in (Signal.HOLD, Signal.SELL)
-        assert "MTF Veto: Majority of HTFs are BEARISH" in result.reason
+        # New strict MTF logic emits "MTF Override: All HTFs BEARISH" (unanimous bearish = suppress bullish)
+        assert "BEARISH" in result.reason
 
 
 # ── Momentum Agent ─────────────────────────────────────────
