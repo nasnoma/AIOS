@@ -1,15 +1,14 @@
 {
-  "_comment": "Editable by the autoresearch optimizer. DO NOT edit manually during a live run.",
   "weights": {
-    "trend": 1.5,
-    "momentum": 1.3,
-    "volume": 1.1,
-    "orderflow": 1.4,
-    "volatility": 0.8,
-    "structure": 1.2,
-    "sentiment": 0.7,
-    "macro": 1.0
+    "trend": 1.26,
+    "momentum": 0.85,
+    "volume": 0.72,
+    "orderflow": 2.35,
+    "volatility": 0.82,
+    "structure": 1.4,
+    "sentiment": 0.8,
+    "macro": 0.65
   },
-  "min_agreement": 3,
-  "min_avg_confidence": 30
+  "min_agreement": 6,
+  "min_avg_confidence": 59.0
 }

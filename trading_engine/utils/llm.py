@@ -42,12 +42,14 @@ def call_llm(prompt: str, system_prompt: str = "") -> str:
     has_openrouter = bool(settings.openrouter_api_key)
     
     use_real = False
-    if provider == "openai" and has_openai:
-        use_real = True
-    elif provider == "anthropic" and has_anthropic:
-        use_real = True
-    elif provider == "openrouter" and has_openrouter:
-        use_real = True
+    import os
+    if os.environ.get("IS_TESTING") != "true":
+        if provider == "openai" and has_openai:
+            use_real = True
+        elif provider == "anthropic" and has_anthropic:
+            use_real = True
+        elif provider == "openrouter" and has_openrouter:
+            use_real = True
         
     if use_real:
         start_time = time.time()
