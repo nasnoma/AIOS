@@ -753,7 +753,43 @@
     </div>
   </div>
 
-  <!-- Row 4: Feeds & History -->
+  <!-- Row 4: Copy Trading Intelligence -->
+  <div class="dashboard-row-feeds" style="grid-template-columns: 1fr 1fr;">
+
+    <!-- Leaderboard Panel -->
+    <div class="panel">
+      <div class="panel-hd">
+        <span>🏆 Copy Trading Leaderboard</span>
+        <div class="panel-hd-right">
+          <span id="ct-scan-time" style="font-size:0.68rem;color:var(--text-3)">—</span>
+          <button class="btn" id="ct-scan-btn" onclick="triggerCopyScan()">⟳ Scan Now</button>
+        </div>
+      </div>
+      <div class="panel-body" style="padding:0;">
+        <div id="ct-leaderboard-body" style="padding:12px 16px;">
+          <div class="empty"><p>No scan yet — click Scan Now</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Copy Positions Panel -->
+    <div class="panel">
+      <div class="panel-hd">
+        <span>📋 Copy Positions</span>
+        <div class="panel-hd-right">
+          <span id="ct-pos-pnl" style="font-size:0.78rem;font-weight:600;">—</span>
+          <span id="ct-pos-time" style="font-size:0.68rem;color:var(--text-3);margin-left:8px;">—</span>
+        </div>
+      </div>
+      <div class="panel-body" style="padding:0;">
+        <div id="ct-positions-body" style="padding:12px 16px;">
+          <div class="empty"><p>No copy positions detected</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 5: Feeds & History -->
   <div class="dashboard-row-feeds">
     <!-- Signal Feed -->
     <div class="panel">
@@ -1591,6 +1627,143 @@ function fetchMarketStatus() {
 // ── Utils ─────────────────────────────────────────────────────────────────────
 function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
+// ── Copy Trading ───────────────────────────────────────────────────────────────
+
+function renderCopyLeaderboard(data) {
+  const el = document.getElementById('ct-leaderboard-body');
+  const scanEl = document.getElementById('ct-scan-time');
+  if (!el) return;
+
+  if (data.last_scan_utc) {
+    const t = new Date(data.last_scan_utc);
+    scanEl.textContent = 'Scanned ' + t.toLocaleTimeString();
+  }
+
+  const masters = (data.top_masters || []).slice(0, 5);
+  if (!masters.length) {
+    el.innerHTML = '<div class="empty"><p>No qualified masters found yet — click Scan Now</p></div>';
+    return;
+  }
+
+  el.innerHTML = masters.map((m, i) => {
+    const scoreColor = m.score >= 70 ? 'var(--green)' : m.score >= 50 ? 'var(--yellow)' : 'var(--red)';
+    const ddColor = m.maxDrawdown < 10 ? 'var(--green)' : m.maxDrawdown < 20 ? 'var(--yellow)' : 'var(--red)';
+    const roiSign = m.roi90d >= 0 ? '+' : '';
+    return `<div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <span style="font-weight:600;font-size:0.85rem;">#${i+1} ${m.nickname}</span>
+        <span style="font-size:0.88rem;font-weight:700;color:${scoreColor};">${m.score.toFixed(0)}<span style="font-size:0.68rem;color:var(--text-3);font-weight:400;">/100</span></span>
+      </div>
+      <div style="background:rgba(255,255,255,0.06);border-radius:4px;height:4px;margin-bottom:6px;">
+        <div style="width:${m.score}%;height:100%;border-radius:4px;background:${scoreColor};transition:width 0.5s;"></div>
+      </div>
+      <div style="display:flex;gap:12px;font-size:0.72rem;color:var(--text-2);">
+        <span>🎯 Win: <b style="color:var(--text-1)">${m.winRate.toFixed(0)}%</b></span>
+        <span style="color:${ddColor};">📉 DD: <b>${m.maxDrawdown.toFixed(0)}%</b></span>
+        <span>📈 ROI: <b style="color:${m.roi90d>=0?'var(--green)':'var(--red)'}">${roiSign}${m.roi90d.toFixed(0)}%</b></span>
+        <span>⚡ Lev: <b>${m.avgLeverage.toFixed(0)}x</b></span>
+        <span>👥 <b>${m.followerNum}</b></span>
+      </div>
+      <div style="margin-top:4px;">
+        <a href="https://www.bybit.com/en/copy-trade/${m.uid}" target="_blank"
+           style="font-size:0.68rem;color:var(--purple);text-decoration:none;">
+          Follow on Bybit →
+        </a>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderCopyPositions(data) {
+  const el = document.getElementById('ct-positions-body');
+  const pnlEl = document.getElementById('ct-pos-pnl');
+  const timeEl = document.getElementById('ct-pos-time');
+  if (!el) return;
+
+  if (data.snapshot_utc) {
+    const t = new Date(data.snapshot_utc);
+    timeEl.textContent = t.toLocaleTimeString();
+  }
+
+  const totalPnl = data.total_pnl || 0;
+  if (pnlEl) {
+    pnlEl.textContent = (totalPnl >= 0 ? '+' : '') + '$' + totalPnl.toFixed(2);
+    pnlEl.style.color = totalPnl >= 0 ? 'var(--green)' : 'var(--red)';
+  }
+
+  const positions = data.open_positions || [];
+  if (!positions.length) {
+    el.innerHTML = '<div class="empty"><p>No open copy positions detected</p></div>';
+    return;
+  }
+
+  el.innerHTML = `<table style="width:100%;font-size:0.75rem;border-collapse:collapse;">
+    <thead><tr style="color:var(--text-3);text-align:left;">
+      <th style="padding:4px 8px;">Symbol</th>
+      <th style="padding:4px 8px;">Side</th>
+      <th style="padding:4px 8px;">Size</th>
+      <th style="padding:4px 8px;">Entry</th>
+      <th style="padding:4px 8px;">Unreal P&L</th>
+      <th style="padding:4px 8px;">Total P&L</th>
+    </tr></thead>
+    <tbody>
+      ${positions.map(p => {
+        const pnlColor = p.unrealisedPnl >= 0 ? 'var(--green)' : 'var(--red)';
+        const totColor  = p.totalPnl >= 0 ? 'var(--green)' : 'var(--red)';
+        const sideColor = p.side === 'Buy' ? 'var(--green)' : 'var(--red)';
+        return `<tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+          <td style="padding:5px 8px;font-weight:600;">${p.symbol}</td>
+          <td style="padding:5px 8px;color:${sideColor};">${p.side}</td>
+          <td style="padding:5px 8px;">${p.size}</td>
+          <td style="padding:5px 8px;">${p.entryPrice}</td>
+          <td style="padding:5px 8px;color:${pnlColor};font-weight:600;">${p.unrealisedPnl >= 0 ? '+' : ''}$${p.unrealisedPnl.toFixed(2)}<span style="color:var(--text-3);font-weight:400;"> (${p.unrealisedPct >= 0 ? '+' : ''}${p.unrealisedPct.toFixed(1)}%)</span></td>
+          <td style="padding:5px 8px;color:${totColor};font-weight:600;">${p.totalPnl >= 0 ? '+' : ''}$${p.totalPnl.toFixed(2)}</td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table>
+  <div style="padding:8px 8px 0;font-size:0.72rem;color:var(--text-3);">
+    Unrealised: <b style="color:${data.total_unrealised_pnl>=0?'var(--green)':'var(--red)'}">${data.total_unrealised_pnl>=0?'+':''}$${(data.total_unrealised_pnl||0).toFixed(2)}</b>
+    &nbsp;·&nbsp; Realised: <b style="color:${data.total_realised_pnl>=0?'var(--green)':'var(--red)'}">${data.total_realised_pnl>=0?'+':''}$${(data.total_realised_pnl||0).toFixed(2)}</b>
+  </div>`;
+}
+
+async function fetchCopyTrading() {
+  try {
+    const [lbRes, posRes] = await Promise.all([
+      fetch('/api/copy-trading/leaderboard'),
+      fetch('/api/copy-trading/positions'),
+    ]);
+    if (lbRes.ok) renderCopyLeaderboard(await lbRes.json());
+    if (posRes.ok) renderCopyPositions(await posRes.json());
+  } catch(e) {}
+}
+
+async function triggerCopyScan() {
+  const btn = document.getElementById('ct-scan-btn');
+  const timeEl = document.getElementById('ct-scan-time');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Scanning…'; }
+  if (timeEl) timeEl.textContent = 'Scan running…';
+  try {
+    const r = await fetch('/api/copy-trading/scan', { method: 'POST' });
+    if (r.ok) {
+      if (timeEl) timeEl.textContent = 'Scan started — results in ~2 min';
+      // Poll every 20s for up to 3 min
+      let attempts = 0;
+      const poll = setInterval(async () => {
+        attempts++;
+        await fetchCopyTrading();
+        if (attempts >= 9) clearInterval(poll);
+      }, 20000);
+    }
+  } catch(e) {}
+  if (btn) { btn.disabled = false; btn.textContent = '⟳ Scan Now'; }
+}
+
+// Poll copy trading data every 5 minutes
+fetchCopyTrading();
+setInterval(fetchCopyTrading, 300000);
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 initChart();
 initWeightsChart();
@@ -1613,5 +1786,6 @@ setInterval(() => {
     .catch(() => {});
 }, 60000);
 </script>
+
 </body>
 </html>

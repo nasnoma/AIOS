@@ -116,6 +116,36 @@ async def get_agent_weights():
         return {"weights": {}, "last_updated": None, "error": str(e)}
 
 
+@app.get("/api/copy-trading/leaderboard")
+async def get_copy_leaderboard():
+    """Return latest copy trading leaderboard scan results."""
+    from trading_engine.copy_trading.leaderboard_scanner import load_state
+    return load_state()
+
+
+@app.get("/api/copy-trading/positions")
+async def get_copy_positions():
+    """Return latest copy trading position snapshot."""
+    from trading_engine.copy_trading.position_monitor import load_state as load_pos_state
+    return load_pos_state()
+
+
+@app.post("/api/copy-trading/scan")
+async def trigger_copy_scan():
+    """Manually trigger a leaderboard scan (runs in background thread)."""
+    import threading
+    from trading_engine.copy_trading import leaderboard_scanner
+    def _run():
+        try:
+            results = leaderboard_scanner.scan()
+            if results:
+                leaderboard_scanner.send_leaderboard_alert(results)
+        except Exception as e:
+            logger.error(f"Manual copy scan error: {e}")
+    threading.Thread(target=_run, daemon=True).start()
+    return {"status": "scan_started", "message": "Leaderboard scan triggered — results in ~2 min"}
+
+
 @app.get("/api/diagnostics/trades")
 async def get_diagnostics_trades():
     from trading_engine.storage import db
