@@ -13,7 +13,7 @@ Features:
 """
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, List
 from loguru import logger
 import math
 import numpy as np
@@ -91,10 +91,11 @@ def _compute_price_correlation(
     lookback: int = 30,
 ) -> float:
     """
-    Compute Pearson correlation of log returns between two assets
-    over the last `lookback` candles using their OHLCV DataFrames.
-    Falls back to 0.85 if data is insufficient (conservative assumption
-    for assets in the same group).
+    Compute Pearson correlation of log returns between two assets.
+    Max Dama §6.2: uses volatility-adjusted (realized variance) returns so that
+    vol spikes during news events don't produce spurious correlation readings
+    and falsely veto otherwise-uncorrelated trades.
+    Falls back to 0.85 if data is insufficient (conservative assumption).
     """
     try:
         df_new = snap_new.df["close"].iloc[-lookback:]
@@ -103,19 +104,83 @@ def _compute_price_correlation(
         if len(df_new) < 10 or len(df_existing) < 10:
             return 0.85  # Conservative fallback
 
-        ret_new = np.log(df_new / df_new.shift(1)).dropna()
-        ret_existing = np.log(df_existing / df_existing.shift(1)).dropna()
+        ret_new = np.log(df_new / df_new.shift(1)).dropna().values
+        ret_existing = np.log(df_existing / df_existing.shift(1)).dropna().values
 
         # Align to same length
         min_len = min(len(ret_new), len(ret_existing))
-        ret_new = ret_new.iloc[-min_len:].values
-        ret_existing = ret_existing.iloc[-min_len:].values
+        ret_new = ret_new[-min_len:]
+        ret_existing = ret_existing[-min_len:]
 
-        corr = float(np.corrcoef(ret_new, ret_existing)[0, 1])
+        # Max Dama §6.2 — Vol-adjusted correlation:
+        # Normalise each series by its own realized std so vol spikes don't
+        # inflate correlation. A narrow EW window (last 10 bars) captures
+        # current realized variance without diluting the signal.
+        ew_window = min(10, min_len)
+        rv_new = np.std(ret_new[-ew_window:]) or 1e-9
+        rv_existing = np.std(ret_existing[-ew_window:]) or 1e-9
+        ret_new_adj = ret_new / rv_new
+        ret_existing_adj = ret_existing / rv_existing
+
+        corr = float(np.corrcoef(ret_new_adj, ret_existing_adj)[0, 1])
         return corr if not np.isnan(corr) else 0.85
     except Exception as e:
         logger.warning(f"Correlation computation failed: {e}. Using conservative default 0.85.")
         return 0.85
+
+
+def _trim_outliers(values: List[float], n_std: float = 4.0) -> List[float]:
+    """
+    Max Dama §4.8 — Trim returns beyond ±N std deviations before feeding
+    into Kelly computation. Prevents a single catastrophic outlier trade
+    from permanently skewing win_rate and kelly fraction downward.
+    """
+    if len(values) < 5:
+        return values
+    arr = np.array(values, dtype=float)
+    mean, std = arr.mean(), arr.std()
+    if std == 0:
+        return values
+    return arr[np.abs(arr - mean) <= n_std * std].tolist()
+
+
+def _compute_rolling_performance(closed_trades: list, window: int = 30) -> dict:
+    """
+    Max Dama §4.10 / §5.5 — Rolling shut-off criteria.
+    Compute win_rate, Sharpe, and max_drawdown over the last `window` trades.
+    Returns a dict with keys: win_rate, sharpe, max_drawdown, n_trades.
+    """
+    if not closed_trades or len(closed_trades) < 5:
+        return {"win_rate": None, "sharpe": None, "max_drawdown": None, "n_trades": 0}
+
+    # Use the most recent `window` trades
+    recent = closed_trades[-window:]
+    returns = []
+    for t in recent:
+        is_dict = isinstance(t, dict)
+        pnl = t.get("pnl_usd") if is_dict else getattr(t, "pnl_usd", None)
+        size = t.get("size_usd") if is_dict else getattr(t, "size_usd", None)
+        if pnl is not None and size and size > 0:
+            returns.append(pnl / size)
+
+    if len(returns) < 5:
+        return {"win_rate": None, "sharpe": None, "max_drawdown": None, "n_trades": len(returns)}
+
+    arr = np.array(returns)
+    win_rate = float((arr > 0).mean())
+    sharpe = float(arr.mean() / arr.std() * np.sqrt(252)) if arr.std() > 0 else 0.0
+
+    # Max drawdown from cumulative returns
+    cum = np.cumprod(1 + arr)
+    peak = np.maximum.accumulate(cum)
+    drawdown = float(((cum - peak) / peak).min())
+
+    return {
+        "win_rate": win_rate,
+        "sharpe": sharpe,
+        "max_drawdown": abs(drawdown),
+        "n_trades": len(returns),
+    }
 
 
 def check_correlation(
@@ -191,6 +256,7 @@ def _kelly_fraction(win_rate: float, rr_ratio: float, kelly_fraction: float = 0.
     """
     Fractional Kelly Criterion.
     kelly_fraction=0.25 means quarter-kelly (much safer than full kelly).
+    Win_rate should already be computed from outlier-trimmed returns (Max Dama §4.8).
     """
     if rr_ratio <= 0 or win_rate <= 0:
         return 0.01
@@ -329,6 +395,44 @@ def evaluate(
             )
 
 
+
+    # ── Max Dama §4.10: Rolling Shut-off Criteria ────────────────────────────
+    # If rolling 30-trade win_rate < 38% OR Sharpe < 0.25 OR max_drawdown > 8%,
+    # suspend all new entries. This prevents grinding through regime shifts.
+    _shutoff_window = int(getattr(settings, "rolling_shutoff_window", 30))
+    _shutoff_enabled = getattr(settings, "rolling_shutoff_enabled", True)
+    if _shutoff_enabled and closed_trades and len(closed_trades) >= 10:
+        _perf = _compute_rolling_performance(closed_trades, window=_shutoff_window)
+        _n = _perf["n_trades"]
+        _wr = _perf["win_rate"]
+        _sh = _perf["sharpe"]
+        _dd = _perf["max_drawdown"]
+        _shutoff_wr   = float(getattr(settings, "rolling_shutoff_min_winrate", 0.38))
+        _shutoff_sh   = float(getattr(settings, "rolling_shutoff_min_sharpe",  0.25))
+        _shutoff_dd   = float(getattr(settings, "rolling_shutoff_max_drawdown", 0.08))
+        _shutoff_triggered = False
+        _shutoff_reason = ""
+        if _wr is not None and _wr < _shutoff_wr:
+            _shutoff_triggered = True
+            _shutoff_reason = f"Rolling win_rate {_wr:.0%} < {_shutoff_wr:.0%} threshold over last {_n} trades"
+        elif _sh is not None and _sh < _shutoff_sh:
+            _shutoff_triggered = True
+            _shutoff_reason = f"Rolling Sharpe {_sh:.2f} < {_shutoff_sh:.2f} threshold over last {_n} trades"
+        elif _dd is not None and _dd > _shutoff_dd:
+            _shutoff_triggered = True
+            _shutoff_reason = f"Rolling max drawdown {_dd:.1%} > {_shutoff_dd:.1%} threshold over last {_n} trades"
+        if _shutoff_triggered:
+            logger.warning(f"  🛑 Rolling Shut-off: {_shutoff_reason}")
+            return RiskDecision(
+                approved=False,
+                reason=f"Rolling shut-off triggered: {_shutoff_reason}. Strategy suspended — regime may have shifted.",
+                position_size_pct=0, position_size_usd=0,
+                entry_price=entry, stop_loss=0, take_profit=0,
+                stop_loss_pct=0, take_profit_pct=0, risk_reward=0,
+                max_loss_usd=0, atr=atr,
+            )
+        else:
+            logger.debug(f"  ✅ Rolling perf OK (wr={_wr:.0%}, sh={_sh:.2f}, dd={_dd:.1%}) over {_n} trades")
 
     # Load risk thresholds live from param file (optimizer can update without restart)
     _rp = _load_risk_params()
@@ -613,14 +717,56 @@ def evaluate(
             risk_reward=rr_ratio, max_loss_usd=0, atr=atr,
         )
 
+    # ── Max Dama §4.8: Outlier-trimmed Kelly inputs ────────────────────────
+    # Trim extreme returns before computing win_rate for Kelly so that a single
+    # catastrophic or anomalous trade doesn't permanently skew position sizing.
+    _trimmed_win_rate = historical_win_rate
+    if closed_trades and len(closed_trades) >= 5:
+        _raw_returns = []
+        for _t in closed_trades[-60:]:  # use last 60 trades for calibration
+            _is_dict = isinstance(_t, dict)
+            _pnl  = _t.get("pnl_usd")  if _is_dict else getattr(_t, "pnl_usd",  None)
+            _size = _t.get("size_usd") if _is_dict else getattr(_t, "size_usd", None)
+            if _pnl is not None and _size and _size > 0:
+                _raw_returns.append(_pnl / _size)
+        _trimmed = _trim_outliers(_raw_returns)
+        if len(_trimmed) >= 5:
+            _trimmed_win_rate = float(sum(1 for r in _trimmed if r > 0) / len(_trimmed))
+            logger.debug(
+                f"  ✂️ Outlier-trimmed Kelly: raw_wr={historical_win_rate:.0%} → "
+                f"trimmed_wr={_trimmed_win_rate:.0%} ({len(_raw_returns)} → {len(_trimmed)} trades)"
+            )
+
+    # ── Max Dama §6.2: Realized-vol dynamic sizing ─────────────────────────
+    # If current short-window ATR% is significantly higher than the long-window
+    # ATR%, a vol spike is underway. Shrink position proportionally so we don't
+    # oversize into a news/liquidation event.
+    _vol_multiplier = 1.0
+    if is_crypto and snap.df is not None and len(snap.df) >= 20:
+        try:
+            _prices = snap.df["close"].values
+            _rets = np.diff(np.log(_prices + 1e-12))
+            _short_vol = float(np.std(_rets[-10:])) if len(_rets) >= 10 else 0.0
+            _long_vol  = float(np.std(_rets[-30:])) if len(_rets) >= 30 else 0.0
+            if _short_vol > 0 and _long_vol > 0 and _short_vol > 1.5 * _long_vol:
+                _vol_multiplier = min(1.0, _long_vol / _short_vol)
+                logger.info(
+                    f"  📉 Realized-vol shrink: short_vol={_short_vol:.4f} > 1.5×long_vol={_long_vol:.4f} "
+                    f"→ size×{_vol_multiplier:.2f}"
+                )
+        except Exception as _ve:
+            logger.debug(f"Realized-vol sizing check failed: {_ve}")
+
     # ── Kelly / Volatility Position Sizing ────────────
-    kelly = _kelly_fraction(historical_win_rate, rr_ratio, kelly_frac)
+    kelly = _kelly_fraction(_trimmed_win_rate, rr_ratio, kelly_frac)
     # Risk-based position size: never risk more than max_risk_per_trade
     risk_based_size = max_risk_per_trade / stop_loss_pct
     kelly_size = kelly
     max_pos_pct = _rp.get("max_position_pct", 0.25)
     # Take the minimum of kelly and risk-based cap
     position_size_pct = min(kelly_size, risk_based_size, max_pos_pct)
+    # Apply realized-vol shrink multiplier
+    position_size_pct *= _vol_multiplier
 
     # ── Confidence-Weighted Position Sizing ────────────────
     # Scale size by judge confidence: high conviction → larger, borderline → smaller.

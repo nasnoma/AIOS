@@ -5,16 +5,63 @@ Agent 4: Order Flow Agent (Crypto-specific)
 - Funding rate: positive = longs paying (bearish pressure), negative = shorts paying (bullish)
 - Open interest: rising OI in uptrend confirms move; rising OI in downtrend confirms sell-off
 - Liquidations: heavy long liqs can be floor; heavy short liqs = squeeze
+- Order book imbalance (microprice) — Max Dama §4.7/§4.8: highest-IC short-term signal
 - For stocks: falls back to volume/options proxy
 """
 from __future__ import annotations
+from loguru import logger
 from trading_engine.agents.base import AgentSignal, Signal
 from trading_engine.data.market_data import MarketSnapshot
+
+# EMA state for OB imbalance smoothing (Max Dama §4.8: push IC horizon to tradeable window)
+_ob_ema: dict[str, float] = {}
+_OB_EMA_WEIGHT = 0.3   # α — heavier = faster, lighter = smoother
+
+
+def _fetch_ob_imbalance(symbol: str) -> float | None:
+    """
+    Fetch top-5 order book levels and compute normalised imbalance.
+    Max Dama §4.7/§4.8:
+        imbalance = (bid_vol - ask_vol) / (bid_vol + ask_vol)
+    Range: [-1, +1].  Positive → buy pressure; Negative → sell pressure.
+    EMA-smoothed to extend the IC horizon from milliseconds to minutes.
+    Returns None on any failure (graceful degradation).
+    """
+    try:
+        import ccxt
+        from trading_engine.config import settings
+        exchange_cls = getattr(ccxt, settings.crypto_exchange, None)
+        if exchange_cls is None:
+            return None
+        exchange = exchange_cls()
+        # Strip perpetual suffix so CCXT can find the symbol
+        fetch_sym = symbol.split(":")[0] if ":" in symbol else symbol
+        ob = exchange.fetch_order_book(fetch_sym, limit=5)
+        bids = ob.get("bids", [])  # [[price, size], ...]
+        asks = ob.get("asks", [])
+        bid_vol = sum(row[1] for row in bids if len(row) >= 2)
+        ask_vol = sum(row[1] for row in asks if len(row) >= 2)
+        total = bid_vol + ask_vol
+        if total == 0:
+            return None
+        raw_imbalance = (bid_vol - ask_vol) / total
+        # EMA smoothing (Max Dama §4.8 — extends IC horizon)
+        prev = _ob_ema.get(symbol, 0.0)
+        smoothed = prev + _OB_EMA_WEIGHT * (raw_imbalance - prev)
+        _ob_ema[symbol] = smoothed
+        logger.debug(
+            f"  📊 OB imbalance {symbol}: raw={raw_imbalance:.3f} "
+            f"ema={smoothed:.3f} (bid={bid_vol:.1f}, ask={ask_vol:.1f})"
+        )
+        return smoothed
+    except Exception as e:
+        logger.debug(f"OB imbalance fetch failed for {symbol}: {e}")
+        return None
 
 
 def analyze(snap: MarketSnapshot) -> AgentSignal:
     score = 0
-    max_score = 5
+    max_score = 7   # increased from 5 to account for OB imbalance signal
     reasons = []
 
     if snap.asset_type == "stock":
@@ -28,6 +75,24 @@ def analyze(snap: MarketSnapshot) -> AgentSignal:
         else:
             reasons.append("Normal stock volume — no clear institutional signal")
     else:
+        # ── Max Dama §4.7/§4.8: Order Book Imbalance (Microprice) ─────────
+        ob_imb = _fetch_ob_imbalance(snap.symbol)
+        if ob_imb is not None:
+            if ob_imb >= 0.30:
+                score += 2
+                reasons.append(f"Strong bid-side OB pressure (imbalance={ob_imb:.2f}) — buyers dominating")
+            elif ob_imb >= 0.10:
+                score += 1
+                reasons.append(f"Mild bid-side OB pressure (imbalance={ob_imb:.2f})")
+            elif ob_imb <= -0.30:
+                score -= 2
+                reasons.append(f"Strong ask-side OB pressure (imbalance={ob_imb:.2f}) — sellers dominating")
+            elif ob_imb <= -0.10:
+                score -= 1
+                reasons.append(f"Mild ask-side OB pressure (imbalance={ob_imb:.2f})")
+            else:
+                reasons.append(f"Balanced order book (imbalance={ob_imb:.2f})")
+
         # ── Funding Rate ───────────────────────────────────
         fr = snap.funding_rate
         if fr is not None:
@@ -91,5 +156,6 @@ def analyze(snap: MarketSnapshot) -> AgentSignal:
             "score": score,
             "funding_rate": snap.funding_rate,
             "open_interest": snap.open_interest,
+            "ob_imbalance": _ob_ema.get(snap.symbol),
         },
     )
