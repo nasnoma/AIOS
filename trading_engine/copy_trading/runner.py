@@ -23,7 +23,8 @@ def run() -> None:
     from trading_engine.copy_trading import leaderboard_scanner, position_monitor
 
     logger.info("🚀 Copy trading runner started")
-    last_scan_ts = 0.0
+    # Force immediate scan on startup (don't wait 6 hours on first deploy)
+    last_scan_ts = -float("inf")
 
     while True:
         now = time.time()

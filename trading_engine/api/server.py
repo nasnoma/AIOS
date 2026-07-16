@@ -118,9 +118,25 @@ async def get_agent_weights():
 
 @app.get("/api/copy-trading/leaderboard")
 async def get_copy_leaderboard():
-    """Return latest copy trading leaderboard scan results."""
-    from trading_engine.copy_trading.leaderboard_scanner import load_state
-    return load_state()
+    """Return latest copy trading leaderboard scan results.
+    Auto-triggers a background scan on first call if no state exists yet."""
+    from trading_engine.copy_trading.leaderboard_scanner import load_state, STATE_FILE
+    state = load_state()
+    # Auto-trigger scan if never run (e.g. fresh Railway deploy with ephemeral fs)
+    if not STATE_FILE.exists() or not state.get("top_masters"):
+        import threading
+        from trading_engine.copy_trading import leaderboard_scanner as _ls
+        def _auto_scan():
+            try:
+                results = _ls.scan()
+                if results:
+                    _ls.send_leaderboard_alert(results)
+            except Exception as _e:
+                logger.warning(f"Auto-scan error: {_e}")
+        t = threading.Thread(target=_auto_scan, daemon=True)
+        t.start()
+        state["_auto_scanning"] = True
+    return state
 
 
 @app.get("/api/copy-trading/positions")

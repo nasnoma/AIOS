@@ -250,9 +250,17 @@
       .dashboard-row-1,
       .dashboard-row-pipeline,
       .dashboard-row-markets,
-      .dashboard-row-feeds {
+      .dashboard-row-feeds,
+      .dashboard-row-copy {
         grid-template-columns: 1fr;
       }
+    }
+
+    .dashboard-row-copy {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 14px;
     }
 
     /* ── Panel ── */
@@ -551,7 +559,8 @@
       .dashboard-row-1,
       .dashboard-row-pipeline,
       .dashboard-row-markets,
-      .dashboard-row-feeds {
+      .dashboard-row-feeds,
+      .dashboard-row-copy {
         grid-template-columns: 1fr;
         gap: 14px;
       }
@@ -754,7 +763,7 @@
   </div>
 
   <!-- Row 4: Copy Trading Intelligence -->
-  <div class="dashboard-row-feeds" style="grid-template-columns: 1fr 1fr;">
+  <div class="dashboard-row-copy">
 
     <!-- Leaderboard Panel -->
     <div class="panel">
@@ -767,7 +776,10 @@
       </div>
       <div class="panel-body" style="padding:0;">
         <div id="ct-leaderboard-body" style="padding:12px 16px;">
-          <div class="empty"><p>No scan yet — click Scan Now</p></div>
+          <div class="empty">
+            <p style="margin-bottom:8px;">No scan yet</p>
+            <button class="btn" onclick="triggerCopyScan()" style="margin:auto;">⟳ Scan Leaderboard Now</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1641,7 +1653,10 @@ function renderCopyLeaderboard(data) {
 
   const masters = (data.top_masters || []).slice(0, 5);
   if (!masters.length) {
-    el.innerHTML = '<div class="empty"><p>No qualified masters found yet — click Scan Now</p></div>';
+    el.innerHTML = `<div class="empty">
+      <p style="margin-bottom:8px;">${data.last_scan_utc ? 'No qualified masters found' : 'No scan yet'}</p>
+      <button class="btn" onclick="triggerCopyScan()" style="margin:auto;">⟳ Scan Leaderboard Now</button>
+    </div>`;
     return;
   }
 
@@ -1657,16 +1672,16 @@ function renderCopyLeaderboard(data) {
       <div style="background:rgba(255,255,255,0.06);border-radius:4px;height:4px;margin-bottom:6px;">
         <div style="width:${m.score}%;height:100%;border-radius:4px;background:${scoreColor};transition:width 0.5s;"></div>
       </div>
-      <div style="display:flex;gap:12px;font-size:0.72rem;color:var(--text-2);">
+      <div style="display:flex;flex-wrap:wrap;gap:8px 12px;font-size:0.72rem;color:var(--text-2);">
         <span>🎯 Win: <b style="color:var(--text-1)">${m.winRate.toFixed(0)}%</b></span>
         <span style="color:${ddColor};">📉 DD: <b>${m.maxDrawdown.toFixed(0)}%</b></span>
         <span>📈 ROI: <b style="color:${m.roi90d>=0?'var(--green)':'var(--red)'}">${roiSign}${m.roi90d.toFixed(0)}%</b></span>
         <span>⚡ Lev: <b>${m.avgLeverage.toFixed(0)}x</b></span>
         <span>👥 <b>${m.followerNum}</b></span>
       </div>
-      <div style="margin-top:4px;">
+      <div style="margin-top:6px;">
         <a href="https://www.bybit.com/en/copy-trade/${m.uid}" target="_blank"
-           style="font-size:0.68rem;color:var(--purple);text-decoration:none;">
+           style="font-size:0.70rem;color:var(--purple);text-decoration:none;font-weight:500;">
           Follow on Bybit →
         </a>
       </div>
