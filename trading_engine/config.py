@@ -81,6 +81,14 @@ class Settings(BaseSettings):
     daily_loss_limit_usd: float = 150.0
     max_position_usd: float = 3000.0    # hard cap per trade regardless of account size
 
+    # ── Rolling Shut-off ─────────────────────────────────────
+    rolling_shutoff_enabled: bool = True
+    rolling_shutoff_window: int = 30
+    rolling_shutoff_min_winrate: float = 0.38
+    rolling_shutoff_min_sharpe: float = 0.25
+    rolling_shutoff_max_drawdown: float = 0.08
+    rolling_shutoff_since: str = "2026-07-16T00:00:00+00:00"  # Filter out old trades before the major code upgrade
+
     # ── Market Regime Filter ─────────────────────────────────
     # Only allow LONG crypto entries when BTC is above its N-period MA on the
     # configured timeframe.  Set regime_filter_enabled=False to bypass.

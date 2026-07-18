@@ -401,6 +401,34 @@ def evaluate(
     # suspend all new entries. This prevents grinding through regime shifts.
     _shutoff_window = int(getattr(settings, "rolling_shutoff_window", 30))
     _shutoff_enabled = getattr(settings, "rolling_shutoff_enabled", True)
+    if _shutoff_enabled and closed_trades:
+        # Filter trades to only those after the new deployment date if specified
+        _since_str = getattr(settings, "rolling_shutoff_since", None)
+        if _since_str:
+            import dateutil.parser
+            from datetime import timezone
+            try:
+                dt_since = dateutil.parser.isoparse(_since_str)
+                filtered_trades = []
+                for t in closed_trades:
+                    is_dict = isinstance(t, dict)
+                    closed_at_val = t.get("closed_at") if is_dict else getattr(t, "closed_at", None)
+                    if closed_at_val:
+                        if isinstance(closed_at_val, str):
+                            dt_closed = dateutil.parser.isoparse(closed_at_val)
+                        else:
+                            dt_closed = closed_at_val
+                        # Ensure both are timezone-aware UTC for comparison
+                        if dt_closed.tzinfo is None:
+                            dt_closed = dt_closed.replace(tzinfo=timezone.utc)
+                        if dt_since.tzinfo is None:
+                            dt_since = dt_since.replace(tzinfo=timezone.utc)
+                        if dt_closed >= dt_since:
+                            filtered_trades.append(t)
+                closed_trades = filtered_trades
+            except Exception as e:
+                logger.warning(f"Failed to parse rolling_shutoff_since: {e}")
+
     if _shutoff_enabled and closed_trades and len(closed_trades) >= 10:
         _perf = _compute_rolling_performance(closed_trades, window=_shutoff_window)
         _n = _perf["n_trades"]
@@ -742,9 +770,11 @@ def evaluate(
     # ATR%, a vol spike is underway. Shrink position proportionally so we don't
     # oversize into a news/liquidation event.
     _vol_multiplier = 1.0
-    if is_crypto and snap.df is not None and len(snap.df) >= 20:
+    import pandas as pd
+    _df = getattr(snap, "df", None)
+    if is_crypto and isinstance(_df, pd.DataFrame) and len(_df) >= 20:
         try:
-            _prices = snap.df["close"].values
+            _prices = _df["close"].values
             _rets = np.diff(np.log(_prices + 1e-12))
             _short_vol = float(np.std(_rets[-10:])) if len(_rets) >= 10 else 0.0
             _long_vol  = float(np.std(_rets[-30:])) if len(_rets) >= 30 else 0.0
