@@ -80,35 +80,29 @@ def analyze(snap: MarketSnapshot) -> AgentSignal:
     if mtf_details:
         reasons.append(f"MTF Trends ({', '.join(mtf_details)})")
 
-        # ── Strict MTF Consensus Requirement ───────────────────────
-        # When all 3 HTFs are available, we require UNANIMOUS agreement.
-        # A split reading (e.g. 1H bullish, 4H neutral, Daily bearish) means
-        # the market has no clear edge — HOLD and wait for alignment.
+        # ── Supportive MTF Consensus Filter ───────────────────────
+        # We allow trading as long as there is supportive majority alignment
+        # and no strong conflict with the macro trend (e.g. buying when majority is bearish).
         htf_count = sum(1 for _, s in [("1H", snap.htf_1h_snap), ("4H", snap.htf_4h_snap), ("Daily", snap.htf_1d_snap)] if s is not None)
         if htf_count >= 2:
-            if mtf_bullish_count == htf_count:
-                # All available HTFs bullish — suppress any bearish score
+            if mtf_bullish_count >= 2:
+                # Majority bullish — suppress any bearish score
                 if score < 0:
                     score = 0
-                    reasons.append("MTF Override: All HTFs BULLISH — bearish signal suppressed.")
-            elif mtf_bearish_count == htf_count:
-                # All available HTFs bearish — suppress any bullish score
+                    reasons.append("MTF Support: Majority of HTFs are BULLISH — bearish signal suppressed.")
+            elif mtf_bearish_count >= 2:
+                # Majority bearish — suppress any bullish score
                 if score > 0:
                     score = 0
-                    reasons.append("MTF Override: All HTFs BEARISH — bullish signal suppressed.")
+                    reasons.append("MTF Support: Majority of HTFs are BEARISH — bullish signal suppressed.")
             else:
-                # HTFs disagree — no clear edge, force HOLD
-                score = 0
-                reasons.append(
-                    f"MTF Conflict veto: {htf_count} HTFs checked but trend is split "
-                    f"(bull={mtf_bullish_count}, bear={mtf_bearish_count}). No edge — holding."
-                )
-        elif mtf_bearish_count >= 2 and score > 0:
-            score = min(0, score - 5)
-            reasons.append("MTF Veto: Majority of HTFs are BEARISH. Long signals vetoed.")
-        elif mtf_bullish_count >= 2 and score < 0:
-            score = max(0, score + 5)
-            reasons.append("MTF Veto: Majority of HTFs are BULLISH. Short signals vetoed.")
+                # Split trend without a clear majority — discount score slightly for caution
+                if score > 0 and mtf_bearish_count >= 1:
+                    score = max(0, score - 1)
+                    reasons.append("MTF Caution: Trend is split — bullish score discounted.")
+                elif score < 0 and mtf_bullish_count >= 1:
+                    score = min(0, score + 1)
+                    reasons.append("MTF Caution: Trend is split — bearish score discounted.")
     else:
         # Fallback to single htf_snap
         if snap.htf_snap:

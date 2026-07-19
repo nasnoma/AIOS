@@ -65,7 +65,7 @@ class Settings(BaseSettings):
     max_concurrent_positions: int = 6
     crypto_use_5m_atr: bool = False
     max_hold_time_minutes: int = 120
-    min_velocity_usd_30s: float = 8.0
+    min_velocity_usd_30s: float = 0.0
     simple_ensemble_enabled: bool = False
     scalping_mode: bool = True
 
