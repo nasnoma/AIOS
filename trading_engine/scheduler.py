@@ -324,6 +324,7 @@ def run_bounty_hunter_cycle():
                 size_usd=size_needed,
                 stop_loss=b["stop_loss"]    or (b["entry_price"] * 0.95),
                 take_profit=b["take_profit"] or (b["entry_price"] * 1.10),
+                atr=float(b.get("atr") or 0.0),
             )
             if pos:
                 portfolio = trader._load_state()
@@ -361,6 +362,7 @@ def run_bounty_hunter_cycle():
                 size_usd=size_needed,
                 stop_loss=s["stop_loss"]    or (s["entry_price"] * 1.05),
                 take_profit=s["take_profit"] or (s["entry_price"] * 0.90),
+                atr=float(s.get("atr") or 0.0),
             )
             if pos:
                 portfolio = trader._load_state()

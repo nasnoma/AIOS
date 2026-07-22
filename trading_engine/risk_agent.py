@@ -709,14 +709,14 @@ def evaluate(
     atr_multiplier = _rp.get("atr_stop_multiplier", settings.atr_multiplier)
     stop_distance = atr * atr_multiplier
 
-    # Enforce minimum stop distance of 1% of entry price.
-    # ATR on 5m bars can be as low as 0.07%, which puts SL inside the spread
-    # and makes TP unreachably small. 1% floor gives meaningful SL/TP levels.
-    min_stop_pct = _rp.get("min_stop_pct", 0.01)  # default 1%
+    # Enforce minimum stop distance of 2.2% of entry price for crypto.
+    # ATR on short bars can be small, causing tight 1% stops that get noise-stopped on volatile assets like ETH.
+    default_min_stop = 0.022 if is_crypto else 0.01
+    min_stop_pct = _rp.get("min_stop_pct", default_min_stop)
     min_stop_distance = entry * min_stop_pct
     if stop_distance < min_stop_distance:
         logger.info(
-            f"ATR stop ({stop_distance:.4f}) below 1% minimum ({min_stop_distance:.4f}). "
+            f"ATR stop ({stop_distance:.4f}) below minimum ({min_stop_distance:.4f}). "
             f"Widening stop to {min_stop_pct:.1%} of entry."
         )
         stop_distance = min_stop_distance
