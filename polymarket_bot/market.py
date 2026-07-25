@@ -117,6 +117,16 @@ async def _fetch_market_by_slug(
         for m in markets:
             if not m or m.get("closed"):
                 continue
+            
+            # Enforce minimum pool liquidity
+            liquidity = float(m.get('liquidityNum') or m.get('liquidity') or 0.0)
+            from polymarket_bot.config import settings
+            if liquidity < settings.min_pool_liquidity_usd:
+                logger.warning(
+                    f"  ⚠️ {asset} market ignored due to low liquidity (${liquidity:.0f} < ${settings.min_pool_liquidity_usd:.0f})"
+                )
+                continue
+
             raw_token_ids = m.get("clobTokenIds", "[]")
             token_ids = json.loads(raw_token_ids) if isinstance(raw_token_ids, str) else raw_token_ids
             if len(token_ids) >= 2:
@@ -124,7 +134,7 @@ async def _fetch_market_by_slug(
                 logger.info(
                     f"  📍 {asset} market found via slug | "
                     f"UP={token_ids[0][:10]}... DOWN={token_ids[1][:10]}... "
-                    f"| liquidity=${m.get('liquidityNum', m.get('liquidity', 0)):.0f}"
+                    f"| liquidity=${liquidity:.0f}"
                 )
                 return MarketTokens(
                     asset=asset,
@@ -182,9 +192,18 @@ async def _fetch_market_by_search(
                 from datetime import datetime, timezone
                 end_dt = datetime.fromisoformat(end_str.replace("Z", "+00:00"))
                 m_end_ts = int(end_dt.timestamp())
-                if abs(m_end_ts - target_end) > 300:
+                if abs(m_end_ts - target_end) > 60:
                     continue  # Wrong window
             except Exception:
+                continue
+
+            # Enforce minimum pool liquidity
+            liquidity = float(m.get('liquidityNum') or m.get('liquidity') or 0.0)
+            from polymarket_bot.config import settings
+            if liquidity < settings.min_pool_liquidity_usd:
+                logger.warning(
+                    f"  ⚠️ {asset} market ignored during search due to low liquidity (${liquidity:.0f} < ${settings.min_pool_liquidity_usd:.0f})"
+                )
                 continue
 
             raw_token_ids = m.get("clobTokenIds", "[]")
@@ -193,7 +212,8 @@ async def _fetch_market_by_search(
                 ws = int(window_end) - 300
                 logger.info(
                     f"  📍 {asset} market found via search | "
-                    f"UP={token_ids[0][:10]}... DOWN={token_ids[1][:10]}..."
+                    f"UP={token_ids[0][:10]}... DOWN={token_ids[1][:10]}... "
+                    f"| liquidity=${liquidity:.0f}"
                 )
                 return MarketTokens(
                     asset=asset,

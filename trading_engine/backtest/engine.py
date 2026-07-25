@@ -277,9 +277,13 @@ def _run_multi_agent_simulation(
     trades = []
     open_position = None
     
-    # 0.06% entry + 0.06% exit
+    # 0.06% entry + 0.06% exit (Binance VIP0 taker)
     entry_fee_rate = 0.0006
     exit_fee_rate = 0.0006
+    # Slippage: adverse fill assumption. Crypto liquid majors ~2-3bps,
+    # alts wider. Conservative 5bps each side applied as cost.
+    entry_slippage_rate = 0.0005
+    exit_slippage_rate = 0.0005
 
     closes = df["close"].values
     highs = df["high"].values
@@ -299,32 +303,29 @@ def _run_multi_agent_simulation(
             stop_loss = open_position["stop_loss"]
             take_profit = open_position["take_profit"]
             size_usd = open_position["size_usd"]
-            
+
             triggered = False
             exit_price = price
             status = "closed"
-            
+
             high_price = highs[i]
             low_price = lows[i]
-            
+
             if direction == "long":
                 if low_price <= stop_loss:
-                    triggered = True
-                    exit_price = stop_loss
-                    status = "stopped"
+                    triggered = True; exit_price = stop_loss; status = "stopped"
                 elif high_price >= take_profit:
-                    triggered = True
-                    exit_price = take_profit
-                    status = "take_profit"
+                    triggered = True; exit_price = take_profit; status = "take_profit"
             else: # short
                 if high_price >= stop_loss:
-                    triggered = True
-                    exit_price = stop_loss
-                    status = "stopped"
+                    triggered = True; exit_price = stop_loss; status = "stopped"
                 elif low_price <= take_profit:
-                    triggered = True
-                    exit_price = take_profit
-                    status = "take_profit"
+                    triggered = True; exit_price = take_profit; status = "take_profit"
+                else: # short
+                    if high_price >= stop_loss:
+                        triggered = True; exit_price = stop_loss; status = "stopped"
+                    elif low_price <= take_profit:
+                        triggered = True; exit_price = take_profit; status = "take_profit"
                     
             if triggered:
                 if direction == "long":
@@ -333,7 +334,8 @@ def _run_multi_agent_simulation(
                     gross_pnl = (entry_price - exit_price) / entry_price * size_usd
                     
                 exit_fee = size_usd * exit_fee_rate
-                net_pnl = gross_pnl - exit_fee
+                exit_slippage = size_usd * exit_slippage_rate
+                net_pnl = gross_pnl - exit_fee - exit_slippage
                 capital += net_pnl
                 
                 trades.append({
@@ -346,6 +348,7 @@ def _run_multi_agent_simulation(
                     "size_usd": size_usd,
                     "gross_pnl": gross_pnl,
                     "fee": open_position["entry_fee"] + exit_fee,
+                    "slippage": open_position["entry_slippage"] + exit_slippage,
                     "net_pnl": net_pnl,
                     "result": "win" if net_pnl > 0 else "loss",
                     "status": status,
@@ -358,7 +361,8 @@ def _run_multi_agent_simulation(
         if not open_position:
             snap = make_historical_snapshot(symbol, asset_type, timeframe, df, i, htf_dfs)
             
-            # Run 6 quant agents
+            # Run 6 quant agents (clean baseline — mean_reversion disabled
+            # after 365d WFO showed it reduces edge on 4h/1h crypto majors)
             quant_signals = [
                 trend_agent.analyze(snap),
                 momentum_agent.analyze(snap),
@@ -398,8 +402,8 @@ def _run_multi_agent_simulation(
                     
                 if decision.approved:
                     entry_fee = decision.position_size_usd * entry_fee_rate
-                    capital -= entry_fee
-                    
+                    entry_slippage = decision.position_size_usd * entry_slippage_rate
+                    capital -= entry_fee + entry_slippage
                     open_position = {
                         "entry_idx": i,
                         "direction": "long" if verdict.decision == Signal.BUY else "short",
@@ -408,6 +412,7 @@ def _run_multi_agent_simulation(
                         "stop_loss": decision.stop_loss,
                         "take_profit": decision.take_profit,
                         "entry_fee": entry_fee,
+                        "entry_slippage": entry_slippage,
                     }
                     
     if not trades:
@@ -1493,9 +1498,11 @@ def run_walk_forward_optimization(
     # ─────────────────────────────────────────────────────────────────────
     from trading_engine.data.market_data import compute_indicators
     import ccxt
-    
+
     from trading_engine.market_hours import classify_symbol, AssetClass
     ac = classify_symbol(symbol)
+    # Enable backtest mode: skips live orderbook fetch (lookahead bias + slow)
+    settings.is_backtesting = True
     asset_type = "crypto" if ac == AssetClass.CRYPTO else "cfd" if ac in (AssetClass.STOCK_CFD, AssetClass.PRECIOUS_METAL) else "stock"
     
     # Timeframe to candles per day mapping
@@ -1653,6 +1660,8 @@ def run_backtest(
     # ── Auto-route NGX symbols to native engine ──────────────────────────
     from trading_engine.market_hours import classify_symbol, AssetClass
     ac = classify_symbol(symbol)
+    # Enable backtest mode: skips live orderbook fetch (lookahead bias + slow)
+    settings.is_backtesting = True
     if ac == AssetClass.NGX_STOCK:
         logger.info(f"Routing {symbol} to NGX native strategy engine")
         return run_ngx_native_backtest(

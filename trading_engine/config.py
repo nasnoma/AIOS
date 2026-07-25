@@ -58,11 +58,14 @@ class Settings(BaseSettings):
     max_portfolio_heat: float = 0.06
     kelly_fraction: float = 0.25
     min_agent_agreement: int = 5
-    min_avg_confidence: float = 52.0
+    min_avg_confidence: float = 58.0
     atr_multiplier: float = 2.8
     rr_ratio: float = 3.0
     stop_loss_pct_max: float = 0.10
     max_concurrent_positions: int = 6
+    max_trades_per_day: int = 8
+    two_strike_window_hours: float = 2.0
+    two_strike_count: int = 2
     crypto_use_5m_atr: bool = False
     max_hold_time_minutes: int = 720
     min_velocity_usd_30s: float = 0.0
@@ -92,7 +95,7 @@ class Settings(BaseSettings):
     # ── Market Regime Filter ─────────────────────────────────
     # Only allow LONG crypto entries when BTC is above its N-period MA on the
     # configured timeframe.  Set regime_filter_enabled=False to bypass.
-    regime_filter_enabled: bool = False
+    regime_filter_enabled: bool = True
     regime_btc_ma_period: int = 50
     regime_btc_timeframe: str = "1d"
     crypto_use_perpetuals: bool = True
@@ -101,7 +104,7 @@ class Settings(BaseSettings):
     # ── Session Awareness & Volatility Filters ──────
     crypto_peak_sessions_only: bool = False
     crypto_peak_sessions_reduce_size: bool = True
-    min_atr_pct: float = 0.05
+    min_atr_pct: float = 0.15
     min_bb_width: float = 0.015
 
     # ── Per-Symbol High-Caution Controls ─────────────
@@ -116,12 +119,33 @@ class Settings(BaseSettings):
     # confidence=neutral (75) → 1.0× baseline size
     # confidence=min (48) → position_size_min_weight (0.6×) — undersized, cautious
     # confidence=max (100) → position_size_max_weight (1.4×) — oversized, high conviction
-    # Formula: weight = min_w + (max_w - min_w) * (conf - min_conf) / (max_conf - min_conf)
+    # Formula: weight = min_w + (max_w - min_w) * (conf - min_conf) / (max_c - min_c)
     # Clamped to [min_w, max_w].
     confidence_sizing_enabled: bool = True
     position_size_min_weight: float = 0.6    # at minimum confidence threshold
     position_size_max_weight: float = 1.4    # at maximum confidence (100)
     confidence_sizing_neutral: float = 75.0  # pivot: no adjustment at this confidence
+
+    # ── Regime-Adaptive Routing ───────────────────────
+    # NOTE: 365d walk-forward backtest on BTC/ETH/SOL (4h + 1h) showed mean-
+    # reversion mode REDUCES edge (PF 0.99 → 0.69-0.87, WR 47% → 38-42%).
+    # Disabled by default: set mean_reversion_adx_threshold > 100 to never
+    # trigger. Re-enable only if a forward test on a NEW market/timeframe
+    # demonstrates PF > 1.3 out-of-sample.
+    mean_reversion_adx_threshold: float = 999.0   # disabled — was 25.0
+    mean_reversion_atr_multiplier: float = 1.5
+    mean_reversion_rr_ratio: float = 1.5
+    mean_reversion_rsi_oversold: float = 35.0
+    mean_reversion_rsi_overbought: float = 65.0
+
+    # ── Let Winners Run ───────────────────────────────
+    # NOTE: backtest showed TP cancellation hurts at bar resolution (intra-
+    # bar ordering ambiguity: TP would hit before cancellation in live).
+    # Disabled by default. Trailing SL ratchet in the execution layer
+    # still protects profits without cancelling the fixed TP.
+    let_winners_run_enabled: bool = False
+    runner_activation_atr: float = 1.5
+    runner_max_profit_pct: float = 1.50    # hard safety cap (150% gain) even when running
 
     # ── Bounty Hunter ───────────────────────
     bounty_hunter_enabled: bool = True

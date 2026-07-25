@@ -7,7 +7,8 @@
     "volatility": 0.82,
     "structure": 1.4,
     "sentiment": 0.8,
-    "macro": 0.65
+    "macro": 0.65,
+    "mean_reversion": 1.6
   },
   "min_agreement": 5,
   "min_avg_confidence": 52.0

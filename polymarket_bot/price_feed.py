@@ -21,6 +21,9 @@ class PriceFeed:
         self.latest_prices: dict[str, float] = {a: 0.0 for a in self.assets}
         # Keep price history as a list of (timestamp, price) tuples per asset
         self.history: dict[str, list[tuple[float, float]]] = {a: [] for a in self.assets}
+        # CVD: running cumulative volume delta and its history (timestamp, cumulative_delta)
+        self._cvd_running: dict[str, float] = {a: 0.0 for a in self.assets}
+        self.cvd_history: dict[str, list[tuple[float, float]]] = {a: [] for a in self.assets}
         self.is_connected = False
         self._ws_task = None
         self._shutdown_event = asyncio.Event()
@@ -75,6 +78,28 @@ class PriceFeed:
 
         return latest - closest_price
 
+    def get_cvd_delta(self, asset: str, lookback_s: int) -> float:
+        """
+        Returns the change in Cumulative Volume Delta over the last lookback_s seconds.
+        Positive = net buying pressure; Negative = net selling pressure.
+        """
+        asset_upper = asset.upper()
+        history = self.cvd_history.get(asset_upper, [])
+        if not history:
+            return 0.0
+        now = time.time()
+        target_ts = now - lookback_s
+        # Find CVD value closest to lookback point
+        past_cvd = history[0][1]
+        min_diff = abs(history[0][0] - target_ts)
+        for ts, cvd_val in history:
+            diff = abs(ts - target_ts)
+            if diff < min_diff:
+                min_diff = diff
+                past_cvd = cvd_val
+        current_cvd = history[-1][1]
+        return current_cvd - past_cvd
+
     async def start(self) -> None:
         """Starts the price feed listener background task."""
         self._shutdown_event.clear()
@@ -95,7 +120,9 @@ class PriceFeed:
         # Map target assets to Bybit spot symbols (e.g. BTC -> BTCUSDT)
         bybit_symbols = {a: f"{a}USDT" for a in self.assets}
         inverse_symbols = {f"{a}USDT": a for a in self.assets}
-        topics = [f"orderbook.1.{sym}" for sym in bybit_symbols.values()]
+        orderbook_topics = [f"orderbook.1.{sym}" for sym in bybit_symbols.values()]
+        trade_topics = [f"publicTrade.{sym}" for sym in bybit_symbols.values()]
+        topics = orderbook_topics + trade_topics
 
         ws_url = "wss://stream.bybit.com/v5/public/spot"
 
@@ -106,40 +133,58 @@ class PriceFeed:
                     self.is_connected = True
                     logger.info("Connected to Bybit public Spot WebSocket.")
 
-                    # Subscribe
+                    # Subscribe to orderbook + trade topics
                     sub_msg = {"op": "subscribe", "args": topics}
                     await ws.send(json.dumps(sub_msg))
-                    logger.info(f"Subscribed to Bybit orderbook topics: {topics}")
+                    logger.info(f"Subscribed to Bybit orderbook + trade topics: {orderbook_topics + trade_topics}")
 
                     async for message in ws:
                         if self._shutdown_event.is_set():
                             break
 
                         data = json.loads(message)
-                        if "topic" in data and "data" in data:
-                            topic = data["topic"]
+                        if "topic" not in data or "data" not in data:
+                            continue
+
+                        topic = data["topic"]
+                        now = time.time()
+
+                        # ── Orderbook: update mid price ──────────────────────
+                        if topic.startswith("orderbook."):
                             s_data = data["data"]
                             symbol = s_data.get("s")
                             asset = inverse_symbols.get(symbol)
                             if not asset:
                                 continue
-
                             bids = s_data.get("b", [])
                             asks = s_data.get("a", [])
                             if bids and asks:
                                 bid = float(bids[0][0])
                                 ask = float(asks[0][0])
                                 mid = (bid + ask) / 2.0
-                                now = time.time()
-
-                                # Store price
                                 self.latest_prices[asset] = mid
                                 self.history[asset].append((now, mid))
-
-                                # Keep history clean (e.g. max 1 hour of history to prevent memory leak)
                                 one_hour_ago = now - 3600
                                 self.history[asset] = [
                                     item for item in self.history[asset] if item[0] > one_hour_ago
+                                ]
+
+                        # ── Trades: accumulate CVD ───────────────────────────
+                        elif topic.startswith("publicTrade."):
+                            for trade in data["data"]:
+                                symbol = trade.get("s", "")
+                                asset = inverse_symbols.get(symbol)
+                                if not asset:
+                                    continue
+                                size = float(trade.get("v", 0))
+                                # Taker side Buy = aggressive buyer lifting ask → positive delta
+                                delta = size if trade.get("S") == "Buy" else -size
+                                self._cvd_running[asset] += delta
+                                self.cvd_history[asset].append((now, self._cvd_running[asset]))
+                                # Keep last 1 hour only
+                                one_hour_ago = now - 3600
+                                self.cvd_history[asset] = [
+                                    item for item in self.cvd_history[asset] if item[0] > one_hour_ago
                                 ]
 
             except (websockets.exceptions.ConnectionClosed, Exception) as e:

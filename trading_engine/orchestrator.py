@@ -17,7 +17,7 @@ from trading_engine.data.market_data import build_snapshot, MarketSnapshot
 from trading_engine.agents import (
     trend_agent, momentum_agent, volume_agent,
     orderflow_agent, volatility_agent, structure_agent,
-    sentiment_agent, macro_agent,
+    sentiment_agent, macro_agent, mean_reversion_agent,
 )
 from trading_engine.agents.base import AgentSignal, Signal
 from trading_engine.judge import evaluate as judge_evaluate, JudgeVerdict
@@ -59,6 +59,7 @@ def _run_agents_parallel(snap: MarketSnapshot) -> list[AgentSignal]:
             structure_agent.analyze,
             sentiment_agent.analyze,
             macro_agent.analyze,
+            mean_reversion_agent.analyze,
         ]
 
     signals = []
@@ -152,6 +153,8 @@ def run(
         # Map symbol to optimization target category
         if ac == AssetClass.CRYPTO:
             target = "crypto"
+        elif ac in (AssetClass.STOCK, AssetClass.STOCK_CFD, AssetClass.NGX_STOCK, AssetClass.BAMBOO_US_STOCK):
+            target = "stock"
         else:
             target = "crypto"
             

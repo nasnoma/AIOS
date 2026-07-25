@@ -147,8 +147,8 @@ def test_risk_size_scaled_on_low_confidence():
     sig = _signal(confidence=0.38)  # < 0.45
     dec = evaluate(sig, account_size=1000, cash=1000, daily_pnl=0, open_position_count=0, cfg=cfg)
     assert dec.approved is True
-    # Base size = $10, capped at $5.00. Low confidence scales to $2.50.
-    assert dec.total_size_usd == pytest.approx(2.50, abs=0.01)
+    # Base size = $10 (not capped by $25.00 limit). Low confidence scales to $5.00.
+    assert dec.total_size_usd == pytest.approx(5.00, abs=0.01)
 
 
 def test_risk_size_scaled_on_negative_pnl():
@@ -156,8 +156,8 @@ def test_risk_size_scaled_on_negative_pnl():
     sig = _signal(confidence=0.80)  # > 0.45
     dec = evaluate(sig, account_size=1000, cash=1000, daily_pnl=-10.0, open_position_count=0, cfg=cfg)
     assert dec.approved is True
-    # Base size = $10, capped at $5.00. Negative daily P&L scales to $2.50.
-    assert dec.total_size_usd == pytest.approx(2.50, abs=0.01)
+    # Base size = $10 (not capped by $25.00 limit). Negative daily P&L scales to $5.00.
+    assert dec.total_size_usd == pytest.approx(5.00, abs=0.01)
 
 
 def test_risk_size_scaled_on_both():
@@ -165,8 +165,8 @@ def test_risk_size_scaled_on_both():
     sig = _signal(confidence=0.38)  # < 0.45
     dec = evaluate(sig, account_size=1000, cash=1000, daily_pnl=-10.0, open_position_count=0, cfg=cfg)
     assert dec.approved is True
-    # Base size = $10, capped at $5.00. Both scale size down to $1.25 (25%).
-    assert dec.total_size_usd == pytest.approx(1.25, abs=0.01)
+    # Base size = $10 (not capped by $25.00 limit). Both scale size down to $2.50 (25%).
+    assert dec.total_size_usd == pytest.approx(2.50, abs=0.01)
 
 
 def test_risk_denied_session_drawdown_limit():

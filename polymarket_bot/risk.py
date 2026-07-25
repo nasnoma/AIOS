@@ -101,7 +101,7 @@ def evaluate(
 
     # ── 4. Position sizing ──────────────────────────────────────────────────
     n_legs = 2 if signal.signal_type == SignalType.SPREAD_ARB else 1
-    min_trade_usd = 1.0  # Hard floor to avoid dust positions
+    min_trade_usd = 1.10  # Hard floor to avoid dust positions (Polymarket min is $1.00)
 
     if signal.signal_type == SignalType.SPREAD_ARB:
         yes_price = signal.entry_price_yes or 0.5
@@ -126,8 +126,8 @@ def evaluate(
         entry_price = signal.entry_price_yes or signal.entry_price_no or 0.5
         size = compute_position_size(account_size, cash, cfg.max_risk_per_trade_pct, entry_price, n_legs=1)
 
-        # Cap base size at $5.00 for live guardrail (strong signals max $5.00)
-        size = min(size, 5.00)
+        # Cap base size at $25.00 for live guardrail (strong signals max $25.00)
+        size = min(size, 25.00)
 
         # Size Management: scale size down by 50% if confidence < 45%, and by 50% if daily_pnl is negative (drawdown protection)
         size_factor = 1.0

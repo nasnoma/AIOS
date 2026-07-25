@@ -26,10 +26,13 @@ def use_test_database():
     original_agreement = settings.min_agent_agreement
     original_confidence = settings.min_avg_confidence
     original_use_5m = settings.crypto_use_5m_atr
+    original_let_runners = getattr(settings, "let_winners_run_enabled", True)
     settings.regime_filter_enabled = True
     settings.min_agent_agreement = 5
     settings.min_avg_confidence = 52.0
     settings.crypto_use_5m_atr = True
+    # Disable "let winners run" in tests so fixed-TP assertions still hold
+    settings.let_winners_run_enabled = False
     
     yield
     
@@ -42,5 +45,6 @@ def use_test_database():
     settings.min_agent_agreement = original_agreement
     settings.min_avg_confidence = original_confidence
     settings.crypto_use_5m_atr = original_use_5m
+    settings.let_winners_run_enabled = original_let_runners
     db._engine = None
     db._SessionLocal = None

@@ -356,6 +356,8 @@ def evaluate(
         # Map BUY/SELL verdict to the direction strings stored in Position.direction
         side = "long" if verdict.decision.value == "BUY" else "short"
         now = datetime.now(timezone.utc)
+        _strike_window_h = float(getattr(settings, "two_strike_window_hours", 2.0))
+        _strike_count_limit = int(getattr(settings, "two_strike_count", 2))
         
         for pos in closed_trades:
             is_dict = isinstance(pos, dict)
@@ -375,18 +377,18 @@ def evaluate(
                         if dt_closed.tzinfo is None:
                             dt_closed = dt_closed.replace(tzinfo=timezone.utc)
                         diff_hours = (now - dt_closed).total_seconds() / 3600.0
-                        if diff_hours <= 2.0:
+                        if diff_hours <= _strike_window_h:
                             stopped_strikes += 1
                     except Exception as parse_err:
                         logger.warning(f"Failed to parse closed_at: {parse_err}")
                         
-        if stopped_strikes >= 2:
-            logger.warning(f"  🚦 Two-strike rule veto: stopped out {stopped_strikes} times on {side} for {symbol} within the last 2 hours.")
+        if stopped_strikes >= _strike_count_limit:
+            logger.warning(f"  🚦 Two-strike rule veto: stopped out {stopped_strikes} times on {side} for {symbol} within the last {_strike_window_h}h.")
             return RiskDecision(
                 approved=False,
                 reason=(
                     f"Two-strike rule veto: stopped out {stopped_strikes} times "
-                    f"on {side} for {symbol} within the last 2 hours. Walking away."
+                    f"on {side} for {symbol} within the last {_strike_window_h}h. Walking away."
                 ),
                 position_size_pct=0, position_size_usd=0,
                 entry_price=entry, stop_loss=0, take_profit=0,
@@ -576,11 +578,89 @@ def evaluate(
             max_loss_usd=0, atr=atr,
         )
 
-    # ── Market Regime Filter ─────────────────────────────────
+    # ── Max Trades Per Day (overtrading guard) ──────────────
+    max_trades_per_day = int(getattr(settings, "max_trades_per_day", 8))
+    if max_trades_per_day > 0 and closed_trades:
+        import dateutil.parser as _duparser
+        from datetime import datetime as _dt, timezone as _tz
+        _today = _dt.now(_tz.utc).date()
+        _entries_today = 0
+        for _t in closed_trades:
+            _is_dict = isinstance(_t, dict)
+            _opened = _t.get("opened_at") if _is_dict else getattr(_t, "opened_at", None)
+            if not _opened:
+                continue
+            try:
+                _odt = _duparser.isoparse(_opened) if isinstance(_opened, str) else _opened
+                if _odt.tzinfo is None:
+                    _odt = _odt.replace(tzinfo=_tz.utc)
+                if _odt.date() == _today:
+                    _entries_today += 1
+            except Exception:
+                continue
+        if _entries_today >= max_trades_per_day:
+            logger.warning(f"  🛑 Overtrading guard: {_entries_today} trades opened today ≥ cap {max_trades_per_day}.")
+            return RiskDecision(
+                approved=False,
+                reason=(
+                    f"Overtrading guard: {_entries_today} trades already opened today "
+                    f"(cap = {max_trades_per_day}). No new entries until tomorrow."
+                ),
+                position_size_pct=0, position_size_usd=0,
+                entry_price=entry, stop_loss=0, take_profit=0,
+                stop_loss_pct=0, take_profit_pct=0, risk_reward=0,
+                max_loss_usd=0, atr=atr,
+            )
+
+    # ── Regime Detection (regime-adaptive routing) ───────────────────
+    # ADX < threshold  → ranging regime  → mean-reversion mode
+    #                    (skip BTC regime + trend alignment filters,
+    #                     tighter ATR stop + RR target,
+    #                     require mean_reversion agent agreement)
+    # ADX >= threshold → trending regime → keep all trend-following filters
+    _snap_adx = snap.adx if isinstance(snap.adx, (int, float)) else 0.0
+    _mr_adx_threshold = float(getattr(settings, "mean_reversion_adx_threshold", 25.0))
+    is_ranging = is_crypto and _snap_adx > 0 and _snap_adx < _mr_adx_threshold
+    if is_ranging:
+        logger.info(
+            f"  🎯 Ranging regime detected: ADX={_snap_adx:.1f} < {_mr_adx_threshold:.0f} — "
+            f"switching to mean-reversion mode (tighter stops, lower RR, skips BTC/trend filters)."
+        )
+
+    # ── Mean-Reversion Agreement Gate ───────────────────────────────
+    # In ranging regime, require the mean_reversion agent to agree with the
+    # verdict direction. Prevents taking trend-following signals in a range
+    # (which would be false breakouts / noise).
+    if is_ranging:
+        _mr_agrees = False
+        for _r in verdict.agent_reports:
+            if _r.get("agent") == "mean_reversion" and _r.get("signal") == verdict.decision.value:
+                _mr_agrees = True
+                break
+        if not _mr_agrees:
+            logger.warning(
+                f"  🚦 Mean-Reversion gate veto: ranging regime (ADX={_snap_adx:.1f}) but "
+                f"mean_reversion agent did not vote {verdict.decision.value}. Likely noise — blocking."
+            )
+            return RiskDecision(
+                approved=False,
+                reason=(
+                    f"Mean-Reversion gate: ADX={_snap_adx:.1f} indicates ranging market, but "
+                    f"mean_reversion agent did not agree with {verdict.decision.value} signal. "
+                    f"Trend-following entries blocked in ranging regime."
+                ),
+                position_size_pct=0, position_size_usd=0,
+                entry_price=entry, stop_loss=0, take_profit=0,
+                stop_loss_pct=0, take_profit_pct=0, risk_reward=0,
+                max_loss_usd=0, atr=atr,
+            )
+
+    # ── Market Regime Filter (trending regime only) ─────────────────
     # Block LONG crypto trades when BTC is below its 50-period MA.
-    # This prevents blindly buying into a bear-market downtrend.
+    # Skipped in ranging regime — mean-reversion trades are counter-trend by design.
     if (
-        is_crypto
+        not is_ranging
+        and is_crypto
         and verdict.decision == Signal.BUY
         and getattr(settings, "regime_filter_enabled", True)
     ):
@@ -592,8 +672,6 @@ def evaluate(
                 tf = getattr(settings, "regime_btc_timeframe", "1d")
                 btc_snap = _bs("BTC/USDT", timeframe=tf)
                 btc_close = btc_snap.close
-                # Use the EMA50 already computed on the snapshot if available,
-                # otherwise fall back to computing a simple MA from the OHLCV df.
                 btc_ma = getattr(btc_snap, "ema50", None)
                 if not btc_ma or btc_ma == 0:
                     btc_ma = btc_snap.df["close"].iloc[-ma_period:].mean()
@@ -624,29 +702,6 @@ def evaluate(
         except Exception as _re:
             logger.warning(f"  Regime filter check failed ({_re}); allowing trade to proceed.")
 
-    # ── ADX Regime Gate ─────────────────────────────────────────────
-    # Block all new entries when the market is choppy/ranging (low ADX).
-    # ADX < 20 means price is oscillating without a clear trend —
-    # EMA crosses flip every few candles, stops get hunted, P&L is noise.
-    # Only trade when there is genuine directional momentum (ADX ≥ 20).
-    adx_regime_threshold = 20.0
-    _snap_adx = snap.adx if isinstance(snap.adx, (int, float)) else 0.0
-    if is_crypto and _snap_adx > 0 and _snap_adx < adx_regime_threshold:
-        logger.warning(
-            f"  🚦 ADX Regime Gate veto: {snap.symbol} ADX={_snap_adx:.1f} < {adx_regime_threshold} — market is ranging/choppy."
-        )
-        return RiskDecision(
-            approved=False,
-            reason=(
-                f"ADX Regime Gate: ADX={_snap_adx:.1f} is below {adx_regime_threshold} threshold. "
-                f"Market is ranging/choppy — no directional edge. Entry blocked."
-            ),
-            position_size_pct=0, position_size_usd=0,
-            entry_price=entry, stop_loss=0, take_profit=0,
-            stop_loss_pct=0, take_profit_pct=0, risk_reward=0,
-            max_loss_usd=0, atr=atr,
-        )
-
     # ── Asset Correlation Filter ───────────────────────
     corr_multiplier = 1.0
     corr_reason = "No correlation check (no existing positions)"
@@ -666,47 +721,55 @@ def evaluate(
             max_loss_usd=0, atr=atr,
         )
 
-    # ── Trend Alignment Filter (TAF) ───────────────────────────────
+    # ── Trend Alignment Filter (TAF) — trending regime only ─────────
     # Read 1H EMA50 from the already-fetched HTF snapshot (zero extra API call).
     # We strictly enforce trend following:
     #   - LONG trades are only approved if 1H Close > 1H EMA50
     #   - SHORT trades are only approved if 1H Close < 1H EMA50
     # Counter-trend trades are vetoed outright.
-    try:
-        htf = snap.htf_1h_snap
-        if htf is not None and htf.ema50 and htf.ema50 > 0:
-            htf_bullish = htf.close > htf.ema50
-            is_long = verdict.decision == Signal.BUY
-            trend_aligned = (is_long and htf_bullish) or (not is_long and not htf_bullish)
-            if not trend_aligned:
-                logger.warning(
-                    f"  🚦 Trend Veto: {verdict.decision.value} {snap.symbol} is counter-trend vs 1H "
-                    f"(HTF close={htf.close:.4f} is {'below' if is_long else 'above'} EMA50={htf.ema50:.4f})."
-                )
-                return RiskDecision(
-                    approved=False,
-                    reason=(
-                        f"Strict trend filter veto: {verdict.decision.value} is counter-trend. "
-                        f"1H Close ({htf.close:.4f}) is {'below' if is_long else 'above'} 1H EMA50 ({htf.ema50:.4f})."
-                    ),
-                    position_size_pct=0, position_size_usd=0,
-                    entry_price=entry, stop_loss=0, take_profit=0,
-                    stop_loss_pct=0, take_profit_pct=0, risk_reward=0,
-                    max_loss_usd=0, atr=atr,
-                )
+    # SKIPPED in ranging regime — mean-reversion trades are inherently counter-trend.
+    if is_ranging:
+        logger.debug("  Trend Filter: skipped in ranging regime (mean-reversion mode).")
+    else:
+        try:
+            htf = snap.htf_1h_snap
+            if htf is not None and htf.ema50 and htf.ema50 > 0:
+                htf_bullish = htf.close > htf.ema50
+                is_long = verdict.decision == Signal.BUY
+                trend_aligned = (is_long and htf_bullish) or (not is_long and not htf_bullish)
+                if not trend_aligned:
+                    logger.warning(
+                        f"  🚦 Trend Veto: {verdict.decision.value} {snap.symbol} is counter-trend vs 1H "
+                        f"(HTF close={htf.close:.4f} is {'below' if is_long else 'above'} EMA50={htf.ema50:.4f})."
+                    )
+                    return RiskDecision(
+                        approved=False,
+                        reason=(
+                            f"Strict trend filter veto: {verdict.decision.value} is counter-trend. "
+                            f"1H Close ({htf.close:.4f}) is {'below' if is_long else 'above'} 1H EMA50 ({htf.ema50:.4f})."
+                        ),
+                        position_size_pct=0, position_size_usd=0,
+                        entry_price=entry, stop_loss=0, take_profit=0,
+                        stop_loss_pct=0, take_profit_pct=0, risk_reward=0,
+                        max_loss_usd=0, atr=atr,
+                    )
+                else:
+                    logger.info(
+                        f"  ✅ Trend Filter: {verdict.decision.value} aligned with 1H trend "
+                        f"(HTF close={htf.close:.4f} {'>' if htf_bullish else '<'} EMA50={htf.ema50:.4f})."
+                    )
             else:
-                logger.info(
-                    f"  ✅ Trend Filter: {verdict.decision.value} aligned with 1H trend "
-                    f"(HTF close={htf.close:.4f} {'>' if htf_bullish else '<'} EMA50={htf.ema50:.4f})."
-                )
-        else:
-            logger.debug("  Trend Filter: no 1H snap available, skipping trend check.")
-    except Exception as _tas_err:
-        logger.debug(f"  Trend Filter: error reading HTF snap ({_tas_err}), skipping trend check.")
+                logger.debug("  Trend Filter: no 1H snap available, skipping trend check.")
+        except Exception as _tas_err:
+            logger.debug(f"  Trend Filter: error reading HTF snap ({_tas_err}), skipping trend check.")
 
     # ── ATR-Based Stop Loss ────────────────────────────
-    # Stop = 1.5x ATR below entry (long), above entry (short)
-    atr_multiplier = _rp.get("atr_stop_multiplier", settings.atr_multiplier)
+    # Stop = N×ATR below entry (long), above entry (short)
+    # Regime-aware: ranging uses tighter multiplier (1.5×), trending uses 2.8×.
+    if is_ranging:
+        atr_multiplier = float(getattr(settings, "mean_reversion_atr_multiplier", 1.5))
+    else:
+        atr_multiplier = _rp.get("atr_stop_multiplier", settings.atr_multiplier)
     stop_distance = atr * atr_multiplier
 
     # Enforce minimum stop distance of 2.2% of entry price for crypto.
@@ -722,16 +785,20 @@ def evaluate(
         )
         stop_distance = min_stop_distance
 
+    # Regime-aware RR: ranging mode targets BB mid (1.5:1), trending mode runs 3:1
+    if is_ranging:
+        rr_ratio = float(getattr(settings, "mean_reversion_rr_ratio", 1.5))
+    else:
+        rr_ratio = settings.rr_ratio
+
     if verdict.decision == Signal.BUY:
         stop_loss = entry - stop_distance
         stop_loss_pct = stop_distance / entry
-        rr_ratio = settings.rr_ratio
         take_profit = entry + (stop_distance * rr_ratio)
         take_profit_pct = (take_profit - entry) / entry
     else:  # SELL (short)
         stop_loss = entry + stop_distance
         stop_loss_pct = stop_distance / entry
-        rr_ratio = settings.rr_ratio
         take_profit = entry - (stop_distance * rr_ratio)
         take_profit_pct = (entry - take_profit) / entry
 

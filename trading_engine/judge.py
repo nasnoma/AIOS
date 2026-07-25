@@ -25,14 +25,15 @@ _WEIGHTS_PARAM_PATH = Path(__file__).parent / "autoresearch" / "params" / "judge
 
 _HARDCODED_DEFAULTS = {
     "weights": {
-        "trend":      1.4,   # High weight — primary direction filter
-        "momentum":   1.2,
-        "volume":     1.1,
-        "orderflow":  1.3,   # High weight for crypto — smart money signal
-        "volatility": 0.8,   # Lower weight — regime filter, not direction
-        "structure":  1.2,
-        "sentiment":  0.9,   # LLM-based — slightly lower trust
-        "macro":      1.0,
+        "trend":          1.4,   # High weight — primary direction filter
+        "momentum":       1.2,
+        "volume":         1.1,
+        "orderflow":      1.3,   # High weight for crypto — smart money signal
+        "volatility":     0.8,   # Lower weight — regime filter, not direction
+        "structure":      1.2,
+        "sentiment":      0.9,   # LLM-based — slightly lower trust
+        "macro":          1.0,
+        "mean_reversion": 1.6,   # High weight — primary signal in ranging regimes (ADX<25)
     },
     "min_agreement": 5,
     "min_avg_confidence": 52,

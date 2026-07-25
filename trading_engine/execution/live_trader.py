@@ -984,6 +984,10 @@ def _apply_trailing_stop(pos: Position, price: float) -> None:
     ATR trailing stop ratchet — called before SL/TP check.
     Progressively ratchets to protect profits and move to breakeven.
     Updates the broker-side Stop Loss order on ratchet trigger.
+
+    Let Winners Run: once profit reaches `runner_activation_atr` × ATR,
+    cancel the broker-side TP order and nullify the fixed take_profit so
+    the trailing stop ratchet becomes the sole exit.
     """
     if pos.atr <= 0:
         return
@@ -995,6 +999,30 @@ def _apply_trailing_stop(pos: Position, price: float) -> None:
     stop_dist = abs(init_sl - pos.entry_price)
     atr = max(pos.atr, stop_dist)
     ratcheted = False
+
+    # ── Let Winners Run: cancel broker TP + nullify fixed TP ─────────
+    if getattr(settings, "let_winners_run_enabled", True) and atr > 0:
+        _runner_act = float(getattr(settings, "runner_activation_atr", 1.5))
+        if pos.direction == "long":
+            _profit_atr = (price - pos.entry_price) / atr
+            if _profit_atr >= _runner_act and pos.take_profit != float("inf"):
+                logger.info(
+                    f"🚀 Let Winners Run: {pos.symbol} LONG profit={_profit_atr:.2f}×ATR ≥ {_runner_act:.1f} — "
+                    f"cancelling fixed TP={pos.take_profit:.4f}, trailing stop takes over."
+                )
+                if pos.tp_order_id:
+                    _cancel_broker_take_profit(pos)
+                pos.take_profit = float("inf")
+        else:
+            _profit_atr = (pos.entry_price - price) / atr
+            if _profit_atr >= _runner_act and pos.take_profit != float("-inf"):
+                logger.info(
+                    f"🚀 Let Winners Run: {pos.symbol} SHORT profit={_profit_atr:.2f}×ATR ≥ {_runner_act:.1f} — "
+                    f"cancelling fixed TP={pos.take_profit:.4f}, trailing stop takes over."
+                )
+                if pos.tp_order_id:
+                    _cancel_broker_take_profit(pos)
+                pos.take_profit = float("-inf")
 
     if pos.direction == "long":
         if pos.trailing_high is None or price > pos.trailing_high:
@@ -1096,10 +1124,11 @@ def update_prices(current_prices: dict[str, float]):
             # Apply trailing stop ratchet
             _apply_trailing_stop(pos, price)
 
-            # Explicit 50% profit-taking check
+            # Explicit profit-taking safety cap (let winners run, but not forever)
             profit_pct = (price - pos.entry_price) / pos.entry_price if pos.direction == "long" else (pos.entry_price - price) / pos.entry_price
-            if profit_pct >= 0.50:
-                logger.info(f"🎯 50% profit target hit for {pos.symbol} (current price={price:.4f}, entry={pos.entry_price:.4f})")
+            _max_profit_cap = float(getattr(settings, "runner_max_profit_pct", 1.50))
+            if profit_pct >= _max_profit_cap:
+                logger.info(f"🎯 Max profit cap hit for {pos.symbol} (profit={profit_pct:.1%} ≥ cap={_max_profit_cap:.1%})")
                 _cancel_broker_stop_loss(pos)
                 _cancel_broker_take_profit(pos)
                 _close_position(portfolio, pos, price, "closed")
@@ -1111,7 +1140,7 @@ def update_prices(current_prices: dict[str, float]):
                         _close_position(portfolio, pos, price, "stopped")
                     else:
                         logger.info(f"Stop loss level hit for {pos.symbol} but exchange-side SL order {pos.sl_order_id} is active. Relying on broker to trigger.")
-                elif price >= pos.take_profit:
+                elif pos.take_profit != float("inf") and price >= pos.take_profit:
                     if not pos.tp_order_id:
                         _close_position(portfolio, pos, price, "closed")
                     else:
@@ -1122,7 +1151,7 @@ def update_prices(current_prices: dict[str, float]):
                         _close_position(portfolio, pos, price, "stopped")
                     else:
                         logger.info(f"Stop loss level hit for {pos.symbol} but exchange-side SL order {pos.sl_order_id} is active. Relying on broker to trigger.")
-                elif price <= pos.take_profit:
+                elif pos.take_profit != float("-inf") and price <= pos.take_profit:
                     if not pos.tp_order_id:
                         _close_position(portfolio, pos, price, "closed")
                     else:

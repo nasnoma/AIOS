@@ -27,9 +27,13 @@ def _fetch_ob_imbalance(symbol: str) -> float | None:
     EMA-smoothed to extend the IC horizon from milliseconds to minutes.
     Returns None on any failure (graceful degradation).
     """
+    from trading_engine.config import settings
+    # ── Backtest guard: live orderbook fetch is (a) too slow per-bar and
+    # (b) lookahead bias — today's OB cannot be used for historical bars.
+    if getattr(settings, "is_backtesting", False):
+        return None
     try:
         import ccxt
-        from trading_engine.config import settings
         exchange_cls = getattr(ccxt, settings.crypto_exchange, None)
         if exchange_cls is None:
             return None

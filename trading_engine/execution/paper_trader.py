@@ -249,12 +249,36 @@ def _apply_trailing_stop(pos: Position, price: float) -> None:
     """
     ATR trailing stop ratchet — called before SL/TP check.
     Tightened and progressively ratchets to protect profits and move to breakeven sooner.
+
+    Let Winners Run: once profit reaches `runner_activation_atr` × ATR,
+    cancel the fixed take_profit (set to ±inf) so the trailing stop ratchet
+    becomes the sole exit. Captures trend extension instead of capping at 3:1.
     """
     # Use the stable initial stop distance as the ratchet unit.
     # The initial_stop_loss ensures stop_dist remains constant and doesn't shrink when ratcheted.
     init_sl = pos.initial_stop_loss if (getattr(pos, "initial_stop_loss", None) and pos.initial_stop_loss > 0) else pos.stop_loss
     stop_dist = abs(init_sl - pos.entry_price)
     atr = max(pos.atr, stop_dist)
+
+    # ── Let Winners Run: cancel fixed TP once runner activates ───────
+    if getattr(settings, "let_winners_run_enabled", True) and atr > 0:
+        _runner_act = float(getattr(settings, "runner_activation_atr", 1.5))
+        if pos.direction == "long":
+            _profit_atr = (price - pos.entry_price) / atr
+            if _profit_atr >= _runner_act and pos.take_profit != float("inf"):
+                logger.info(
+                    f"🚀 Let Winners Run: {pos.symbol} LONG profit={_profit_atr:.2f}×ATR ≥ {_runner_act:.1f} — "
+                    f"cancelling fixed TP={pos.take_profit:.4f}, trailing stop takes over."
+                )
+                pos.take_profit = float("inf")
+        else:
+            _profit_atr = (pos.entry_price - price) / atr
+            if _profit_atr >= _runner_act and pos.take_profit != float("-inf"):
+                logger.info(
+                    f"🚀 Let Winners Run: {pos.symbol} SHORT profit={_profit_atr:.2f}×ATR ≥ {_runner_act:.1f} — "
+                    f"cancelling fixed TP={pos.take_profit:.4f}, trailing stop takes over."
+                )
+                pos.take_profit = float("-inf")
 
     if pos.direction == "long":
         # Update trailing high
@@ -340,22 +364,23 @@ def update_prices(current_prices: dict[str, float]):
         # Apply trailing stop ratchet before SL/TP check
         _apply_trailing_stop(pos, price)
 
-        # Explicit 50% profit-taking check
+        # Explicit profit-taking safety cap (let winners run, but not forever)
         profit_pct = (price - pos.entry_price) / pos.entry_price if pos.direction == "long" else (pos.entry_price - price) / pos.entry_price
-        if profit_pct >= 0.50:
-            logger.info(f"🎯 50% profit target hit for {pos.symbol} (current price={price:.4f}, entry={pos.entry_price:.4f})")
+        _max_profit_cap = float(getattr(settings, "runner_max_profit_pct", 1.50))
+        if profit_pct >= _max_profit_cap:
+            logger.info(f"🎯 Max profit cap hit for {pos.symbol} (profit={profit_pct:.1%} ≥ cap={_max_profit_cap:.1%})")
             _close_position(portfolio, pos, price, "closed")
             continue
 
         if pos.direction == "long":
             if price <= pos.stop_loss:
                 _close_position(portfolio, pos, price, "stopped")
-            elif price >= pos.take_profit:
+            elif pos.take_profit != float("inf") and price >= pos.take_profit:
                 _close_position(portfolio, pos, price, "closed")
         else:  # short
             if price >= pos.stop_loss:
                 _close_position(portfolio, pos, price, "stopped")
-            elif price <= pos.take_profit:
+            elif pos.take_profit != float("-inf") and price <= pos.take_profit:
                 _close_position(portfolio, pos, price, "closed")
 
     _save_state(portfolio)
