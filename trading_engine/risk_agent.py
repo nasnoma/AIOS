@@ -710,9 +710,10 @@ def evaluate(
     stop_distance = atr * atr_multiplier
 
     # Enforce minimum stop distance of 2.2% of entry price for crypto.
-    # ATR on short bars can be small, causing tight 1% stops that get noise-stopped on volatile assets like ETH.
+    # ATR on short bars can be small, causing tight 1% stops that get noise-stopped on volatile assets.
     default_min_stop = 0.022 if is_crypto else 0.01
-    min_stop_pct = _rp.get("min_stop_pct", default_min_stop)
+    raw_min_stop = float(_rp.get("min_stop_pct", default_min_stop))
+    min_stop_pct = max(0.022, raw_min_stop) if is_crypto else raw_min_stop
     min_stop_distance = entry * min_stop_pct
     if stop_distance < min_stop_distance:
         logger.info(
