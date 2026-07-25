@@ -949,12 +949,13 @@ class TestRiskAgentStage3:
             assert result.entry_price == 99.5
             assert result.atr == 1.0
             
-            # stop loss = entry - (atr * atr_multiplier)
-            expected_sl = 99.5 - (1.0 * risk_agent.settings.atr_multiplier)
+            # Since 1.0 * multiplier (1.5) is below 2.2% crypto floor (2.189), stop distance is widened to 2.2%
+            expected_stop_dist = 99.5 * 0.022
+            expected_sl = 99.5 - expected_stop_dist
             assert abs(result.stop_loss - expected_sl) < 1e-4
             
-            # take profit = entry + (atr * atr_multiplier * rr_ratio)
-            expected_tp = 99.5 + (1.0 * risk_agent.settings.atr_multiplier * risk_agent.settings.rr_ratio)
+            # take profit = entry + (stop_distance * rr_ratio)
+            expected_tp = 99.5 + (expected_stop_dist * risk_agent.settings.rr_ratio)
             assert abs(result.take_profit - expected_tp) < 1e-4
 
     def test_risk_agent_5m_fallback(self):
