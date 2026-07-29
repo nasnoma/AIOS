@@ -620,7 +620,9 @@ def evaluate(
     # ADX >= threshold → trending regime → keep all trend-following filters
     _snap_adx = snap.adx if isinstance(snap.adx, (int, float)) else 0.0
     _mr_adx_threshold = float(getattr(settings, "mean_reversion_adx_threshold", 25.0))
-    is_ranging = is_crypto and _snap_adx > 0 and _snap_adx < _mr_adx_threshold
+    # Threshold >= 100 is a sentinel value used to disable ranging-mode entirely.
+    # (e.g. mean_reversion_adx_threshold=999 means "never enter ranging mode")
+    is_ranging = is_crypto and _snap_adx > 0 and _mr_adx_threshold < 100 and _snap_adx < _mr_adx_threshold
     if is_ranging:
         logger.info(
             f"  🎯 Ranging regime detected: ADX={_snap_adx:.1f} < {_mr_adx_threshold:.0f} — "
