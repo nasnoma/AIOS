@@ -598,6 +598,7 @@
   <div class="header-right">
     <span id="last-upd" style="color:var(--text-3);font-size:0.72rem;">—</span>
     <div class="pill pill-evo" id="evo-pill" style="display:none;">⚗️ Evolution Running</div>
+    <div class="pill pill-evo" id="council-pill" style="background:var(--purple-dim);border:1px solid rgba(167,139,250,0.25);color:var(--purple);">🏛️ Claude Council</div>
     <div class="pill pill-mode" id="mode-pill">Paper Mode</div>
     <div style="display:flex;align-items:center;gap:6px;font-size:0.72rem;">
       <div class="dot dot-live" id="ws-dot"></div>
@@ -1349,13 +1350,14 @@ function renderFeed() {
     const adxVal = sig.risk?.adx;
     const adxStr = adxVal ? `<span class="badge" style="font-size: 0.65rem; background: var(--surface3); border: 1px solid var(--border); color: var(--text-2); padding: 1px 4px; border-radius: 4px; margin-left: 4px; display: inline-block;">ADX ${adxVal.toFixed(0)}</span>` : '';
 
-    const subText = (action === 'NO_TRADE' && sig.risk?.reason) ? sig.risk.reason : (sig.reasoning || '—');
+    const isCouncilVeto = subText.includes('Claude Council');
+    const councilBadge = isCouncilVeto ? '<span class="badge" style="font-size:0.65rem;background:var(--purple-dim);border:1px solid rgba(167,139,250,0.3);color:var(--purple);padding:1px 4px;border-radius:4px;margin-left:4px;display:inline-block;">🏛️ Council Veto</span>' : '';
 
     return `<div class="feed-item ${activeClass} ${vetoedClass} ${i===0 && !selectedSignal ? 'new-signal' : ''}" onclick="inspectSignal(${i}, this)">
       <div class="feed-dot ${dotClass}" style="margin-top:5px"></div>
       <div>
         <div class="feed-title">${sig.symbol} ${badge} ${tfStr} ${entryStr}
-          <small style="color:var(--text-3)">conf ${conf.toFixed(0)}%</small>${adxStr}
+          <small style="color:var(--text-3)">conf ${conf.toFixed(0)}%</small>${adxStr}${councilBadge}
         </div>
         <div class="feed-sub">${subText.replace(/[\\]+/g, '').slice(0, 120)}</div>
       </div>
