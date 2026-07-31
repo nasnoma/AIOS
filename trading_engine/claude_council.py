@@ -53,7 +53,8 @@ class ClaudeCouncil:
         Conducts a pre-trade Bull vs. Bear Red-Team evaluation.
         Synthesizes adversarial arguments to decide whether to approve or veto the trade.
         """
-        if not judge_verdict.approved or judge_verdict.direction == "HOLD":
+        decision_val = judge_verdict.decision.value if hasattr(judge_verdict.decision, "value") else str(judge_verdict.decision)
+        if not judge_verdict.approved or decision_val == "HOLD":
             return RedTeamVerdict(
                 approved=False,
                 confidence_modifier=1.0,
@@ -62,22 +63,28 @@ class ClaudeCouncil:
                 verdict_reason="Judge did not approve trade."
             )
 
-        logger.info(f"🛡️ Claude Council: Red-Teaming {judge_verdict.direction} signal for {snapshot.symbol}...")
+        logger.info(f"🛡️ Claude Council: Red-Teaming {decision_val} signal for {snapshot.symbol}...")
+
+        macd_h = getattr(snapshot, "macd_hist", 0.0) or 0.0
+        ema_short = getattr(snapshot, "ema9", 0.0) or getattr(snapshot, "ema20", 0.0) or 0.0
+        ema_mid = getattr(snapshot, "ema21", 0.0) or getattr(snapshot, "ema50", 0.0) or 0.0
+        ema_long = getattr(snapshot, "ema200", 0.0) or 0.0
+        r_vol = getattr(snapshot, "realized_vol", 0.0) or 0.0
 
         prompt = f"""You are the Chief Investment Officer of an AI Quant Fund conducting a mandatory Red-Team review for a proposed trade.
 
 Symbol: {snapshot.symbol}
-Direction: {judge_verdict.direction}
+Direction: {decision_val}
 Judge Confidence: {judge_verdict.confidence:.1f}%
-Agent Agreement: {judge_verdict.agreement_count}/8 agents
+Agent Agreement: {judge_verdict.agreement}/8 agents
 
 Market Context:
 - Close Price: {snapshot.close:.4f}
 - RSI: {snapshot.rsi:.1f} | StochRSI: K={snapshot.stoch_rsi_k:.1f}, D={snapshot.stoch_rsi_d:.1f}
-- MACD Hist: {snapshot.macd_hist:.4f} | ATR: {snapshot.atr:.4f}
-- EMA Stack: EMA9={snapshot.ema9:.4f}, EMA21={snapshot.ema21:.4f}, EMA200={snapshot.ema200:.4f}
+- MACD Hist: {macd_h:.4f} | ATR: {snapshot.atr:.4f}
+- EMA Stack: Short={ema_short:.4f}, Mid={ema_mid:.4f}, Long={ema_long:.4f}
 - Relative Volume: {snapshot.rel_volume:.2f}x
-- Realized Volatility: {snapshot.realized_vol:.2%}
+- Realized Volatility: {r_vol:.2%}
 
 Task:
 1. Formulate the strongest Bullish argument.

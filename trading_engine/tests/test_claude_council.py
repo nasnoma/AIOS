@@ -31,8 +31,8 @@ def _mock_snapshot() -> MarketSnapshot:
         close=102.0,
         rsi=55.0,
         atr=2.0,
-        ema9=101.0,
-        ema21=100.0,
+        ema20=101.0,
+        ema50=100.0,
         ema200=90.0,
         rel_volume=1.2,
         realized_vol=0.35,
@@ -47,8 +47,10 @@ def test_red_team_no_signal():
         confidence=50.0,
         agreement=4,
         disagreement=2,
-        approved=False,
+        weighted_score=0.0,
+        reasoning="No clear trend",
         agent_reports=[],
+        approved=False,
     )
     result = council.red_team_trade(snap, judge_verdict)
     assert result.approved is False
@@ -65,8 +67,10 @@ def test_red_team_approval(mock_call_llm):
         confidence=75.0,
         agreement=7,
         disagreement=1,
-        approved=True,
+        weighted_score=5.5,
+        reasoning="Strong buy consensus",
         agent_reports=[],
+        approved=True,
     )
     result = council.red_team_trade(snap, judge_verdict)
     assert result.approved is True
@@ -84,8 +88,10 @@ def test_red_team_veto(mock_call_llm):
         confidence=60.0,
         agreement=6,
         disagreement=2,
-        approved=True,
+        weighted_score=4.2,
+        reasoning="Moderate buy consensus",
         agent_reports=[],
+        approved=True,
     )
     result = council.red_team_trade(snap, judge_verdict)
     assert result.approved is False
