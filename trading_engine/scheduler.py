@@ -13,6 +13,7 @@ import requests
 from loguru import logger
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.interval import IntervalTrigger
+from apscheduler.triggers.cron import CronTrigger
 
 from trading_engine.config import settings
 from trading_engine.orchestrator import run_all_assets
@@ -442,6 +443,45 @@ def main():
                 name="Bounty Hunter Cycle",
                 next_run_time=datetime.now(timezone.utc) + timedelta(seconds=30),
             )
+
+def run_claude_council_weekly_review():
+    """Run weekly performance review & parameter tuning via Claude Council."""
+    logger.info("🏛️ Running Claude Council Weekly Performance Review...")
+    try:
+        from trading_engine.claude_council import ClaudeCouncil
+        from trading_engine.execution.live_trader import live_trader
+        from trading_engine.alerts.telegram import send_telegram_alert
+
+        state = live_trader._load_state()
+        closed_list = getattr(state, "closed_trades", [])
+        closed_dicts = []
+        for p in closed_list:
+            pnl_val = float(getattr(p, "pnl_usd", 0.0) or getattr(p, "pnl", 0.0) or 0.0)
+            closed_dicts.append({
+                "symbol": getattr(p, "symbol", "UNKNOWN"),
+                "pnl": pnl_val,
+                "closed_at": getattr(p, "closed_at", None),
+            })
+
+        council = ClaudeCouncil()
+        review = council.run_weekly_performance_review(closed_dicts, days=7)
+        logger.info(f"🏛️ Weekly review completed: {review.get('summary')}")
+        
+        # Send Telegram alert summary
+        summary_text = review.get("summary")
+        if summary_text:
+            send_telegram_alert(summary_text)
+
+    except Exception as e:
+        logger.error(f"❌ Failed running Claude Council weekly review: {e}")
+
+
+    scheduler.add_job(
+        run_claude_council_weekly_review,
+        trigger=CronTrigger(day_of_week="sun", hour=0, minute=0),
+        id="claude_council_weekly_review",
+        name="Claude Council Weekly Performance Review",
+    )
 
     scheduler.start()
 

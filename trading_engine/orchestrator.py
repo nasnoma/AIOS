@@ -199,6 +199,22 @@ def run(
     logger.info(f"   Decision: {verdict.decision.value} | Conf={verdict.confidence:.0f}% | "
                 f"Agreement={verdict.agreement}/{len(agent_signals)}")
 
+    # Step 3.5: Claude Council Red-Team Review
+    if verdict.approved and verdict.decision.value in ("BUY", "SELL"):
+        try:
+            from trading_engine.claude_council import ClaudeCouncil
+            council = ClaudeCouncil()
+            rt_verdict = council.red_team_trade(snap, verdict)
+            if not rt_verdict.approved:
+                logger.warning(f"   🛑 Claude Council VETOED trade for {symbol}: {rt_verdict.verdict_reason}")
+                verdict.approved = False
+                verdict.reason = f"Claude Council Veto: {rt_verdict.verdict_reason}"
+            else:
+                verdict.confidence *= rt_verdict.confidence_modifier
+                logger.info(f"   ✅ Claude Council APPROVED trade for {symbol} (conf modified to {verdict.confidence:.1f}%)")
+        except Exception as e:
+            logger.warning(f"   Claude Council Red-Team check bypassed due to error: {e}")
+
     # Step 4: Risk Agent (with correlation filter)
     logger.info("🛡️  Risk Agent evaluating...")
     risk: RiskDecision = risk_evaluate(
