@@ -209,7 +209,7 @@ class CryptoDataFetcher:
             raise e
 
     def fetch_order_flow(self, symbol: str) -> dict:
-        """Fetch funding rate and open interest via Binance futures."""
+        """Fetch funding rate and open interest via Bybit futures."""
         result = {
             "open_interest": None,
             "funding_rate": None,
@@ -217,12 +217,13 @@ class CryptoDataFetcher:
             "short_liq_24h": None,
         }
         try:
+            contract_symbol = f"{symbol}:USDT" if ":" not in symbol else symbol
             # Funding rate
-            ticker = self.exchange.fetch_funding_rate(symbol)
+            ticker = self.exchange.fetch_funding_rate(contract_symbol)
             result["funding_rate"] = ticker.get("fundingRate")
 
             # Open interest
-            oi = self.exchange.fetch_open_interest(symbol)
+            oi = self.exchange.fetch_open_interest(contract_symbol)
             result["open_interest"] = oi.get("openInterest")
         except Exception as e:
             logger.warning(f"Order flow fetch failed for {symbol}: {e}")
