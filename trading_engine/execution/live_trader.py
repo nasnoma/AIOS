@@ -1829,15 +1829,6 @@ def sync_with_broker() -> bool:
 
 @locked
 def get_status() -> dict:
-    global _last_sync_time
-    now = time.time()
-    if now - _last_sync_time > 60.0:
-        try:
-            sync_with_broker()
-        except Exception as e:
-            logger.warning(f"Failed to sync with broker: {e}")
-        _last_sync_time = now
-
     portfolio = _load_state()
     open_trades = [asdict(p) for p in portfolio.open_positions]
     closed_trades = [asdict(p) for p in portfolio.closed_trades[-20:]]
