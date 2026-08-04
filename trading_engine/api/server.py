@@ -285,7 +285,10 @@ async def broadcast_signal(signal_data: dict):
 
 
 def start():
-    uvicorn.run(app, host=settings.api_host, port=settings.api_port, log_level="warning")
+    port = int(os.environ.get("PORT", getattr(settings, "api_port", 8000)))
+    host = os.environ.get("HOST", getattr(settings, "api_host", "0.0.0.0"))
+    logger.info(f"🚀 Starting Uvicorn API server on {host}:{port}")
+    uvicorn.run(app, host=host, port=port, log_level="info")
 
 
 if __name__ == "__main__":
