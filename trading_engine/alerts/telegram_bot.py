@@ -10,21 +10,8 @@ from trading_engine.config import settings
 
 
 def send_message(text: str):
-    """Send a plain text message to Telegram."""
-    if not settings.telegram_bot_token or not settings.telegram_chat_id:
-        logger.debug("Telegram not configured — skipping alert")
-        return
-    url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage"
-    payload = {
-        "chat_id": settings.telegram_chat_id,
-        "text": text,
-        "parse_mode": "HTML",
-    }
-    try:
-        resp = requests.post(url, json=payload, timeout=5)
-        resp.raise_for_status()
-    except Exception as e:
-        logger.warning(f"Telegram send failed: {e}")
+    """Send a plain text message to Telegram (Globally Paused)."""
+    return  # Telegram alerts globally paused per user request until explicitly re-enabled
 
 
 def send_signal_alert(signal):
