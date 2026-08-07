@@ -932,6 +932,10 @@ const AGENT_ICONS = {
   sentiment:'💬', macro:'🌍',
 };
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function cap(str) { return str ? str.charAt(0).toUpperCase() + str.slice(1) : ''; }
+function safeNum(v) { return Number(v) || 0; }
+
 // ── State ─────────────────────────────────────────────────────────────────────
 let ws, signals = [], statusData = {}, selectedSignal = null;
 let equityChart;
@@ -1055,12 +1059,15 @@ function connectWS() {
       setTimeout(connectWS, 4000);
     };
     ws.onmessage = e => {
-      const msg = JSON.parse(e.data);
-      if (msg.type === 'status') {
-        updateStatus(msg.data);
-        document.getElementById('last-upd').textContent = 'Updated ' + new Date().toLocaleTimeString();
-      }
-      if (msg.type === 'signal') addSignal(msg.data);
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'status') {
+          updateStatus(msg.data);
+          const lu = document.getElementById('last-upd');
+          if (lu) lu.textContent = 'Updated ' + new Date().toLocaleTimeString();
+        }
+        if (msg.type === 'signal') addSignal(msg.data);
+      } catch(err) { console.warn('WS parse error:', err); }
     };
   } catch (err) {
     console.error('WebSocket connection failed:', err);
@@ -1092,7 +1099,7 @@ async function refreshAll() {
     updateStatus(status);
 
     // Refresh signals array with latest from server, sorted newest first
-    signals = sigs.slice().reverse();
+    signals = (Array.isArray(sigs) ? sigs : []).slice().reverse();
     
     // Update total count on UI
     document.getElementById('s-sigs').textContent = typeof total_count === 'number' ? total_count : signals.length;
@@ -1253,7 +1260,7 @@ function renderTrades(trades) {
   
   // Sort trades so that open positions are always pinned to the top,
   // and closed/stopped positions are sorted by their date descending (newest first).
-  const all = trades.slice().sort((a, b) => {
+  const all = (Array.isArray(trades) ? trades : []).slice().sort((a, b) => {
     if (a.status === 'open' && b.status !== 'open') return -1;
     if (a.status !== 'open' && b.status === 'open') return 1;
     
@@ -1337,8 +1344,12 @@ function addSignal(sig) {
 
 function renderFeed() {
   const el = document.getElementById('signal-feed');
-  document.getElementById('feed-count').textContent = `${signals.length} signals`;
-  if (signals.length === 0) return;
+  const fc = document.getElementById('feed-count');
+  if (fc) fc.textContent = `${signals.length} signals`;
+  if (signals.length === 0) {
+    if (el) el.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text-3);font-size:0.82rem;">No signals yet</div>';
+    return;
+  }
   el.innerHTML = signals.slice(0, 40).map((sig, i) => {
     const action   = sig.final_action || 'NO_TRADE';
     const dotClass = action === 'BUY' ? 'buy' : action === 'SELL' ? 'sell' : 'notrade';
@@ -1384,14 +1395,17 @@ function makeBadge(action) {
 
 // ── Agents ────────────────────────────────────────────────────────────────────
 function renderAgents(agentSignals, sym) {
-  document.getElementById('agent-sym').textContent = sym || '—';
+  if (!Array.isArray(agentSignals)) return;
+  const symEl = document.getElementById('agent-sym');
+  if (symEl) symEl.textContent = sym || '—';
   const list = document.getElementById('agent-list');
+  if (!list) return;
   list.innerHTML = agentSignals.map(a => {
     const icon = AGENT_ICONS[a.agent] || '🤖';
-    const conf = a.confidence || 0;
+    const conf = safeNum(a.confidence);
     const fillClass = conf >= 70 ? 'bar-hi' : conf >= 50 ? 'bar-mid' : 'bar-lo';
     const sigCol = a.signal === 'BUY' ? 'var(--green)' : a.signal === 'SELL' ? 'var(--red)' : 'var(--yellow)';
-    const wt = a.weight ? `<span class="agent-wt">×${a.weight.toFixed(1)}</span>` : '';
+    const wt = a.weight ? `<span class="agent-wt">×${safeNum(a.weight).toFixed(1)}</span>` : '';
     return `<div class="agent-row">
       <span class="agent-icon">${icon}</span>
       <div>
@@ -1399,7 +1413,7 @@ function renderAgents(agentSignals, sym) {
       </div>
       <div class="agent-bar-wrap">
         <div class="agent-bar"><div class="agent-bar-fill ${fillClass}" style="width:${conf}%"></div></div>
-        <span class="agent-conf">${conf.toFixed(0)}%</span>
+        <span class="agent-conf">${safeNum(conf).toFixed(0)}%</span>
       </div>
       <div class="agent-sig" style="color:${sigCol}">${a.signal}</div>
     </div>`;
@@ -1408,25 +1422,25 @@ function renderAgents(agentSignals, sym) {
 
 // ── Judge ─────────────────────────────────────────────────────────────────────
 function renderJudge(verdict, reasoning, symbol) {
+  if (!verdict) return;
+  const judgeEl = document.getElementById('judge-panel');
+  if (!judgeEl) return;
   const dec = verdict.decision || 'HOLD';
   const col = dec === 'BUY' ? 'var(--green)' : dec === 'SELL' ? 'var(--red)' : 'var(--yellow)';
-  const total = (verdict.agreement || 0) + (verdict.disagreement || 0);
-  const agreePct = total > 0 ? (verdict.agreement / total * 100) : 0;
+  const total = safeNum(verdict.agreement) + safeNum(verdict.disagreement);
+  const agreePct = total > 0 ? (safeNum(verdict.agreement) / total * 100) : 0;
   const approvedBadge = verdict.approved
     ? '<span class="badge b-buy" style="font-size:0.6rem">APPROVED</span>'
     : '<span class="badge b-notrade" style="font-size:0.6rem">BLOCKED</span>';
 
-  const hd = document.getElementById('judge-panel').previousElementSibling;
-  if (hd) {
-    const span = hd.querySelector('span');
-    if (span) span.textContent = `⚖️ Judge Verdict (${symbol || '—'})`;
-  }
+  const hd = judgeEl.previousElementSibling;
+  if (hd) { const span = hd.querySelector('span'); if (span) span.textContent = `⚖️ Judge Verdict (${symbol || '—'})`; }
 
-  document.getElementById('judge-panel').innerHTML = `
+  judgeEl.innerHTML = `
     <div class="judge-verdict">
       <div style="font-family:'JetBrains Mono';font-size:2rem;font-weight:800;color:${col}">${dec}</div>
       <div class="judge-meta">
-        <div class="judge-conf">${(verdict.confidence||0).toFixed(0)}%</div>
+        <div class="judge-conf">${safeNum(verdict.confidence).toFixed(0)}%</div>
         <div class="judge-sub">confidence</div>
         <div style="margin-top:4px">${approvedBadge}</div>
       </div>
@@ -1438,13 +1452,12 @@ function renderJudge(verdict, reasoning, symbol) {
 
 // ── Risk ──────────────────────────────────────────────────────────────────────
 function renderRisk(risk, action, symbol) {
+  if (!risk) return;
   const panel = document.getElementById('risk-panel');
-  
+  if (!panel) return;
+
   const hd = panel.previousElementSibling;
-  if (hd) {
-    const span = hd.querySelector('span');
-    if (span) span.textContent = `🛡️ Risk Decision (${symbol || '—'})`;
-  }
+  if (hd) { const span = hd.querySelector('span'); if (span) span.textContent = `🛡️ Risk Decision (${symbol || '—'})`; }
 
   if (!risk.approved) {
     panel.innerHTML = `
@@ -1461,12 +1474,12 @@ function renderRisk(risk, action, symbol) {
       <strong style="font-size:0.9rem">APPROVED — ${action || 'TRADE'}</strong>
     </div>
     <div class="risk-grid">
-      ${riskItem('💼 Position', '$' + (risk.position_size_usd||0).toLocaleString())}
-      ${riskItem('📉 Stop Loss', ((risk.stop_loss_pct||0)*100).toFixed(1)+'%')}
-      ${riskItem('🎯 Take Profit', ((risk.take_profit_pct||0)*100).toFixed(1)+'%')}
-      ${riskItem('⚖️ R:R', (risk.risk_reward||0).toFixed(1)+':1')}
-      ${riskItem('💸 Max Loss', '$'+(risk.max_loss_usd||0).toFixed(0))}
-      ${riskItem('🌡️ Kelly', ((risk.kelly_fraction||0)*100).toFixed(0)+'%')}
+      ${riskItem('💼 Position', '$' + safeNum(risk.position_size_usd).toLocaleString())}
+      ${riskItem('📉 Stop Loss', (safeNum(risk.stop_loss_pct)*100).toFixed(1)+'%')}
+      ${riskItem('🎯 Take Profit', (safeNum(risk.take_profit_pct)*100).toFixed(1)+'%')}
+      ${riskItem('⚖️ R:R', safeNum(risk.risk_reward).toFixed(1)+':1')}
+      ${riskItem('💸 Max Loss', '$'+safeNum(risk.max_loss_usd).toFixed(0))}
+      ${riskItem('🌡️ Kelly', (safeNum(risk.kelly_fraction)*100).toFixed(0)+'%')}
     </div>`;
 }
 
