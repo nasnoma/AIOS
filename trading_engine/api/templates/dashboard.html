@@ -936,7 +936,13 @@ let equityChart;
 
 // ── Equity Chart init ─────────────────────────────────────────────────────────
 function initChart() {
-  const ctx = document.getElementById('equity-chart').getContext('2d');
+  if (typeof Chart === 'undefined') {
+    console.warn('Chart.js CDN not loaded — skipping equity chart');
+    return;
+  }
+  const el = document.getElementById('equity-chart');
+  if (!el) return;
+  const ctx = el.getContext('2d');
   equityChart = new Chart(ctx, {
     type: 'line',
     data: {
@@ -990,6 +996,7 @@ function initChart() {
 }
 
 function updateEquityChart(trades, accountSize) {
+  if (!equityChart || !equityChart.data) return;
   const startBal = accountSize || 10000;
   
   if (!trades || trades.length === 0) {
@@ -1699,8 +1706,8 @@ function hideLoadingOverlay() {
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-// Safety net: hide spinner after 5s no matter what (must register BEFORE any potentially-throwing code)
-setTimeout(hideLoadingOverlay, 5000);
+// Fast safety net: hide spinner after 1.2s max no matter what
+setTimeout(hideLoadingOverlay, 1200);
 
 try { initChart(); } catch(e) { console.warn('Chart init failed:', e); }
 try { connectWS(); } catch(e) { console.warn('WS connect failed:', e); }
