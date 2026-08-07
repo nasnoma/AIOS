@@ -18,9 +18,14 @@
 trading_engine/.pytest_cache/
 trading_engine/backtest_results/
 trading_engine/live_state.json
+trading_engine/live_state.lock
 trading_engine/paper_state.json
+trading_engine/paper_state.lock
+trading_engine/carry_state.json
+trading_engine/carry_state.lock
 trading_engine/trading_engine.db
 trading_engine.db
 trading_engine/.env
 railway_status.json
 trading_engine/scratch/
+/antigravity/

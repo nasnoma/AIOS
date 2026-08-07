@@ -156,6 +156,22 @@ class Settings(BaseSettings):
     # momentum has stronger positive edge on 4H crypto timeframes
     bounty_hunter_scan_mode: str = "momentum"
 
+    # ── Delta-Neutral Funding Carry ───────────────────
+    # Harvests perpetual funding rates via delta-neutral spot+perp legs.
+    # This is a NON-DIRECTIONAL strategy: it profits from funding, not price.
+    # Runs in parallel with the directional engine.
+    carry_enabled: bool = False               # disabled by default — enable after reading docs
+    carry_min_apy: float = 15.0                # min annualized carry % to open position
+    carry_borrow_cost_apy: float = 5.0        # estimated spot borrow + opportunity cost (APY %)
+    carry_margin_buffer_pct: float = 0.30     # keep 30% margin buffer on perp leg
+    carry_max_positions: int = 3              # max concurrent carry positions
+    carry_max_inversions: int = 2             # close after N consecutive adverse funding cycles
+    carry_max_hold_cycles: int = 90           # max funding cycles (~30 days at 3/day)
+    carry_max_basis_loss_pct: float = 0.05    # close if basis loss exceeds 5% of position size
+    carry_scan_interval_hours: int = 8        # how often to scan for new carry opportunities
+    carry_watchlist: str = "BTC/USDT,ETH/USDT,SOL/USDT,BNB/USDT,XRP/USDT,AVAX/USDT,LINK/USDT,ADA/USDT"
+    carry_position_size_pct: float = 0.15     # % of account per carry position
+
     # ── DEPRECATED / LEGACY (COMPATIBILITY ONLY) ──────────────────
     alpaca_api_key: str = ""
     alpaca_secret_key: str = ""

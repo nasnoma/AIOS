@@ -34,3 +34,5 @@ polymarket_bot/best_params.json
 polymarket_bot/autoresearch_history.json
 polymarket_bot/tests/__pycache__/
 
+trading_engine/carry_state.json
+trading_engine/carry_state.lock

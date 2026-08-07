@@ -251,6 +251,26 @@ async def get_market_status():
     return result
 
 
+@app.get("/api/carry/status")
+async def get_carry_status():
+    """Return delta-neutral carry portfolio status for the dashboard."""
+    from trading_engine.execution import carry_trader
+    from trading_engine.config import settings
+    try:
+        status = carry_trader.get_status()
+        status["carry_enabled"] = getattr(settings, "carry_enabled", False)
+        status["min_apy"] = getattr(settings, "carry_min_apy", 0)
+        return status
+    except Exception as e:
+        return {
+            "carry_enabled": getattr(settings, "carry_enabled", False),
+            "error": str(e),
+            "open_positions": 0,
+            "total_pnl": 0,
+            "total_return_pct": 0,
+        }
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
