@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>AIOS — Trading Engine</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Chart.js loaded dynamically after DOM ready — prevents CDN slowness from blocking page render -->
   <style>
     :root {
       --bg:            #07090f;
@@ -1706,12 +1706,24 @@ function hideLoadingOverlay() {
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-// Fast safety net: hide spinner after 1.2s max no matter what
+// Safety net: hide spinner after 1.2s max — registered FIRST before anything can throw
 setTimeout(hideLoadingOverlay, 1200);
 
-try { initChart(); } catch(e) { console.warn('Chart init failed:', e); }
+// Start non-chart work immediately (no CDN dependency)
 try { connectWS(); } catch(e) { console.warn('WS connect failed:', e); }
 try { refreshAll(); } catch(e) { console.warn('Refresh failed:', e); }
+
+// Load Chart.js dynamically so CDN latency never blocks the page
+(function loadChartJS() {
+  const s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+  s.async = true;
+  s.onload = function() {
+    try { initChart(); } catch(e) { console.warn('Chart init failed:', e); }
+  };
+  s.onerror = function() { console.warn('Chart.js CDN failed to load — chart disabled'); };
+  document.head.appendChild(s);
+})();
 
 // Poll periodically only if WebSocket is disconnected/closed
 setInterval(() => {
