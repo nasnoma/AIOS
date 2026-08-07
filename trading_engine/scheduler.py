@@ -444,6 +444,17 @@ def main():
                 next_run_time=datetime.now(timezone.utc) + timedelta(seconds=30),
             )
 
+    # Claude Council weekly review
+    scheduler.add_job(
+        run_claude_council_weekly_review,
+        trigger=CronTrigger(day_of_week="sun", hour=0, minute=0),
+        id="claude_council_weekly_review",
+        name="Claude Council Weekly Performance Review",
+    )
+
+    scheduler.start()
+
+
 def run_claude_council_weekly_review():
     """Run weekly performance review & parameter tuning via Claude Council."""
     logger.info("🏛️ Running Claude Council Weekly Performance Review...")
@@ -474,16 +485,6 @@ def run_claude_council_weekly_review():
 
     except Exception as e:
         logger.error(f"❌ Failed running Claude Council weekly review: {e}")
-
-
-    scheduler.add_job(
-        run_claude_council_weekly_review,
-        trigger=CronTrigger(day_of_week="sun", hour=0, minute=0),
-        id="claude_council_weekly_review",
-        name="Claude Council Weekly Performance Review",
-    )
-
-    scheduler.start()
 
 
 if __name__ == "__main__":
