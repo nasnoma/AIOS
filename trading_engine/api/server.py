@@ -334,17 +334,18 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     connected_clients.append(websocket)
     try:
+        # Push immediately on connect (fast first load), then every 10s
         while True:
-            # Load and push latest status every 5 seconds
             current_status = get_trading_status()
             await websocket.send_json({
                 "type": "status",
                 "data": current_status,
                 "timestamp": datetime.utcnow().isoformat()
             })
-            await asyncio.sleep(5)
+            await asyncio.sleep(10)
     except WebSocketDisconnect:
-        connected_clients.remove(websocket)
+        if websocket in connected_clients:
+            connected_clients.remove(websocket)
 
 
 async def broadcast_signal(signal_data: dict):

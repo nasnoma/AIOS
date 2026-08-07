@@ -161,7 +161,7 @@ _cached_paper_portfolio_time: float = 0.0
 def _load_state(force_refresh: bool = False) -> PaperPortfolio:
     global _cached_paper_portfolio, _cached_paper_portfolio_time
     now = time.time()
-    if not force_refresh and _cached_paper_portfolio is not None and (now - _cached_paper_portfolio_time) < 3.0:
+    if not force_refresh and _cached_paper_portfolio is not None and (now - _cached_paper_portfolio_time) < 15.0:
         return _cached_paper_portfolio
 
     with state_lock():
