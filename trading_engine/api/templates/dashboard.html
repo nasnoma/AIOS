@@ -1059,6 +1059,7 @@ function connectWS() {
       if (msg.type === 'status') {
         updateStatus(msg.data);
         document.getElementById('last-upd').textContent = 'Updated ' + new Date().toLocaleTimeString();
+      }
       if (msg.type === 'signal') addSignal(msg.data);
     };
   } catch (err) {
