@@ -256,11 +256,20 @@
       }
     }
 
-    .dashboard-row-copy {
-      display: grid;
+.dashboard-row-copy {
+
       grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      margin-bottom: 14px;
+    }
+
+    .dashboard-row-carry {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: 1.3fr 1fr;
+    }
+    @media (max-width: 1300px) {
+      .dashboard-row-carry {
+        grid-template-columns: 1fr;
+      }
     }
 
     /* ── Panel ── */
@@ -535,44 +544,102 @@
       .logo-text {
         font-size: 0.9rem;
       }
+      .logo-text span { display: none; }
       .header-right {
-        gap: 10px;
-        font-size: 0.7rem;
+        gap: 8px;
+        font-size: 0.65rem;
       }
       .pill {
         padding: 3px 8px;
-        font-size: 0.65rem;
+        font-size: 0.6rem;
       }
+      #council-pill { display: none; }
       main {
-        padding: 1rem 1rem 2rem;
+        padding: 0.75rem 0.75rem 2rem;
+        max-width: 100%;
       }
       .stat-row {
         grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
+        gap: 8px;
+        margin-bottom: 1rem;
       }
       .stat-card {
-        padding: 0.9rem 1rem;
+        padding: 0.75rem 0.85rem;
+        border-radius: 10px;
       }
+      .stat-card:hover { transform: none; }
       .stat-val {
-        font-size: 1.35rem;
+        font-size: 1.15rem;
+      }
+      .stat-label {
+        font-size: 0.6rem;
+      }
+      .stat-sub {
+        font-size: 0.65rem;
       }
       .dashboard-row-1,
       .dashboard-row-pipeline,
       .dashboard-row-markets,
       .dashboard-row-feeds,
-      .dashboard-row-copy {
+      .dashboard-row-copy,
+      .dashboard-row-carry {
         grid-template-columns: 1fr;
-        gap: 14px;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      .panel {
+        border-radius: 10px;
+      }
+      .panel-hd {
+        padding: 10px 14px;
+        font-size: 0.78rem;
+      }
+      .panel-body {
+        padding: 12px 14px;
+      }
+      .chart-wrap {
+        height: 160px;
+        padding: 10px 10px 6px;
+      }
+      .tbl {
+        font-size: 0.72rem;
       }
       .tbl th, .tbl td {
-        padding: 8px;
+        padding: 6px 8px;
+        font-size: 0.7rem;
+      }
+      .agent-row {
+        grid-template-columns: 24px 1fr auto;
+        padding: 8px 10px;
+      }
+      .agent-bar-wrap { display: none; }
+      .judge-dec { font-size: 1.5rem; }
+      .judge-conf { font-size: 1rem; }
+      .risk-grid { grid-template-columns: 1fr; }
+      .feed-item {
+        padding: 10px 14px;
+        grid-template-columns: 8px 1fr;
+      }
+      .feed-meta { display: none; }
+      .feed-sub { max-width: none; }
+      .btn {
+        padding: 7px 14px;
         font-size: 0.75rem;
+        min-height: 36px;
+      }
+      .scroll {
+        max-height: 300px;
+        -webkit-overflow-scrolling: touch;
       }
     }
 
     @media (max-width: 480px) {
       .stat-row {
         grid-template-columns: 1fr;
+        gap: 6px;
+      }
+      .stat-val {
+        font-size: 1.3rem;
       }
       .logo-mark {
         width: 28px; height: 28px;
@@ -582,9 +649,16 @@
         display: none;
       }
       .header-right {
-        width: 100%;
-        justify-content: flex-end;
+        gap: 6px;
       }
+      .pill-mode { font-size: 0.55rem; padding: 2px 6px; }
+      #last-upd { display: none; }
+      .panel-hd { font-size: 0.72rem; padding: 8px 12px; }
+      .tbl { font-size: 0.65rem; }
+      .tbl th, .tbl td { padding: 5px 6px; font-size: 0.65rem; }
+      .agent-list { gap: 5px; }
+      .agent-row { padding: 6px 8px; }
+      .agent-name { font-size: 0.72rem; }
     }
   </style>
 </head>
@@ -723,80 +797,77 @@
     </div>
   </div>
 
-  <!-- Row 3: Markets & Evolution -->
-  <div class="dashboard-row-markets">
-    <!-- Market Status -->
+  <!-- Row 3: Delta-Neutral Carry -->
+  <div class="dashboard-row-carry">
+    <!-- Carry Stats + Positions -->
     <div class="panel">
       <div class="panel-hd">
-        <span>🌐 Market Status</span>
-        <span style="font-size:0.68rem;color:var(--text-3)" id="mkt-refresh-time">—</span>
-      </div>
-      <div class="panel-body" id="mkt-status-body">
-        <div class="empty"><p>Loading…</p></div>
-      </div>
-    </div>
-
-    <!-- ART Agent Weights -->
-    <div class="panel">
-      <div class="panel-hd">
-        <span>🧠 ART Agent Weights</span>
-        <span id="weights-last-updated" style="font-size:0.68rem;color:var(--text-3)">—</span>
-      </div>
-      <div class="panel-body" style="height:220px; position:relative; padding:10px 15px;">
-        <canvas id="weights-chart"></canvas>
-      </div>
-    </div>
-
-    <!-- Evolution Tracker -->
-    <div class="panel" style="display:none;">
-      <div class="panel-hd">
-        <span>⚗️ Evolution History</span>
+        <span>⚖️ Delta-Neutral Carry</span>
         <div class="panel-hd-right">
-          <span id="evo-best-label" style="font-size:0.7rem;color:var(--purple);">—</span>
-        </div>
-      </div>
-      <div class="scroll" style="max-height:280px;">
-        <div style="padding:12px 16px;" id="evo-list">
-          <div class="empty" style="padding:1rem 0;"><p>No evolution cycles yet</p></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Row 4: Copy Trading Intelligence -->
-  <div class="dashboard-row-copy">
-
-    <!-- Leaderboard Panel -->
-    <div class="panel">
-      <div class="panel-hd">
-        <span>🏆 Copy Trading Leaderboard</span>
-        <div class="panel-hd-right">
-          <span id="ct-scan-time" style="font-size:0.68rem;color:var(--text-3)">—</span>
-          <button class="btn" id="ct-scan-btn" onclick="triggerCopyScan()">⟳ Scan Now</button>
+          <span id="carry-enabled-pill" class="badge" style="font-size:0.68rem;">—</span>
+          <span id="carry-refresh-time" style="font-size:0.68rem;color:var(--text-3)">—</span>
         </div>
       </div>
       <div class="panel-body" style="padding:0;">
-        <div id="ct-leaderboard-body" style="padding:12px 16px;">
-          <div class="empty">
-            <p style="margin-bottom:8px;">No scan yet</p>
-            <button class="btn" onclick="triggerCopyScan()" style="margin:auto;">⟳ Scan Leaderboard Now</button>
+        <!-- Carry Stats Row -->
+        <div class="stat-row" style="grid-template-columns:repeat(5,1fr);padding:12px 16px;gap:8px;">
+          <div>
+            <div class="stat-val" id="carry-pnl" style="font-size:1.1rem;">$0.00</div>
+            <div class="stat-sub" id="carry-pnl-pct">0.00% return</div>
+          </div>
+          <div>
+            <div class="stat-val muted" id="carry-funding" style="font-size:1.1rem;">$0.00</div>
+            <div class="stat-sub">Funding collected</div>
+          </div>
+          <div>
+            <div class="stat-val muted" id="carry-basis" style="font-size:1.1rem;">$0.00</div>
+            <div class="stat-sub">Basis P&L</div>
+          </div>
+          <div>
+            <div class="stat-val muted" id="carry-pos" style="font-size:1.1rem;">0</div>
+            <div class="stat-sub" id="carry-positions-sub">Open positions</div>
+          </div>
+          <div>
+            <div class="stat-val muted" id="carry-wr" style="font-size:1.1rem;">—</div>
+            <div class="stat-sub" id="carry-wl">0W / 0L</div>
+          </div>
+        </div>
+
+        <!-- Open Carry Positions -->
+        <div style="padding:8px 16px 4px;">
+          <div style="font-size:0.72rem;color:var(--text-3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Open Positions</div>
+        </div>
+        <div id="carry-open-body" style="padding:0 16px 8px;">
+          <div class="empty" style="padding:0.5rem 0;text-align:center;">
+            <p style="font-size:0.78rem;color:var(--text-3);">No carry positions</p>
+          </div>
+        </div>
+
+        <!-- Closed Carry History -->
+        <div style="padding:4px 16px 4px;border-top:1px solid rgba(255,255,255,0.05);">
+          <div style="font-size:0.72rem;color:var(--text-3);text-transform:uppercase;letter-spacing:0.05em;margin:6px 0;">Recent Closed</div>
+        </div>
+        <div id="carry-closed-body" style="padding:0 16px 12px;">
+          <div class="empty" style="padding:0.5rem 0;text-align:center;">
+            <p style="font-size:0.78rem;color:var(--text-3);">No closed carry trades yet</p>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Copy Positions Panel -->
+    <!-- Carry Live Funding Scanner -->
     <div class="panel">
       <div class="panel-hd">
-        <span>📋 Copy Positions</span>
+        <span>🔍 Live Funding Scanner</span>
         <div class="panel-hd-right">
-          <span id="ct-pos-pnl" style="font-size:0.78rem;font-weight:600;">—</span>
-          <span id="ct-pos-time" style="font-size:0.68rem;color:var(--text-3);margin-left:8px;">—</span>
+          <button class="btn" id="carry-scan-btn" onclick="triggerCarryScan()">⟳ Scan Now</button>
         </div>
       </div>
       <div class="panel-body" style="padding:0;">
-        <div id="ct-positions-body" style="padding:12px 16px;">
-          <div class="empty"><p>No copy positions detected</p></div>
+        <div id="carry-scan-body" style="padding:12px 16px;">
+          <div class="empty" style="padding:1rem 0;text-align:center;">
+            <p style="font-size:0.78rem;color:var(--text-3);">Click "Scan Now" to check live funding rates</p>
+          </div>
         </div>
       </div>
     </div>
@@ -853,75 +924,8 @@ const AGENT_ICONS = {
 };
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let ws, signals = [], statusData = {}, evoHistory = [], selectedSignal = null;
-let equityChart, weightsChart;
-let evoAccepted = 0;
-
-// ── Weights Chart init ────────────────────────────────────────────────────────
-function initWeightsChart() {
-  const ctx = document.getElementById('weights-chart').getContext('2d');
-  weightsChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: [],
-      datasets: [{
-        label: 'Agent Weight',
-        data: [],
-        backgroundColor: 'rgba(79, 142, 247, 0.45)',
-        borderColor: '#4f8ef7',
-        borderWidth: 1.5,
-        borderRadius: 5,
-        borderSkipped: false,
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: '#141928',
-          borderColor: '#1e2d45',
-          borderWidth: 1,
-          titleColor: '#94a3b8',
-          bodyColor: '#e2e8f0',
-        }
-      },
-      scales: {
-        x: {
-          grid: { display: false },
-          ticks: { color: '#94a3b8', font: { size: 10 } }
-        },
-        y: {
-          min: 0,
-          max: 3.5,
-          grid: { color: 'rgba(30,45,69,0.3)', drawBorder: false },
-          ticks: { color: '#4a5568', font: { size: 9, family: 'JetBrains Mono' } }
-        }
-      }
-    }
-  });
-}
-
-function updateWeightsChart(weights, lastUpdated) {
-  if (!weightsChart) return;
-  const labels = Object.keys(weights).map(k => cap(k));
-  const data = Object.values(weights);
-  
-  weightsChart.data.labels = labels;
-  weightsChart.data.datasets[0].data = data;
-  weightsChart.update();
-  
-  const el = document.getElementById('weights-last-updated');
-  if (el) {
-    if (lastUpdated) {
-      const timeStr = new Date(lastUpdated).toLocaleTimeString();
-      el.textContent = 'Updated ' + timeStr;
-    } else {
-      el.textContent = 'Active';
-    }
-  }
-}
+let ws, signals = [], statusData = {}, selectedSignal = null;
+let equityChart;
 
 // ── Equity Chart init ─────────────────────────────────────────────────────────
 function initChart() {
@@ -1039,11 +1043,6 @@ function connectWS() {
       if (msg.type === 'status') {
         updateStatus(msg.data);
         document.getElementById('last-upd').textContent = 'Updated ' + new Date().toLocaleTimeString();
-        fetch('/api/agent_weights')
-          .then(r => r.ok && r.json())
-          .then(w => w && w.weights && updateWeightsChart(w.weights, w.last_updated))
-          .catch(() => {});
-      }
       if (msg.type === 'signal') addSignal(msg.data);
     };
   } catch (err) {
@@ -1067,20 +1066,13 @@ function setWS(ok) {
 
 async function refreshAll() {
   try {
-    const [stRes, sigRes, evoRes, weightsRes] = await Promise.all([
+    const [stRes, sigRes] = await Promise.all([
       fetch('/api/status'),
       fetch('/api/signals'),
-      fetch('/api/evolution').catch(() => ({ ok: false })),
-      fetch('/api/agent_weights').catch(() => ({ ok: false })),
     ]);
     const status = await stRes.json();
     const { signals: sigs, total_count } = await sigRes.json();
     updateStatus(status);
-
-    if (weightsRes && weightsRes.ok) {
-      const w = await weightsRes.json();
-      if (w && w.weights) updateWeightsChart(w.weights, w.last_updated);
-    }
 
     // Refresh signals array with latest from server, sorted newest first
     signals = sigs.slice().reverse();
@@ -1107,11 +1099,6 @@ async function refreshAll() {
       document.getElementById('s-last-sym').textContent = `Last: ${signals[0].symbol}`;
     } else {
       document.getElementById('s-last-sym').textContent = 'No scan yet';
-    }
-
-    if (evoRes.ok) {
-      const evo = await evoRes.json();
-      updateEvo(evo.history || []);
     }
   } catch(e) { console.warn('Refresh error', e); }
 }
@@ -1498,319 +1485,215 @@ function riskItem(label, val) {
   return `<div class="risk-item"><div class="risk-lbl">${label}</div><div class="risk-val">${val}</div></div>`;
 }
 
-// ── Evolution tracker ─────────────────────────────────────────────────────────
-function updateEvo(history) {
-  evoHistory = history.filter(h => h.iteration);
-  const accepted = evoHistory.filter(h => h.improved).length;
-  evoAccepted = accepted;
-  document.getElementById('h-evo-acc').textContent = accepted;
-
-  const bestFit = Math.max(...evoHistory.map(h => h.fitness || 0), 0);
-  document.getElementById('s-fitness').textContent = bestFit ? bestFit.toFixed(4) : '—';
-  document.getElementById('s-evo-iter').textContent = `${evoHistory.length} iterations`;
-  document.getElementById('evo-best-label').textContent = bestFit ? `best: +${bestFit.toFixed(4)}` : '';
-
-  // Show evo pill if recent activity (last 30 min)
-  const latest = evoHistory[evoHistory.length - 1];
-  if (latest?.timestamp) {
-    const age = Date.now() - new Date(latest.timestamp).getTime();
-    document.getElementById('evo-pill').style.display = age < 30 * 60 * 1000 ? 'flex' : 'none';
-  }
-
-  const el = document.getElementById('evo-list');
-  if (evoHistory.length === 0) {
-    el.innerHTML = '<div class="empty" style="padding:1rem 0;"><p>No evolution cycles yet</p></div>';
-    return;
-  }
-
-  const maxFit = Math.max(...evoHistory.map(h => Math.abs(h.fitness || 0))) || 1;
-
-  el.innerHTML = evoHistory.slice().reverse().slice(0, 20).map(h => {
-    const fit    = h.fitness || 0;
-    const barW   = Math.min(100, Math.abs(fit) / maxFit * 100).toFixed(0);
-    const barCol = fit >= 0 ? '#00e5b0' : '#ff4d6d';
-    const tick   = h.improved ? '✅' : h.reason?.includes('validation') ? '⚠️' : '❌';
-    const target = h.target || '—';
-    const fitStr = `${fit >= 0 ? '+' : ''}${fit.toFixed(4)}`;
-    const fitCol = fit >= 0 ? 'var(--green)' : 'var(--red)';
-    return `<div class="evo-row">
-      <span class="evo-it">#${h.iteration}</span>
-      <span class="evo-target">${target}</span>
-      <div class="evo-bar-wrap">
-        <div class="evo-bar"><div class="evo-bar-fill" style="width:${barW}%;background:${barCol}"></div></div>
-      </div>
-      <span class="evo-fitness" style="color:${fitCol}">${fitStr}</span>
-      <span class="evo-tick">${tick}</span>
-    </div>`;
-  }).join('');
+// ── Carry Strategy ──────────────────────────────────────────────────────────
+async function fetchCarryStatus() {
+  try {
+    const res = await fetch('/api/carry/status');
+    if (!res.ok) return;
+    const data = await res.json();
+    renderCarryStatus(data);
+  } catch(e) {}
 }
 
-// ── Market Status ─────────────────────────────────────────────────────────────
-
-const CFD_MARKETS = [
-  { name: '🪙 Bitcoin (BTC/USDT)',   type: 'crypto',  symbol: 'BTC/USDT' },
-  { name: '🪙 Ethereum (ETH/USDT)',  type: 'crypto',  symbol: 'ETH/USDT' },
-  { name: '🪙 Solana (SOL/USDT)',    type: 'crypto',  symbol: 'SOL/USDT' },
-];
-
-function computeMarketOpenClient(symbol) {
-  // Pure client-side market hours check (mirrors server logic)
-  const now  = new Date();
-  const utcH = now.getUTCHours();
-  const utcM = now.getUTCMinutes();
-  const dow   = now.getUTCDay(); // 0=Sun, 6=Sat
-  const utcMin = utcH * 60 + utcM;
-
-  const sym = (symbol || '').toUpperCase();
-
-  // NGX Stock
-  if (sym.endsWith('/NGX') || sym.endsWith(':NGX')) {
-    if (dow === 0 || dow === 6) return { open: false, reason: 'NGX closed weekends' };
-    const openMin = 8 * 60; // 08:00 UTC
-    const closeMin = 15 * 60; // 15:00 UTC
-    if (utcMin < openMin) return { open: false, reason: 'Opens 09:00 WAT (08:00 UTC)' };
-    if (utcMin >= closeMin) return { open: false, reason: 'Closed at 16:00 WAT (15:00 UTC)' };
-    return { open: true, reason: 'NGX hours (09:00–16:00 WAT)' };
-  }
-
-  // Crypto — always open
-  if (!sym.includes(':')) return { open: true, reason: '24/7' };
-
-  // Precious metals & commodities
-  if (sym.startsWith('XAU') || sym.startsWith('XAG') || sym.startsWith('CL') || sym.startsWith('USOIL')) {
-    if (dow === 6) return { open: false, reason: 'Closed all day Saturday' };
-    if (dow === 0 && utcMin < 22 * 60) return { open: false, reason: `Opens Sunday 22:00 UTC` };
-    if (dow === 5 && utcMin >= 21 * 60) return { open: false, reason: 'Closed after 21:00 UTC Fri' };
-    return { open: true, reason: 'Market session open' };
-  }
-
-  // Stock CFDs — detect DST (rough: EDT Mar–Nov, EST otherwise)
-  const month = now.getUTCMonth() + 1; // 1-based
-  const inEDT = month >= 3 && month <= 10;
-  const openMin  = inEDT ? 13 * 60       : 14 * 60;       // 13:00 or 14:00 UTC
-  const closeMin = inEDT ? 21 * 60       : 22 * 60;       // 21:00 or 22:00 UTC
-  const tzLabel  = inEDT ? 'EDT' : 'EST';
-
-  if (dow === 0 || dow === 6) return { open: false, reason: 'NYSE closed weekends' };
-  if (utcMin < openMin)  return { open: false, reason: `Opens ${Math.floor(openMin/60)}:00 UTC (${tzLabel})` };
-  if (utcMin >= closeMin) return { open: false, reason: `Closed at ${Math.floor(closeMin/60)}:00 UTC (${tzLabel})` };
-  return { open: true, reason: `${tzLabel} hours (${Math.floor(openMin/60)}:00–${Math.floor(closeMin/60)}:00 UTC)` };
-}
-
-function renderMarketStatus(data) {
-  const body = document.getElementById('mkt-status-body');
-  if (!body) return;
-
-  const rows = CFD_MARKETS.map(m => {
-    let status;
-    if (data && data[m.symbol]) {
-      status = data[m.symbol];
+function renderCarryStatus(s) {
+  // Enabled pill
+  const pill = document.getElementById('carry-enabled-pill');
+  if (pill) {
+    if (s.carry_enabled) {
+      pill.textContent = '✅ Enabled';
+      pill.style.background = 'var(--green-dim, rgba(34,197,94,0.15))';
+      pill.style.color = 'var(--green)';
     } else {
-      status = computeMarketOpenClient(m.symbol);
+      pill.textContent = '⏸ Disabled';
+      pill.style.background = 'var(--surface)';
+      pill.style.color = 'var(--text-3)';
     }
-    const isOpen  = status.open || status.is_open;
-    const reason  = status.reason || '';
-    const dotCls  = isOpen ? 'open' : 'closed';
-    const statCls = isOpen ? 'mkt-status-open' : 'mkt-status-closed';
-    const statTxt = isOpen ? 'OPEN' : 'CLOSED';
-    return `<div class="mkt-row">
-      <span class="mkt-name">
-        <span class="mkt-dot ${dotCls}"></span>
-        ${m.name}
-      </span>
-      <div style="text-align:right">
-        <div class="${statCls}">${statTxt}</div>
-        <div class="mkt-next">${reason}</div>
-      </div>
-    </div>`;
-  });
-
-  body.innerHTML = rows.join('');
-  const el = document.getElementById('mkt-refresh-time');
-  if (el) el.textContent = 'Updated ' + new Date().toLocaleTimeString('en', {hour:'2-digit', minute:'2-digit'});
-}
-
-function fetchMarketStatus() {
-  // Try server endpoint first; fall back to client-side computation
-  fetch('/api/market_status')
-    .then(r => r.ok ? r.json() : null)
-    .then(d => renderMarketStatus(d))
-    .catch(() => renderMarketStatus(null)); // graceful fallback
-}
-
-// ── Utils ─────────────────────────────────────────────────────────────────────
-function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
-
-// ── Copy Trading ───────────────────────────────────────────────────────────────
-
-function renderCopyLeaderboard(data) {
-  const el = document.getElementById('ct-leaderboard-body');
-  const scanEl = document.getElementById('ct-scan-time');
-  if (!el) return;
-
-  if (data.last_scan_utc) {
-    const t = new Date(data.last_scan_utc);
-    scanEl.textContent = 'Scanned ' + t.toLocaleTimeString();
   }
 
-  const masters = (data.top_masters || []).slice(0, 5);
-  if (!masters.length) {
-    el.innerHTML = `<div class="empty">
-      <p style="margin-bottom:8px;">${data.last_scan_utc ? 'No qualified masters found' : 'No scan yet'}</p>
-      <button class="btn" onclick="triggerCopyScan()" style="margin:auto;">⟳ Scan Leaderboard Now</button>
-    </div>`;
+  // Refresh time
+  const timeEl = document.getElementById('carry-refresh-time');
+  if (timeEl) {
+    timeEl.textContent = new Date().toLocaleTimeString();
+  }
+
+  // Net P&L
+  const pnl = s.total_pnl || 0;
+  const pnlEl = document.getElementById('carry-pnl');
+  pnlEl.textContent = `${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}`;
+  pnlEl.className = 'stat-val ' + (pnl >= 0 ? 'green' : 'red');
+  document.getElementById('carry-pnl-pct').textContent = `${(s.total_return_pct || 0).toFixed(2)}% return`;
+
+  // Funding collected
+  document.getElementById('carry-funding').textContent = `$${(s.total_funding_collected || 0).toFixed(2)}`;
+
+  // Basis P&L
+  const basis = s.total_basis_pnl || 0;
+  const basisEl = document.getElementById('carry-basis');
+  basisEl.textContent = `${basis >= 0 ? '+' : ''}$${basis.toFixed(2)}`;
+  basisEl.style.color = basis >= 0 ? 'var(--green)' : 'var(--red)';
+
+  // Open positions count
+  document.getElementById('carry-pos').textContent = s.open_positions || 0;
+
+  // Win rate
+  const wr = s.win_rate || 0;
+  const wrEl = document.getElementById('carry-wr');
+  wrEl.textContent = wr > 0 ? `${wr.toFixed(0)}%` : '—';
+  wrEl.className = 'stat-val ' + (wr >= 50 ? 'green' : 'red');
+  document.getElementById('carry-wl').textContent = `${s.win_count || 0}W / ${s.loss_count || 0}L`;
+
+  // Render open positions
+  renderCarryOpen(s.open_carry || []);
+
+  // Render closed trades
+  renderCarryClosed(s.closed_trades || []);
+}
+
+function renderCarryOpen(positions) {
+  const el = document.getElementById('carry-open-body');
+  if (!positions || positions.length === 0) {
+    el.innerHTML = '<div class="empty" style="padding:0.5rem 0;text-align:center;"><p style="font-size:0.78rem;color:var(--text-3);">No carry positions</p></div>';
     return;
   }
 
-  el.innerHTML = masters.map((m, i) => {
-    const scoreColor = m.score >= 70 ? 'var(--green)' : m.score >= 50 ? 'var(--yellow)' : 'var(--red)';
-    const ddColor = m.maxDrawdown < 10 ? 'var(--green)' : m.maxDrawdown < 20 ? 'var(--yellow)' : 'var(--red)';
-    const roiSign = m.roi90d >= 0 ? '+' : '';
-    return `<div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-        <span style="font-weight:600;font-size:0.85rem;">#${i+1} ${m.nickname}</span>
-        <span style="font-size:0.88rem;font-weight:700;color:${scoreColor};">${m.score.toFixed(0)}<span style="font-size:0.68rem;color:var(--text-3);font-weight:400;">/100</span></span>
-      </div>
-      <div style="background:rgba(255,255,255,0.06);border-radius:4px;height:4px;margin-bottom:6px;">
-        <div style="width:${m.score}%;height:100%;border-radius:4px;background:${scoreColor};transition:width 0.5s;"></div>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px 12px;font-size:0.72rem;color:var(--text-2);">
-        <span>🎯 Win: <b style="color:var(--text-1)">${m.winRate.toFixed(0)}%</b></span>
-        <span style="color:${ddColor};">📉 DD: <b>${m.maxDrawdown.toFixed(0)}%</b></span>
-        <span>📈 ROI: <b style="color:${m.roi90d>=0?'var(--green)':'var(--red)'}">${roiSign}${m.roi90d.toFixed(0)}%</b></span>
-        <span>⚡ Lev: <b>${m.avgLeverage.toFixed(0)}x</b></span>
-        <span>👥 <b>${m.followerNum}</b></span>
-      </div>
-      <div style="margin-top:6px;">
-        <a href="https://www.bybit.com/en/copy-trade/${m.uid}" target="_blank"
-           style="font-size:0.70rem;color:var(--purple);text-decoration:none;font-weight:500;">
-          Follow on Bybit →
-        </a>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function renderCopyPositions(data) {
-  const el = document.getElementById('ct-positions-body');
-  const pnlEl = document.getElementById('ct-pos-pnl');
-  const timeEl = document.getElementById('ct-pos-time');
-  if (!el) return;
-
-  if (data.snapshot_utc) {
-    const t = new Date(data.snapshot_utc);
-    timeEl.textContent = t.toLocaleTimeString();
-  }
-
-  const totalPnl = data.total_pnl || 0;
-  if (pnlEl) {
-    pnlEl.textContent = (totalPnl >= 0 ? '+' : '') + '$' + totalPnl.toFixed(2);
-    pnlEl.style.color = totalPnl >= 0 ? 'var(--green)' : 'var(--red)';
-  }
-
-  const positions = data.open_positions || [];
-  if (!positions.length) {
-    el.innerHTML = `<div class="empty" style="padding: 24px 16px; text-align: center;">
-      <p style="color: var(--text-2); margin-bottom: 4px; font-weight: 500;">No active copy positions</p>
-      <p style="font-size: 0.70rem; color: var(--text-3); max-width: 250px; margin: auto;">Mirrored orders from followed master traders will appear here.</p>
-    </div>
-    <div style="padding:10px 8px 0;font-size:0.72rem;color:var(--text-3);border-top:1px solid rgba(255,255,255,0.05);margin-top:8px;">
-      Unrealised: <b style="color:${data.total_unrealised_pnl>=0?'var(--green)':'var(--red)'}">${data.total_unrealised_pnl>=0?'+':''}$${(data.total_unrealised_pnl||0).toFixed(2)}</b>
-      &nbsp;·&nbsp; Realised: <b style="color:${data.total_realised_pnl>=0?'var(--green)':'var(--red)'}">${data.total_realised_pnl>=0?'+':''}$${(data.total_realised_pnl||0).toFixed(2)}</b>
-    </div>`;
-    return;
-  }
-
-  el.innerHTML = `<div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
-    <table style="width:100%;font-size:0.75rem;border-collapse:collapse;min-width:480px;">
+  el.innerHTML = `<div style="overflow-x:auto;">
+    <table style="width:100%;font-size:0.72rem;border-collapse:collapse;">
       <thead><tr style="color:var(--text-3);text-align:left;border-bottom:1px solid rgba(255,255,255,0.08);">
-        <th style="padding:6px 8px;">Symbol</th>
-        <th style="padding:6px 8px;">Side</th>
-        <th style="padding:6px 8px;">Size</th>
-        <th style="padding:6px 8px;">Entry</th>
-        <th style="padding:6px 8px;">Unreal P&L</th>
-        <th style="padding:6px 8px;">Total P&L</th>
+        <th style="padding:5px 6px;">Symbol</th>
+        <th style="padding:5px 6px;">Structure</th>
+        <th style="padding:5px 6px;">Size</th>
+        <th style="padding:5px 6px;">Funding</th>
+        <th style="padding:5px 6px;">Basis</th>
+        <th style="padding:5px 6px;">Cycles</th>
+        <th style="padding:5px 6px;">Inv.</th>
       </tr></thead>
       <tbody>
         ${positions.map(p => {
-          const pnlColor = p.unrealisedPnl >= 0 ? 'var(--green)' : 'var(--red)';
-          const totColor  = p.totalPnl >= 0 ? 'var(--green)' : 'var(--red)';
-          const sideColor = p.side === 'Buy' ? 'var(--green)' : 'var(--red)';
-          return `<tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
-            <td style="padding:7px 8px;font-weight:600;">${p.symbol}</td>
-            <td style="padding:7px 8px;color:${sideColor};font-weight:500;">${p.side}</td>
-            <td style="padding:7px 8px;">${p.size}</td>
-            <td style="padding:7px 8px;">${p.entryPrice}</td>
-            <td style="padding:7px 8px;color:${pnlColor};font-weight:600;">${p.unrealisedPnl >= 0 ? '+' : ''}$${p.unrealisedPnl.toFixed(2)}<span style="color:var(--text-3);font-weight:400;font-size:0.68rem;"> (${p.unrealisedPct >= 0 ? '+' : ''}${p.unrealisedPct.toFixed(1)}%)</span></td>
-            <td style="padding:7px 8px;color:${totColor};font-weight:600;">${p.totalPnl >= 0 ? '+' : ''}$${p.totalPnl.toFixed(2)}</td>
+          const fundingColor = p.funding_collected >= 0 ? 'var(--green)' : 'var(--red)';
+          const basisColor = p.basis_pnl >= 0 ? 'var(--green)' : 'var(--red)';
+          const invBadge = p.consecutive_inversions > 0
+            ? `<span style="color:var(--red);font-weight:600;">${p.consecutive_inversions}</span>`
+            : '0';
+          return `<tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
+            <td style="padding:5px 6px;font-weight:600;">${p.symbol}</td>
+            <td style="padding:5px 6px;font-size:0.68rem;color:var(--purple);">${p.structure}</td>
+            <td style="padding:5px 6px;">$${(p.size_usd||0).toFixed(0)}</td>
+            <td style="padding:5px 6px;color:${fundingColor};font-weight:600;">$${(p.funding_collected||0).toFixed(2)}</td>
+            <td style="padding:5px 6px;color:${basisColor};font-weight:600;">${(p.basis_pnl||0)>=0?'+':''}$${(p.basis_pnl||0).toFixed(2)}</td>
+            <td style="padding:5px 6px;">${p.funding_cycles_collected||0}</td>
+            <td style="padding:5px 6px;">${invBadge}</td>
           </tr>`;
         }).join('')}
       </tbody>
     </table>
-  </div>
-  <div style="padding:10px 8px 0;font-size:0.72rem;color:var(--text-3);border-top:1px solid rgba(255,255,255,0.05);margin-top:8px;">
-    Unrealised: <b style="color:${data.total_unrealised_pnl>=0?'var(--green)':'var(--red)'}">${data.total_unrealised_pnl>=0?'+':''}$${(data.total_unrealised_pnl||0).toFixed(2)}</b>
-    &nbsp;·&nbsp; Realised: <b style="color:${data.total_realised_pnl>=0?'var(--green)':'var(--red)'}">${data.total_realised_pnl>=0?'+':''}$${(data.total_realised_pnl||0).toFixed(2)}</b>
   </div>`;
 }
 
-async function fetchCopyTrading() {
-  try {
-    const [lbRes, posRes] = await Promise.all([
-      fetch('/api/copy-trading/leaderboard'),
-      fetch('/api/copy-trading/positions'),
-    ]);
-    if (lbRes.ok) renderCopyLeaderboard(await lbRes.json());
-    if (posRes.ok) renderCopyPositions(await posRes.json());
-  } catch(e) {}
+function renderCarryClosed(trades) {
+  const el = document.getElementById('carry-closed-body');
+  if (!trades || trades.length === 0) {
+    el.innerHTML = '<div class="empty" style="padding:0.5rem 0;text-align:center;"><p style="font-size:0.78rem;color:var(--text-3);">No closed carry trades yet</p></div>';
+    return;
+  }
+
+  el.innerHTML = `<div style="overflow-x:auto;max-height:200px;" class="scroll">
+    <table style="width:100%;font-size:0.72rem;border-collapse:collapse;">
+      <thead><tr style="color:var(--text-3);text-align:left;border-bottom:1px solid rgba(255,255,255,0.08);">
+        <th style="padding:5px 6px;">Symbol</th>
+        <th style="padding:5px 6px;">Structure</th>
+        <th style="padding:5px 6px;">Funding</th>
+        <th style="padding:5px 6px;">Basis</th>
+        <th style="padding:5px 6px;">Net</th>
+        <th style="padding:5px 6px;">Cycles</th>
+        <th style="padding:5px 6px;">Reason</th>
+      </tr></thead>
+      <tbody>
+        ${trades.slice(0, 10).map(t => {
+          const netColor = (t.net_pnl||0) >= 0 ? 'var(--green)' : 'var(--red)';
+          return `<tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
+            <td style="padding:5px 6px;font-weight:600;">${t.symbol}</td>
+            <td style="padding:5px 6px;font-size:0.68rem;color:var(--purple);">${t.structure}</td>
+            <td style="padding:5px 6px;color:var(--green);">$${(t.funding_collected||0).toFixed(2)}</td>
+            <td style="padding:5px 6px;color:${(t.basis_pnl||0)>=0?'var(--green)':'var(--red)'};">${(t.basis_pnl||0)>=0?'+':''}$${(t.basis_pnl||0).toFixed(2)}</td>
+            <td style="padding:5px 6px;color:${netColor};font-weight:700;">${(t.net_pnl||0)>=0?'+':''}$${(t.net_pnl||0).toFixed(2)}</td>
+            <td style="padding:5px 6px;">${t.funding_cycles_collected||0}</td>
+            <td style="padding:5px 6px;font-size:0.65rem;color:var(--text-3);">${(t.exit_reason||'').substring(0,40)}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>`;
 }
 
-async function triggerCopyScan() {
-  const btn = document.getElementById('ct-scan-btn');
-  const timeEl = document.getElementById('ct-scan-time');
+async function triggerCarryScan() {
+  const btn = document.getElementById('carry-scan-btn');
+  const body = document.getElementById('carry-scan-body');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Scanning…'; }
-  if (timeEl) timeEl.textContent = 'Scan running…';
+  if (body) {
+    body.innerHTML = '<div class="empty" style="padding:1rem 0;text-align:center;"><p style="font-size:0.78rem;color:var(--text-3);">Fetching live funding rates…</p></div>';
+  }
   try {
-    const r = await fetch('/api/copy-trading/scan', { method: 'POST' });
-    if (r.ok) {
-      if (timeEl) timeEl.textContent = 'Scan started — results in ~2 min';
-      // Poll every 20s for up to 3 min
-      let attempts = 0;
-      const poll = setInterval(async () => {
-        attempts++;
-        await fetchCopyTrading();
-        if (attempts >= 9) clearInterval(poll);
-      }, 20000);
+    const res = await fetch('/api/carry/scan', { method: 'POST' });
+    if (res.ok) {
+      const data = await res.json();
+      renderCarryScan(data);
     }
-  } catch(e) {}
+  } catch(e) {
+    if (body) body.innerHTML = '<p style="font-size:0.78rem;color:var(--red);">Scan failed</p>';
+  }
   if (btn) { btn.disabled = false; btn.textContent = '⟳ Scan Now'; }
 }
 
-// Poll copy trading data every 5 minutes
-fetchCopyTrading();
-setInterval(fetchCopyTrading, 300000);
+function renderCarryScan(data) {
+  const body = document.getElementById('carry-scan-body');
+  if (!body) return;
+  const opps = data.opportunities || [];
+  if (opps.length === 0) {
+    body.innerHTML = '<div class="empty" style="padding:1rem 0;text-align:center;"><p style="font-size:0.78rem;color:var(--text-3);">No carry opportunities found<br>All funding rates below min APY threshold.</p></div>';
+    return;
+  }
+  body.innerHTML = `<div style="overflow-x:auto;">
+    <table style="width:100%;font-size:0.72rem;border-collapse:collapse;">
+      <thead><tr style="color:var(--text-3);text-align:left;border-bottom:1px solid rgba(255,255,255,0.08);">
+        <th style="padding:5px 6px;">Symbol</th>
+        <th style="padding:5px 6px;">Structure</th>
+        <th style="padding:5px 6px;">APY</th>
+        <th style="padding:5px 6px;">Binance</th>
+        <th style="padding:5px 6px;">Bybit</th>
+        <th style="padding:5px 6px;">Signal</th>
+      </tr></thead>
+      <tbody>
+        ${opps.map(o => {
+          const apyColor = o.apy >= 15 ? 'var(--green)' : o.apy >= 8 ? 'var(--gold)' : 'var(--text-2)';
+          const sigColor = o.signal === 'BUY' ? 'var(--green)' : 'var(--text-3)';
+          return `<tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
+            <td style="padding:5px 6px;font-weight:600;">${o.symbol}</td>
+            <td style="padding:5px 6px;font-size:0.68rem;color:var(--purple);">${o.structure || '—'}</td>
+            <td style="padding:5px 6px;color:${apyColor};font-weight:700;">${(o.apy||0).toFixed(1)}%</td>
+            <td style="padding:5px 6px;font-size:0.68rem;">${((o.binance_funding||0)*100).toFixed(4)}%</td>
+            <td style="padding:5px 6px;font-size:0.68rem;">${((o.bybit_funding||0)*100).toFixed(4)}%</td>
+            <td style="padding:5px 6px;color:${sigColor};font-weight:600;">${o.signal}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+// Fetch carry status every 30 seconds
+fetchCarryStatus();
+setInterval(fetchCarryStatus, 30000);
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 initChart();
-initWeightsChart();
 connectWS();
 refreshAll();
-fetchMarketStatus();
 // Poll periodically only if WebSocket is disconnected/closed
 setInterval(() => {
   if (!ws || ws.readyState !== WebSocket.OPEN) {
     refreshAll();
   }
 }, 12000);
-
-// Settle static/semi-static data fetches to a 60-second interval
-setInterval(fetchMarketStatus, 60000);
-setInterval(() => {
-  fetch('/api/evolution')
-    .then(r => r.ok ? r.json() : null)
-    .then(d => d && updateEvo(d.history || []))
-    .catch(() => {});
-}, 60000);
 </script>
 
 </body>

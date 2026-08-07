@@ -271,6 +271,64 @@ async def get_carry_status():
         }
 
 
+@app.post("/api/carry/scan")
+async def trigger_carry_scan():
+    """Manually trigger a carry funding scan — returns live opportunities."""
+    import threading
+    import ccxt
+    from trading_engine.config import settings
+    from trading_engine.agents.carry_agent import _fetch_funding_rates, _apy_from_rate
+
+    watchlist = [s.strip() for s in settings.carry_watchlist.split(",") if s.strip()]
+    min_apy = float(getattr(settings, "carry_min_apy", 15.0))
+    borrow_cost = float(getattr(settings, "carry_borrow_cost_apy", 5.0))
+
+    def _scan():
+        opportunities = []
+        for symbol in watchlist:
+            try:
+                venues = _fetch_funding_rates(symbol)
+                if not venues:
+                    continue
+                binance_data = venues.get("binance", {})
+                bybit_data = venues.get("bybit", {})
+                binance_funding = binance_data.get("funding_rate", 0)
+                bybit_funding = bybit_data.get("funding_rate", 0)
+                binance_apy = _apy_from_rate(binance_funding)
+                bybit_apy = _apy_from_rate(bybit_funding)
+                spread_apy = abs(_apy_from_rate(binance_funding - bybit_funding))
+                best_short_apy = max(binance_apy, bybit_apy)
+                net_short_carry = best_short_apy - borrow_cost
+                cross_basis_apy = spread_apy if len(venues) >= 2 else 0
+
+                structure = None
+                apy = 0
+                signal = "HOLD"
+                if cross_basis_apy > min_apy:
+                    structure = "cross_basis"
+                    apy = cross_basis_apy
+                    signal = "BUY"
+                elif net_short_carry > min_apy:
+                    structure = "short_perp"
+                    apy = net_short_carry
+                    signal = "BUY"
+
+                opportunities.append({
+                    "symbol": symbol,
+                    "structure": structure,
+                    "apy": round(apy, 1),
+                    "binance_funding": binance_funding,
+                    "bybit_funding": bybit_funding,
+                    "signal": signal,
+                })
+            except Exception:
+                pass
+        return opportunities
+
+    opportunities = _scan()
+    return {"opportunities": opportunities, "min_apy": min_apy, "count": len(opportunities)}
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
