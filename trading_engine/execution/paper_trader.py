@@ -154,20 +154,37 @@ class PaperPortfolio:
         return p
 
 
-def _load_state() -> PaperPortfolio:
+_cached_paper_portfolio: Optional[PaperPortfolio] = None
+_cached_paper_portfolio_time: float = 0.0
+
+def _load_state(force_refresh: bool = False) -> PaperPortfolio:
+    global _cached_paper_portfolio, _cached_paper_portfolio_time
+    now = time.time()
+    if not force_refresh and _cached_paper_portfolio is not None and (now - _cached_paper_portfolio_time) < 3.0:
+        return _cached_paper_portfolio
+
     with state_lock():
         if STATE_FILE.exists() and STATE_FILE.stat().st_size > 0:
             try:
                 with open(STATE_FILE) as f:
-                    return PaperPortfolio.from_dict(json.load(f))
+                    portfolio = PaperPortfolio.from_dict(json.load(f))
+                    _cached_paper_portfolio = portfolio
+                    _cached_paper_portfolio_time = now
+                    return portfolio
             except Exception as e:
                 logger.error(f"CRITICAL: Could not parse paper state file: {e}")
                 raise RuntimeError(f"Failed to load portfolio state: {e}") from e
-        return PaperPortfolio()
+        portfolio = PaperPortfolio()
+        _cached_paper_portfolio = portfolio
+        _cached_paper_portfolio_time = now
+        return portfolio
 
 
 def _save_state(portfolio: PaperPortfolio):
+    global _cached_paper_portfolio, _cached_paper_portfolio_time
     with state_lock():
+        _cached_paper_portfolio = portfolio
+        _cached_paper_portfolio_time = time.time()
         with open(STATE_FILE, "w") as f:
             json.dump(portfolio.to_dict(), f, indent=2)
 

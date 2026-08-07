@@ -165,13 +165,21 @@ class LivePortfolio:
         return p
 
 
-def _load_state() -> LivePortfolio:
+_cached_live_portfolio: Optional[LivePortfolio] = None
+_cached_live_portfolio_time: float = 0.0
+
+def _load_state(force_refresh: bool = False) -> LivePortfolio:
+    global _cached_live_portfolio, _cached_live_portfolio_time
+    now = time.time()
+    if not force_refresh and _cached_live_portfolio is not None and (now - _cached_live_portfolio_time) < 3.0:
+        return _cached_live_portfolio
+
     with state_lock():
         # 1. Try loading from PostgreSQL database first
         try:
             db_state = db.get_portfolio_state("live")
             if db_state:
-                logger.info("Loaded live state from PostgreSQL database.")
+                logger.debug("Loaded live state from PostgreSQL database.")
                 portfolio = LivePortfolio.from_dict(db_state)
                 # Keep local state file in sync
                 try:
@@ -179,6 +187,8 @@ def _load_state() -> LivePortfolio:
                         json.dump(db_state, f, indent=2)
                 except Exception as e_file:
                     logger.warning(f"Failed to write live_state.json locally: {e_file}")
+                _cached_live_portfolio = portfolio
+                _cached_live_portfolio_time = now
                 return portfolio
         except Exception as e_db:
             logger.warning(f"Failed to load live state from PostgreSQL database: {e_db}")
@@ -187,17 +197,28 @@ def _load_state() -> LivePortfolio:
         if STATE_FILE.exists() and STATE_FILE.stat().st_size > 0:
             try:
                 with open(STATE_FILE) as f:
-                    logger.info("Loaded live state from local file.")
-                    return LivePortfolio.from_dict(json.load(f))
+                    logger.debug("Loaded live state from local file.")
+                    portfolio = LivePortfolio.from_dict(json.load(f))
+                    _cached_live_portfolio = portfolio
+                    _cached_live_portfolio_time = now
+                    return portfolio
             except Exception as e:
                 logger.error(f"CRITICAL: Could not parse live state file: {e}")
                 raise RuntimeError(f"Failed to load portfolio state: {e}") from e
-        return LivePortfolio()
+        
+        portfolio = LivePortfolio()
+        _cached_live_portfolio = portfolio
+        _cached_live_portfolio_time = now
+        return portfolio
 
 
 def _save_state(portfolio: LivePortfolio):
+    global _cached_live_portfolio, _cached_live_portfolio_time
     with state_lock():
         state_dict = portfolio.to_dict()
+        _cached_live_portfolio = portfolio
+        _cached_live_portfolio_time = time.time()
+
         # 1. Save to local live_state.json
         try:
             with open(STATE_FILE, "w") as f:
