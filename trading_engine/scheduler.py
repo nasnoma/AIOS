@@ -450,7 +450,7 @@ def run_claude_council_weekly_review():
     try:
         from trading_engine.claude_council import ClaudeCouncil
         from trading_engine.execution.live_trader import live_trader
-        from trading_engine.alerts.telegram import send_telegram_alert
+        from trading_engine.alerts.telegram_bot import send_message as send_telegram_alert
 
         state = live_trader._load_state()
         closed_list = getattr(state, "closed_trades", [])
