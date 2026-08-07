@@ -1692,26 +1692,26 @@ function renderCarryScan(data) {
 fetchCarryStatus();
 setInterval(fetchCarryStatus, 30000);
 
-// ── Init ──────────────────────────────────────────────────────────────────────
-initChart();
-connectWS();
-refreshAll();
-
 // Hide loading overlay after first successful data load
 function hideLoadingOverlay() {
   const ov = document.getElementById('loading-overlay');
   if (ov) { ov.style.opacity = '0'; setTimeout(() => ov.remove(), 500); }
 }
 
+// ── Init ──────────────────────────────────────────────────────────────────────
+// Safety net: hide spinner after 5s no matter what (must register BEFORE any potentially-throwing code)
+setTimeout(hideLoadingOverlay, 5000);
+
+try { initChart(); } catch(e) { console.warn('Chart init failed:', e); }
+try { connectWS(); } catch(e) { console.warn('WS connect failed:', e); }
+try { refreshAll(); } catch(e) { console.warn('Refresh failed:', e); }
+
 // Poll periodically only if WebSocket is disconnected/closed
 setInterval(() => {
   if (!ws || ws.readyState !== WebSocket.OPEN) {
-    refreshAll();
+    try { refreshAll(); } catch(e) {}
   }
 }, 12000);
-
-// Fallback: hide overlay after 8s even if data is slow
-setTimeout(hideLoadingOverlay, 8000);
 </script>
 
 </body>
