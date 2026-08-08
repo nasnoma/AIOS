@@ -363,6 +363,58 @@ async def trigger_self_heal_endpoint():
         return {"error": str(e)}
 
 
+@app.api_route("/api/spot/optimize", methods=["GET", "POST"])
+async def trigger_autoResearch_optimizer():
+    """
+    Trigger the AutoResearch optimizer in a background thread.
+    Runs ~4620 backtests to find optimal grid params per asset.
+    Results saved to best_params.json and auto-loaded by GridEngine on next restart.
+    """
+    import threading
+    from trading_engine.spot.auto_optimizer import run_full_optimization, DEFAULT_ASSETS
+    try:
+        def _run():
+            logger.info("AutoResearch Optimizer started in background thread")
+            run_full_optimization(assets=DEFAULT_ASSETS, days=30, regime='RANGE')
+            logger.info("AutoResearch Optimizer COMPLETE — best_params.json updated")
+        t = threading.Thread(target=_run, daemon=True)
+        t.start()
+        return {
+            "status": "started",
+            "message": "AutoResearch Optimizer running in background (~5-15 min). "
+                       "Check /api/spot/optimizer-results when complete.",
+            "combos_per_asset": 7 * 5 * 4 * 3,
+            "total_backtests": 11 * (7 * 5 * 4 * 3),
+        }
+    except Exception as e:
+        logger.error(f"Error starting optimizer: {e}")
+        return {"error": str(e)}
+
+
+@app.api_route("/api/spot/optimizer-results", methods=["GET"])
+async def get_optimizer_results():
+    """Return the best params found by the last AutoResearch run."""
+    from pathlib import Path
+    bp_file = Path(__file__).parent.parent / "spot" / "best_params.json"
+    res_file = Path(__file__).parent.parent / "spot" / "optimizer_results.json"
+    if not bp_file.exists():
+        return {"status": "not_run", "message": "Optimizer has not been run yet. POST /api/spot/optimize to start."}
+    try:
+        best_params = json.loads(bp_file.read_text())
+        summary = {}
+        if res_file.exists():
+            all_results = json.loads(res_file.read_text())
+            for sym, res in all_results.items():
+                br = res.get('best_result') or {}
+                summary[sym] = {
+                    "best_params": res.get('best_params'),
+                    "cycles": br.get('total_cycles', 0),
+                    "net_pnl_usd": br.get('net_pnl_usd', 0.0),
+                    "net_pnl_pct": br.get('net_pnl_pct', 0.0),
+                }
+        return {"status": "complete", "best_params": best_params, "asset_summary": summary}
+    except Exception as e:
+        return {"error": str(e)}
 
 
 

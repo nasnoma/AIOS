@@ -1,9 +1,14 @@
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any
+import json
+from pathlib import Path
 import ccxt
 from datetime import datetime, timezone
 from loguru import logger
 from uuid import uuid4
+
+# Path where auto_optimizer.py writes winning params
+_BEST_PARAMS_FILE = Path(__file__).parent / 'best_params.json'
 
 @dataclass
 class RegimeParams:
@@ -67,6 +72,36 @@ class GridEngine:
         self.grid_levels: List[GridLevel] = []
         self.completed_cycles: List[Dict[str, Any]] = []
         self.exchange: Optional[ccxt.Exchange] = None
+
+        # Load optimizer-tuned params for this symbol if available
+        self._apply_best_params()
+
+    def _apply_best_params(self):
+        """Read best_params.json written by auto_optimizer and apply to RANGE regime."""
+        try:
+            if not _BEST_PARAMS_FILE.exists():
+                return
+            best = json.loads(_BEST_PARAMS_FILE.read_text())
+            sym_params = best.get(self.symbol)
+            if not sym_params:
+                return
+            regime = sym_params.get('regime', 'RANGE')
+            orig = REGIME_PARAMS.get(regime)
+            if not orig:
+                return
+            REGIME_PARAMS[regime] = RegimeParams(
+                grid_spacing=float(sym_params.get('grid_spacing', orig.grid_spacing)),
+                buy_levels  =int(sym_params.get('buy_levels',    orig.buy_levels)),
+                sell_levels =int(sym_params.get('sell_levels',   orig.sell_levels)),
+                capital_pct =float(sym_params.get('capital_pct', orig.capital_pct)),
+                base_hold_pct=orig.base_hold_pct,
+            )
+            logger.info(f"Loaded optimized params [{self.symbol} {regime}]: "
+                        f"spacing={sym_params['grid_spacing']:.3f} "
+                        f"buy={sym_params['buy_levels']} sell={sym_params['sell_levels']} "
+                        f"cap={sym_params['capital_pct']:.0%}")
+        except Exception as e:
+            logger.debug(f"Could not load best_params for {self.symbol}: {e}")
 
     def set_regime(self, regime: str):
         if regime not in REGIME_PARAMS:
