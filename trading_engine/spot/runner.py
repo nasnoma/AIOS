@@ -210,8 +210,22 @@ def run_spot_dca_check():
                     qty = order_size / price
                     _portfolio.record_buy(symbol, qty, price, order_size, f"DCA_{int(datetime.now(timezone.utc).timestamp())}", is_dca=True)
                     _portfolio.save()
+
+                    # ── DCA Exit Target: place limit sell at +1.5% above entry ──
+                    # After fees (0.1% each side = 0.2% round-trip), this yields ~1.3% net gain.
+                    # Prevents DCA positions sitting open through prolonged downtrends.
+                    exit_price = round(price * 1.015, 6)
+                    try:
+                        if not spot_settings.paper_mode:
+                            exchange.create_limit_sell_order(symbol, qty, exit_price)
+                            logger.info(f"📤 DCA Exit Limit Sell placed [{symbol}]: qty={qty:.6f} @ ${exit_price:.4f} (+1.5% target)")
+                        else:
+                            logger.info(f"📤 [PAPER] DCA Exit Limit Sell [{symbol}]: qty={qty:.6f} @ ${exit_price:.4f} (+1.5% target)")
+                    except Exception as sell_err:
+                        logger.warning(f"DCA exit sell placement failed [{symbol}]: {sell_err}")
         except Exception as e:
             logger.warning(f"DCA check failed for {symbol}: {e}")
+
 
 
 def get_spot_status() -> Dict[str, Any]:

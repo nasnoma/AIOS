@@ -1,5 +1,6 @@
 import ccxt
 import pandas as pd
+import pandas_ta as ta
 from loguru import logger
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any
@@ -45,6 +46,10 @@ def run_backtest(
 
     df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
     df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+
+    # Compute true 14-period ATR from OHLCV for dynamic grid spacing
+    df.ta.atr(length=14, append=True)
+    atr_col = 'ATRr_14' if 'ATRr_14' in df.columns else ('ATR_14' if 'ATR_14' in df.columns else None)
     
     engine = GridEngine(
         symbol=symbol,
@@ -59,8 +64,9 @@ def run_backtest(
     start_price = df.iloc[0]['open']
     end_price = df.iloc[-1]['close']
     
-    # Initial Grid
-    engine.build_grid(start_price, portfolio)
+    # Initial Grid — pass real ATR for accurate dynamic spacing
+    init_atr = float(df[atr_col].iloc[14]) if atr_col and pd.notna(df[atr_col].iloc[14]) else 0.0
+    engine.build_grid(start_price, portfolio, atr=init_atr)
     engine.place_grid_orders(portfolio, exchange=None)
     
     last_rebuild_time = df.iloc[0]['timestamp']
@@ -72,10 +78,11 @@ def run_backtest(
     current_capital = allocated_usd
     
     for idx, row in df.iterrows():
-        # Rebuild grid daily
+        # Rebuild grid daily — use real ATR at this point in history
         if (row['timestamp'] - last_rebuild_time).total_seconds() >= 86400:
+            row_atr = float(df.loc[idx, atr_col]) if atr_col and pd.notna(df.loc[idx, atr_col]) else 0.0
             engine.cancel_all()
-            engine.build_grid(row['close'], portfolio)
+            engine.build_grid(row['close'], portfolio, atr=row_atr)
             engine.place_grid_orders(portfolio, exchange=None)
             last_rebuild_time = row['timestamp']
             
