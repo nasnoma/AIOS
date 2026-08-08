@@ -244,6 +244,18 @@ class GridEngine:
         open_sells = sum(1 for l in self.grid_levels if l.status == 'open' and l.side == 'sell')
         total_pnl = sum(c['net_pnl'] for c in self.completed_cycles)
         
+        levels_list = []
+        for l in self.grid_levels:
+            if l.status == 'open':
+                levels_list.append({
+                    'price': l.price,
+                    'side': l.side,
+                    'qty': l.qty,
+                    'size_usd': l.size_usd,
+                    'status': l.status,
+                    'order_id': l.order_id
+                })
+
         return {
             'symbol': self.symbol,
             'regime': self.current_regime,
@@ -251,5 +263,7 @@ class GridEngine:
             'open_sells': open_sells,
             'completed_cycles': len(self.completed_cycles),
             'total_net_pnl_usd': total_pnl,
-            'paper_mode': self.paper_mode
+            'paper_mode': self.paper_mode,
+            'levels': levels_list,
         }
+
