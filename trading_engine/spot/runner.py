@@ -214,14 +214,15 @@ def get_spot_status() -> Dict[str, Any]:
     if not spot_settings.paper_mode and exchange:
         try:
             bal = exchange.fetch_balance({'accountType': 'UNIFIED'})
-            usdt_total = float(bal.get('USDT', {}).get('total', 0) or bal.get('total', {}).get('USDT', 0) or 0)
+            usdt_total = float(bal.get('total', {}).get('USDT', 0) or bal.get('USDT', {}).get('total', 0) or 0)
             if usdt_total > 0:
-                active_capital = usdt_total * spot_settings.total_capital_pct  # 20% of account
-                _portfolio.usdt_available = round(active_capital * 0.80, 2)
-                _portfolio.usdt_reserved = round(active_capital * 0.20, 2)
+                active_capital = usdt_total * spot_settings.total_capital_pct  # 20% of account ($2,000)
+                _portfolio.usdt_available = round(active_capital * 0.80, 2)     # $1,600 free liquidity
+                _portfolio.usdt_reserved = round(active_capital * 0.20, 2)      # $400 hard reserve
                 _portfolio.save()
         except Exception as e_bal:
             logger.debug(f"Live balance fetch in get_spot_status: {e_bal}")
+
 
     regimes = {}
     grids = {}
