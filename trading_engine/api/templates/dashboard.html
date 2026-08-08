@@ -391,7 +391,8 @@ function renderSpotStatus(data) {
   if (modePill) modePill.textContent = data.paper_mode ? 'Paper Mode' : 'Live Mode';
   
   const activeCap = (p.usdt_available || 0) + (p.usdt_reserved || 0);
-  const totalCap = activeCap > 0 ? (activeCap / 0.50) : 10000;
+  const totalCap = activeCap > 0 ? (activeCap / 0.75) : 10000;
+
   if (capitalEl) capitalEl.textContent = '$' + totalCap.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
   if (activeCapEl) activeCapEl.textContent = '$' + activeCap.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
   if (usdtFreeEl) usdtFreeEl.textContent = '$' + (p.usdt_available || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
