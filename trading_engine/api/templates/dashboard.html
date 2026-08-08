@@ -214,23 +214,23 @@
   <div class="stat-row">
     <div class="stat-card">
       <div class="stat-label">💰 Portfolio Capital</div>
-      <div class="stat-val" id="spot-capital">$211,028.58</div>
-      <div class="stat-sub">Total account equity</div>
+      <div class="stat-val" id="spot-capital">$10,000.00</div>
+      <div class="stat-sub">Bybit Demo total equity</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">⚡ Active Deployed Capital</div>
-      <div class="stat-val" id="spot-active-cap" style="color:var(--teal);">$42,205.72</div>
+      <div class="stat-val" id="spot-active-cap" style="color:var(--teal);">$2,000.00</div>
       <div class="stat-sub">20% initial grid deployment</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">💵 USDT Free Cash</div>
-      <div class="stat-val" id="spot-usdt-free">$33,764.57</div>
+      <div class="stat-val" id="spot-usdt-free">$1,600.00</div>
       <div class="stat-sub">Grid liquidity &amp; reserves</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">🎯 Grid Cycles Today</div>
-      <div class="stat-val" id="spot-cycles-today" style="color:var(--green);">0</div>
-      <div class="stat-sub">Completed buy→sell rounds</div>
+      <div class="stat-label">📈 Total Unrealised P&amp;L</div>
+      <div class="stat-val" id="spot-unrealised-pnl" style="color:var(--green);">$0.00</div>
+      <div class="stat-sub">Open position mark-to-market</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">📊 Realised P&amp;L Today</div>
@@ -238,11 +238,12 @@
       <div class="stat-sub">Net profit after fees</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">🛡️ Compliance Mode</div>
-      <div class="stat-val" style="color:var(--green); font-size:1.1rem; padding-top:4px;">Spot Only</div>
-      <div class="stat-sub">Zero leverage / No shorts</div>
+      <div class="stat-label">🎯 Grid Cycles Today</div>
+      <div class="stat-val" id="spot-cycles-today" style="color:var(--green);">0</div>
+      <div class="stat-sub">Completed buy→sell rounds</div>
     </div>
   </div>
+
 
   <!-- ── Main Section 1: Halal Asset Watchlist ── -->
   <div class="panel" style="margin-bottom: 16px;">
@@ -373,13 +374,29 @@ function renderSpotStatus(data) {
 
   if (modePill) modePill.textContent = data.paper_mode ? 'Paper Mode' : 'Live Mode';
   
-  const totalCap = (p.usdt_available || 0) + (p.usdt_reserved || 0) + (p.total_realised_pnl || 0);
+  const activeCap = (p.usdt_available || 0) + (p.usdt_reserved || 0);
+  const totalCap = activeCap > 0 ? (activeCap / 0.20) : 10000;
   if (capitalEl) capitalEl.textContent = '$' + totalCap.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-  if (activeCapEl) activeCapEl.textContent = '$' + (totalCap * 0.20).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  if (activeCapEl) activeCapEl.textContent = '$' + activeCap.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
   if (usdtFreeEl) usdtFreeEl.textContent = '$' + (p.usdt_available || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
   if (cyclesTodayEl) cyclesTodayEl.textContent = p.cycles_today || 0;
   if (pnlTodayEl) pnlTodayEl.textContent = '$' + (p.daily_realised_pnl || 0).toFixed(2);
   if (updateEl) updateEl.textContent = 'Updated: ' + new Date().toLocaleTimeString();
+
+  // Calculate & render total Unrealised PnL across all open positions
+  let totalUnrealised = 0;
+  if (p.holdings) {
+    Object.values(p.holdings).forEach(h => {
+      totalUnrealised += (h.unrealised_pnl || 0);
+    });
+  }
+  const unrealisedEl = document.getElementById('spot-unrealised-pnl');
+  if (unrealisedEl) {
+    const sign = totalUnrealised >= 0 ? '+$' : '-$';
+    unrealisedEl.textContent = sign + Math.abs(totalUnrealised).toFixed(2);
+    unrealisedEl.style.color = totalUnrealised >= 0 ? 'var(--green)' : 'var(--red)';
+  }
+
 
   // Render Halal asset cards
   const gridEl = document.getElementById('spot-assets-grid');
