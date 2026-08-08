@@ -78,6 +78,8 @@ class SpotPortfolio:
                 active_cap = account_size * 0.20                              # $42,205.72
                 self.usdt_available = round(active_cap * 0.80, 2)             # $33,764.57 free cash
                 self.usdt_reserved = round(active_cap * 0.20, 2)              # $8,441.15 hard reserve
+                self.save()
+
 
                 
             self.total_realised_pnl = data.get('total_realised_pnl', 0.0)
