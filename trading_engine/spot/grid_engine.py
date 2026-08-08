@@ -139,15 +139,18 @@ class GridEngine:
                     logger.info(f"[PAPER] Placed {level.side} limit order for {self.symbol} at {level.price} (Qty: {level.qty})")
                 else:
                     try:
+                        qty_val = float(exchange.amount_to_precision(self.symbol, level.qty)) if hasattr(exchange, 'amount_to_precision') else level.qty
+                        price_val = float(exchange.price_to_precision(self.symbol, level.price)) if hasattr(exchange, 'price_to_precision') else level.price
                         if level.side == 'buy':
-                            order = exchange.create_limit_buy_order(self.symbol, level.qty, level.price)
+                            order = exchange.create_limit_buy_order(self.symbol, qty_val, price_val)
                         else:
-                            order = exchange.create_limit_sell_order(self.symbol, level.qty, level.price)
+                            order = exchange.create_limit_sell_order(self.symbol, qty_val, price_val)
                         level.status = 'open'
                         level.order_id = order['id']
-                        logger.info(f"[LIVE] Placed {level.side} limit order for {self.symbol} at {level.price}")
+                        logger.info(f"[LIVE] Placed {level.side} limit order for {self.symbol} at {price_val} (ID: {order['id']})")
                     except Exception as e:
-                        logger.error(f"Failed to place {level.side} order: {e}")
+                        logger.error(f"Failed to place {level.side} order for {self.symbol}: {e}")
+
 
     def tick(self, current_price: float, portfolio) -> List[Dict[str, Any]]:
         fills = []
