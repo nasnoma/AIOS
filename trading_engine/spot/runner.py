@@ -105,41 +105,46 @@ def run_spot_regime_check():
 
 def run_spot_grid_tick() -> Dict[str, Any]:
     """
-    Main spot tick job — fetches latest price, updates portfolio, checks limit fills,
+    Main spot tick job — fetches latest prices, updates portfolio, checks limit fills,
     and places new grid orders.
     """
     exchange = get_spot_exchange()
     _portfolio.reset_daily_if_needed()
     
     fill_events = []
+    asset_list = spot_settings.asset_list
     
-    for symbol in spot_settings.asset_list:
+    # ── Bulk Ticker Fetch (Fast & Rate-Limit Resilient) ──
+    tickers = {}
+    try:
+        tickers = exchange.fetch_tickers(asset_list)
+    except Exception as e_bulk:
+        logger.debug(f"Bulk ticker fetch failed ({e_bulk}), falling back to individual fetches")
+        for sym in asset_list:
+            try:
+                tickers[sym] = exchange.fetch_ticker(sym)
+            except Exception:
+                pass
+    
+    for symbol in asset_list:
         engine = _grid_engines.get(symbol)
         if not engine:
             continue
             
         try:
-            ticker = exchange.fetch_ticker(symbol)
-            price = ticker["last"]
+            ticker = tickers.get(symbol)
+            if not ticker or "last" not in ticker or not ticker["last"]:
+                try:
+                    ticker = exchange.fetch_ticker(symbol)
+                except Exception:
+                    continue
+                    
+            price = float(ticker["last"])
             _portfolio.update_price(symbol, price)
-            
-            # Fetch ATR for dynamic grid spacing
-            atr = 0.0
-            try:
-                ohlcv = exchange.fetch_ohlcv(symbol, timeframe='15m', limit=50)
-                import pandas as pd
-                df = pd.DataFrame(ohlcv, columns=['timestamp','open','high','low','close','volume'])
-                high_low = df['high'] - df['low']
-                high_close = (df['high'] - df['close'].shift()).abs()
-                low_close = (df['low'] - df['close'].shift()).abs()
-                tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
-                atr = float(tr.rolling(14).mean().iloc[-1])
-            except Exception:
-                pass
             
             # Initial grid build if empty
             if not engine.grid_levels:
-                engine.build_grid(price, _portfolio, atr=atr)
+                engine.build_grid(price, _portfolio)
                 engine.place_grid_orders(_portfolio, exchange)
                 
             # Process tick (simulates/checks fills & places replacement orders)
@@ -151,6 +156,7 @@ def run_spot_grid_tick() -> Dict[str, Any]:
             
     _portfolio.save()
     return {"status": "ok", "fills": fill_events, "portfolio": _portfolio.summary()}
+
 
 
 def run_spot_dca_check():
