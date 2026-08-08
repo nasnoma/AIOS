@@ -71,18 +71,8 @@ class SpotPortfolio:
                 
             self.usdt_available = data.get('usdt_available', 0.0)
             self.usdt_reserved = data.get('usdt_reserved', 0.0)
-            
-            # Recalibrate legacy test balance ($1,600) to full $211,028.58 account size ($33,764.57 free cash)
-            if self.usdt_available <= 5000.0 and len(self.holdings) == 0:
-                account_size = 211028.58
-                active_cap = account_size * 0.20                              # $42,205.72
-                self.usdt_available = round(active_cap * 0.80, 2)             # $33,764.57 free cash
-                self.usdt_reserved = round(active_cap * 0.20, 2)              # $8,441.15 hard reserve
-                self.save()
-
-
-                
             self.total_realised_pnl = data.get('total_realised_pnl', 0.0)
+
             self.daily_realised_pnl = data.get('daily_realised_pnl', 0.0)
             self.cycles_today = data.get('cycles_today', 0)
             self.last_daily_reset = data.get('last_daily_reset', datetime.datetime.now(datetime.timezone.utc).date().isoformat())
@@ -101,11 +91,8 @@ class SpotPortfolio:
             
     def save(self):
         try:
-            if self.usdt_available < 10000.0 and len(self.holdings) == 0:
-                self.usdt_available = 33764.57
-                self.usdt_reserved = 8441.15
-
             data = {
+
                 'usdt_available': self.usdt_available,
                 'usdt_reserved': self.usdt_reserved,
                 'total_realised_pnl': self.total_realised_pnl,

@@ -200,6 +200,7 @@ def run_spot_dca_check():
 def get_spot_status() -> Dict[str, Any]:
     """Returns full JSON state for API / dashboard."""
     init_spot_engine()
+    exchange = get_spot_exchange()
     
     # Auto-build grid levels if empty
     has_empty = any(len(eng.grid_levels) == 0 for eng in _grid_engines.values())
@@ -208,6 +209,19 @@ def get_spot_status() -> Dict[str, Any]:
             run_spot_grid_tick()
         except Exception as e:
             logger.warning(f"Auto grid tick in get_spot_status failed: {e}")
+
+    # If Live / Demo mode: fetch exact live Bybit account balance & open orders
+    if not spot_settings.paper_mode and exchange:
+        try:
+            bal = exchange.fetch_balance({'accountType': 'UNIFIED'})
+            usdt_total = float(bal.get('USDT', {}).get('total', 0) or bal.get('total', {}).get('USDT', 0) or 0)
+            if usdt_total > 0:
+                active_capital = usdt_total * spot_settings.total_capital_pct  # 20% of account
+                _portfolio.usdt_available = round(active_capital * 0.80, 2)
+                _portfolio.usdt_reserved = round(active_capital * 0.20, 2)
+                _portfolio.save()
+        except Exception as e_bal:
+            logger.debug(f"Live balance fetch in get_spot_status: {e_bal}")
 
     regimes = {}
     grids = {}
@@ -225,6 +239,31 @@ def get_spot_status() -> Dict[str, Any]:
             
     for sym, eng in _grid_engines.items():
         grids[sym] = eng.summary()
+
+    # If Live / Demo mode: merge live open orders directly from Bybit
+    if not spot_settings.paper_mode and exchange:
+        try:
+            open_orders = exchange.fetch_open_orders(params={'category': 'spot'})
+            bybit_levels = {}
+            for o in open_orders:
+                sym = o.get('symbol')
+                if sym not in bybit_levels:
+                    bybit_levels[sym] = []
+                bybit_levels[sym].append({
+                    'price': float(o.get('price', 0)),
+                    'side': o.get('side', '').lower(),
+                    'qty': float(o.get('amount', 0)),
+                    'size_usd': float(o.get('price', 0)) * float(o.get('amount', 0)),
+                    'status': 'open',
+                    'order_id': o.get('id')
+                })
+            for sym, lvl_list in bybit_levels.items():
+                if sym in grids:
+                    grids[sym]['levels'] = lvl_list
+                    grids[sym]['open_buys'] = sum(1 for l in lvl_list if l['side'] == 'buy')
+                    grids[sym]['open_sells'] = sum(1 for l in lvl_list if l['side'] == 'sell')
+        except Exception as e_orders:
+            logger.debug(f"Live open orders fetch in get_spot_status: {e_orders}")
         
     return {
         "enabled": spot_settings.enabled,
@@ -233,4 +272,5 @@ def get_spot_status() -> Dict[str, Any]:
         "regimes": regimes,
         "grids": grids,
     }
+
 
