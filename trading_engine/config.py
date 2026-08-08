@@ -247,8 +247,9 @@ class SpotGridSettings(BaseSettings):
     # ── Master Switch ──────────────────────────────────────────
     enabled: bool = True
     paper_mode: bool = False          # False = live/demo orders on exchange
-    # Verified Halal / Sharia-compliant assets (Includes Tether Gold XAUT)
-    assets: str = "BTC/USDT,ETH/USDT,SOL/USDT,XAUT/USDT,XRP/USDT,LTC/USDT,BCH/USDT,ADA/USDT,LINK/USDT,UNI/USDT,POL/USDT,AVAX/USDT,DOT/USDT,ATOM/USDT,XLM/USDT,NEAR/USDT,ALGO/USDT"
+    # Verified High-Liquidity Halal Assets for Bybit Spot (BTC, ETH, SOL, XAUT Gold, XRP)
+    assets: str = "BTC/USDT,ETH/USDT,SOL/USDT,XAUT/USDT,XRP/USDT"
+
 
 
     # ── Capital ────────────────────────────────────────────────
