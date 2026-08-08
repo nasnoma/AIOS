@@ -93,8 +93,12 @@ class DCAManager:
 
             vwap_diff_pct = ((price - vwap) / vwap) * 100 if vwap else 0.0
             
-            signal = None
-            
+            # Premium vs Discount Zone Equilibrium (50% Fibonacci Range level):
+            swing_high = df['high'].max()
+            swing_low = df['low'].min()
+            equilibrium_price = (swing_high + swing_low) / 2.0 if swing_high > swing_low else price
+            is_discount_zone = price <= equilibrium_price  # Price is in Discount Zone (cheap)
+
             # Liquidity Sweep & POI Mitigation detection (Smart Money Concept):
             # Detects when low price swept below lower band or prior low but candle closed higher (bullish rejection wick)
             prev_candle = df.iloc[-2] if len(df) >= 2 else latest
@@ -102,16 +106,17 @@ class DCAManager:
 
             # Day trading signal logic:
             if regime == "RANGE":
-                if (price <= lower_band or is_liquidity_sweep) and rsi < 34 and price < vwap:
+                if (price <= lower_band or is_liquidity_sweep) and rsi < 36 and price < vwap and is_discount_zone:
                     signal = "liquidity_sweep_poi_dip" if is_liquidity_sweep else "vwap_bb_dip"
             elif regime == "BULL":
-                # In Bull regime: buy dip when price sweeps liquidity into VWAP discount with green Supertrend
-                if (price <= lower_band or is_liquidity_sweep or rsi < 36) and price < vwap and st_dir == 1:
+                # In Bull regime: buy dip when price sweeps liquidity in Discount Zone below VWAP with green Supertrend
+                if (price <= lower_band or is_liquidity_sweep or rsi < 40) and price < vwap and st_dir == 1 and is_discount_zone:
                     signal = "bull_liquidity_sweep" if is_liquidity_sweep else "bull_vwap_pullback"
             elif regime == "BEAR":
-                # In Bear regime: require deep liquidity sweep + extreme oversold (RSI < 22)
-                if (price <= lower_band and rsi < 22 and vwap_diff_pct < -2.0) or (is_liquidity_sweep and rsi < 20):
+                # In Bear regime: require deep liquidity sweep in Discount Zone + extreme oversold (RSI < 22)
+                if (price <= lower_band and rsi < 22 and vwap_diff_pct < -2.0 and is_discount_zone) or (is_liquidity_sweep and rsi < 20):
                     signal = "bear_sweep_extreme_oversold"
+
 
                     
             if signal:
