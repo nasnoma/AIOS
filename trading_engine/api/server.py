@@ -329,6 +329,29 @@ async def trigger_carry_scan():
     return {"opportunities": opportunities, "min_apy": min_apy, "count": len(opportunities)}
 
 
+@app.get("/api/spot/status")
+async def get_spot_status_endpoint():
+    """Get status of spot grid portfolio, regimes, active grids, and completed cycles."""
+    try:
+        from trading_engine.spot.runner import get_spot_status
+        return get_spot_status()
+    except Exception as e:
+        logger.error(f"Error fetching spot status: {e}")
+        return {"error": str(e)}
+
+
+@app.post("/api/spot/tick")
+async def trigger_spot_tick_endpoint():
+    """Manually trigger a spot grid tick."""
+    try:
+        from trading_engine.spot.runner import run_spot_grid_tick
+        res = run_spot_grid_tick()
+        return res
+    except Exception as e:
+        logger.error(f"Error triggering spot tick: {e}")
+        return {"error": str(e)}
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()

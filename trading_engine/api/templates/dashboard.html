@@ -720,6 +720,66 @@
   </div>
 
   <!-- ── Dashboard Grid Layout ── -->
+  <!-- Row 0: Spot Grid & DCA Engine -->
+  <div class="dashboard-row-1" style="grid-template-columns: 1fr 1.2fr; margin-bottom:16px;">
+    <!-- Spot Holdings & Regime Card -->
+    <div class="panel">
+      <div class="panel-hd">
+        <span>⚡ Spot Grid &amp; DCA Engine (Halal / Sharia Compliant)</span>
+        <div class="panel-hd-right">
+          <span class="pill" id="spot-mode-pill" style="background:var(--teal-dim);color:var(--teal);">Paper Mode</span>
+          <button class="btn" style="padding:4px 10px;font-size:0.7rem;" onclick="triggerSpotTick()">⚡ Scan/Tick</button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--border);">
+          <div>
+            <span style="font-size:0.75rem; color:var(--text-2);">Allocated Capital (20%): </span>
+            <strong id="spot-capital">$0.00</strong>
+          </div>
+          <div>
+            <span style="font-size:0.75rem; color:var(--text-2);">USDT Available: </span>
+            <strong id="spot-usdt-free">$0.00</strong>
+          </div>
+          <div>
+            <span style="font-size:0.75rem; color:var(--text-2);">Cycles Today: </span>
+            <strong id="spot-cycles-today" style="color:var(--green);">0</strong>
+          </div>
+          <div>
+            <span style="font-size:0.75rem; color:var(--text-2);">Realised Today: </span>
+            <strong id="spot-pnl-today" style="color:var(--green);">$0.00</strong>
+          </div>
+        </div>
+
+        <div id="spot-assets-grid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px;">
+          <!-- Asset Cards will render here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Grids & Cycles Feed -->
+    <div class="panel">
+      <div class="panel-hd">
+        <span>📊 Active Grids &amp; Completed Cycles</span>
+        <span style="font-size:0.72rem; color:var(--text-2);" id="spot-last-update">Updated: —</span>
+      </div>
+      <div class="panel-body" style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+        <div>
+          <div style="font-size:0.75rem; font-weight:600; margin-bottom:6px; color:var(--text-2);">⚡ Active Grid Levels</div>
+          <div class="scroll" id="spot-grid-levels" style="max-height:220px; font-family:'JetBrains Mono'; font-size:0.7rem;">
+            <div style="color:var(--text-3); padding:10px;">Loading grid levels...</div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:0.75rem; font-weight:600; margin-bottom:6px; color:var(--text-2);">✅ Completed Cycles</div>
+          <div class="scroll" id="spot-cycles-list" style="max-height:220px; font-size:0.7rem;">
+            <div style="color:var(--text-3); padding:10px;">No completed cycles yet.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Row 1: Performance & Health -->
   <div class="dashboard-row-1">
     <!-- Equity Curve -->
@@ -1517,6 +1577,101 @@ function riskItem(label, val) {
   return `<div class="risk-item"><div class="risk-lbl">${label}</div><div class="risk-val">${val}</div></div>`;
 }
 
+// ── Spot Grid & DCA Trading ──────────────────────────────────────────────────
+async function fetchSpotStatus() {
+  try {
+    const res = await fetch('/api/spot/status');
+    if (!res.ok) return;
+    const data = await res.json();
+    renderSpotStatus(data);
+  } catch(e) {
+    console.warn('Error fetching spot status:', e);
+  }
+}
+
+async function triggerSpotTick() {
+  try {
+    const res = await fetch('/api/spot/tick', { method: 'POST' });
+    if (res.ok) {
+      await fetchSpotStatus();
+    }
+  } catch(e) {}
+}
+
+function renderSpotStatus(data) {
+  if (!data || data.error) return;
+  const p = data.portfolio || {};
+  const regimes = data.regimes || {};
+  const grids = data.grids || {};
+
+  const capitalEl = document.getElementById('spot-capital');
+  const usdtFreeEl = document.getElementById('spot-usdt-free');
+  const cyclesTodayEl = document.getElementById('spot-cycles-today');
+  const pnlTodayEl = document.getElementById('spot-pnl-today');
+  const updateEl = document.getElementById('spot-last-update');
+
+  if (capitalEl) capitalEl.textContent = '$' + (p.usdt_available + p.usdt_reserved + p.total_realised_pnl).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  if (usdtFreeEl) usdtFreeEl.textContent = '$' + (p.usdt_available || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  if (cyclesTodayEl) cyclesTodayEl.textContent = p.cycles_today || 0;
+  if (pnlTodayEl) pnlTodayEl.textContent = '$' + (p.daily_realised_pnl || 0).toFixed(2);
+  if (updateEl) updateEl.textContent = 'Updated: ' + new Date().toLocaleTimeString();
+
+  // Render asset cards
+  const gridEl = document.getElementById('spot-assets-grid');
+  if (gridEl && p.holdings) {
+    const assets = Object.keys(p.holdings);
+    gridEl.innerHTML = assets.map(sym => {
+      const h = p.holdings[sym] || {};
+      const reg = regimes[sym] || {};
+      const regimeName = reg.regime || 'RANGE';
+      const regColor = regimeName === 'BULL' ? 'var(--green)' : (regimeName === 'BEAR' ? 'var(--red)' : 'var(--yellow)');
+      const pnlColor = (h.unrealised_pnl || 0) >= 0 ? 'var(--green)' : 'var(--red)';
+
+      return `<div style="background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <strong style="font-size:0.85rem;">${sym.split('/')[0]}</strong>
+          <span class="pill" style="font-size:0.6rem; background:rgba(255,255,255,0.05); color:${regColor}; border:1px solid ${regColor};">${regimeName}</span>
+        </div>
+        <div style="font-size:0.7rem; color:var(--text-2);">Price: <strong>$${(h.last_price || reg.price || 0).toLocaleString()}</strong></div>
+        <div style="font-size:0.7rem; color:var(--text-2);">Held: <strong>${(h.units_held || 0).toFixed(4)}</strong> ($${(h.value_usd || 0).toFixed(2)})</div>
+        <div style="font-size:0.7rem; color:var(--text-2);">Avg Cost: <strong>$${(h.avg_cost_basis || 0).toFixed(2)}</strong></div>
+        <div style="font-size:0.7rem; color:${pnlColor}; font-weight:600; margin-top:4px;">PnL: $${(h.unrealised_pnl || 0).toFixed(2)} (${((h.unrealised_pnl_pct || 0)*100).toFixed(2)}%)</div>
+      </div>`;
+    }).join('');
+  }
+
+  // Render Active Grid Levels
+  const gridLevelsEl = document.getElementById('spot-grid-levels');
+  if (gridLevelsEl) {
+    let lines = [];
+    Object.keys(grids).forEach(sym => {
+      const g = grids[sym];
+      if (g && g.levels) {
+        g.levels.forEach(lvl => {
+          const sideColor = lvl.side === 'buy' ? 'var(--green)' : 'var(--red)';
+          lines.push(`<div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.02); padding:2px 0;">
+            <span><strong style="color:${sideColor};">${lvl.side.toUpperCase()}</strong> ${sym.split('/')[0]} @ $${lvl.price.toFixed(2)}</span>
+            <span style="color:var(--text-3);">${lvl.status}</span>
+          </div>`);
+        });
+      }
+    });
+    gridLevelsEl.innerHTML = lines.length ? lines.join('') : '<div style="color:var(--text-3); padding:6px;">No active grid levels.</div>';
+  }
+
+  // Render Completed Cycles
+  const cyclesListEl = document.getElementById('spot-cycles-list');
+  if (cyclesListEl && p.completed_cycles) {
+    const cycles = p.completed_cycles.slice(-10).reverse();
+    cyclesListEl.innerHTML = cycles.length ? cycles.map(c => `
+      <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.03); padding:4px 0;">
+        <span><strong>${(c.symbol||'BTC').split('/')[0]}</strong> $${c.buy_price?.toFixed(2)} → $${c.sell_price?.toFixed(2)}</span>
+        <span style="color:var(--green); font-weight:600;">+$${c.net_pnl?.toFixed(2)}</span>
+      </div>
+    `).join('') : '<div style="color:var(--text-3); padding:6px;">No completed cycles today.</div>';
+  }
+}
+
 // ── Carry Strategy ──────────────────────────────────────────────────────────
 async function fetchCarryStatus() {
   try {
@@ -1715,6 +1870,10 @@ function renderCarryScan(data) {
 // Fetch carry status every 30 seconds
 fetchCarryStatus();
 setInterval(fetchCarryStatus, 30000);
+
+// Fetch spot status every 15 seconds
+fetchSpotStatus();
+setInterval(fetchSpotStatus, 15000);
 
 // Hide loading overlay after first successful data load
 function hideLoadingOverlay() {

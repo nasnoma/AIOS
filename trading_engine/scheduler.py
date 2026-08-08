@@ -452,6 +452,41 @@ def main():
         name="Claude Council Weekly Performance Review",
     )
 
+    # ── Spot Grid & DCA Jobs ──────────────────────────
+    try:
+        from trading_engine.config import spot_settings
+        if spot_settings.enabled:
+            from trading_engine.spot.runner import init_spot_engine, run_spot_grid_tick, run_spot_regime_check, run_spot_dca_check
+            init_spot_engine()
+            logger.info("   ⚡ Spot Grid Engine enabled & initialised.")
+            
+            # Spot Grid Tick (every 5 mins)
+            scheduler.add_job(
+                run_spot_grid_tick,
+                trigger=IntervalTrigger(minutes=spot_settings.grid_tick_minutes),
+                id="spot_grid_tick",
+                name="Spot Grid Tick",
+                next_run_time=datetime.now(timezone.utc),
+            )
+            # Spot Regime Check (every 1 hour)
+            scheduler.add_job(
+                run_spot_regime_check,
+                trigger=IntervalTrigger(hours=spot_settings.regime_check_hours),
+                id="spot_regime_check",
+                name="Spot Regime Check",
+                next_run_time=datetime.now(timezone.utc),
+            )
+            # Spot DCA Check (every 1 hour, staggered by 2 minutes)
+            scheduler.add_job(
+                run_spot_dca_check,
+                trigger=IntervalTrigger(hours=1),
+                id="spot_dca_check",
+                name="Spot DCA Oversold Check",
+                next_run_time=datetime.now(timezone.utc) + timedelta(minutes=2),
+            )
+    except Exception as e_spot:
+        logger.error(f"❌ Failed starting Spot Grid jobs: {e_spot}")
+
     scheduler.start()
 
 

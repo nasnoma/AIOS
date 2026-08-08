@@ -230,3 +230,89 @@ settings = Settings()
 import os
 if "PORT" in os.environ:
     settings.api_port = int(os.environ["PORT"])
+
+
+# ── Spot Grid Settings ────────────────────────────────────────────────────────
+# All parameters for the regime-adaptive spot grid / DCA strategy.
+# These live here so they can be overridden via Railway environment variables.
+
+class SpotGridSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=ROOT_DIR / ".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        env_prefix="SPOT_",          # env var: SPOT_ENABLED=true etc.
+    )
+
+    # ── Master Switch ──────────────────────────────────────────
+    enabled: bool = True
+    paper_mode: bool = True           # True = simulate, False = live orders
+    assets: str = "BTC/USDT,ETH/USDT,SOL/USDT"
+
+    # ── Capital ────────────────────────────────────────────────
+    total_capital_pct: float = 0.20   # fraction of account to deploy (20% to start)
+    usdt_hard_reserve_pct: float = 0.20  # fraction kept as untouchable USDT reserve
+
+    # ── Asset Split (must sum to 1.0) ──────────────────────────
+    btc_allocation_pct: float = 0.45  # 45% of active spot capital → BTC
+    eth_allocation_pct: float = 0.35  # 35% → ETH
+    sol_allocation_pct: float = 0.20  # 20% → SOL
+
+    # ── Fees ───────────────────────────────────────────────────
+    fee_rate: float = 0.001           # 0.1% per side (Bybit spot maker/taker)
+
+    # ── Regime Detection ───────────────────────────────────────
+    regime_timeframe: str = "1h"
+    regime_sma_fast: int = 50
+    regime_sma_slow: int = 200
+    regime_adx_period: int = 14
+    regime_confirm_bars: int = 3      # consecutive bars to confirm regime flip
+
+    # ── Grid Params: BULL ──────────────────────────────────────
+    bull_grid_spacing: float = 0.006  # 0.6% geometric spacing
+    bull_buy_levels: int = 4
+    bull_sell_levels: int = 8
+    bull_capital_deployed: float = 0.80
+    bull_base_hold_pct: float = 0.40  # 40% of asset never sold
+
+    # ── Grid Params: RANGE (default) ───────────────────────────
+    range_grid_spacing: float = 0.010 # 1.0%
+    range_buy_levels: int = 8
+    range_sell_levels: int = 8
+    range_capital_deployed: float = 0.65
+    range_base_hold_pct: float = 0.30
+
+    # ── Grid Params: BEAR ──────────────────────────────────────
+    bear_grid_spacing: float = 0.025  # 2.5%
+    bear_buy_levels: int = 5
+    bear_sell_levels: int = 3
+    bear_capital_deployed: float = 0.30
+    bear_base_hold_pct: float = 0.20
+
+    # ── DCA (mean-reversion extra buys) ───────────────────────
+    dca_bb_period: int = 20
+    dca_bb_std: float = 2.5
+    dca_rsi_period: int = 14
+    dca_rsi_range: float = 30.0       # RSI threshold for RANGE regime
+    dca_rsi_bull: float = 35.0        # RSI threshold for BULL
+    dca_rsi_bear: float = 20.0        # RSI threshold for BEAR (extreme only)
+
+    # ── Scheduler ─────────────────────────────────────────────
+    grid_tick_minutes: int = 5        # how often to check for fills / place orders
+    regime_check_hours: int = 1       # how often to re-evaluate regime
+    sync_minutes: int = 10            # how often to sync balances with exchange
+
+    @property
+    def asset_list(self) -> list[str]:
+        return [a.strip() for a in self.assets.split(",") if a.strip()]
+
+    @property
+    def asset_allocation(self) -> dict[str, float]:
+        return {
+            "BTC/USDT": self.btc_allocation_pct,
+            "ETH/USDT": self.eth_allocation_pct,
+            "SOL/USDT": self.sol_allocation_pct,
+        }
+
+
+spot_settings = SpotGridSettings()
