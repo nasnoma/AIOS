@@ -274,17 +274,9 @@ def load_state() -> dict:
 # ── Alerts ─────────────────────────────────────────────────────────────────────
 
 def _send_drawdown_alerts(alerts: list[dict]) -> None:
-    from trading_engine.alerts.telegram_bot import send_message
+    """Send drawdown alerts via Telegram. Disabled per user request."""
+    return  # alerts disabled
 
-    lines = ["⚠️ <b>Copy Trading Drawdown Alert</b>", ""]
-    for a in alerts:
-        lines.append(
-            f"🔴 <b>{a['symbol']}</b> ({a['side']})\n"
-            f"  Unrealised loss: <b>${a['unreal_pnl']:+.2f}</b>  "
-            f"({a['dd_pct']:.1f}% of position)\n"
-            f"  👉 Consider unfollowing this master on Bybit."
-        )
-    send_message("\n".join(lines))
 
 
 if __name__ == "__main__":

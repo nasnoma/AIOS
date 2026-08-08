@@ -342,27 +342,8 @@ def load_state() -> dict:
 # ── Telegram alert ─────────────────────────────────────────────────────────────
 
 def send_leaderboard_alert(top_masters: list[dict], n: int = 5) -> None:
-    """Send top-N master recommendation via Telegram."""
-    from trading_engine.alerts.telegram_bot import send_message
-
-    if not top_masters:
-        send_message("📊 <b>Copy Trading Scan</b>\n\nNo qualified masters found this scan.")
-        return
-
-    lines = ["📊 <b>Bybit Copy Trading — Weekly Scan</b>", ""]
-    for i, m in enumerate(top_masters[:n], 1):
-        dd_emoji = "🟢" if m["maxDrawdown"] < 10 else ("🟡" if m["maxDrawdown"] < 20 else "🔴")
-        lines.append(
-            f"<b>#{i} {m['nickname']}</b> — Score: <b>{m['score']:.0f}/100</b>\n"
-            f"  Win: {m['winRate']:.0f}%  {dd_emoji} DD: {m['maxDrawdown']:.0f}%  "
-            f"ROI(90d): {m['roi90d']:+.0f}%  Lev: {m['avgLeverage']:.0f}x\n"
-            f"  Trades: {m['totalTrades']}  Followers: {m['followerNum']}\n"
-            f"  👉 bybit.com/en/copy-trade/{m['uid']}"
-        )
-        lines.append("")
-
-    lines.append("ℹ️ Go to Bybit → Copy Trade → follow manually.")
-    send_message("\n".join(lines))
+    """Send top-N master recommendation via Telegram. Disabled per user request."""
+    return  # alerts disabled
 
 
 if __name__ == "__main__":
