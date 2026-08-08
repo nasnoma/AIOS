@@ -95,21 +95,24 @@ class DCAManager:
             
             signal = None
             
+            # Liquidity Sweep & POI Mitigation detection (Smart Money Concept):
+            # Detects when low price swept below lower band or prior low but candle closed higher (bullish rejection wick)
+            prev_candle = df.iloc[-2] if len(df) >= 2 else latest
+            is_liquidity_sweep = (latest['low'] < lower_band or latest['low'] < prev_candle['low']) and (latest['close'] > latest['low'] + (latest['high'] - latest['low']) * 0.4)
+
             # Day trading signal logic:
-            # 1. Price is at a discount to VWAP (price < vwap)
-            # 2. RSI is oversold or recovering
-            # 3. Regime checks
             if regime == "RANGE":
-                if price <= lower_band and rsi < 32 and price < vwap:
-                    signal = "vwap_bb_dip"
+                if (price <= lower_band or is_liquidity_sweep) and rsi < 34 and price < vwap:
+                    signal = "liquidity_sweep_poi_dip" if is_liquidity_sweep else "vwap_bb_dip"
             elif regime == "BULL":
-                # In Bull regime: buy dip when price dips below VWAP and RSI < 40 with Supertrend green
-                if (price <= lower_band or rsi < 36) and price < vwap and st_dir == 1:
-                    signal = "bull_vwap_pullback"
+                # In Bull regime: buy dip when price sweeps liquidity into VWAP discount with green Supertrend
+                if (price <= lower_band or is_liquidity_sweep or rsi < 36) and price < vwap and st_dir == 1:
+                    signal = "bull_liquidity_sweep" if is_liquidity_sweep else "bull_vwap_pullback"
             elif regime == "BEAR":
-                # In Bear regime: require deep extreme oversold (RSI < 22) + below lower band
-                if price <= lower_band and rsi < 22 and vwap_diff_pct < -2.0:
-                    signal = "bear_extreme_oversold"
+                # In Bear regime: require deep liquidity sweep + extreme oversold (RSI < 22)
+                if (price <= lower_band and rsi < 22 and vwap_diff_pct < -2.0) or (is_liquidity_sweep and rsi < 20):
+                    signal = "bear_sweep_extreme_oversold"
+
                     
             if signal:
                 return DCASignal(
