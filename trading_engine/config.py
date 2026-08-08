@@ -247,15 +247,16 @@ class SpotGridSettings(BaseSettings):
     # ── Master Switch ──────────────────────────────────────────
     enabled: bool = True
     paper_mode: bool = False          # False = live/demo orders on exchange
-    # 9 Screened High-Yield Halal Assets for Bybit Spot (BTC, ETH, SOL, XAUT Gold, XRP, ADA, LINK, AVAX, UNI)
-    assets: str = "BTC/USDT,ETH/USDT,SOL/USDT,XAUT/USDT,XRP/USDT,ADA/USDT,LINK/USDT,AVAX/USDT,UNI/USDT"
+    # 12 Screened High-Yield Halal Assets for Bybit Spot (BTC, ETH, SOL, XAUT Gold, XRP, ADA, LINK, AVAX, UNI, DOT, BCH, LTC)
+    assets: str = "BTC/USDT,ETH/USDT,SOL/USDT,XAUT/USDT,XRP/USDT,ADA/USDT,LINK/USDT,AVAX/USDT,UNI/USDT,DOT/USDT,BCH/USDT,LTC/USDT"
 
 
 
 
     # ── Capital ────────────────────────────────────────────────
-    total_capital_pct: float = 0.50   # 50% of account balance deployed ($5,000 for maximum daily yield)
-    usdt_hard_reserve_pct: float = 0.05  # 5% hard reserve (95% active order liquidity)
+    total_capital_pct: float = 0.75   # 75% of account balance deployed ($7,500.00 for maximum daily yield)
+    usdt_hard_reserve_pct: float = 0.05  # 5% hard reserve ($7,125.00 active order liquidity)
+
 
     # ── Asset Split ────────────────────────────────────────────
     btc_allocation_pct: float = 0.25  # 25% → BTC
