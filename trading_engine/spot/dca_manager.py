@@ -99,6 +99,10 @@ class DCAManager:
             equilibrium_price = (swing_high + swing_low) / 2.0 if swing_high > swing_low else price
             is_discount_zone = price <= equilibrium_price  # Price is in Discount Zone (cheap)
 
+            # Single-Candle Volume Surge Confirmation (Institutional Absorption):
+            vol_sma20 = df['volume'].tail(20).mean() if ('volume' in df and len(df) >= 20) else 1.0
+            has_volume_surge = (latest['volume'] >= 1.12 * vol_sma20) if ('volume' in latest and vol_sma20 > 0) else True
+
             # Quick Flip Opening Range Reversal (UTC Day Session Low Reversal):
             utc_open_low = df['low'].tail(24).min() if len(df) >= 24 else swing_low
             is_opening_range_reversal = (latest['low'] <= utc_open_low) and (latest['close'] > utc_open_low) and (rsi < 38)
@@ -106,7 +110,7 @@ class DCAManager:
             # Liquidity Sweep & POI Mitigation detection (Smart Money Concept):
             # Detects when low price swept below lower band or prior low but candle closed higher (bullish rejection wick)
             prev_candle = df.iloc[-2] if len(df) >= 2 else latest
-            is_liquidity_sweep = (latest['low'] < lower_band or latest['low'] < prev_candle['low']) and (latest['close'] > latest['low'] + (latest['high'] - latest['low']) * 0.4)
+            is_liquidity_sweep = (latest['low'] < lower_band or latest['low'] < prev_candle['low']) and (latest['close'] > latest['low'] + (latest['high'] - latest['low']) * 0.4) and has_volume_surge
 
             # Day trading signal logic:
             if regime == "RANGE":
@@ -120,6 +124,7 @@ class DCAManager:
                 # In Bear regime: require deep liquidity sweep / opening range reclaim in Discount Zone + extreme oversold (RSI < 22)
                 if (price <= lower_band and rsi < 22 and vwap_diff_pct < -2.0 and is_discount_zone) or ((is_liquidity_sweep or is_opening_range_reversal) and rsi < 20):
                     signal = "bear_sweep_extreme_oversold"
+
 
 
 
