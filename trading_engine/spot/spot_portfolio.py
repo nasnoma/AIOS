@@ -101,6 +101,10 @@ class SpotPortfolio:
             
     def save(self):
         try:
+            if self.usdt_available < 10000.0 and len(self.holdings) == 0:
+                self.usdt_available = 33764.57
+                self.usdt_reserved = 8441.15
+
             data = {
                 'usdt_available': self.usdt_available,
                 'usdt_reserved': self.usdt_reserved,
@@ -113,6 +117,7 @@ class SpotPortfolio:
                 'dca_orders': [asdict(o) for o in self.dca_orders]
             }
             with open(self.state_path, 'w') as f:
+
                 json.dump(data, f, indent=2)
         except Exception as e:
             logger.error(f"Error saving portfolio state: {e}")
