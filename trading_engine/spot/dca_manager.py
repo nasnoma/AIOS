@@ -99,6 +99,10 @@ class DCAManager:
             equilibrium_price = (swing_high + swing_low) / 2.0 if swing_high > swing_low else price
             is_discount_zone = price <= equilibrium_price  # Price is in Discount Zone (cheap)
 
+            # Quick Flip Opening Range Reversal (UTC Day Session Low Reversal):
+            utc_open_low = df['low'].tail(24).min() if len(df) >= 24 else swing_low
+            is_opening_range_reversal = (latest['low'] <= utc_open_low) and (latest['close'] > utc_open_low) and (rsi < 38)
+
             # Liquidity Sweep & POI Mitigation detection (Smart Money Concept):
             # Detects when low price swept below lower band or prior low but candle closed higher (bullish rejection wick)
             prev_candle = df.iloc[-2] if len(df) >= 2 else latest
@@ -106,16 +110,17 @@ class DCAManager:
 
             # Day trading signal logic:
             if regime == "RANGE":
-                if (price <= lower_band or is_liquidity_sweep) and rsi < 36 and price < vwap and is_discount_zone:
-                    signal = "liquidity_sweep_poi_dip" if is_liquidity_sweep else "vwap_bb_dip"
+                if (price <= lower_band or is_liquidity_sweep or is_opening_range_reversal) and rsi < 36 and price < vwap and is_discount_zone:
+                    signal = "quick_flip_opening_range_dip" if is_opening_range_reversal else ("liquidity_sweep_poi_dip" if is_liquidity_sweep else "vwap_bb_dip")
             elif regime == "BULL":
-                # In Bull regime: buy dip when price sweeps liquidity in Discount Zone below VWAP with green Supertrend
-                if (price <= lower_band or is_liquidity_sweep or rsi < 40) and price < vwap and st_dir == 1 and is_discount_zone:
-                    signal = "bull_liquidity_sweep" if is_liquidity_sweep else "bull_vwap_pullback"
+                # In Bull regime: buy dip when price sweeps liquidity or opening range in Discount Zone below VWAP with green Supertrend
+                if (price <= lower_band or is_liquidity_sweep or is_opening_range_reversal or rsi < 40) and price < vwap and st_dir == 1 and is_discount_zone:
+                    signal = "quick_flip_opening_range_dip" if is_opening_range_reversal else ("bull_liquidity_sweep" if is_liquidity_sweep else "bull_vwap_pullback")
             elif regime == "BEAR":
-                # In Bear regime: require deep liquidity sweep in Discount Zone + extreme oversold (RSI < 22)
-                if (price <= lower_band and rsi < 22 and vwap_diff_pct < -2.0 and is_discount_zone) or (is_liquidity_sweep and rsi < 20):
+                # In Bear regime: require deep liquidity sweep / opening range reclaim in Discount Zone + extreme oversold (RSI < 22)
+                if (price <= lower_band and rsi < 22 and vwap_diff_pct < -2.0 and is_discount_zone) or ((is_liquidity_sweep or is_opening_range_reversal) and rsi < 20):
                     signal = "bear_sweep_extreme_oversold"
+
 
 
                     
