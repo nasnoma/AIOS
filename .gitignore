@@ -36,3 +36,5 @@ polymarket_bot/tests/__pycache__/
 
 trading_engine/carry_state.json
 trading_engine/carry_state.lock
+trading_engine/spot_state.json
+trading_engine/spot/spot_state.json

@@ -44,7 +44,7 @@ def init_spot_engine():
     _portfolio.load()
     
     # Calculate active total capital allocated (20% of account size)
-    account_size = settings.account_size_usd
+    account_size = settings.account_size
     spot_active_capital = account_size * spot_settings.total_capital_pct  # e.g., 20% of $211K = ~$42K
     
     if _portfolio.usdt_available == 0 and len(_portfolio.holdings) == 0:
@@ -112,9 +112,23 @@ def run_spot_grid_tick() -> Dict[str, Any]:
             price = ticker["last"]
             _portfolio.update_price(symbol, price)
             
+            # Fetch ATR for dynamic grid spacing
+            atr = 0.0
+            try:
+                ohlcv = exchange.fetch_ohlcv(symbol, timeframe='15m', limit=50)
+                import pandas as pd
+                df = pd.DataFrame(ohlcv, columns=['timestamp','open','high','low','close','volume'])
+                high_low = df['high'] - df['low']
+                high_close = (df['high'] - df['close'].shift()).abs()
+                low_close = (df['low'] - df['close'].shift()).abs()
+                tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+                atr = float(tr.rolling(14).mean().iloc[-1])
+            except Exception:
+                pass
+            
             # Initial grid build if empty
             if not engine.grid_levels:
-                engine.build_grid(price)
+                engine.build_grid(price, _portfolio, atr=atr)
                 engine.place_grid_orders(_portfolio, exchange)
                 
             # Process tick (simulates/checks fills & places replacement orders)

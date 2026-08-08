@@ -48,7 +48,10 @@ class GridOrder:
     profit_usd: Optional[float] = None
 
 class SpotPortfolio:
-    def __init__(self, state_path: str = 'spot_state.json'):
+    def __init__(self, state_path: str = None):
+        if state_path is None:
+            from pathlib import Path
+            state_path = str(Path(__file__).parent.parent / "spot_state.json")
         self.state_path = state_path
         self.holdings: Dict[str, AssetHolding] = {}
         self.usdt_available: float = 0.0

@@ -82,17 +82,30 @@ class GridEngine:
             logger.info(f"Regime changed to {regime}. Spacing changed > 30%. Need to rebuild grid.")
             # Note: actual grid rebuild would require current_price, normally called separately
 
-    def build_grid(self, current_price: float, portfolio=None):
+    def build_grid(self, current_price: float, portfolio=None, atr: float = 0.0):
+        """Build grid levels. If ATR provided, use it for dynamic spacing."""
         logger.info(f"Building grid for {self.symbol} at {current_price} in {self.current_regime} regime.")
         
         self.grid_levels = [level for level in self.grid_levels if level.status in ['filled']]
         
+        # ── Dynamic spacing: use ATR if available, else config spacing ──
+        # Research: ATR-based grid spacing adapts to volatility regime,
+        # prevents tight grids getting stopped in high-vol and wide grids
+        # missing fills in low-vol. Floor at 0.3% to stay above fees.
+        if atr > 0 and current_price > 0:
+            atr_pct = atr / current_price
+            dynamic_spacing = max(0.003, min(atr_pct * 0.8, 0.05))  # 0.3% to 5%
+            # Blend with regime spacing: 50% ATR, 50% regime default
+            spacing = (dynamic_spacing + self.params.grid_spacing) / 2
+        else:
+            spacing = self.params.grid_spacing
+        
         total_levels = self.params.buy_levels + self.params.sell_levels
         order_size_usd = (self.allocated_usd * self.params.capital_pct) / total_levels if total_levels > 0 else 0
         
-        # Build Buy Levels
+        # Build Buy Levels (geometric spacing below current price)
         for i in range(1, self.params.buy_levels + 1):
-            price = current_price * (1 - self.params.grid_spacing * i)
+            price = current_price * (1 - spacing * i)
             qty = order_size_usd / price
             self.grid_levels.append(GridLevel(
                 price=price,
@@ -101,15 +114,13 @@ class GridEngine:
                 size_usd=order_size_usd
             ))
             
-        # Build Sell Levels (simplified logic, ideally checking portfolio base asset)
-        # We assume base asset is held if we generate sells here, though prompt says "ONLY for coins already held"
-        # For simplicity in this structure, we'll generate the requested sell levels above current price
+        # Build Sell Levels (only for coins already held)
         base_asset = self.symbol.split('/')[0]
         base_qty_held = portfolio.get_position(base_asset) if portfolio and hasattr(portfolio, 'get_position') else 0.0
         
         if base_qty_held > 0 or not portfolio:
             for i in range(1, self.params.sell_levels + 1):
-                price = current_price * (1 + self.params.grid_spacing * i)
+                price = current_price * (1 + spacing * i)
                 qty = order_size_usd / price
                 self.grid_levels.append(GridLevel(
                     price=price,
@@ -158,7 +169,12 @@ class GridEngine:
                     if hasattr(portfolio, 'record_buy'):
                         portfolio.record_buy(self.symbol, level.qty, level.price, level.size_usd * self.fee_rate)
                     
-                    sell_price = level.price * (1 + self.params.grid_spacing + 2 * self.fee_rate)
+                    # Fee-aware sell price: profit must exceed 2× round-trip fees
+                    # Round-trip fee = buy fee + sell fee = 2 × fee_rate × notional
+                    # Min profit = spacing (price gain) must be > 2 × fee_rate
+                    min_profit_pct = 2 * self.fee_rate  # break-even on fees
+                    safety_margin_pct = 0.002  # 0.2% extra profit margin
+                    sell_price = level.price * (1 + self.params.grid_spacing + min_profit_pct + safety_margin_pct)
                     new_sell = GridLevel(
                         price=sell_price,
                         side='sell',

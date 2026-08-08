@@ -48,12 +48,38 @@ class DCAManager:
                 # Fallback VWAP if pandas_ta vwap needs datetime index
                 df['vwap'] = (df['volume'] * (df['high'] + df['low'] + df['close']) / 3).cumsum() / df['volume'].cumsum()
 
-            # Compute Supertrend
+            # Compute Supertrend manually (pandas-ta .supertrend() not available in all versions)
             try:
-                st = df.ta.supertrend(length=10, multiplier=3.0)
-                df = pd.concat([df, st], axis=1)
-            except Exception:
-                pass
+                atr_col = f'ATRr_{self.adx_period}'
+                if atr_col not in df.columns:
+                    df.ta.atr(length=10, append=True)
+                    atr_col = 'ATRr_10'
+                atr_series = df.get(atr_col, df.get('ATR_14', pd.Series(0.0, index=df.index)))
+                hl2 = (df['high'] + df['low']) / 2.0
+                upper_band = hl2 + 3.0 * atr_series
+                lower_band = hl2 - 3.0 * atr_series
+                st_final = pd.Series(index=df.index, dtype=float)
+                st_dir = pd.Series(index=df.index, dtype=int)
+                prev_dir = 0
+                prev_close = df['close'].iloc[0]
+                for idx_i in range(len(df)):
+                    close_i = df['close'].iloc[idx_i]
+                    if prev_dir == 1:
+                        st_val = lower_band.iloc[idx_i] if close_i > lower_band.iloc[idx_i] else upper_band.iloc[idx_i]
+                    elif prev_dir == -1:
+                        st_val = upper_band.iloc[idx_i] if close_i < upper_band.iloc[idx_i] else lower_band.iloc[idx_i]
+                    else:
+                        st_val = upper_band.iloc[idx_i] if close_i < hl2.iloc[idx_i] else lower_band.iloc[idx_i]
+                    d = 1 if close_i > st_val else -1
+                    st_final.iloc[idx_i] = st_val
+                    st_dir.iloc[idx_i] = d
+                    prev_dir = d
+                    prev_close = close_i
+                df['ST_VAL'] = st_final.fillna(0.0)
+                df['ST_DIR'] = st_dir.fillna(0)
+            except Exception as st_err:
+                logger.debug(f"Supertrend computation failed in DCA: {st_err}")
+                df['ST_DIR'] = 1
 
             latest = df.iloc[-1]
             price = latest['close']
@@ -63,10 +89,7 @@ class DCAManager:
             vwap = latest.get('VWAP_D') if 'VWAP_D' in latest else latest.get('vwap', price)
             
             # Supertrend direction: 1 = bullish (green), -1 = bearish (red)
-            st_dir = 1
-            st_col = [c for c in df.columns if c.startswith('SUPERTd_')]
-            if st_col:
-                st_dir = int(latest[st_col[0]])
+            st_dir = int(latest.get('ST_DIR', 1))
 
             vwap_diff_pct = ((price - vwap) / vwap) * 100 if vwap else 0.0
             
