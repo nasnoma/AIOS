@@ -66,6 +66,12 @@ class MarketSnapshot:
     realized_vol: float = 0.0 # 14-period realized volatility
     adx: float = 0.0          # Average Directional Index (14) — 0-100; <20 = ranging, >25 = trending
 
+    # Day-trading indicators (proven strategies)
+    supertrend: float = 0.0       # Supertrend line (ATR-based trailing)
+    supertrend_dir: int = 0       # +1 = uptrend (long), -1 = downtrend (short)
+    mfi: float = 50.0             # Money Flow Index (volume-weighted RSI)
+    zscore: float = 0.0           # Z-score of close vs 20-period mean
+
     # Order flow (crypto-specific, None for stocks)
     open_interest: Optional[float] = None
     funding_rate: Optional[float] = None
@@ -607,6 +613,36 @@ def compute_indicators(df: pd.DataFrame, overrides: dict | None = None) -> pd.Da
     df["is_pivot_low"] = (df["low"] < df["low"].shift(1)) & (df["low"] < df["low"].shift(2)) & \
                          (df["low"] < df["low"].shift(-1)) & (df["low"] < df["low"].shift(-2))
 
+    # ── Supertrend (ATR-based trailing trend — 87% WR with volume filter) ──
+    try:
+        st_df = df.ta.supertrend(length=atr_p, multiplier=3.0, append=True)
+        if st_df is not None:
+            for col in st_df.columns:
+                df[col] = st_df[col]
+        # Canonical names
+        df["SUPERT_14_3.0"] = df.get("SUPERT_14_3.0", df.get(f"SUPERT_{atr_p}_3.0", pd.Series(0.0, index=df.index)))
+        df["SUPERTd_14_3.0"] = df.get("SUPERTd_14_3.0", df.get(f"SUPERTd_{atr_p}_3.0", pd.Series(0.0, index=df.index)))
+        df["SUPERT_14_3.0"] = df["SUPERT_14_3.0"].fillna(0.0)
+        df["SUPERTd_14_3.0"] = df["SUPERTd_14_3.0"].fillna(0.0)
+    except Exception as e:
+        logger.debug(f"Supertrend computation failed: {e}")
+        df["SUPERT_14_3.0"] = pd.Series(0.0, index=df.index)
+        df["SUPERTd_14_3.0"] = pd.Series(0.0, index=df.index)
+
+    # ── MFI (Money Flow Index — volume-weighted RSI, better for crypto) ──
+    try:
+        df.ta.mfi(length=14, append=True)
+        df["MFI_14"] = df.get("MFI_14", pd.Series(50.0, index=df.index))
+        df["MFI_14"] = df["MFI_14"].fillna(50.0)
+    except Exception as e:
+        logger.debug(f"MFI computation failed: {e}")
+        df["MFI_14"] = pd.Series(50.0, index=df.index)
+
+    # ── Z-Score (deviation from 20-period mean — 2.11 Sharpe mean reversion) ──
+    _z_window = 20
+    df["ZSCORE_20"] = (df["close"] - df["close"].rolling(_z_window).mean()) / df["close"].rolling(_z_window).std()
+    df["ZSCORE_20"] = df["ZSCORE_20"].fillna(0.0)
+
     return df
 
 
@@ -825,6 +861,10 @@ def build_snapshot(symbol: str, timeframe: str = None, is_htf: bool = False) -> 
         bb_width=float(bb_width),
         adx=float(latest.get("ADX_14", 0) or 0),
         realized_vol=float(latest.get("REAL_VOL", 0) or 0),
+        supertrend=float(latest.get("SUPERT_14_3.0", 0) or 0),
+        supertrend_dir=int(latest.get("SUPERTd_14_3.0", 0) or 0),
+        mfi=float(latest.get("MFI_14", 50) or 50),
+        zscore=float(latest.get("ZSCORE_20", 0) or 0),
         open_interest=order_flow.get("open_interest"),
         funding_rate=order_flow.get("funding_rate"),
         long_liq_24h=order_flow.get("long_liq_24h"),

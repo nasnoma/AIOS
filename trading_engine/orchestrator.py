@@ -18,6 +18,7 @@ from trading_engine.agents import (
     trend_agent, momentum_agent, volume_agent,
     orderflow_agent, volatility_agent, structure_agent,
     sentiment_agent, macro_agent, mean_reversion_agent,
+    supertrend_agent, vwap_agent, zscore_agent, orb_agent,
 )
 from trading_engine.agents.base import AgentSignal, Signal
 from trading_engine.judge import evaluate as judge_evaluate, JudgeVerdict
@@ -60,6 +61,10 @@ def _run_agents_parallel(snap: MarketSnapshot) -> list[AgentSignal]:
             sentiment_agent.analyze,
             macro_agent.analyze,
             mean_reversion_agent.analyze,
+            supertrend_agent.analyze,
+            vwap_agent.analyze,
+            zscore_agent.analyze,
+            orb_agent.analyze,
         ]
 
     signals = []

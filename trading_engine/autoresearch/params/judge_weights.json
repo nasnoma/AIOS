@@ -8,8 +8,12 @@
     "structure": 1.4,
     "sentiment": 0.8,
     "macro": 0.65,
-    "mean_reversion": 1.6
+    "mean_reversion": 1.6,
+    "supertrend": 1.8,
+    "vwap": 1.5,
+    "zscore": 1.7,
+    "orb": 1.3
   },
   "min_agreement": 5,
-  "min_avg_confidence": 38.0
+  "min_avg_confidence": 52.0
 }
