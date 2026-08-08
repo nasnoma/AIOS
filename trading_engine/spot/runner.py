@@ -180,6 +180,15 @@ def run_spot_dca_check():
 def get_spot_status() -> Dict[str, Any]:
     """Returns full JSON state for API / dashboard."""
     init_spot_engine()
+    
+    # Auto-build grid levels if empty
+    has_empty = any(len(eng.grid_levels) == 0 for eng in _grid_engines.values())
+    if has_empty:
+        try:
+            run_spot_grid_tick()
+        except Exception as e:
+            logger.warning(f"Auto grid tick in get_spot_status failed: {e}")
+
     regimes = {}
     grids = {}
     for sym, det in _regime_detectors.items():
@@ -204,3 +213,4 @@ def get_spot_status() -> Dict[str, Any]:
         "regimes": regimes,
         "grids": grids,
     }
+
