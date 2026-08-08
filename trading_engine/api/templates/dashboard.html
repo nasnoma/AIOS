@@ -247,7 +247,7 @@
   <!-- ── Main Section 1: Halal Asset Watchlist ── -->
   <div class="panel" style="margin-bottom: 16px;">
     <div class="panel-hd">
-      <span>🛡️ Screened Halal Spot Watchlist (11 Assets)</span>
+      <span>🛡️ Screened Halal Spot Watchlist (16 Assets on Bybit)</span>
       <div style="display:flex; gap:10px; align-items:center;">
         <span style="font-size:0.72rem; color:var(--text-3);">Auto Regime Switch: 🟢 BULL / ↔️ RANGE / 🔴 BEAR</span>
         <button class="btn" onclick="triggerSpotTick()">⚡ Trigger Scan / Tick</button>
@@ -305,24 +305,24 @@
 
     <!-- System Health -->
     <div class="panel">
-      <div class="panel-hd"><span>🖥️ System Health &amp; Execution Info</span></div>
+      <div class="panel-hd"><span>🖥️ System Health &amp; Day-Trading Agents</span></div>
       <div class="panel-body">
-        <div style="display:flex; flex-direction:column; gap:12px; font-size:0.82rem;">
-          <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:8px;">
-            <span style="color:var(--text-2);">🔌 API Server</span>
-            <strong style="color:var(--green);" id="h-api">Online</strong>
+        <div style="display:flex; flex-direction:column; gap:10px; font-size:0.8rem;">
+          <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:6px;">
+            <span style="color:var(--text-2);">🤖 Day-Trading Agents</span>
+            <strong style="color:var(--teal);">VWAP Mean-Rev | Supertrend 10/3 | RSI Scalper | Orderflow</strong>
           </div>
-          <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:8px;">
+          <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:6px;">
+            <span style="color:var(--text-2);">🔌 API / Data Source</span>
+            <strong style="color:var(--green);" id="h-api">Bybit Public Ticker (Fallback Resilient)</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:6px;">
             <span style="color:var(--text-2);">⏱️ Scheduler Jobs</span>
             <strong style="color:var(--green);">Grid Tick (5m) | Regime (1h) | DCA (1h)</strong>
           </div>
-          <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:8px;">
+          <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:6px;">
             <span style="color:var(--text-2);">📐 Execution Mode</span>
             <strong style="color:var(--teal);">Spot Limit Orders (Paper Mode)</strong>
-          </div>
-          <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:8px;">
-            <span style="color:var(--text-2);">💼 Exchange Connection</span>
-            <strong style="color:var(--blue);">Bybit Spot (Sandbox API)</strong>
           </div>
           <div style="display:flex; justify-content:space-between;">
             <span style="color:var(--text-2);">🛡️ Fee Model</span>
@@ -391,6 +391,7 @@ function renderSpotStatus(data) {
       const regimeName = reg.regime || 'RANGE';
       const regColor = regimeName === 'BULL' ? 'var(--green)' : (regimeName === 'BEAR' ? 'var(--red)' : 'var(--yellow)');
       const pnlColor = (h.unrealised_pnl || 0) >= 0 ? 'var(--green)' : 'var(--red)';
+      const adxStr = reg.adx ? `ADX: ${reg.adx}` : '';
 
       return `<div style="background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
@@ -400,7 +401,10 @@ function renderSpotStatus(data) {
         <div style="font-size:0.7rem; color:var(--text-2);">Price: <strong>$${(h.last_price || reg.price || 0).toLocaleString()}</strong></div>
         <div style="font-size:0.7rem; color:var(--text-2);">Held: <strong>${(h.units_held || 0).toFixed(4)}</strong> ($${(h.value_usd || 0).toFixed(2)})</div>
         <div style="font-size:0.7rem; color:var(--text-2);">Avg Cost: <strong>$${(h.avg_cost_basis || 0).toFixed(2)}</strong></div>
-        <div style="font-size:0.7rem; color:${pnlColor}; font-weight:600; margin-top:4px;">PnL: $${(h.unrealised_pnl || 0).toFixed(2)} (${((h.unrealised_pnl_pct || 0)*100).toFixed(2)}%)</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+          <span style="font-size:0.65rem; color:var(--text-3);">${adxStr}</span>
+          <span style="font-size:0.7rem; color:${pnlColor}; font-weight:600;">PnL: $${(h.unrealised_pnl || 0).toFixed(2)}</span>
+        </div>
       </div>`;
     }).join('');
   }
