@@ -146,15 +146,41 @@
     }
     .btn:hover { background: var(--surface3); border-color: var(--teal); color: var(--teal); }
 
-    .scroll { overflow-y: auto; max-height: 280px; }
+    .scroll { overflow-y: auto; max-height: 280px; -webkit-overflow-scrolling: touch; }
 
+    /* ── Mobile & Responsive Design ── */
     @media (max-width: 1200px) {
       .stat-row { grid-template-columns: repeat(3, 1fr); }
       .dashboard-grid { grid-template-columns: 1fr; }
+      #spot-assets-grid { grid-template-columns: repeat(3, 1fr) !important; }
     }
-    @media (max-width: 600px) {
-      .stat-row { grid-template-columns: repeat(2, 1fr); }
+
+    @media (max-width: 900px) {
+      header { padding: 0 1rem; height: auto; min-height: 56px; flex-wrap: wrap; padding-top: 8px; padding-bottom: 8px; gap: 8px; }
+      .stat-row { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+      #spot-assets-grid { grid-template-columns: repeat(2, 1fr) !important; }
       main { padding: 1rem; }
+    }
+
+    @media (max-width: 640px) {
+      header { flex-direction: column; align-items: flex-start; gap: 6px; }
+      .header-right { width: 100%; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+      .pill { font-size: 0.65rem; padding: 3px 8px; }
+      .stat-row { grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 1rem; }
+      .stat-card { padding: 0.75rem 0.85rem; border-radius: 10px; }
+      .stat-val { font-size: 1.15rem; }
+      .stat-label { font-size: 0.65rem; }
+      .stat-sub { font-size: 0.62rem; }
+      #spot-assets-grid { grid-template-columns: 1fr !important; }
+      .panel-hd { padding: 10px 14px; font-size: 0.8rem; flex-wrap: wrap; gap: 6px; }
+      .panel-body { padding: 12px 14px; }
+      .btn { min-height: 40px; padding: 8px 14px; font-size: 0.8rem; width: 100%; text-align: center; }
+      .chart-wrap { height: 160px; padding: 8px; }
+    }
+
+    @media (max-width: 420px) {
+      .stat-row { grid-template-columns: 1fr; }
+      .stat-val { font-size: 1.25rem; }
     }
   </style>
 </head>
@@ -230,7 +256,7 @@
     <div class="panel-body">
       <div id="spot-assets-grid" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:12px;">
         <!-- Asset Cards dynamically rendered here -->
-        <div style="color:var(--text-3); grid-column: span 4; text-align:center; padding:20px;">Loading Halal asset prices &amp; regimes...</div>
+        <div style="color:var(--text-3); grid-column: 1 / -1; text-align:center; padding:20px;">Loading Halal asset prices &amp; regimes...</div>
       </div>
     </div>
   </div>
