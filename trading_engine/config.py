@@ -247,8 +247,9 @@ class SpotGridSettings(BaseSettings):
     # ── Master Switch ──────────────────────────────────────────
     enabled: bool = True
     paper_mode: bool = False          # False = live/demo orders on exchange
-    # Verified Halal / Sharia-compliant assets
-    assets: str = "BTC/USDT,ETH/USDT,SOL/USDT,XRP/USDT,LTC/USDT,BCH/USDT,ADA/USDT,LINK/USDT,UNI/USDT,POL/USDT,AVAX/USDT,DOT/USDT,ATOM/USDT,XLM/USDT,NEAR/USDT,ALGO/USDT"
+    # Verified Halal / Sharia-compliant assets (Includes Tether Gold XAUT)
+    assets: str = "BTC/USDT,ETH/USDT,SOL/USDT,XAUT/USDT,XRP/USDT,LTC/USDT,BCH/USDT,ADA/USDT,LINK/USDT,UNI/USDT,POL/USDT,AVAX/USDT,DOT/USDT,ATOM/USDT,XLM/USDT,NEAR/USDT,ALGO/USDT"
+
 
     # ── Capital ────────────────────────────────────────────────
     total_capital_pct: float = 0.20   # fraction of account to deploy (20% to start)
