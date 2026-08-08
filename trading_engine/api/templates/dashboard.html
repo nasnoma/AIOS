@@ -262,7 +262,21 @@
     </div>
   </div>
 
-  <!-- ── Main Section 2: Active Grids & Completed Cycles ── -->
+  <!-- ── Main Section 2: Active Open Spot Positions ── -->
+  <div class="panel" style="margin-bottom: 16px;">
+    <div class="panel-hd">
+      <span>💼 Active Open Spot Positions (Held Assets)</span>
+      <span style="font-size:0.72rem; color:var(--text-3);">Live mark-to-market positions</span>
+    </div>
+    <div class="panel-body">
+      <div id="spot-open-positions" style="font-size:0.8rem;">
+        <div style="color:var(--text-3); padding:10px; text-align:center;">No open spot positions yet. Waiting for buy limit orders to fill on price dips.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Main Section 3: Active Grids & Completed Cycles ── -->
+
   <div class="dashboard-grid">
     <!-- Active Grid Limit Orders Ladder -->
     <div class="panel">
@@ -396,6 +410,45 @@ function renderSpotStatus(data) {
     unrealisedEl.textContent = sign + Math.abs(totalUnrealised).toFixed(2);
     unrealisedEl.style.color = totalUnrealised >= 0 ? 'var(--green)' : 'var(--red)';
   }
+
+  // Render Open Spot Positions Table
+  const openPosEl = document.getElementById('spot-open-positions');
+  if (openPosEl && p.holdings) {
+    const heldAssets = Object.keys(p.holdings).filter(sym => (p.holdings[sym]?.units_held || 0) > 0);
+    if (heldAssets.length === 0) {
+      openPosEl.innerHTML = '<div style="color:var(--text-3); padding:10px; text-align:center;">No open spot positions yet. Waiting for buy limit orders to fill on price dips.</div>';
+    } else {
+      let tableHtml = `<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; text-align:left;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border); color:var(--text-3); font-size:0.72rem;">
+            <th style="padding:6px;">Asset</th>
+            <th style="padding:6px;">Held Units</th>
+            <th style="padding:6px;">Current Price</th>
+            <th style="padding:6px;">Avg Cost Basis</th>
+            <th style="padding:6px;">Position Value</th>
+            <th style="padding:6px;">Unrealised PnL</th>
+          </tr>
+        </thead>
+        <tbody>`;
+      heldAssets.forEach(sym => {
+        const h = p.holdings[sym];
+        const reg = regimes[sym] || {};
+        const pnlColor = (h.unrealised_pnl || 0) >= 0 ? 'var(--green)' : 'var(--red)';
+        const sign = (h.unrealised_pnl || 0) >= 0 ? '+$' : '-$';
+        tableHtml += `<tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
+          <td style="padding:6px;"><strong>${sym}</strong></td>
+          <td style="padding:6px;">${(h.units_held||0).toFixed(4)}</td>
+          <td style="padding:6px;">$${(h.last_price||reg.price||0).toLocaleString()}</td>
+          <td style="padding:6px;">$${(h.avg_cost_basis||0).toFixed(2)}</td>
+          <td style="padding:6px;">$${(h.value_usd||0).toFixed(2)}</td>
+          <td style="padding:6px; color:${pnlColor}; font-weight:600;">${sign}${Math.abs(h.unrealised_pnl||0).toFixed(2)} (${((h.unrealised_pnl_pct||0)*100).toFixed(2)}%)</td>
+        </tr>`;
+      });
+      tableHtml += `</tbody></table></div>`;
+      openPosEl.innerHTML = tableHtml;
+    }
+  }
+
 
 
   // Render Halal asset cards
