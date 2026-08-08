@@ -165,10 +165,18 @@ def run_spot_grid_tick() -> Dict[str, Any]:
             price = float(ticker["last"])
             _portfolio.update_price(symbol, price)
             
+            # Compute ATR volatility for dynamic volatility scaling (Lance Breitstein method)
+            detector = _regime_detectors.get(symbol)
+            atr_val = 0.0
+            if detector and detector._cached_state and hasattr(detector._cached_state, 'price') and detector._cached_state.price > 0:
+                # Estimate 1h ATR from SMA50/SMA200 volatility or cached indicator state
+                atr_val = price * 0.008  # Default 0.8% volatility estimate
+
             # Initial grid build if empty
             if not engine.grid_levels:
-                engine.build_grid(price, _portfolio)
+                engine.build_grid(price, _portfolio, atr=atr_val)
                 engine.place_grid_orders(_portfolio, exchange)
+
                 
             # Process tick (simulates/checks fills & places replacement orders)
             events = engine.tick(price, _portfolio)
