@@ -252,14 +252,14 @@ class SpotGridSettings(BaseSettings):
 
 
     # ── Capital ────────────────────────────────────────────────
-    total_capital_pct: float = 0.20   # fraction of account to deploy (20% to start)
-    usdt_hard_reserve_pct: float = 0.20  # fraction kept as untouchable USDT reserve
+    total_capital_pct: float = 0.35   # 35% of account balance deployed (increased for higher cash flow)
+    usdt_hard_reserve_pct: float = 0.10  # 10% hard reserve (90% active liquidity)
 
     # ── Asset Split ────────────────────────────────────────────
-    btc_allocation_pct: float = 0.35  # 35% → BTC
+    btc_allocation_pct: float = 0.30  # 30% → BTC
     eth_allocation_pct: float = 0.25  # 25% → ETH
-    sol_allocation_pct: float = 0.15  # 15% → SOL
-    # Remaining 25% split dynamically across active altcoin opportunities
+    sol_allocation_pct: float = 0.25  # 25% → SOL (high volatility profit generator)
+    xaut_allocation_pct: float = 0.10 # 10% → XAUT Tether Gold (gold macro anchor)
 
     # ── Fees ───────────────────────────────────────────────────
     fee_rate: float = 0.001           # 0.1% per side (Bybit spot maker/taker)
@@ -272,32 +272,32 @@ class SpotGridSettings(BaseSettings):
     regime_confirm_bars: int = 3      # consecutive bars to confirm regime flip
 
     # ── Grid Params: BULL ──────────────────────────────────────
-    bull_grid_spacing: float = 0.006  # 0.6% geometric spacing
-    bull_buy_levels: int = 4
+    bull_grid_spacing: float = 0.005  # 0.50% spacing (faster high-frequency fills)
+    bull_buy_levels: int = 5
     bull_sell_levels: int = 8
-    bull_capital_deployed: float = 0.80
-    bull_base_hold_pct: float = 0.40  # 40% of asset never sold
+    bull_capital_deployed: float = 0.90  # 90% capital active in Bull trend
+    bull_base_hold_pct: float = 0.35  # 35% base hold
 
     # ── Grid Params: RANGE (default) ───────────────────────────
-    range_grid_spacing: float = 0.010 # 1.0%
+    range_grid_spacing: float = 0.0075 # 0.75% spacing (captures smaller intraday swings)
     range_buy_levels: int = 8
     range_sell_levels: int = 8
-    range_capital_deployed: float = 0.65
-    range_base_hold_pct: float = 0.30
+    range_capital_deployed: float = 0.80  # 80% capital active in Range
+    range_base_hold_pct: float = 0.25
 
     # ── Grid Params: BEAR ──────────────────────────────────────
-    bear_grid_spacing: float = 0.025  # 2.5%
+    bear_grid_spacing: float = 0.020  # 2.0%
     bear_buy_levels: int = 5
     bear_sell_levels: int = 3
-    bear_capital_deployed: float = 0.30
+    bear_capital_deployed: float = 0.35
     bear_base_hold_pct: float = 0.20
 
     # ── DCA (mean-reversion extra buys) ───────────────────────
     dca_bb_period: int = 20
     dca_bb_std: float = 2.5
     dca_rsi_period: int = 14
-    dca_rsi_range: float = 30.0       # RSI threshold for RANGE regime
-    dca_rsi_bull: float = 35.0        # RSI threshold for BULL
+    dca_rsi_range: float = 34.0       # RSI threshold for RANGE regime
+    dca_rsi_bull: float = 38.0        # RSI threshold for BULL
     dca_rsi_bear: float = 20.0        # RSI threshold for BEAR (extreme only)
 
     # ── Scheduler ─────────────────────────────────────────────
@@ -316,8 +316,9 @@ class SpotGridSettings(BaseSettings):
             "BTC/USDT": self.btc_allocation_pct,
             "ETH/USDT": self.eth_allocation_pct,
             "SOL/USDT": self.sol_allocation_pct,
+            "XAUT/USDT": self.xaut_allocation_pct,
         }
-        remaining_pct = 1.0 - sum(base_alloc.values())
+        remaining_pct = max(0.0, 1.0 - sum(base_alloc.values()))
         alts = [a for a in active_assets if a not in base_alloc]
         alt_share = (remaining_pct / len(alts)) if alts else 0.0
         
@@ -325,6 +326,7 @@ class SpotGridSettings(BaseSettings):
         for a in active_assets:
             alloc[a] = base_alloc.get(a, alt_share)
         return alloc
+
 
 
 spot_settings = SpotGridSettings()
