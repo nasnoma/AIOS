@@ -28,14 +28,22 @@ _exchange: ccxt.Exchange | None = None
 def get_spot_exchange() -> ccxt.Exchange:
     global _exchange
     if _exchange is None:
-        _exchange = ccxt.bybit({
-            'apiKey': settings.bybit_api_key,
-            'secret': settings.bybit_api_secret,
-            'options': {'defaultType': 'spot'},
-            'enableRateLimit': True,
-        })
-        if settings.bybit_demo_trading:
-            _exchange.set_sandbox_mode(True)
+        if settings.bybit_api_key and settings.bybit_api_secret:
+            _exchange = ccxt.bybit({
+                'apiKey': settings.bybit_api_key,
+                'secret': settings.bybit_api_secret,
+                'options': {'defaultType': 'spot'},
+                'enableRateLimit': True,
+            })
+            if settings.bybit_demo_trading:
+                _exchange.set_sandbox_mode(True)
+        else:
+            # No API keys — use public Bybit for price data only (paper mode)
+            _exchange = ccxt.bybit({
+                'options': {'defaultType': 'spot'},
+                'enableRateLimit': True,
+            })
+            logger.info("Spot engine: no Bybit API keys — running in public/paper mode (price data only, no live orders)")
     return _exchange
 
 
