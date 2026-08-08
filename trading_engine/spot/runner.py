@@ -259,7 +259,8 @@ def get_spot_status() -> Dict[str, Any]:
             open_orders = exchange.fetch_open_orders(params={'category': 'spot'})
             bybit_levels = {}
             for o in open_orders:
-                sym = o.get('symbol')
+                raw_sym = o.get('symbol', '')
+                sym = raw_sym if '/' in raw_sym else (raw_sym.replace('USDT', '/USDT') if 'USDT' in raw_sym else raw_sym)
                 if sym not in bybit_levels:
                     bybit_levels[sym] = []
                 bybit_levels[sym].append({
@@ -271,10 +272,12 @@ def get_spot_status() -> Dict[str, Any]:
                     'order_id': o.get('id')
                 })
             for sym, lvl_list in bybit_levels.items():
-                if sym in grids:
-                    grids[sym]['levels'] = lvl_list
-                    grids[sym]['open_buys'] = sum(1 for l in lvl_list if l['side'] == 'buy')
-                    grids[sym]['open_sells'] = sum(1 for l in lvl_list if l['side'] == 'sell')
+                if sym not in grids:
+                    grids[sym] = {'symbol': sym, 'levels': lvl_list, 'open_buys': 0, 'open_sells': 0}
+                grids[sym]['levels'] = lvl_list
+                grids[sym]['open_buys'] = sum(1 for l in lvl_list if l['side'] == 'buy')
+                grids[sym]['open_sells'] = sum(1 for l in lvl_list if l['side'] == 'sell')
+
         except Exception as e_orders:
             logger.debug(f"Live open orders fetch in get_spot_status: {e_orders}")
         
