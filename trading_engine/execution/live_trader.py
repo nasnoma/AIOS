@@ -1050,27 +1050,27 @@ def _apply_trailing_stop(pos: Position, price: float) -> None:
             pos.trailing_high = price
 
         profit_in_atr = (pos.trailing_high - pos.entry_price) / atr
-        if profit_in_atr >= 2.5:
+        if profit_in_atr >= 3.0:
             new_sl = pos.entry_price + 2.0 * atr
+            if new_sl > pos.stop_loss:
+                logger.info(f"🔒 Trailing stop ratchet (3.0×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → {new_sl:.4f}")
+                pos.stop_loss = new_sl
+                ratcheted = True
+        elif profit_in_atr >= 2.5:
+            new_sl = pos.entry_price + 1.2 * atr
             if new_sl > pos.stop_loss:
                 logger.info(f"🔒 Trailing stop ratchet (2.5×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → {new_sl:.4f}")
                 pos.stop_loss = new_sl
                 ratcheted = True
         elif profit_in_atr >= 2.0:
-            new_sl = pos.entry_price + 1.2 * atr
+            new_sl = pos.entry_price + 0.5 * atr
             if new_sl > pos.stop_loss:
-                logger.info(f"🔒 Trailing stop ratchet (2×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → {new_sl:.4f}")
+                logger.info(f"🔒 Trailing stop ratchet (2.0×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → {new_sl:.4f}")
                 pos.stop_loss = new_sl
                 ratcheted = True
         elif profit_in_atr >= 1.5:
-            new_sl = pos.entry_price + 0.5 * atr
-            if new_sl > pos.stop_loss:
-                logger.info(f"🔒 Trailing stop ratchet (1.5×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → {new_sl:.4f}")
-                pos.stop_loss = new_sl
-                ratcheted = True
-        elif profit_in_atr >= 1.0:
             if pos.entry_price > pos.stop_loss:
-                logger.info(f"🔒 Trailing stop ratchet (1.0×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → breakeven {pos.entry_price:.4f}")
+                logger.info(f"🔒 Trailing stop ratchet (1.5×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → breakeven {pos.entry_price:.4f}")
                 pos.stop_loss = pos.entry_price
                 ratcheted = True
 
@@ -1079,27 +1079,27 @@ def _apply_trailing_stop(pos: Position, price: float) -> None:
             pos.trailing_low = price
 
         profit_in_atr = (pos.entry_price - pos.trailing_low) / atr
-        if profit_in_atr >= 2.5:
+        if profit_in_atr >= 3.0:
             new_sl = pos.entry_price - 2.0 * atr
+            if new_sl < pos.stop_loss:
+                logger.info(f"🔒 Trailing stop ratchet (3.0×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → {new_sl:.4f}")
+                pos.stop_loss = new_sl
+                ratcheted = True
+        elif profit_in_atr >= 2.5:
+            new_sl = pos.entry_price - 1.2 * atr
             if new_sl < pos.stop_loss:
                 logger.info(f"🔒 Trailing stop ratchet (2.5×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → {new_sl:.4f}")
                 pos.stop_loss = new_sl
                 ratcheted = True
         elif profit_in_atr >= 2.0:
-            new_sl = pos.entry_price - 1.2 * atr
+            new_sl = pos.entry_price - 0.5 * atr
             if new_sl < pos.stop_loss:
-                logger.info(f"🔒 Trailing stop ratchet (2×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → {new_sl:.4f}")
+                logger.info(f"🔒 Trailing stop ratchet (2.0×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → {new_sl:.4f}")
                 pos.stop_loss = new_sl
                 ratcheted = True
         elif profit_in_atr >= 1.5:
-            new_sl = pos.entry_price - 0.5 * atr
-            if new_sl < pos.stop_loss:
-                logger.info(f"🔒 Trailing stop ratchet (1.5×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → {new_sl:.4f}")
-                pos.stop_loss = new_sl
-                ratcheted = True
-        elif profit_in_atr >= 1.0:
             if pos.entry_price < pos.stop_loss:
-                logger.info(f"🔒 Trailing stop ratchet (1.0×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → breakeven {pos.entry_price:.4f}")
+                logger.info(f"🔒 Trailing stop ratchet (1.5×ATR): {pos.symbol} SL {pos.stop_loss:.4f} → breakeven {pos.entry_price:.4f}")
                 pos.stop_loss = pos.entry_price
                 ratcheted = True
 

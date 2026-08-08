@@ -110,7 +110,7 @@ class Settings(BaseSettings):
     # ── Per-Symbol High-Caution Controls ─────────────
     # Symbols listed here require higher agent consensus and have a lower position cap.
     # Use this for alts with erratic structure / low liquidity.
-    high_caution_symbols: str = "NEAR/USDT,NEAR/USDT:USDT"
+    high_caution_symbols: str = "NEAR/USDT,NEAR/USDT:USDT,ETH/USDT,ETH/USDT:USDT,SOL/USDT,SOL/USDT:USDT,AVAX/USDT,AVAX/USDT:USDT,BNB/USDT,BNB/USDT:USDT,XRP/USDT,XRP/USDT:USDT"
     high_caution_min_agreement: int = 7   # out of 8 agents
     high_caution_max_position_usd: float = 1500.0
 
@@ -151,7 +151,7 @@ class Settings(BaseSettings):
     bounty_hunter_enabled: bool = True
     bounty_hunter_interval_hours: int = 1
     bounty_hunter_interval_minutes: int = 0
-    bounty_hunter_watchlist: str = "BTC/USDT,ETH/USDT,SOL/USDT,BNB/USDT,XRP/USDT,ADA/USDT,AVAX/USDT,DOT/USDT,LINK/USDT,NEAR/USDT,LTC/USDT,UNI/USDT,POL/USDT,APT/USDT,SUI/USDT,OP/USDT,ARB/USDT,AAVE/USDT"
+    bounty_hunter_watchlist: str = "BTC/USDT"  # BTC-only until altcoin win rate improves (audit: ETH 0%, SOL 20%, NEAR 0%, AVAX 0%)
     # Scan strategy: "momentum" (buy confirmed strength) | "oversold" (mean-reversion) | "volume" | "hot"
     # momentum has stronger positive edge on 4H crypto timeframes
     bounty_hunter_scan_mode: str = "momentum"
