@@ -246,7 +246,7 @@ class SpotGridSettings(BaseSettings):
 
     # ── Master Switch ──────────────────────────────────────────
     enabled: bool = True
-    paper_mode: bool = True           # True = simulate, False = live orders
+    paper_mode: bool = False          # False = live/demo orders on exchange
     # Verified Halal / Sharia-compliant assets
     assets: str = "BTC/USDT,ETH/USDT,SOL/USDT,XRP/USDT,LTC/USDT,BCH/USDT,ADA/USDT,LINK/USDT,UNI/USDT,POL/USDT,AVAX/USDT,DOT/USDT,ATOM/USDT,XLM/USDT,NEAR/USDT,ALGO/USDT"
 
