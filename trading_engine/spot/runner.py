@@ -26,9 +26,11 @@ _exchange: ccxt.Exchange | None = None
 
 
 def get_spot_exchange() -> ccxt.Exchange:
+    """Get Bybit spot exchange. In paper mode, uses public endpoints (no auth needed)."""
     global _exchange
     if _exchange is None:
-        if settings.bybit_api_key and settings.bybit_api_secret:
+        if not spot_settings.paper_mode and settings.bybit_api_key and settings.bybit_api_secret:
+            # Live mode: use authenticated exchange
             _exchange = ccxt.bybit({
                 'apiKey': settings.bybit_api_key,
                 'secret': settings.bybit_api_secret,
@@ -37,13 +39,14 @@ def get_spot_exchange() -> ccxt.Exchange:
             })
             if settings.bybit_demo_trading:
                 _exchange.set_sandbox_mode(True)
+            logger.info("Spot engine: Bybit LIVE/DEMO mode (authenticated)")
         else:
-            # No API keys — use public Bybit for price data only (paper mode)
+            # Paper mode: public endpoints only (price data, no auth needed)
             _exchange = ccxt.bybit({
                 'options': {'defaultType': 'spot'},
                 'enableRateLimit': True,
             })
-            logger.info("Spot engine: no Bybit API keys — running in public/paper mode (price data only, no live orders)")
+            logger.info("Spot engine: PAPER mode (public endpoints, simulated fills)")
     return _exchange
 
 
@@ -180,15 +183,15 @@ def get_spot_status() -> Dict[str, Any]:
     regimes = {}
     grids = {}
     for sym, det in _regime_detectors.items():
-        if det.last_state:
+        if det._cached_state:
             regimes[sym] = {
-                "regime": det.last_state.regime.name,
-                "adx": round(det.last_state.adx, 1),
-                "plus_di": round(det.last_state.plus_di, 1),
-                "minus_di": round(det.last_state.minus_di, 1),
-                "sma_50": round(det.last_state.sma_50, 2),
-                "sma_200": round(det.last_state.sma_200, 2),
-                "price": round(det.last_state.price, 2),
+                "regime": det._cached_state.regime,
+                "adx": round(det._cached_state.adx, 1),
+                "plus_di": round(det._cached_state.plus_di, 1),
+                "minus_di": round(det._cached_state.minus_di, 1),
+                "sma_50": round(det._cached_state.sma_50, 2),
+                "sma_200": round(det._cached_state.sma_200, 2),
+                "price": round(det._cached_state.price, 2),
             }
             
     for sym, eng in _grid_engines.items():
