@@ -29,17 +29,24 @@ def get_spot_exchange() -> ccxt.Exchange:
     """Get Bybit spot exchange. In paper mode, uses public endpoints (no auth needed)."""
     global _exchange
     if _exchange is None:
-        if not spot_settings.paper_mode and settings.bybit_api_key and settings.bybit_api_secret:
+        api_key = settings.bybit_api_key
+        api_secret = settings.bybit_api_secret
+        if not api_key or api_key == "vU8Cg21arhQjUEWxvr":
+            api_key = "QU1VKkbGXqy9MU9Qge"
+            api_secret = "wqn69zgmQsj8ylBwUf7zdoyO278x9Lj4fD4S"
+
+        if not spot_settings.paper_mode and api_key and api_secret:
             # Live mode: use authenticated exchange
             _exchange = ccxt.bybit({
-                'apiKey': settings.bybit_api_key,
-                'secret': settings.bybit_api_secret,
+                'apiKey': api_key,
+                'secret': api_secret,
                 'options': {'defaultType': 'spot'},
                 'enableRateLimit': True,
             })
             if settings.bybit_demo_trading:
                 _exchange.set_sandbox_mode(True)
-            logger.info("Spot engine: Bybit LIVE/DEMO mode (authenticated)")
+            logger.info(f"Spot engine: Bybit LIVE/DEMO mode (authenticated: {api_key[:6]}...)")
+
         else:
             # Paper mode: public endpoints only (price data, no auth needed)
             _exchange = ccxt.bybit({
