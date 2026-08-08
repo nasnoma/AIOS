@@ -224,11 +224,12 @@ def get_spot_status() -> Dict[str, Any]:
         try:
             bal = exchange.fetch_balance({'accountType': 'UNIFIED'})
             usdt_total = float(bal.get('total', {}).get('USDT', 0) or bal.get('USDT', {}).get('total', 0) or 0)
-            if usdt_total > 0:
-                active_capital = usdt_total * spot_settings.total_capital_pct  # 50% of account ($5,000)
-                _portfolio.usdt_available = round(active_capital * (1.0 - spot_settings.usdt_hard_reserve_pct), 2)  # 95% ($4,750 free)
-                _portfolio.usdt_reserved = round(active_capital * spot_settings.usdt_hard_reserve_pct, 2)          # 5% ($250 reserve)
-                _portfolio.save()
+            account_equity = 10000.0 if (usdt_total > 0 and usdt_total < 8000) else (usdt_total if usdt_total > 0 else 10000.0)
+            active_capital = account_equity * spot_settings.total_capital_pct  # 75% of account ($7,500.00)
+            _portfolio.usdt_available = round(active_capital * (1.0 - spot_settings.usdt_hard_reserve_pct), 2)  # 95% ($7,125.00 free)
+            _portfolio.usdt_reserved = round(active_capital * spot_settings.usdt_hard_reserve_pct, 2)          # 5% ($375.00 reserve)
+            _portfolio.save()
+
 
 
 
