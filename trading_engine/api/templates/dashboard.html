@@ -219,14 +219,15 @@
     </div>
     <div class="stat-card">
       <div class="stat-label">⚡ Active Deployed Capital</div>
-      <div class="stat-val" id="spot-active-cap" style="color:var(--teal);">$2,000.00</div>
-      <div class="stat-sub">20% initial grid deployment</div>
+      <div class="stat-val" id="spot-active-cap" style="color:var(--teal);">$5,000.00</div>
+      <div class="stat-sub">50% active grid deployment</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">💵 USDT Free Cash</div>
-      <div class="stat-val" id="spot-usdt-free">$1,600.00</div>
+      <div class="stat-val" id="spot-usdt-free">$4,750.00</div>
       <div class="stat-sub">Grid liquidity &amp; reserves</div>
     </div>
+
     <div class="stat-card">
       <div class="stat-label">📈 Total Unrealised P&amp;L</div>
       <div class="stat-val" id="spot-unrealised-pnl" style="color:var(--green);">$0.00</div>
@@ -389,10 +390,11 @@ function renderSpotStatus(data) {
   if (modePill) modePill.textContent = data.paper_mode ? 'Paper Mode' : 'Live Mode';
   
   const activeCap = (p.usdt_available || 0) + (p.usdt_reserved || 0);
-  const totalCap = activeCap > 0 ? (activeCap / 0.20) : 10000;
+  const totalCap = activeCap > 0 ? (activeCap / 0.50) : 10000;
   if (capitalEl) capitalEl.textContent = '$' + totalCap.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
   if (activeCapEl) activeCapEl.textContent = '$' + activeCap.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
   if (usdtFreeEl) usdtFreeEl.textContent = '$' + (p.usdt_available || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
   if (cyclesTodayEl) cyclesTodayEl.textContent = p.cycles_today || 0;
   if (pnlTodayEl) pnlTodayEl.textContent = '$' + (p.daily_realised_pnl || 0).toFixed(2);
   if (updateEl) updateEl.textContent = 'Updated: ' + new Date().toLocaleTimeString();

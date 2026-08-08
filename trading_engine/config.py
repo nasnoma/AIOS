@@ -252,13 +252,13 @@ class SpotGridSettings(BaseSettings):
 
 
     # ── Capital ────────────────────────────────────────────────
-    total_capital_pct: float = 0.35   # 35% of account balance deployed (increased for higher cash flow)
-    usdt_hard_reserve_pct: float = 0.10  # 10% hard reserve (90% active liquidity)
+    total_capital_pct: float = 0.50   # 50% of account balance deployed ($5,000 for maximum daily yield)
+    usdt_hard_reserve_pct: float = 0.05  # 5% hard reserve (95% active order liquidity)
 
     # ── Asset Split ────────────────────────────────────────────
-    btc_allocation_pct: float = 0.30  # 30% → BTC
+    btc_allocation_pct: float = 0.25  # 25% → BTC
     eth_allocation_pct: float = 0.25  # 25% → ETH
-    sol_allocation_pct: float = 0.25  # 25% → SOL (high volatility profit generator)
+    sol_allocation_pct: float = 0.35  # 35% → SOL (top high-volatility daily profit engine)
     xaut_allocation_pct: float = 0.10 # 10% → XAUT Tether Gold (gold macro anchor)
 
     # ── Fees ───────────────────────────────────────────────────
@@ -272,38 +272,38 @@ class SpotGridSettings(BaseSettings):
     regime_confirm_bars: int = 3      # consecutive bars to confirm regime flip
 
     # ── Grid Params: BULL ──────────────────────────────────────
-    bull_grid_spacing: float = 0.005  # 0.50% spacing (faster high-frequency fills)
-    bull_buy_levels: int = 5
-    bull_sell_levels: int = 8
-    bull_capital_deployed: float = 0.90  # 90% capital active in Bull trend
-    bull_base_hold_pct: float = 0.35  # 35% base hold
+    bull_grid_spacing: float = 0.0035 # 0.35% micro-scalp spacing (rapid intraday cycle fills)
+    bull_buy_levels: int = 6
+    bull_sell_levels: int = 10
+    bull_capital_deployed: float = 0.95  # 95% capital active in Bull trend
+    bull_base_hold_pct: float = 0.30  # 30% base hold
 
     # ── Grid Params: RANGE (default) ───────────────────────────
-    range_grid_spacing: float = 0.0075 # 0.75% spacing (captures smaller intraday swings)
-    range_buy_levels: int = 8
-    range_sell_levels: int = 8
-    range_capital_deployed: float = 0.80  # 80% capital active in Range
-    range_base_hold_pct: float = 0.25
+    range_grid_spacing: float = 0.0050 # 0.50% range spacing (captures 0.5% intraday price waves)
+    range_buy_levels: int = 10
+    range_sell_levels: int = 10
+    range_capital_deployed: float = 0.85  # 85% capital active in Range
+    range_base_hold_pct: float = 0.20
 
     # ── Grid Params: BEAR ──────────────────────────────────────
-    bear_grid_spacing: float = 0.020  # 2.0%
-    bear_buy_levels: int = 5
-    bear_sell_levels: int = 3
-    bear_capital_deployed: float = 0.35
-    bear_base_hold_pct: float = 0.20
+    bear_grid_spacing: float = 0.015  # 1.5% spacing
+    bear_buy_levels: int = 6
+    bear_sell_levels: int = 4
+    bear_capital_deployed: float = 0.40
+    bear_base_hold_pct: float = 0.15
 
     # ── DCA (mean-reversion extra buys) ───────────────────────
     dca_bb_period: int = 20
     dca_bb_std: float = 2.5
     dca_rsi_period: int = 14
-    dca_rsi_range: float = 34.0       # RSI threshold for RANGE regime
-    dca_rsi_bull: float = 38.0        # RSI threshold for BULL
-    dca_rsi_bear: float = 20.0        # RSI threshold for BEAR (extreme only)
+    dca_rsi_range: float = 36.0       # RSI threshold for RANGE regime
+    dca_rsi_bull: float = 40.0        # RSI threshold for BULL
+    dca_rsi_bear: float = 22.0        # RSI threshold for BEAR (extreme only)
 
     # ── Scheduler ─────────────────────────────────────────────
-    grid_tick_minutes: int = 5        # how often to check for fills / place orders
+    grid_tick_minutes: int = 1        # 1-minute high-frequency tick interval for instant fill processing
     regime_check_hours: int = 1       # how often to re-evaluate regime
-    sync_minutes: int = 10            # how often to sync balances with exchange
+    sync_minutes: int = 5             # how often to sync balances with exchange
 
     @property
     def asset_list(self) -> list[str]:
@@ -326,6 +326,7 @@ class SpotGridSettings(BaseSettings):
         for a in active_assets:
             alloc[a] = base_alloc.get(a, alt_share)
         return alloc
+
 
 
 

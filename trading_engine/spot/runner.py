@@ -73,13 +73,14 @@ def init_spot_engine():
         except Exception as e:
             logger.debug(f"Could not fetch live balance in init_spot_engine: {e}")
             
-    spot_active_capital = account_size * spot_settings.total_capital_pct  # 35% of account balance ($3,500)
-    expected_free = spot_active_capital * (1.0 - spot_settings.usdt_hard_reserve_pct)  # 90% ($3,150 free)
-    expected_res = spot_active_capital * spot_settings.usdt_hard_reserve_pct          # 10% ($350 reserve)
+    spot_active_capital = account_size * spot_settings.total_capital_pct  # 50% of account balance ($5,000)
+    expected_free = spot_active_capital * (1.0 - spot_settings.usdt_hard_reserve_pct)  # 95% ($4,750 free)
+    expected_res = spot_active_capital * spot_settings.usdt_hard_reserve_pct          # 5% ($250 reserve)
     
     _portfolio.usdt_available = expected_free
     _portfolio.usdt_reserved = expected_res
     _portfolio.save()
+
 
 
 
