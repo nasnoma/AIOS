@@ -614,20 +614,50 @@ def compute_indicators(df: pd.DataFrame, overrides: dict | None = None) -> pd.Da
                          (df["low"] < df["low"].shift(-1)) & (df["low"] < df["low"].shift(-2))
 
     # ── Supertrend (ATR-based trailing trend — 87% WR with volume filter) ──
+    # Compute manually — pandas-ta supertrend is not available in all versions
     try:
-        st_df = df.ta.supertrend(length=atr_p, multiplier=3.0, append=True)
-        if st_df is not None:
-            for col in st_df.columns:
-                df[col] = st_df[col]
-        # Canonical names
-        df["SUPERT_14_3.0"] = df.get("SUPERT_14_3.0", df.get(f"SUPERT_{atr_p}_3.0", pd.Series(0.0, index=df.index)))
-        df["SUPERTd_14_3.0"] = df.get("SUPERTd_14_3.0", df.get(f"SUPERTd_{atr_p}_3.0", pd.Series(0.0, index=df.index)))
-        df["SUPERT_14_3.0"] = df["SUPERT_14_3.0"].fillna(0.0)
-        df["SUPERTd_14_3.0"] = df["SUPERTd_14_3.0"].fillna(0.0)
+        _atr_col = f"ATRr_{atr_p}"
+        if _atr_col not in df.columns:
+            _atr_col = "ATR_14"
+        atr_series = df.get(_atr_col, df.get("ATR_14", pd.Series(0.0, index=df.index)))
+        _hl2 = (df["high"] + df["low"]) / 2.0
+        _mult = 3.0
+        _upper_band = _hl2 + _mult * atr_series
+        _lower_band = _hl2 - _mult * atr_series
+        # Trailing logic: band closes in trend direction
+        _st = pd.Series(index=df.index, dtype=float)
+        _st_dir = pd.Series(index=df.index, dtype=int)
+        prev_st = 0.0
+        prev_dir = 0
+        prev_close = df["close"].iloc[0]
+        for i in range(len(df)):
+            close_i = df["close"].iloc[i]
+            upper_i = _upper_band.iloc[i]
+            lower_i = _lower_band.iloc[i]
+            if close_i > prev_close:
+                _lower = max(lower_i, _lower_band.iloc[i] if i > 0 else lower_i)
+            else:
+                _lower = lower_i
+            if close_i < prev_close:
+                _upper = min(upper_i, _upper_band.iloc[i] if i > 0 else upper_i)
+            else:
+                _upper = upper_i
+            if prev_dir == 1:
+                _st.iloc[i] = _lower if close_i > _lower else _upper
+            elif prev_dir == -1:
+                _st.iloc[i] = _upper if close_i < _upper else _lower
+            else:
+                _st.iloc[i] = _upper if close_i < _hl2.iloc[i] else _lower
+            _st_dir.iloc[i] = 1 if close_i > _st.iloc[i] else -1
+            prev_st = _st.iloc[i]
+            prev_dir = _st_dir.iloc[i]
+            prev_close = close_i
+        df["SUPERT_14_3.0"] = _st.fillna(0.0)
+        df["SUPERTd_14_3.0"] = _st_dir.fillna(0)
     except Exception as e:
         logger.debug(f"Supertrend computation failed: {e}")
         df["SUPERT_14_3.0"] = pd.Series(0.0, index=df.index)
-        df["SUPERTd_14_3.0"] = pd.Series(0.0, index=df.index)
+        df["SUPERTd_14_3.0"] = pd.Series(0, index=df.index)
 
     # ── MFI (Money Flow Index — volume-weighted RSI, better for crypto) ──
     try:
