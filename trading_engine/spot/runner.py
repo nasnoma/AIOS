@@ -53,17 +53,27 @@ def get_spot_exchange() -> ccxt.Exchange:
 def init_spot_engine():
     """Initialise portfolio and grid engines for all configured spot assets."""
     _portfolio.load()
+    exchange = get_spot_exchange()
     
-    # Calculate active total capital allocated (20% of account size)
+    # Calculate active total capital allocated dynamically from exchange balance or config
     account_size = settings.account_size
-    spot_active_capital = account_size * spot_settings.total_capital_pct  # e.g., 20% of $211K = ~$42K
-    
-    # Recalibrate portfolio cash to full $211,028.58 account size
+    if not spot_settings.paper_mode and exchange:
+        try:
+            bal = exchange.fetch_balance({'accountType': 'UNIFIED'})
+            usdt_total = float(bal.get('USDT', {}).get('total', 0) or bal.get('total', {}).get('USDT', 0) or 0)
+            if usdt_total > 0:
+                account_size = usdt_total
+        except Exception as e:
+            logger.debug(f"Could not fetch live balance in init_spot_engine: {e}")
+            
+    spot_active_capital = account_size * spot_settings.total_capital_pct  # 20% of account balance
     expected_free = spot_active_capital * (1.0 - spot_settings.usdt_hard_reserve_pct)
-    if (_portfolio.usdt_available < 10000.0) and len(_portfolio.holdings) == 0:
+    
+    if len(_portfolio.holdings) == 0:
         _portfolio.usdt_available = expected_free
         _portfolio.usdt_reserved = spot_active_capital * spot_settings.usdt_hard_reserve_pct
         _portfolio.save()
+
 
 
 
