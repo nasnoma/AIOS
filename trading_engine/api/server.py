@@ -352,6 +352,7 @@ async def trigger_spot_tick_endpoint():
         return {"error": str(e)}
 
 
+@app.get("/api/spot/self-heal")
 @app.post("/api/spot/self-heal")
 async def trigger_self_heal_endpoint():
     """Trigger self-healing audit and automated event-driven backtesting."""
@@ -361,6 +362,7 @@ async def trigger_self_heal_endpoint():
     except Exception as e:
         logger.error(f"Error triggering self-heal: {e}")
         return {"error": str(e)}
+
 
 
 
