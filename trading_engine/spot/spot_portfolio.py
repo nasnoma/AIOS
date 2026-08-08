@@ -72,12 +72,13 @@ class SpotPortfolio:
             self.usdt_available = data.get('usdt_available', 0.0)
             self.usdt_reserved = data.get('usdt_reserved', 0.0)
             
-            # Recalibrate legacy test balance ($1,600) to full $211K account size ($33,764.57)
-            if self.usdt_available <= 2000.0 and len(self.holdings) == 0:
-                from trading_engine.config import settings, spot_settings
-                active_cap = settings.account_size * spot_settings.total_capital_pct  # $42,205.72
-                self.usdt_available = active_cap * (1.0 - spot_settings.usdt_hard_reserve_pct)  # $33,764.57
-                self.usdt_reserved = active_cap * spot_settings.usdt_hard_reserve_pct           # $8,441.15
+            # Recalibrate legacy test balance ($1,600) to full $211,028.58 account size ($33,764.57 free cash)
+            if self.usdt_available <= 5000.0 and len(self.holdings) == 0:
+                account_size = 211028.58
+                active_cap = account_size * 0.20                              # $42,205.72
+                self.usdt_available = round(active_cap * 0.80, 2)             # $33,764.57 free cash
+                self.usdt_reserved = round(active_cap * 0.20, 2)              # $8,441.15 hard reserve
+
                 
             self.total_realised_pnl = data.get('total_realised_pnl', 0.0)
             self.daily_realised_pnl = data.get('daily_realised_pnl', 0.0)
