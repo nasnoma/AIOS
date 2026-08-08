@@ -247,16 +247,18 @@ class SpotGridSettings(BaseSettings):
     # ── Master Switch ──────────────────────────────────────────
     enabled: bool = True
     paper_mode: bool = True           # True = simulate, False = live orders
-    assets: str = "BTC/USDT,ETH/USDT,SOL/USDT"
+    # Verified Halal / Sharia-compliant assets
+    assets: str = "BTC/USDT,ETH/USDT,SOL/USDT,XLM/USDT,NEAR/USDT,ISLM/USDT,ALGO/USDT,AVAX/USDT,DOT/USDT,LINK/USDT,ATOM/USDT"
 
     # ── Capital ────────────────────────────────────────────────
     total_capital_pct: float = 0.20   # fraction of account to deploy (20% to start)
     usdt_hard_reserve_pct: float = 0.20  # fraction kept as untouchable USDT reserve
 
-    # ── Asset Split (must sum to 1.0) ──────────────────────────
-    btc_allocation_pct: float = 0.45  # 45% of active spot capital → BTC
-    eth_allocation_pct: float = 0.35  # 35% → ETH
-    sol_allocation_pct: float = 0.20  # 20% → SOL
+    # ── Asset Split ────────────────────────────────────────────
+    btc_allocation_pct: float = 0.35  # 35% → BTC
+    eth_allocation_pct: float = 0.25  # 25% → ETH
+    sol_allocation_pct: float = 0.15  # 15% → SOL
+    # Remaining 25% split dynamically across active altcoin opportunities
 
     # ── Fees ───────────────────────────────────────────────────
     fee_rate: float = 0.001           # 0.1% per side (Bybit spot maker/taker)
@@ -308,11 +310,21 @@ class SpotGridSettings(BaseSettings):
 
     @property
     def asset_allocation(self) -> dict[str, float]:
-        return {
+        active_assets = self.asset_list
+        base_alloc = {
             "BTC/USDT": self.btc_allocation_pct,
             "ETH/USDT": self.eth_allocation_pct,
             "SOL/USDT": self.sol_allocation_pct,
         }
+        remaining_pct = 1.0 - sum(base_alloc.values())
+        alts = [a for a in active_assets if a not in base_alloc]
+        alt_share = (remaining_pct / len(alts)) if alts else 0.0
+        
+        alloc = {}
+        for a in active_assets:
+            alloc[a] = base_alloc.get(a, alt_share)
+        return alloc
 
 
 spot_settings = SpotGridSettings()
+
