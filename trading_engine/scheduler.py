@@ -484,8 +484,18 @@ def main():
                 name="Spot DCA Oversold Check",
                 next_run_time=datetime.now(timezone.utc) + timedelta(minutes=2),
             )
+            # Spot Self-Healing & Automated Backtest Optimizer (every 6 hours)
+            from trading_engine.spot.runner import run_spot_self_healing_and_optimize
+            scheduler.add_job(
+                run_spot_self_healing_and_optimize,
+                trigger=IntervalTrigger(hours=6),
+                id="spot_self_healing_optimize",
+                name="Spot Self-Healing & Backtest Optimizer",
+                next_run_time=datetime.now(timezone.utc) + timedelta(minutes=5),
+            )
     except Exception as e_spot:
         logger.error(f"❌ Failed starting Spot Grid jobs: {e_spot}")
+
 
     scheduler.start()
 

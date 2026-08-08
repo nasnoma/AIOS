@@ -352,6 +352,18 @@ async def trigger_spot_tick_endpoint():
         return {"error": str(e)}
 
 
+@app.post("/api/spot/self-heal")
+async def trigger_self_heal_endpoint():
+    """Trigger self-healing audit and automated event-driven backtesting."""
+    try:
+        from trading_engine.spot.runner import run_spot_self_healing_and_optimize
+        return run_spot_self_healing_and_optimize()
+    except Exception as e:
+        logger.error(f"Error triggering self-heal: {e}")
+        return {"error": str(e)}
+
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
