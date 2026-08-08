@@ -11,53 +11,90 @@ class DCASignal:
     symbol: str
     trigger_type: str
     rsi: float
-    bb_pct: float
+    vwap_diff_pct: float
+    supertrend_direction: int  # 1 for bullish, -1 for bearish
     adx: float
     regime: str
     timestamp: str
 
 class DCAManager:
+    """
+    Enhanced Day-Trading DCA & Dip Engine.
+    Uses VWAP (Volume Weighted Average Price), Supertrend (10, 3.0),
+    Bollinger Bands (20, 2.5), and RSI(14) to catch high-probability day trading dips.
+    """
     def __init__(self, bb_period=20, bb_std=2.5, rsi_period=14, adx_period=14):
         self.bb_period = bb_period
         self.bb_std = bb_std
         self.rsi_period = rsi_period
         self.adx_period = adx_period
-        
+
     def check(self, symbol: str, exchange: ccxt.Exchange, regime: str) -> Optional[DCASignal]:
         try:
-            ohlcv = exchange.fetch_ohlcv(symbol, timeframe='1h', limit=50)
+            # Fetch 15m candles for fast day-trading responsiveness
+            ohlcv = exchange.fetch_ohlcv(symbol, timeframe='15m', limit=100)
             df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
             
+            # Compute technical indicators
             bb = df.ta.bbands(length=self.bb_period, std=self.bb_std)
             df = pd.concat([df, bb], axis=1)
             df.ta.rsi(length=self.rsi_period, append=True)
             df.ta.adx(length=self.adx_period, append=True)
             
+            # Compute VWAP
+            try:
+                df.ta.vwap(append=True)
+            except Exception:
+                # Fallback VWAP if pandas_ta vwap needs datetime index
+                df['vwap'] = (df['volume'] * (df['high'] + df['low'] + df['close']) / 3).cumsum() / df['volume'].cumsum()
+
+            # Compute Supertrend
+            try:
+                st = df.ta.supertrend(length=10, multiplier=3.0)
+                df = pd.concat([df, st], axis=1)
+            except Exception:
+                pass
+
             latest = df.iloc[-1]
             price = latest['close']
-            lower_band = latest[f'BBL_{self.bb_period}_{self.bb_std}']
-            rsi = latest[f'RSI_{self.rsi_period}']
-            adx = latest[f'ADX_{self.adx_period}']
+            lower_band = latest.get(f'BBL_{self.bb_period}_{self.bb_std}', price * 0.98)
+            rsi = latest.get(f'RSI_{self.rsi_period}', 50)
+            adx = latest.get(f'ADX_{self.adx_period}', 15)
+            vwap = latest.get('VWAP_D') if 'VWAP_D' in latest else latest.get('vwap', price)
+            
+            # Supertrend direction: 1 = bullish (green), -1 = bearish (red)
+            st_dir = 1
+            st_col = [c for c in df.columns if c.startswith('SUPERTd_')]
+            if st_col:
+                st_dir = int(latest[st_col[0]])
+
+            vwap_diff_pct = ((price - vwap) / vwap) * 100 if vwap else 0.0
             
             signal = None
             
+            # Day trading signal logic:
+            # 1. Price is at a discount to VWAP (price < vwap)
+            # 2. RSI is oversold or recovering
+            # 3. Regime checks
             if regime == "RANGE":
-                if price < lower_band and rsi < 30 and adx < 25:
-                    signal = "bb_rsi"
+                if price <= lower_band and rsi < 32 and price < vwap:
+                    signal = "vwap_bb_dip"
             elif regime == "BULL":
-                if price < lower_band and rsi < 35:
-                    signal = "bb_rsi"
+                # In Bull regime: buy dip when price dips below VWAP and RSI < 40 with Supertrend green
+                if (price <= lower_band or rsi < 36) and price < vwap and st_dir == 1:
+                    signal = "bull_vwap_pullback"
             elif regime == "BEAR":
-                if price < lower_band and rsi < 20 and adx < 30:
-                    signal = "extreme_oversold"
+                # In Bear regime: require deep extreme oversold (RSI < 22) + below lower band
+                if price <= lower_band and rsi < 22 and vwap_diff_pct < -2.0:
+                    signal = "bear_extreme_oversold"
                     
             if signal:
-                bb_pct = (price - lower_band) / lower_band * 100
                 return DCASignal(
                     symbol=symbol,
                     trigger_type=signal,
                     rsi=float(rsi),
-                    bb_pct=float(bb_pct),
+                    vwap_diff_pct=float(vwap_diff_pct),
+                    supertrend_direction=st_dir,
                     adx=float(adx),
                     regime=regime,
                     timestamp=datetime.datetime.now(datetime.timezone.utc).isoformat()
@@ -66,7 +103,7 @@ class DCAManager:
             return None
             
         except Exception as e:
-            logger.error(f"Error checking DCA conditions for {symbol}: {e}")
+            logger.error(f"Error in day-trading DCA check for {symbol}: {e}")
             return None
             
     def extra_buy_multiplier(self, regime: str) -> float:
