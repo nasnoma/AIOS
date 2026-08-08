@@ -71,10 +71,19 @@ class SpotPortfolio:
                 
             self.usdt_available = data.get('usdt_available', 0.0)
             self.usdt_reserved = data.get('usdt_reserved', 0.0)
+            
+            # Recalibrate legacy test balance ($1,600) to full $211K account size ($33,764.57)
+            if self.usdt_available <= 2000.0 and len(self.holdings) == 0:
+                from trading_engine.config import settings, spot_settings
+                active_cap = settings.account_size * spot_settings.total_capital_pct  # $42,205.72
+                self.usdt_available = active_cap * (1.0 - spot_settings.usdt_hard_reserve_pct)  # $33,764.57
+                self.usdt_reserved = active_cap * spot_settings.usdt_hard_reserve_pct           # $8,441.15
+                
             self.total_realised_pnl = data.get('total_realised_pnl', 0.0)
             self.daily_realised_pnl = data.get('daily_realised_pnl', 0.0)
             self.cycles_today = data.get('cycles_today', 0)
             self.last_daily_reset = data.get('last_daily_reset', datetime.datetime.now(datetime.timezone.utc).date().isoformat())
+
             
             for symbol, holding_data in data.get('holdings', {}).items():
                 self.holdings[symbol] = AssetHolding(**holding_data)
