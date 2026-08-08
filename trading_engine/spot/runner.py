@@ -224,10 +224,13 @@ def get_spot_status() -> Dict[str, Any]:
         try:
             bal = exchange.fetch_balance({'accountType': 'UNIFIED'})
             usdt_total = float(bal.get('total', {}).get('USDT', 0) or bal.get('USDT', {}).get('total', 0) or 0)
+            if usdt_total > 0:
                 active_capital = usdt_total * spot_settings.total_capital_pct  # 50% of account ($5,000)
                 _portfolio.usdt_available = round(active_capital * (1.0 - spot_settings.usdt_hard_reserve_pct), 2)  # 95% ($4,750 free)
                 _portfolio.usdt_reserved = round(active_capital * spot_settings.usdt_hard_reserve_pct, 2)          # 5% ($250 reserve)
                 _portfolio.save()
+
+
 
         except Exception as e_bal:
             logger.debug(f"Live balance fetch in get_spot_status: {e_bal}")
