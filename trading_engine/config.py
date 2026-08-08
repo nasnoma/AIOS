@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     signal_interval_minutes: int = 240
 
     # ── Risk ────────────────────────────────
-    account_size: float = 10_000.0
+    account_size: float = 211028.58
     max_risk_per_trade: float = 0.02
     max_portfolio_heat: float = 0.06
     kelly_fraction: float = 0.25

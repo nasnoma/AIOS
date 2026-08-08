@@ -58,10 +58,13 @@ def init_spot_engine():
     account_size = settings.account_size
     spot_active_capital = account_size * spot_settings.total_capital_pct  # e.g., 20% of $211K = ~$42K
     
-    if _portfolio.usdt_available == 0 and len(_portfolio.holdings) == 0:
-        _portfolio.usdt_available = spot_active_capital * (1.0 - spot_settings.usdt_hard_reserve_pct)
+    # Recalibrate portfolio cash if at default test balance
+    expected_free = spot_active_capital * (1.0 - spot_settings.usdt_hard_reserve_pct)
+    if (_portfolio.usdt_available == 0 or _portfolio.usdt_available < expected_free * 0.5) and len(_portfolio.holdings) == 0:
+        _portfolio.usdt_available = expected_free
         _portfolio.usdt_reserved = spot_active_capital * spot_settings.usdt_hard_reserve_pct
         _portfolio.save()
+
 
     exchange = get_spot_exchange()
     allocations = spot_settings.asset_allocation  # e.g. {'BTC/USDT': 0.45, ...}
