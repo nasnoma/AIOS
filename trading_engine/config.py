@@ -248,7 +248,7 @@ class SpotGridSettings(BaseSettings):
     enabled: bool = True
     paper_mode: bool = True           # True = simulate, False = live orders
     # Verified Halal / Sharia-compliant assets
-    assets: str = "BTC/USDT,ETH/USDT,SOL/USDT,XLM/USDT,NEAR/USDT,ISLM/USDT,ALGO/USDT,AVAX/USDT,DOT/USDT,LINK/USDT,ATOM/USDT"
+    assets: str = "BTC/USDT,ETH/USDT,SOL/USDT,XLM/USDT,NEAR/USDT,ALGO/USDT,AVAX/USDT,DOT/USDT,LINK/USDT,ATOM/USDT"
 
     # ── Capital ────────────────────────────────────────────────
     total_capital_pct: float = 0.20   # fraction of account to deploy (20% to start)
