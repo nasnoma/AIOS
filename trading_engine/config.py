@@ -247,8 +247,9 @@ class SpotGridSettings(BaseSettings):
     # ── Master Switch ──────────────────────────────────────────
     enabled: bool = True
     paper_mode: bool = False          # False = live/demo orders on exchange
-    # Verified High-Liquidity Halal Assets for Bybit Spot (BTC, ETH, SOL, XAUT Gold, XRP)
-    assets: str = "BTC/USDT,ETH/USDT,SOL/USDT,XAUT/USDT,XRP/USDT"
+    # 9 Screened High-Yield Halal Assets for Bybit Spot (BTC, ETH, SOL, XAUT Gold, XRP, ADA, LINK, AVAX, UNI)
+    assets: str = "BTC/USDT,ETH/USDT,SOL/USDT,XAUT/USDT,XRP/USDT,ADA/USDT,LINK/USDT,AVAX/USDT,UNI/USDT"
+
 
 
 
