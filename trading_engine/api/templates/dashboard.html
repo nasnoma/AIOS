@@ -612,7 +612,7 @@ function renderSpotStatus(data) {
 }
 
 fetchSpotStatus();
-setInterval(fetchSpotStatus, 10000);
+setInterval(fetchSpotStatus, 3000); // 3-second high-frequency real-time auto-refresh
 
 (function loadChartJS() {
   const s = document.createElement('script');
