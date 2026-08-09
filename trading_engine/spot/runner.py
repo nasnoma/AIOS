@@ -387,15 +387,18 @@ def get_spot_status() -> Dict[str, Any]:
                         except Exception:
                             cur_price = 0.0
 
-                    # Compute exact cost basis from recent trade fills if available
+                    # Compute exact weighted average cost basis from exchange trade fills
                     avg_cost_basis = cur_price
-                    if recent_trades:
-                        sym_buys = [t for t in recent_trades if t.get('symbol') == symbol and t.get('side') == 'BUY']
+                    try:
+                        sym_trades = exchange.fetch_my_trades(symbol, params={'category': 'spot'}, limit=50)
+                        sym_buys = [t for t in sym_trades if (t.get('side') or '').lower() == 'buy']
                         if sym_buys:
-                            tot_c = sum(t.get('size_usd', 0) for t in sym_buys)
-                            tot_q = sum(t.get('qty', 0) for t in sym_buys)
+                            tot_c = sum(float(t.get('cost') or 0) or (float(t.get('price') or 0) * float(t.get('amount') or 0)) for t in sym_buys)
+                            tot_q = sum(float(t.get('amount') or 0) for t in sym_buys)
                             if tot_q > 0:
                                 avg_cost_basis = tot_c / tot_q
+                    except Exception:
+                        pass
 
                     unrealised_pnl = (cur_price - avg_cost_basis) * units_val
                     total_cost = avg_cost_basis * units_val
