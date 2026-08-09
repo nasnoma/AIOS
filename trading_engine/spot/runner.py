@@ -24,6 +24,22 @@ _regime_detectors: Dict[str, RegimeDetector] = {}
 _grid_engines: Dict[str, GridEngine] = {}
 _dca_manager = DCAManager()
 _exchange: ccxt.Exchange | None = None
+_public_exchange: ccxt.Exchange | None = None
+
+
+def get_public_exchange() -> ccxt.Exchange:
+    """Get public Bybit mainnet exchange for fetching accurate real-world market prices."""
+    global _public_exchange
+    if _public_exchange is None:
+        _public_exchange = ccxt.bybit({
+            'options': {'defaultType': 'spot'},
+            'enableRateLimit': True,
+        })
+        try:
+            _public_exchange.load_markets()
+        except Exception as e_m:
+            logger.debug(f"load_markets in get_public_exchange: {e_m}")
+    return _public_exchange
 
 
 def get_spot_exchange() -> ccxt.Exchange:
@@ -146,15 +162,16 @@ def run_spot_grid_tick() -> Dict[str, Any]:
     fill_events = []
     asset_list = spot_settings.asset_list
     
-    # ── Bulk Ticker Fetch (Fast & Rate-Limit Resilient) ──
+    # ── Bulk Ticker Fetch (Real-world Mainnet Prices) ──
+    pub_exchange = get_public_exchange()
     tickers = {}
     try:
-        tickers = exchange.fetch_tickers(asset_list)
+        tickers = pub_exchange.fetch_tickers(asset_list)
     except Exception as e_bulk:
         logger.debug(f"Bulk ticker fetch failed ({e_bulk}), falling back to individual fetches")
         for sym in asset_list:
             try:
-                tickers[sym] = exchange.fetch_ticker(sym)
+                tickers[sym] = pub_exchange.fetch_ticker(sym)
             except Exception:
                 pass
     
