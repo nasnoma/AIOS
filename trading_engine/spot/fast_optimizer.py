@@ -32,16 +32,31 @@ BUY_LEVELS   = [6, 8, 10, 12, 14]
 SELL_LEVELS  = [6, 8, 10, 12]
 CAPITAL_PCTS = [0.95, 0.98, 0.998]
 
-# Concentrated Performance-Weighted Halal Volatility Powerhouses + Gold Anchor (99.8% Active Deployed Capital = $9,980)
+# 23 Screened High-Volatility Halal Spot Assets + Gold Anchor (99.5% Active Deployed Capital = $9,950)
 ASSETS = [
-    ("UNI/USDT",    1800.0), # #1 Volatility Powerhouse (1.23% ATR)
-    ("TIA/USDT",    1500.0), # #2 Volatility Powerhouse (1.06% ATR)
-    ("PENDLE/USDT", 1500.0), # #3 Volatility Powerhouse (1.02% ATR)
-    ("INJ/USDT",    1400.0), # #4 Volatility Powerhouse (1.04% ATR)
-    ("ARB/USDT",    1200.0), # #5 Volatility Powerhouse (1.03% ATR)
-    ("JUP/USDT",    1100.0), # #6 Volatility Powerhouse (1.00% ATR)
-    ("ADA/USDT",     800.0), # #7 Volatility Powerhouse (1.01% ATR)
-    ("XAUT/USDT",    680.0), # GOLD ANCHOR: Low-correlation, continuous micro-scalping
+    ("GRASS/USDT",   900.0), # #1 Volatility (1.51% 1h range - AI Data)
+    ("TAIKO/USDT",   850.0), # #2 Volatility (1.40% 1h range - ZK Rollup L2)
+    ("WLD/USDT",     800.0), # #3 Volatility (1.32% 1h range - Worldcoin ID)
+    ("AERO/USDT",    750.0), # #4 Volatility (1.23% 1h range - Base DEX Hub)
+    ("UNI/USDT",     700.0), # #5 Volatility (1.22% 1h range - DEX Engine)
+    ("TIA/USDT",     650.0), # #6 Volatility (1.04% 1h range - Modular L1)
+    ("ARB/USDT",     600.0), # #7 Volatility (1.02% 1h range - Arbitrum L2)
+    ("SUI/USDT",     550.0), # #8 Volatility (0.95% 1h range - Sui L1)
+    ("SEI/USDT",     500.0), # #9 Volatility (0.90% 1h range - Sei L1)
+    ("RENDER/USDT",  450.0), # #10 Volatility (0.85% 1h range - Render AI GPU)
+    ("ADA/USDT",     400.0), # #11 Volatility (1.00% 1h range - Cardano L1)
+    ("JUP/USDT",     350.0), # #12 Volatility (0.98% 1h range - Jupiter Swap)
+    ("NEAR/USDT",    300.0), # #13 Volatility (0.96% 1h range - NEAR Protocol)
+    ("ARKM/USDT",    300.0), # #14 Volatility (0.78% 1h range - Arkham AI)
+    ("ROSE/USDT",    250.0), # #15 Volatility (0.94% 1h range - Oasis Privacy)
+    ("IMX/USDT",     250.0), # #16 Volatility (0.74% 1h range - Immutable L2)
+    ("OP/USDT",      200.0), # #17 Volatility (0.89% 1h range - Optimism L2)
+    ("APT/USDT",     200.0), # #18 Volatility (0.85% 1h range - Aptos L1)
+    ("FET/USDT",     200.0), # #19 Volatility (0.84% 1h range - Fetch AI)
+    ("AVAX/USDT",    150.0), # #20 Volatility (0.79% 1h range - Avalanche L1)
+    ("DOT/USDT",     150.0), # #21 Volatility (0.79% 1h range - Polkadot L1)
+    ("SOL/USDT",     150.0), # #22 Volatility (0.61% 1h range - Solana L1)
+    ("XAUT/USDT",    100.0), # GOLD ANCHOR: Low-correlation continuous scalper
 ]
 
 DAYS     = 30

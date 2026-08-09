@@ -241,8 +241,8 @@ class SpotGridSettings(BaseSettings):
     # ── Master Switch ──────────────────────────────────────────
     enabled: bool = True
     paper_mode: bool = False          # False = live/demo orders on exchange
-    # 15 100% Verified High-Volatility Screened Halal Assets on Bybit Spot Demo
-    assets: str = "UNI/USDT,TIA/USDT,ARB/USDT,SUI/USDT,SEI/USDT,RENDER/USDT,ADA/USDT,JUP/USDT,NEAR/USDT,OP/USDT,APT/USDT,FET/USDT,AVAX/USDT,DOT/USDT,SOL/USDT"
+    # 23 Screened High-Volatility Halal Spot Assets + Gold Anchor on Bybit
+    assets: str = "GRASS/USDT,TAIKO/USDT,WLD/USDT,AERO/USDT,UNI/USDT,TIA/USDT,ARB/USDT,SUI/USDT,SEI/USDT,RENDER/USDT,ADA/USDT,JUP/USDT,NEAR/USDT,ARKM/USDT,ROSE/USDT,IMX/USDT,OP/USDT,APT/USDT,FET/USDT,AVAX/USDT,DOT/USDT,SOL/USDT,XAUT/USDT"
 
     # ── Capital ────────────────────────────────────────────────
     total_capital_pct: float = 0.995  # 99.5% of account balance deployed ($9,950.00 active grid capital)
@@ -305,23 +305,31 @@ class SpotGridSettings(BaseSettings):
     @property
     def asset_allocation(self) -> dict[str, float]:
         active_assets = self.asset_list
-        # Performance-weighted capital allocation for $9,950 active capital across 15 Halal powerhouses
+        # Performance-weighted capital allocation for $9,950 active capital across 23 Halal spot tokens
         custom_weights = {
-            "UNI/USDT":    1200.0 / 9950.0,
-            "TIA/USDT":    1000.0 / 9950.0,
-            "SUI/USDT":     950.0 / 9950.0,
-            "SEI/USDT":     900.0 / 9950.0,
-            "ARB/USDT":     900.0 / 9950.0,
-            "RENDER/USDT":  850.0 / 9950.0,
-            "ADA/USDT":     800.0 / 9950.0,
-            "JUP/USDT":     750.0 / 9950.0,
-            "NEAR/USDT":    700.0 / 9950.0,
-            "SOL/USDT":     550.0 / 9950.0,
-            "OP/USDT":      450.0 / 9950.0,
-            "APT/USDT":     350.0 / 9950.0,
-            "FET/USDT":     250.0 / 9950.0,
+            "GRASS/USDT":   900.0 / 9950.0,
+            "TAIKO/USDT":   850.0 / 9950.0,
+            "WLD/USDT":     800.0 / 9950.0,
+            "AERO/USDT":    750.0 / 9950.0,
+            "UNI/USDT":     700.0 / 9950.0,
+            "TIA/USDT":     650.0 / 9950.0,
+            "ARB/USDT":     600.0 / 9950.0,
+            "SUI/USDT":     550.0 / 9950.0,
+            "SEI/USDT":     500.0 / 9950.0,
+            "RENDER/USDT":  450.0 / 9950.0,
+            "ADA/USDT":     400.0 / 9950.0,
+            "JUP/USDT":     350.0 / 9950.0,
+            "NEAR/USDT":    300.0 / 9950.0,
+            "ARKM/USDT":    300.0 / 9950.0,
+            "ROSE/USDT":    250.0 / 9950.0,
+            "IMX/USDT":     250.0 / 9950.0,
+            "OP/USDT":      200.0 / 9950.0,
+            "APT/USDT":     200.0 / 9950.0,
+            "FET/USDT":     200.0 / 9950.0,
             "AVAX/USDT":    150.0 / 9950.0,
             "DOT/USDT":     150.0 / 9950.0,
+            "SOL/USDT":     150.0 / 9950.0,
+            "XAUT/USDT":    100.0 / 9950.0,
         }
         alloc = {}
         for a in active_assets:
