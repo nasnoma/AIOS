@@ -178,6 +178,14 @@ class GridEngine:
                     try:
                         qty_val = float(exchange.amount_to_precision(self.symbol, level.qty)) if hasattr(exchange, 'amount_to_precision') else level.qty
                         price_val = float(exchange.price_to_precision(self.symbol, level.price)) if hasattr(exchange, 'price_to_precision') else level.price
+                        
+                        # Enforce minimum amount limit precision for the exchange
+                        if hasattr(exchange, 'market') and self.symbol in exchange.markets:
+                            m_info = exchange.market(self.symbol)
+                            min_amt = m_info.get('limits', {}).get('amount', {}).get('min', None)
+                            if min_amt is not None and qty_val < float(min_amt):
+                                qty_val = float(min_amt)
+
                         params = {'category': 'spot'} if 'bybit' in str(type(exchange)).lower() else {}
                         if level.side == 'buy':
                             order = exchange.create_limit_buy_order(self.symbol, qty_val, price_val, params)
@@ -185,7 +193,7 @@ class GridEngine:
                             order = exchange.create_limit_sell_order(self.symbol, qty_val, price_val, params)
                         level.status = 'open'
                         level.order_id = order['id']
-                        logger.info(f"[LIVE] Placed {level.side} limit order for {self.symbol} at {price_val} (ID: {order['id']})")
+                        logger.info(f"[LIVE] Placed {level.side} limit order for {self.symbol} at {price_val} (Qty: {qty_val}, ID: {order['id']})")
 
                     except Exception as e:
                         logger.error(f"Failed to place {level.side} order for {self.symbol}: {e}")
