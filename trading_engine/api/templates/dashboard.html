@@ -509,8 +509,8 @@ function renderSpotStatus(data) {
         tableHtml += `<tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
           <td style="padding:6px;"><strong>${sym}</strong></td>
           <td style="padding:6px;">${(h.units_held||0).toFixed(4)}</td>
-          <td style="padding:6px;">$${(h.last_price||reg.price||0).toLocaleString()}</td>
-          <td style="padding:6px;">$${(h.avg_cost_basis||0).toFixed(2)}</td>
+          <td style="padding:6px;">$${(h.last_price||reg.price||0) < 10 ? (h.last_price||reg.price||0).toFixed(4) : (h.last_price||reg.price||0).toFixed(2)}</td>
+          <td style="padding:6px;">$${(h.avg_cost_basis||0) < 10 ? (h.avg_cost_basis||0).toFixed(4) : (h.avg_cost_basis||0).toFixed(2)}</td>
           <td style="padding:6px;">$${(h.value_usd||0).toFixed(2)}</td>
           <td style="padding:6px; color:${pnlColor}; font-weight:600;">${sign}${Math.abs(h.unrealised_pnl||0).toFixed(2)} (${((h.unrealised_pnl_pct||0)*100).toFixed(2)}%)</td>
         </tr>`;
@@ -578,12 +578,12 @@ function renderSpotStatus(data) {
           <strong style="font-size:0.85rem; color:var(--text);">${sym.split('/')[0]}</strong>
           <span class="pill" style="font-size:0.6rem; background:rgba(255,255,255,0.05); color:${regColor}; border:1px solid ${regColor};">${regimeName}</span>
         </div>
-        <div style="font-size:0.7rem; color:var(--text-2);">Price: <strong>$${(h.last_price || reg.price || 0).toLocaleString()}</strong></div>
+        <div style="font-size:0.7rem; color:var(--text-2);">Price: <strong>$${(h.last_price || reg.price || 0) < 10 ? (h.last_price || reg.price || 0).toFixed(4) : (h.last_price || reg.price || 0).toFixed(2)}</strong></div>
         <div style="font-size:0.7rem; color:var(--text-2);">Held: <strong>${(h.units_held || 0).toFixed(4)}</strong> ($${(h.value_usd || 0).toFixed(2)})</div>
-        <div style="font-size:0.7rem; color:var(--text-2);">Avg Cost: <strong>$${(h.avg_cost_basis || 0).toFixed(2)}</strong></div>
+        <div style="font-size:0.7rem; color:var(--text-2);">Avg Cost: <strong>$${(h.avg_cost_basis || 0) < 10 ? (h.avg_cost_basis || 0).toFixed(4) : (h.avg_cost_basis || 0).toFixed(2)}</strong></div>
         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
           <span style="font-size:0.65rem; color:var(--text-3);">${adxStr}</span>
-          <span style="font-size:0.7rem; color:${pnlColor}; font-weight:600;">PnL: $${(h.unrealised_pnl || 0).toFixed(2)} (${((h.unrealised_pnl_pct || 0)*100).toFixed(2)}%)</span>
+          <span style="font-size:0.7rem; color:${pnlColor}; font-weight:600;">PnL: ${(h.unrealised_pnl || 0) >= 0 ? '+$' : '-$'}${Math.abs(h.unrealised_pnl || 0).toFixed(2)} (${((h.unrealised_pnl_pct || 0) * 100).toFixed(2)}%)</span>
         </div>
       </div>`;
     }).join('');
