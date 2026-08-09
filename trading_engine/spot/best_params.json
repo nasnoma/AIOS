@@ -1,12 +1,19 @@
 {
   "UNI/USDT": {
-    "grid_spacing": 0.003,
+    "grid_spacing": 0.0025,
     "buy_levels": 6,
     "sell_levels": 6,
     "capital_pct": 0.998,
     "regime": "RANGE"
   },
   "TIA/USDT": {
+    "grid_spacing": 0.0015,
+    "buy_levels": 6,
+    "sell_levels": 6,
+    "capital_pct": 0.998,
+    "regime": "RANGE"
+  },
+  "PENDLE/USDT": {
     "grid_spacing": 0.0018,
     "buy_levels": 6,
     "sell_levels": 6,
@@ -14,27 +21,13 @@
     "regime": "RANGE"
   },
   "INJ/USDT": {
-    "grid_spacing": 0.0015,
+    "grid_spacing": 0.002,
     "buy_levels": 6,
     "sell_levels": 6,
     "capital_pct": 0.998,
     "regime": "RANGE"
   },
   "ARB/USDT": {
-    "grid_spacing": 0.0025,
-    "buy_levels": 6,
-    "sell_levels": 6,
-    "capital_pct": 0.998,
-    "regime": "RANGE"
-  },
-  "PENDLE/USDT": {
-    "grid_spacing": 0.0012,
-    "buy_levels": 6,
-    "sell_levels": 6,
-    "capital_pct": 0.998,
-    "regime": "RANGE"
-  },
-  "ADA/USDT": {
     "grid_spacing": 0.0018,
     "buy_levels": 6,
     "sell_levels": 6,
@@ -42,70 +35,21 @@
     "regime": "RANGE"
   },
   "JUP/USDT": {
-    "grid_spacing": 0.0015,
+    "grid_spacing": 0.0018,
     "buy_levels": 6,
     "sell_levels": 6,
     "capital_pct": 0.998,
     "regime": "RANGE"
   },
-  "AAVE/USDT": {
-    "grid_spacing": 0.0012,
+  "ADA/USDT": {
+    "grid_spacing": 0.001,
     "buy_levels": 6,
     "sell_levels": 6,
     "capital_pct": 0.998,
-    "regime": "RANGE"
-  },
-  "NEAR/USDT": {
-    "grid_spacing": 0.0015,
-    "buy_levels": 6,
-    "sell_levels": 6,
-    "capital_pct": 0.998,
-    "regime": "RANGE"
-  },
-  "STX/USDT": {
-    "grid_spacing": 0.0015,
-    "buy_levels": 6,
-    "sell_levels": 6,
-    "capital_pct": 0.998,
-    "regime": "RANGE"
-  },
-  "OP/USDT": {
-    "grid_spacing": 0.0012,
-    "buy_levels": 6,
-    "sell_levels": 6,
-    "capital_pct": 0.998,
-    "regime": "RANGE"
-  },
-  "APT/USDT": {
-    "grid_spacing": 0.0012,
-    "buy_levels": 6,
-    "sell_levels": 6,
-    "capital_pct": 0.998,
-    "regime": "RANGE"
-  },
-  "FET/USDT": {
-    "grid_spacing": 0.0012,
-    "buy_levels": 6,
-    "sell_levels": 6,
-    "capital_pct": 0.998,
-    "regime": "RANGE"
-  },
-  "AVAX/USDT": {
-    "grid_spacing": 0.0012,
-    "buy_levels": 14,
-    "sell_levels": 6,
-    "capital_pct": 0.95,
-    "regime": "RANGE"
-  },
-  "DOT/USDT": {
-    "grid_spacing": 0.0012,
-    "buy_levels": 14,
-    "sell_levels": 6,
-    "capital_pct": 0.95,
     "regime": "RANGE"
   },
   "XAUT/USDT": {
-    "grid_spacing": 0.0012,
+    "grid_spacing": 0.001,
     "buy_levels": 6,
     "sell_levels": 6,
     "capital_pct": 0.998,

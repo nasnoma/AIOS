@@ -241,11 +241,8 @@ class SpotGridSettings(BaseSettings):
     # ── Master Switch ──────────────────────────────────────────
     enabled: bool = True
     paper_mode: bool = False          # False = live/demo orders on exchange
-    # ── Master Switch ──────────────────────────────────────────
-    enabled: bool = True
-    paper_mode: bool = False          # False = live/demo orders on exchange
-    # 16 Screened High-Volatility Halal Assets + Gold Anchor on Bybit Spot (Ranked by 30-day Intraday Volatility & ATR)
-    assets: str = "UNI/USDT,TIA/USDT,INJ/USDT,ARB/USDT,PENDLE/USDT,ADA/USDT,JUP/USDT,AAVE/USDT,NEAR/USDT,PAXG/USDT,STX/USDT,OP/USDT,APT/USDT,FET/USDT,AVAX/USDT,DOT/USDT"
+    # 8 Concentrated Screened Halal Volatility Powerhouses + Gold Anchor XAUT on Bybit Spot
+    assets: str = "UNI/USDT,TIA/USDT,PENDLE/USDT,INJ/USDT,ARB/USDT,JUP/USDT,ADA/USDT,XAUT/USDT"
 
     # ── Capital ────────────────────────────────────────────────
     total_capital_pct: float = 0.998  # 99.8% of account balance deployed ($9,980.00 active grid capital)
@@ -268,14 +265,14 @@ class SpotGridSettings(BaseSettings):
     regime_confirm_bars: int = 3      # consecutive bars to confirm regime flip
 
     # ── Grid Params: BULL ──────────────────────────────────────
-    bull_grid_spacing: float = 0.0015 # 0.15% micro-scalp spacing (rapid intraday cycle fills)
+    bull_grid_spacing: float = 0.0012 # 0.12% micro-scalp spacing (rapid intraday cycle fills)
     bull_buy_levels: int = 8
     bull_sell_levels: int = 10
     bull_capital_deployed: float = 0.998 # 99.8% capital active in Bull trend
     bull_base_hold_pct: float = 0.30  # 30% base hold
 
     # ── Grid Params: RANGE (default) ───────────────────────────
-    range_grid_spacing: float = 0.0015 # 0.15% micro-scalp spacing
+    range_grid_spacing: float = 0.0012 # 0.12% micro-scalp spacing
     range_buy_levels: int = 12         # 12 buy levels: maximum dip-catching
     range_sell_levels: int = 10
     range_capital_deployed: float = 0.998 # 99.8% capital active in Range
@@ -308,24 +305,16 @@ class SpotGridSettings(BaseSettings):
     @property
     def asset_allocation(self) -> dict[str, float]:
         active_assets = self.asset_list
-        # Performance-weighted capital allocation for $9,980 active capital across 16 Halal tokens including Gold
+        # Performance-weighted capital allocation for $9,980 active capital across 8 concentrated Halal powerhouses + Gold
         custom_weights = {
-            "UNI/USDT":    1200.0 / 9980.0,
-            "TIA/USDT":    1000.0 / 9980.0,
-            "INJ/USDT":     950.0 / 9980.0,
-            "ARB/USDT":     900.0 / 9980.0,
-            "PENDLE/USDT":  900.0 / 9980.0,
-            "ADA/USDT":     850.0 / 9980.0,
-            "JUP/USDT":     800.0 / 9980.0,
-            "AAVE/USDT":    750.0 / 9980.0,
-            "NEAR/USDT":    700.0 / 9980.0,
-            "PAXG/USDT":    500.0 / 9980.0, # GOLD ANCHOR
-            "STX/USDT":     400.0 / 9980.0,
-            "OP/USDT":      350.0 / 9980.0,
-            "APT/USDT":     250.0 / 9980.0,
-            "FET/USDT":     200.0 / 9980.0,
-            "AVAX/USDT":    115.0 / 9980.0,
-            "DOT/USDT":     115.0 / 9980.0,
+            "UNI/USDT":    1800.0 / 9980.0,
+            "TIA/USDT":    1500.0 / 9980.0,
+            "PENDLE/USDT": 1500.0 / 9980.0,
+            "INJ/USDT":    1400.0 / 9980.0,
+            "ARB/USDT":    1200.0 / 9980.0,
+            "JUP/USDT":    1100.0 / 9980.0,
+            "ADA/USDT":     800.0 / 9980.0,
+            "XAUT/USDT":    680.0 / 9980.0, # GOLD ANCHOR
         }
         alloc = {}
         for a in active_assets:

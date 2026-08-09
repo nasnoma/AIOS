@@ -26,30 +26,22 @@ from trading_engine.spot import grid_engine as ge
 BEST_PARAMS_FILE   = Path(__file__).parent.parent / "spot" / "best_params.json"
 RESULTS_FILE       = Path(__file__).parent.parent / "spot" / "optimizer_results.json"
 
-# ── 3x Yield Tripling Search Space (Ultra-Dense Micro-Grid Scalping: 0.12% - 0.25%) ──
-SPACINGS     = [0.0012, 0.0015, 0.0018, 0.0020, 0.0025, 0.0030]
+# ── Quadruple Yield Expansion Search Space (Ultra-Dense Micro-Grid Scalping: 0.10% - 0.25%) ──
+SPACINGS     = [0.0010, 0.0012, 0.0015, 0.0018, 0.0020, 0.0025]
 BUY_LEVELS   = [6, 8, 10, 12, 14]
 SELL_LEVELS  = [6, 8, 10, 12]
 CAPITAL_PCTS = [0.95, 0.98, 0.998]
 
-# Top 16 Screened Halal Tokens Including Gold (PAXG/USDT) on 99.8% Active Deployed Capital = $9,980
+# Concentrated Performance-Weighted Halal Volatility Powerhouses + Gold Anchor (99.8% Active Deployed Capital = $9,980)
 ASSETS = [
-    ("UNI/USDT",    1200.0), # #1 Volatility (1.23% ATR, 1588 est cycles)
-    ("TIA/USDT",    1000.0), # #2 Volatility (1.06% ATR, 1356 est cycles)
-    ("INJ/USDT",     950.0), # #3 Volatility (1.04% ATR, 1344 est cycles)
-    ("ARB/USDT",     900.0), # #4 Volatility (1.03% ATR, 1320 est cycles)
-    ("PENDLE/USDT",  900.0), # #5 Volatility (1.02% ATR, 1303 est cycles)
-    ("ADA/USDT",     850.0), # #6 Volatility (1.01% ATR, 1300 est cycles)
-    ("JUP/USDT",     800.0), # #7 Volatility (1.00% ATR, 1278 est cycles)
-    ("AAVE/USDT",    750.0), # #8 Volatility (0.98% ATR, 1253 est cycles)
-    ("NEAR/USDT",    700.0), # #9 Volatility (0.96% ATR, 1240 est cycles)
-    ("XAUT/USDT",    500.0), # GOLD ANCHOR: Low correlation, continuous micro-scalping
-    ("STX/USDT",     400.0), # #10 Volatility (0.90% ATR, 1157 est cycles)
-    ("OP/USDT",      350.0), # #11 Volatility (0.89% ATR, 1147 est cycles)
-    ("APT/USDT",     250.0), # #12 Volatility (0.85% ATR, 1094 est cycles)
-    ("FET/USDT",     200.0), # #13 Volatility (0.84% ATR, 1086 est cycles)
-    ("AVAX/USDT",    115.0), # #14 Volatility (0.80% ATR, 1024 est cycles)
-    ("DOT/USDT",     115.0), # #15 Volatility (0.79% ATR, 1019 est cycles)
+    ("UNI/USDT",    1800.0), # #1 Volatility Powerhouse (1.23% ATR)
+    ("TIA/USDT",    1500.0), # #2 Volatility Powerhouse (1.06% ATR)
+    ("PENDLE/USDT", 1500.0), # #3 Volatility Powerhouse (1.02% ATR)
+    ("INJ/USDT",    1400.0), # #4 Volatility Powerhouse (1.04% ATR)
+    ("ARB/USDT",    1200.0), # #5 Volatility Powerhouse (1.03% ATR)
+    ("JUP/USDT",    1100.0), # #6 Volatility Powerhouse (1.00% ATR)
+    ("ADA/USDT",     800.0), # #7 Volatility Powerhouse (1.01% ATR)
+    ("XAUT/USDT",    680.0), # GOLD ANCHOR: Low-correlation, continuous micro-scalping
 ]
 
 DAYS     = 30
@@ -70,7 +62,7 @@ def score(r):
 
 
 def run_combo(df_with_atr, atr_col, symbol, alloc, spacing, buy_lvl, sell_lvl, cap_pct):
-    """Run one backtest combo against pre-loaded dataframe with 1-Hour Profit Compounding."""
+    """Run one backtest combo against pre-loaded dataframe with 1-Hour Candle-by-Candle Profit Compounding."""
     engine = ge.GridEngine(symbol=symbol, allocated_usd=alloc, paper_mode=True, fee_rate=FEE_RATE)
     engine.current_regime = "RANGE"
     engine.params = ge.RegimeParams(
