@@ -237,8 +237,17 @@ def run_spot_dca_check():
 
 
 
+_cached_spot_status: Dict[str, Any] | None = None
+_last_spot_status_time: float = 0.0
+
+
 def get_spot_status() -> Dict[str, Any]:
     """Returns full JSON state for API / dashboard."""
+    global _cached_spot_status, _last_spot_status_time
+    now = time.time()
+    if _cached_spot_status and (now - _last_spot_status_time) < 5.0:
+        return _cached_spot_status
+
     init_spot_engine()
     exchange = get_spot_exchange()
     
@@ -420,7 +429,7 @@ def get_spot_status() -> Dict[str, Any]:
         except Exception as e_bal:
             logger.debug(f"Live balance fetch in get_spot_status: {e_bal}")
 
-    return {
+    res = {
         "enabled": spot_settings.enabled,
         "paper_mode": spot_settings.paper_mode,
         "total_capital_pct": spot_settings.total_capital_pct,
@@ -429,6 +438,9 @@ def get_spot_status() -> Dict[str, Any]:
         "grids": grids,
         "recent_trades": recent_trades[:50]
     }
+    _cached_spot_status = res
+    _last_spot_status_time = now
+    return res
 
 
 def run_spot_self_healing_and_optimize() -> Dict[str, Any]:
