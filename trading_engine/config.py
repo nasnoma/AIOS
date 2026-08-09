@@ -241,18 +241,21 @@ class SpotGridSettings(BaseSettings):
     # ── Master Switch ──────────────────────────────────────────
     enabled: bool = True
     paper_mode: bool = False          # False = live/demo orders on exchange
-    # 12 Top High-Volatility Screened Halal Assets on Bybit Spot (Screened by 30-day ATR & cycle count)
-    assets: str = "UNI/USDT,INJ/USDT,ADA/USDT,NEAR/USDT,APT/USDT,FET/USDT,AVAX/USDT,DOT/USDT,BCH/USDT,SUI/USDT,SOL/USDT,ETH/USDT"
+    # ── Master Switch ──────────────────────────────────────────
+    enabled: bool = True
+    paper_mode: bool = False          # False = live/demo orders on exchange
+    # 15 Top High-Volatility Screened Halal Assets on Bybit Spot (Ranked by 30-day Intraday Volatility & ATR)
+    assets: str = "UNI/USDT,TIA/USDT,INJ/USDT,ARB/USDT,ADA/USDT,JUP/USDT,AAVE/USDT,NEAR/USDT,STX/USDT,OP/USDT,APT/USDT,FET/USDT,AVAX/USDT,DOT/USDT,SUI/USDT"
 
     # ── Capital ────────────────────────────────────────────────
-    total_capital_pct: float = 0.95   # 95% of account balance deployed ($9,500.00 for 3x yield expansion)
-    usdt_hard_reserve_pct: float = 0.05  # 5% hard reserve ($9,025.00 active order liquidity)
+    total_capital_pct: float = 0.98   # 98% of account balance deployed ($9,800.00 active grid capital)
+    usdt_hard_reserve_pct: float = 0.02  # 2% hard reserve ($9,604.00 active order liquidity)
 
-    # ── Asset Split (Weighted by Volatility & Cycle Generating Potential) ──────
-    btc_allocation_pct: float = 0.00   # 0%  → BTC (low volatility, moved to alts)
-    eth_allocation_pct: float = 0.042  # 4.2% → ETH ($400)
-    sol_allocation_pct: float = 0.053  # 5.3% → SOL ($500)
-    xaut_allocation_pct: float = 0.00  # 0%  → XAUT
+    # ── Asset Split (Performance-Weighted by 30-Day Volatility & Cycle Potential) ──────
+    btc_allocation_pct: float = 0.00   # 0% → BTC (low volatility, reallocated to top alts)
+    eth_allocation_pct: float = 0.00   # 0% → ETH (low volatility, reallocated to top alts)
+    sol_allocation_pct: float = 0.00   # 0% → SOL
+    xaut_allocation_pct: float = 0.00  # 0% → XAUT
 
     # ── Fees ───────────────────────────────────────────────────
     fee_rate: float = 0.001           # 0.1% per side (Bybit spot maker/taker)
@@ -265,17 +268,17 @@ class SpotGridSettings(BaseSettings):
     regime_confirm_bars: int = 3      # consecutive bars to confirm regime flip
 
     # ── Grid Params: BULL ──────────────────────────────────────
-    bull_grid_spacing: float = 0.0030 # 0.30% micro-scalp spacing (rapid intraday cycle fills)
+    bull_grid_spacing: float = 0.0025 # 0.25% micro-scalp spacing (rapid intraday cycle fills)
     bull_buy_levels: int = 8
     bull_sell_levels: int = 10
-    bull_capital_deployed: float = 0.95  # 95% capital active in Bull trend
+    bull_capital_deployed: float = 0.98  # 98% capital active in Bull trend
     bull_base_hold_pct: float = 0.30  # 30% base hold
 
     # ── Grid Params: RANGE (default) ───────────────────────────
-    range_grid_spacing: float = 0.0030 # 0.30% micro-scalp spacing
+    range_grid_spacing: float = 0.0025 # 0.25% micro-scalp spacing
     range_buy_levels: int = 12         # 12 buy levels: maximum dip-catching
     range_sell_levels: int = 10
-    range_capital_deployed: float = 0.95  # 95% capital active in Range
+    range_capital_deployed: float = 0.98  # 98% capital active in Range
     range_base_hold_pct: float = 0.20
 
     # ── Grid Params: BEAR ──────────────────────────────────────
@@ -305,20 +308,23 @@ class SpotGridSettings(BaseSettings):
     @property
     def asset_allocation(self) -> dict[str, float]:
         active_assets = self.asset_list
-        # Custom weights based on 30-day ATR volatility and cycle potential
+        # Performance-weighted capital allocation for $9,800 active capital across 15 Halal tokens
         custom_weights = {
-            "UNI/USDT": 1200.0 / 9500.0,
-            "INJ/USDT": 1100.0 / 9500.0,
-            "ADA/USDT": 1100.0 / 9500.0,
-            "NEAR/USDT": 1000.0 / 9500.0,
-            "APT/USDT":  950.0 / 9500.0,
-            "FET/USDT":  950.0 / 9500.0,
-            "AVAX/USDT": 900.0 / 9500.0,
-            "DOT/USDT":  850.0 / 9500.0,
-            "BCH/USDT":  750.0 / 9500.0,
-            "SUI/USDT":  750.0 / 9500.0,
-            "SOL/USDT":  500.0 / 9500.0,
-            "ETH/USDT":  400.0 / 9500.0,
+            "UNI/USDT":  1100.0 / 9800.0,
+            "TIA/USDT":  1000.0 / 9800.0,
+            "INJ/USDT":   950.0 / 9800.0,
+            "ARB/USDT":   900.0 / 9800.0,
+            "ADA/USDT":   900.0 / 9800.0,
+            "JUP/USDT":   850.0 / 9800.0,
+            "AAVE/USDT":  800.0 / 9800.0,
+            "NEAR/USDT":  750.0 / 9800.0,
+            "STX/USDT":   650.0 / 9800.0,
+            "OP/USDT":    500.0 / 9800.0,
+            "APT/USDT":   450.0 / 9800.0,
+            "FET/USDT":   350.0 / 9800.0,
+            "AVAX/USDT":  200.0 / 9800.0,
+            "DOT/USDT":   200.0 / 9800.0,
+            "SUI/USDT":   200.0 / 9800.0,
         }
         alloc = {}
         for a in active_assets:

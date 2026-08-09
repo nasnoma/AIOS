@@ -26,26 +26,29 @@ from trading_engine.spot import grid_engine as ge
 BEST_PARAMS_FILE   = Path(__file__).parent.parent / "spot" / "best_params.json"
 RESULTS_FILE       = Path(__file__).parent.parent / "spot" / "optimizer_results.json"
 
-# ── Ultra-High Yield Search space (0.25% - 0.50% Micro-Grid Scalping) ──────
-SPACINGS     = [0.0025, 0.0030, 0.0035, 0.0040, 0.0050, 0.0060]
+# ── 3x Yield Expansion Search Space (Ultra-Dense Micro-Grid Scalping: 0.20% - 0.40%) ──
+SPACINGS     = [0.0020, 0.0025, 0.0030, 0.0035, 0.0040]
 BUY_LEVELS   = [6, 8, 10, 12, 14]
 SELL_LEVELS  = [6, 8, 10, 12]
-CAPITAL_PCTS = [0.75, 0.85, 0.95]
+CAPITAL_PCTS = [0.85, 0.95, 0.98]
 
-# Top 12 High-Volatility Screened Halal Tokens (Performance-Weighted on 95% Active Capital = $9,500)
+# Top 15 Highest-Volatility Screened Halal Tokens (Ranked by 30-day Intraday Volatility, 98% Active Capital = $9,800)
 ASSETS = [
-    ("UNI/USDT",   1200.0),  # 1.23% ATR powerhouse
-    ("INJ/USDT",   1100.0),  # 1.04% ATR powerhouse
-    ("ADA/USDT",   1100.0),  # 1.01% ATR
-    ("NEAR/USDT",  1000.0),  # 0.96% ATR
-    ("APT/USDT",    950.0),  # 0.85% ATR
-    ("FET/USDT",    950.0),  # 0.84% ATR
-    ("AVAX/USDT",   900.0),  # 0.80% ATR
-    ("DOT/USDT",    850.0),  # 0.79% ATR
-    ("BCH/USDT",    750.0),  # 0.72% ATR
-    ("SUI/USDT",    750.0),  # 0.72% ATR
-    ("SOL/USDT",    500.0),  # 0.61% ATR
-    ("ETH/USDT",    400.0),  # 0.62% ATR
+    ("UNI/USDT",   1100.0), # #1 Range Volatility (8.83)
+    ("TIA/USDT",   1000.0), # #2 Range Volatility (7.53)
+    ("INJ/USDT",    950.0), # #3 Range Volatility (7.47)
+    ("ARB/USDT",    900.0), # #4 Range Volatility (7.33)
+    ("ADA/USDT",    900.0), # #5 Range Volatility (7.23)
+    ("JUP/USDT",    850.0), # #6 Range Volatility (7.10)
+    ("AAVE/USDT",   800.0), # #7 Range Volatility (6.96)
+    ("NEAR/USDT",   750.0), # #8 Range Volatility (6.89)
+    ("STX/USDT",    650.0), # #9 Range Volatility (6.42)
+    ("OP/USDT",     500.0), # #10 Range Volatility (6.37)
+    ("APT/USDT",    450.0), # #11 Range Volatility (6.08)
+    ("FET/USDT",    350.0), # #12 Range Volatility (6.04)
+    ("AVAX/USDT",   200.0), # #13 Range Volatility (5.70)
+    ("DOT/USDT",    200.0), # #14 Range Volatility (5.66)
+    ("SUI/USDT",    200.0), # #15 Range Volatility (5.14)
 ]
 
 DAYS     = 30
@@ -62,13 +65,12 @@ class DummyPortfolio:
 
 def score(r):
     if not r: return -999.0
-    return r.get("net_pnl_usd", 0) - 0.5 * r.get("max_drawdown_usd", 0) + 0.02 * r.get("total_cycles", 0)
+    return r.get("net_pnl_usd", 0) - 0.3 * r.get("max_drawdown_usd", 0) + 0.03 * r.get("total_cycles", 0)
 
 
 def run_combo(df_with_atr, atr_col, symbol, alloc, spacing, buy_lvl, sell_lvl, cap_pct):
-    """Run one backtest combo against pre-loaded dataframe."""
+    """Run one backtest combo against pre-loaded dataframe with Auto-Compounding Grid Sizing."""
     engine = ge.GridEngine(symbol=symbol, allocated_usd=alloc, paper_mode=True, fee_rate=FEE_RATE)
-    # Override regime params for this combo
     engine.current_regime = "RANGE"
     engine.params = ge.RegimeParams(
         grid_spacing=spacing, buy_levels=buy_lvl, sell_levels=sell_lvl,
@@ -78,7 +80,6 @@ def run_combo(df_with_atr, atr_col, symbol, alloc, spacing, buy_lvl, sell_lvl, c
     portfolio   = DummyPortfolio()
     df          = df_with_atr.copy()
     start_price = df.iloc[0]["open"]
-    end_price   = df.iloc[-1]["close"]
 
     init_atr = float(df[atr_col].iloc[14]) if (atr_col and pd.notna(df[atr_col].iloc[14])) else 0.0
     engine.build_grid(start_price, portfolio, atr=init_atr)
@@ -89,8 +90,12 @@ def run_combo(df_with_atr, atr_col, symbol, alloc, spacing, buy_lvl, sell_lvl, c
     max_dd       = 0.0
 
     for idx, row in df.iterrows():
+        # Auto-Compounding Rebalance: rebuild grid with accumulated profits
         if (row["timestamp"] - last_rebuild).total_seconds() >= 86400:
             row_atr = float(df.loc[idx, atr_col]) if (atr_col and pd.notna(df.loc[idx, atr_col])) else 0.0
+            cum_pnl = sum(c["net_pnl"] for c in engine.completed_cycles)
+            # Dynamic compounding capital expansion
+            engine.allocated_usd = max(alloc * 0.5, alloc + cum_pnl)
             engine.cancel_all()
             engine.build_grid(row["close"], portfolio, atr=row_atr)
             engine.place_grid_orders(portfolio, exchange=None)
