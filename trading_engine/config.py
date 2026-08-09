@@ -212,13 +212,7 @@ class Settings(BaseSettings):
 
     @property
     def watchlist_assets(self) -> list[str]:
-        return [a.strip() for a in self.default_watchlist.split(",")]
-
-    @property
-    def bounty_hunter_watchlist_assets(self) -> list[str] | None:
-        if not self.bounty_hunter_watchlist:
-            return None
-        return [a.strip() for a in self.bounty_hunter_watchlist.split(",") if a.strip()]
+        return [a.strip() for a in self.default_watchlist.split(",") if a.strip()]
 
     @property
     def get_massive_api_key(self) -> str:
@@ -247,28 +241,18 @@ class SpotGridSettings(BaseSettings):
     # ── Master Switch ──────────────────────────────────────────
     enabled: bool = True
     paper_mode: bool = False          # False = live/demo orders on exchange
-    # 10 Screened High-Yield Halal Assets — performance-weighted by 30-day backtest cycle count
-    # Dropped: LTC (18 cycles, lowest yield), XAUT (gold, low crypto correlation)
-    # Top performers: UNI(93c), ADA(58c), AVAX(45c), BCH(43c), DOT(35c)
-    assets: str = "ETH/USDT,SOL/USDT,XRP/USDT,ADA/USDT,LINK/USDT,AVAX/USDT,UNI/USDT,DOT/USDT,BCH/USDT,BTC/USDT"
-
-
-
+    # 12 Top High-Volatility Screened Halal Assets on Bybit Spot (Screened by 30-day ATR & cycle count)
+    assets: str = "UNI/USDT,INJ/USDT,ADA/USDT,NEAR/USDT,APT/USDT,FET/USDT,AVAX/USDT,DOT/USDT,BCH/USDT,SUI/USDT,SOL/USDT,ETH/USDT"
 
     # ── Capital ────────────────────────────────────────────────
-    total_capital_pct: float = 0.75   # 75% of account balance deployed ($7,500.00 for maximum daily yield)
-    usdt_hard_reserve_pct: float = 0.05  # 5% hard reserve ($7,125.00 active order liquidity)
+    total_capital_pct: float = 0.95   # 95% of account balance deployed ($9,500.00 for 3x yield expansion)
+    usdt_hard_reserve_pct: float = 0.05  # 5% hard reserve ($9,025.00 active order liquidity)
 
-
-    # ── Asset Split (Performance-Weighted by 30-Day Backtest Cycle Count) ──────
-    # Cycle counts from backtest: UNI=93, ADA=58, AVAX=45, BCH=43, DOT=35, ETH=28, SOL=26, LINK=26, XRP=21, BTC=9
-    # Capital weighted proportional to cycle-generating ability for maximum monthly PnL
-    btc_allocation_pct: float = 0.05   # 5%  → BTC  (9 cycles — low freq, strategic anchor)
-    eth_allocation_pct: float = 0.12   # 12% → ETH  (28 cycles)
-    sol_allocation_pct: float = 0.11   # 11% → SOL  (26 cycles)
-    xaut_allocation_pct: float = 0.00  # 0%  → XAUT removed from active trading
-    # Alts get the remaining 72%: UNI, ADA, AVAX, BCH, DOT, LINK, XRP share it
-    # (handled by asset_allocation property — each gets 72%/7 ≈ 10.3% = ~$773 each)
+    # ── Asset Split (Weighted by Volatility & Cycle Generating Potential) ──────
+    btc_allocation_pct: float = 0.00   # 0%  → BTC (low volatility, moved to alts)
+    eth_allocation_pct: float = 0.042  # 4.2% → ETH ($400)
+    sol_allocation_pct: float = 0.053  # 5.3% → SOL ($500)
+    xaut_allocation_pct: float = 0.00  # 0%  → XAUT
 
     # ── Fees ───────────────────────────────────────────────────
     fee_rate: float = 0.001           # 0.1% per side (Bybit spot maker/taker)
@@ -281,17 +265,17 @@ class SpotGridSettings(BaseSettings):
     regime_confirm_bars: int = 3      # consecutive bars to confirm regime flip
 
     # ── Grid Params: BULL ──────────────────────────────────────
-    bull_grid_spacing: float = 0.0035 # 0.35% micro-scalp spacing (rapid intraday cycle fills)
-    bull_buy_levels: int = 6
+    bull_grid_spacing: float = 0.0030 # 0.30% micro-scalp spacing (rapid intraday cycle fills)
+    bull_buy_levels: int = 8
     bull_sell_levels: int = 10
     bull_capital_deployed: float = 0.95  # 95% capital active in Bull trend
     bull_base_hold_pct: float = 0.30  # 30% base hold
 
     # ── Grid Params: RANGE (default) ───────────────────────────
-    range_grid_spacing: float = 0.0050 # 0.50% range spacing (captures 0.5% intraday price waves)
-    range_buy_levels: int = 12         # 12 buy levels: more dip-catching = more cycles per month
+    range_grid_spacing: float = 0.0030 # 0.30% micro-scalp spacing
+    range_buy_levels: int = 12         # 12 buy levels: maximum dip-catching
     range_sell_levels: int = 10
-    range_capital_deployed: float = 0.85  # 85% capital active in Range
+    range_capital_deployed: float = 0.95  # 95% capital active in Range
     range_base_hold_pct: float = 0.20
 
     # ── Grid Params: BEAR ──────────────────────────────────────
@@ -310,6 +294,36 @@ class SpotGridSettings(BaseSettings):
     dca_rsi_bear: float = 22.0        # RSI threshold for BEAR (extreme only)
 
     # ── Scheduler ─────────────────────────────────────────────
+    grid_tick_minutes: int = 1        # 1-minute high-frequency tick interval for instant fill processing
+    regime_check_hours: int = 1       # how often to re-evaluate regime
+    sync_minutes: int = 5             # how often to sync balances with exchange
+
+    @property
+    def asset_list(self) -> list[str]:
+        return [a.strip() for a in self.assets.split(",") if a.strip()]
+
+    @property
+    def asset_allocation(self) -> dict[str, float]:
+        active_assets = self.asset_list
+        # Custom weights based on 30-day ATR volatility and cycle potential
+        custom_weights = {
+            "UNI/USDT": 1200.0 / 9500.0,
+            "INJ/USDT": 1100.0 / 9500.0,
+            "ADA/USDT": 1100.0 / 9500.0,
+            "NEAR/USDT": 1000.0 / 9500.0,
+            "APT/USDT":  950.0 / 9500.0,
+            "FET/USDT":  950.0 / 9500.0,
+            "AVAX/USDT": 900.0 / 9500.0,
+            "DOT/USDT":  850.0 / 9500.0,
+            "BCH/USDT":  750.0 / 9500.0,
+            "SUI/USDT":  750.0 / 9500.0,
+            "SOL/USDT":  500.0 / 9500.0,
+            "ETH/USDT":  400.0 / 9500.0,
+        }
+        alloc = {}
+        for a in active_assets:
+            alloc[a] = custom_weights.get(a, 1.0 / len(active_assets))
+        return alloc
     grid_tick_minutes: int = 1        # 1-minute high-frequency tick interval for instant fill processing
     regime_check_hours: int = 1       # how often to re-evaluate regime
     sync_minutes: int = 5             # how often to sync balances with exchange

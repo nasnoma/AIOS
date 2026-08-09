@@ -1,69 +1,83 @@
 {
-  "ETH/USDT": {
-    "grid_spacing": 0.004,
+  "UNI/USDT": {
+    "grid_spacing": 0.0025,
     "buy_levels": 6,
     "sell_levels": 6,
     "capital_pct": 0.95,
     "regime": "RANGE"
   },
-  "SOL/USDT": {
-    "grid_spacing": 0.004,
-    "buy_levels": 6,
-    "sell_levels": 6,
-    "capital_pct": 0.95,
-    "regime": "RANGE"
-  },
-  "XRP/USDT": {
-    "grid_spacing": 0.004,
+  "INJ/USDT": {
+    "grid_spacing": 0.003,
     "buy_levels": 6,
     "sell_levels": 6,
     "capital_pct": 0.95,
     "regime": "RANGE"
   },
   "ADA/USDT": {
-    "grid_spacing": 0.004,
+    "grid_spacing": 0.0035,
     "buy_levels": 6,
     "sell_levels": 6,
     "capital_pct": 0.95,
     "regime": "RANGE"
   },
-  "LINK/USDT": {
-    "grid_spacing": 0.004,
+  "NEAR/USDT": {
+    "grid_spacing": 0.0025,
+    "buy_levels": 6,
+    "sell_levels": 6,
+    "capital_pct": 0.95,
+    "regime": "RANGE"
+  },
+  "APT/USDT": {
+    "grid_spacing": 0.0025,
+    "buy_levels": 6,
+    "sell_levels": 6,
+    "capital_pct": 0.95,
+    "regime": "RANGE"
+  },
+  "FET/USDT": {
+    "grid_spacing": 0.003,
     "buy_levels": 6,
     "sell_levels": 6,
     "capital_pct": 0.95,
     "regime": "RANGE"
   },
   "AVAX/USDT": {
-    "grid_spacing": 0.004,
-    "buy_levels": 6,
-    "sell_levels": 6,
-    "capital_pct": 0.95,
-    "regime": "RANGE"
-  },
-  "UNI/USDT": {
-    "grid_spacing": 0.004,
+    "grid_spacing": 0.0025,
     "buy_levels": 6,
     "sell_levels": 6,
     "capital_pct": 0.95,
     "regime": "RANGE"
   },
   "DOT/USDT": {
-    "grid_spacing": 0.004,
+    "grid_spacing": 0.0025,
     "buy_levels": 6,
     "sell_levels": 6,
     "capital_pct": 0.95,
     "regime": "RANGE"
   },
   "BCH/USDT": {
-    "grid_spacing": 0.004,
+    "grid_spacing": 0.0025,
     "buy_levels": 6,
     "sell_levels": 6,
     "capital_pct": 0.95,
     "regime": "RANGE"
   },
-  "BTC/USDT": {
-    "grid_spacing": 0.004,
+  "SUI/USDT": {
+    "grid_spacing": 0.0025,
+    "buy_levels": 6,
+    "sell_levels": 6,
+    "capital_pct": 0.95,
+    "regime": "RANGE"
+  },
+  "SOL/USDT": {
+    "grid_spacing": 0.0025,
+    "buy_levels": 6,
+    "sell_levels": 6,
+    "capital_pct": 0.95,
+    "regime": "RANGE"
+  },
+  "ETH/USDT": {
+    "grid_spacing": 0.0025,
     "buy_levels": 6,
     "sell_levels": 6,
     "capital_pct": 0.95,

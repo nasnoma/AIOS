@@ -26,23 +26,26 @@ from trading_engine.spot import grid_engine as ge
 BEST_PARAMS_FILE   = Path(__file__).parent.parent / "spot" / "best_params.json"
 RESULTS_FILE       = Path(__file__).parent.parent / "spot" / "optimizer_results.json"
 
-# ── Search space ────────────────────────────────────────────────────────────
-SPACINGS     = [0.004, 0.005, 0.006, 0.008, 0.010, 0.013, 0.016, 0.020]
+# ── Ultra-High Yield Search space (0.25% - 0.50% Micro-Grid Scalping) ──────
+SPACINGS     = [0.0025, 0.0030, 0.0035, 0.0040, 0.0050, 0.0060]
 BUY_LEVELS   = [6, 8, 10, 12, 14]
 SELL_LEVELS  = [6, 8, 10, 12]
-CAPITAL_PCTS = [0.60, 0.75, 0.85, 0.95]
+CAPITAL_PCTS = [0.75, 0.85, 0.95]
 
+# Top 12 High-Volatility Screened Halal Tokens (Performance-Weighted on 95% Active Capital = $9,500)
 ASSETS = [
-    ("ETH/USDT",   900.0),
-    ("SOL/USDT",   825.0),
-    ("XRP/USDT",   773.0),
-    ("ADA/USDT",   773.0),
-    ("LINK/USDT",  773.0),
-    ("AVAX/USDT",  773.0),
-    ("UNI/USDT",   773.0),
-    ("DOT/USDT",   773.0),
-    ("BCH/USDT",   773.0),
-    ("BTC/USDT",   375.0),
+    ("UNI/USDT",   1200.0),  # 1.23% ATR powerhouse
+    ("INJ/USDT",   1100.0),  # 1.04% ATR powerhouse
+    ("ADA/USDT",   1100.0),  # 1.01% ATR
+    ("NEAR/USDT",  1000.0),  # 0.96% ATR
+    ("APT/USDT",    950.0),  # 0.85% ATR
+    ("FET/USDT",    950.0),  # 0.84% ATR
+    ("AVAX/USDT",   900.0),  # 0.80% ATR
+    ("DOT/USDT",    850.0),  # 0.79% ATR
+    ("BCH/USDT",    750.0),  # 0.72% ATR
+    ("SUI/USDT",    750.0),  # 0.72% ATR
+    ("SOL/USDT",    500.0),  # 0.61% ATR
+    ("ETH/USDT",    400.0),  # 0.62% ATR
 ]
 
 DAYS     = 30
