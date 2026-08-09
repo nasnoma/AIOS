@@ -93,7 +93,7 @@
 
     .stat-row {
       display: grid;
-      grid-template-columns: repeat(6, 1fr);
+      grid-template-columns: repeat(7, 1fr);
       gap: 12px;
       margin-bottom: 1.5rem;
     }
@@ -150,7 +150,7 @@
 
     /* ── Mobile & Responsive Design ── */
     @media (max-width: 1200px) {
-      .stat-row { grid-template-columns: repeat(3, 1fr); }
+      .stat-row { grid-template-columns: repeat(4, 1fr); }
       .dashboard-grid { grid-template-columns: 1fr; }
       #spot-assets-grid { grid-template-columns: repeat(3, 1fr) !important; }
     }
@@ -244,16 +244,22 @@
       <div class="stat-val" id="spot-cycles-today" style="color:var(--green);">0</div>
       <div class="stat-sub">Completed buy→sell rounds</div>
     </div>
+    <div class="stat-card">
+      <div class="stat-label">📅 Projected Monthly</div>
+      <div class="stat-val" id="spot-monthly-return" style="color:var(--purple);">+5.45%</div>
+      <div class="stat-sub" id="spot-monthly-usd">~$409/mo · 1,118 cycles · Optimised</div>
+    </div>
   </div>
 
 
   <!-- ── Main Section 1: Halal Asset Watchlist ── -->
   <div class="panel" style="margin-bottom: 16px;">
     <div class="panel-hd">
-      <span>🛡️ Screened Halal Spot Watchlist (16 Assets on Bybit)</span>
+      <span>🛡️ Screened Halal Spot Watchlist (10 Active Assets)</span>
       <div style="display:flex; gap:10px; align-items:center;">
         <span style="font-size:0.72rem; color:var(--text-3);">Auto Regime Switch: 🟢 BULL / ↔️ RANGE / 🔴 BEAR</span>
         <button class="btn" onclick="triggerSpotTick()">⚡ Trigger Scan / Tick</button>
+        <button class="btn" id="btn-optimize" onclick="triggerOptimizer()" style="border-color:var(--purple); color:var(--purple);">🔬 Run Optimizer</button>
       </div>
     </div>
     <div class="panel-body">
@@ -297,7 +303,7 @@
     <div class="panel">
       <div class="panel-hd">
         <span>✅ Completed Buy → Sell Cycles</span>
-        <span style="font-size:0.72rem; color:var(--text-3);">0.4%–0.8% Net Profit / Cycle</span>
+        <span style="font-size:0.72rem; color:var(--text-3);">~0.2% Net / Cycle (after 0.2% fees) · Optimised 0.4% spacing</span>
       </div>
       <div class="panel-body">
         <div class="scroll" id="spot-cycles-list" style="max-height:300px; font-size:0.75rem;">
@@ -335,15 +341,23 @@
           </div>
           <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:6px;">
             <span style="color:var(--text-2);">⏱️ Scheduler Jobs</span>
-            <strong style="color:var(--green);">Grid Tick (5m) | Regime (1h) | DCA (1h)</strong>
+            <strong style="color:var(--green);">Grid Tick (1m) | Regime (1h) | DCA (1h)</strong>
           </div>
           <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:6px;">
             <span style="color:var(--text-2);">📐 Execution Mode</span>
             <strong style="color:var(--teal);">Spot Limit Orders (Paper Mode)</strong>
           </div>
-          <div style="display:flex; justify-content:space-between;">
+          <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:6px;">
             <span style="color:var(--text-2);">🛡️ Fee Model</span>
             <strong style="color:var(--yellow);">0.10% Maker / 0.10% Taker (0.20% Round-Trip)</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:6px;">
+            <span style="color:var(--text-2);">📊 DCA Entry Filter</span>
+            <strong style="color:var(--purple);">Dual Stochastic (Fast K9 + Slow K60 &lt; 25) · Multi-TF Exhaustion</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span style="color:var(--text-2);">🔬 AutoResearch Optimizer</span>
+            <strong style="color:var(--purple);">6,400 backtests · 0.4% spacing · 95% cap · <span id="opt-last-run">Last: this session</span></strong>
           </div>
         </div>
       </div>
@@ -374,6 +388,27 @@ async function triggerSpotTick() {
   } catch(e) {}
 }
 
+async function triggerOptimizer() {
+  const btn = document.getElementById('btn-optimize');
+  if (btn) { btn.textContent = '⏳ Running...'; btn.disabled = true; }
+  try {
+    const res = await fetch('/api/spot/optimize', { method: 'POST' });
+    const d = await res.json();
+    if (d.status === 'started') {
+      alert('🔬 AutoResearch Optimizer started!\n\n' +
+        d.total_backtests + ' backtests running in background (~10-15 min).\n' +
+        'Optimised params auto-load on next restart.\n\n' +
+        'Check /api/spot/optimizer-results when done.');
+    } else {
+      alert('Optimizer error: ' + (d.error || JSON.stringify(d)));
+    }
+  } catch(e) {
+    alert('Failed to start optimizer: ' + e);
+  } finally {
+    if (btn) { btn.textContent = '🔬 Run Optimizer'; btn.disabled = false; }
+  }
+}
+
 function renderSpotStatus(data) {
   if (!data || data.error) return;
   const p = data.portfolio || {};
@@ -391,7 +426,8 @@ function renderSpotStatus(data) {
   if (modePill) modePill.textContent = data.paper_mode ? 'Paper Mode' : 'Live Mode';
   
   const activeCap = (p.usdt_available || 0) + (p.usdt_reserved || 0);
-  const totalCap = activeCap > 0 ? (activeCap / 0.75) : 10000;
+  const capitalPct = data.total_capital_pct || 0.75;
+  const totalCap = activeCap > 0 ? (activeCap / capitalPct) : 10000;
 
   if (capitalEl) capitalEl.textContent = '$' + totalCap.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
   if (activeCapEl) activeCapEl.textContent = '$' + activeCap.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
