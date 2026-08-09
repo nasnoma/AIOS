@@ -112,46 +112,40 @@ class DCAManager:
             prev_candle = df.iloc[-2] if len(df) >= 2 else latest
             is_liquidity_sweep = (latest['low'] < lower_band or latest['low'] < prev_candle['low']) and (latest['close'] > latest['low'] + (latest['high'] - latest['low']) * 0.4) and has_volume_surge
 
-            # ── Dual Stochastic Exhaustion Filter (Quad Stochastic concept, Kurisko) ──
-            # Fast Stoch(9) and Slow Stoch(60) must BOTH be below 25 to confirm
-            # multi-timeframe momentum is genuinely exhausted — not just a single-period dip.
-            # This is the "Quad alignment" principle: multiple oscillator periods aligned oversold.
+            # ── David Hanlin Volatility Contraction / Squeeze Expansion (PBhrBnrtbxs) ──
+            # Detects tight volatility compression (BB Bandwidth Squeeze < 85% of 20-SMA)
+            # and explosive breakout expansions with volume surge to capture high-momentum waves.
             try:
-                stoch_fast = df.ta.stoch(k=9, d=3, smooth_k=3)   # fast %K(9)
-                stoch_slow = df.ta.stoch(k=60, d=9, smooth_k=9)  # slow %K(60)
-                if stoch_fast is not None and not stoch_fast.empty:
-                    fast_k_col = [c for c in stoch_fast.columns if c.startswith('STOCHk')][0]
-                    fast_k = float(stoch_fast[fast_k_col].iloc[-1])
-                else:
-                    fast_k = 50.0
-                if stoch_slow is not None and not stoch_slow.empty:
-                    slow_k_col = [c for c in stoch_slow.columns if c.startswith('STOCHk')][0]
-                    slow_k = float(stoch_slow[slow_k_col].iloc[-1])
-                else:
-                    slow_k = 50.0
-                # Both exhausted = true multi-timeframe oversold confirmation
-                dual_stoch_exhausted = (fast_k < 25.0) and (slow_k < 25.0)
+                bbu_c = [c for c in df.columns if c.startswith('BBU')][0]
+                bbl_c = [c for c in df.columns if c.startswith('BBL')][0]
+                bbm_c = [c for c in df.columns if c.startswith('BBM')][0]
+                bbw_series = (df[bbu_c] - df[bbl_c]) / df[bbm_c]
+                bbw_curr = float(bbw_series.iloc[-1])
+                bbw_sma20 = float(bbw_series.tail(20).mean())
+                bbw_prev = float(bbw_series.iloc[-2])
+                is_tight_compression = bbw_curr < (bbw_sma20 * 0.85)
+                is_squeeze_expansion = (bbw_prev < bbw_sma20 * 0.85) and (bbw_curr > bbw_prev) and has_volume_surge
             except Exception:
-                dual_stoch_exhausted = True  # Fail open: don't block if compute fails
+                is_tight_compression = False
+                is_squeeze_expansion = False
 
             # Day trading signal logic:
             if regime == "RANGE":
-                if (price <= lower_band or is_liquidity_sweep or is_opening_range_reversal) and rsi < 36 and price < vwap and is_discount_zone and dual_stoch_exhausted:
+                if is_squeeze_expansion and price < vwap and is_discount_zone and dual_stoch_exhausted:
+                    signal = "hanlin_squeeze_breakout_dip"
+                elif (price <= lower_band or is_liquidity_sweep or is_opening_range_reversal) and rsi < 36 and price < vwap and is_discount_zone and dual_stoch_exhausted:
                     signal = "quick_flip_opening_range_dip" if is_opening_range_reversal else ("liquidity_sweep_poi_dip" if is_liquidity_sweep else "vwap_bb_dip")
             elif regime == "BULL":
-                # In Bull regime: buy dip when price sweeps liquidity or opening range in Discount Zone below VWAP with green Supertrend
-                if (price <= lower_band or is_liquidity_sweep or is_opening_range_reversal or rsi < 40) and price < vwap and st_dir == 1 and is_discount_zone and dual_stoch_exhausted:
+                # In Bull regime: buy dip when price sweeps liquidity, opening range, or expands out of a Hanlin Squeeze
+                if is_squeeze_expansion and price < vwap and st_dir == 1 and is_discount_zone:
+                    signal = "hanlin_squeeze_breakout_dip"
+                elif (price <= lower_band or is_liquidity_sweep or is_opening_range_reversal or rsi < 40) and price < vwap and st_dir == 1 and is_discount_zone and dual_stoch_exhausted:
                     signal = "quick_flip_opening_range_dip" if is_opening_range_reversal else ("bull_liquidity_sweep" if is_liquidity_sweep else "bull_vwap_pullback")
             elif regime == "BEAR":
                 # In Bear regime: require deep liquidity sweep / opening range reclaim in Discount Zone + extreme oversold (RSI < 22)
                 if (price <= lower_band and rsi < 22 and vwap_diff_pct < -2.0 and is_discount_zone) or ((is_liquidity_sweep or is_opening_range_reversal) and rsi < 20):
                     signal = "bear_sweep_extreme_oversold"
 
-
-
-
-
-                    
             if signal:
                 return DCASignal(
                     symbol=symbol,
@@ -170,7 +164,9 @@ class DCAManager:
             logger.error(f"Error in day-trading DCA check for {symbol}: {e}")
             return None
             
-    def extra_buy_multiplier(self, regime: str) -> float:
+    def extra_buy_multiplier(self, regime: str, signal_type: str = "") -> float:
+        if signal_type == "hanlin_squeeze_breakout_dip":
+            return 1.8  # Hanlin Volatility Expansion Squeeze Pyramiding Booster
         if regime == "BULL":
             return 1.0
         elif regime == "RANGE":
@@ -178,3 +174,4 @@ class DCAManager:
         elif regime == "BEAR":
             return 2.0
         return 1.0
+

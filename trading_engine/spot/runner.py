@@ -200,7 +200,7 @@ def run_spot_dca_check():
         try:
             signal = _dca_manager.check(symbol, exchange, regime)
             if signal:
-                mult = _dca_manager.extra_buy_multiplier(regime)
+                mult = _dca_manager.extra_buy_multiplier(regime, signal.trigger_type)
                 order_size = (engine.allocated_usd * 0.05) * mult if engine else 500.0
                 logger.info(f"🎯 DCA Signal Triggered [{symbol}]: {signal.trigger_type} (RSI: {signal.rsi:.1f}, mult: {mult}x) -> Buying ${order_size:.2f}")
                 # Execute DCA Buy
