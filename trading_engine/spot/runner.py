@@ -386,6 +386,7 @@ def get_spot_status() -> Dict[str, Any]:
                             cur_price = float(t_info.get('last') or 0)
                         except Exception:
                             cur_price = 0.0
+
                     # Compute exact cost basis from recent trade fills if available
                     avg_cost_basis = cur_price
                     if recent_trades:
