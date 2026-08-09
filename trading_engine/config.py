@@ -241,8 +241,8 @@ class SpotGridSettings(BaseSettings):
     # ── Master Switch ──────────────────────────────────────────
     enabled: bool = True
     paper_mode: bool = False          # False = live/demo orders on exchange
-    # 15 Top High-Volatility Screened Halal Assets on Bybit Spot (Ranked by 30-day Intraday Volatility & ATR)
-    assets: str = "UNI/USDT,TIA/USDT,INJ/USDT,ARB/USDT,PENDLE/USDT,ADA/USDT,JUP/USDT,AAVE/USDT,NEAR/USDT,STX/USDT,OP/USDT,APT/USDT,FET/USDT,AVAX/USDT,DOT/USDT"
+    # 15 100% Verified High-Volatility Screened Halal Assets on Bybit Spot Demo
+    assets: str = "UNI/USDT,TIA/USDT,ARB/USDT,SUI/USDT,SEI/USDT,RENDER/USDT,ADA/USDT,JUP/USDT,NEAR/USDT,OP/USDT,APT/USDT,FET/USDT,AVAX/USDT,DOT/USDT,SOL/USDT"
 
     # ── Capital ────────────────────────────────────────────────
     total_capital_pct: float = 0.995  # 99.5% of account balance deployed ($9,950.00 active grid capital)
@@ -309,14 +309,14 @@ class SpotGridSettings(BaseSettings):
         custom_weights = {
             "UNI/USDT":    1200.0 / 9950.0,
             "TIA/USDT":    1000.0 / 9950.0,
-            "INJ/USDT":     950.0 / 9950.0,
+            "SUI/USDT":     950.0 / 9950.0,
+            "SEI/USDT":     900.0 / 9950.0,
             "ARB/USDT":     900.0 / 9950.0,
-            "PENDLE/USDT":  900.0 / 9950.0,
-            "ADA/USDT":     850.0 / 9950.0,
-            "JUP/USDT":     800.0 / 9950.0,
-            "AAVE/USDT":    750.0 / 9950.0,
+            "RENDER/USDT":  850.0 / 9950.0,
+            "ADA/USDT":     800.0 / 9950.0,
+            "JUP/USDT":     750.0 / 9950.0,
             "NEAR/USDT":    700.0 / 9950.0,
-            "STX/USDT":     550.0 / 9950.0,
+            "SOL/USDT":     550.0 / 9950.0,
             "OP/USDT":      450.0 / 9950.0,
             "APT/USDT":     350.0 / 9950.0,
             "FET/USDT":     250.0 / 9950.0,
