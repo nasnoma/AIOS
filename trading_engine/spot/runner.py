@@ -247,11 +247,12 @@ def run_spot_dca_check():
 
 _cached_spot_status: Dict[str, Any] | None = None
 _last_spot_status_time: float = 0.0
+_last_auto_tick_time: float = 0.0
 
 
 def get_spot_status() -> Dict[str, Any]:
     """Returns full JSON state for API / dashboard."""
-    global _cached_spot_status, _last_spot_status_time
+    global _cached_spot_status, _last_spot_status_time, _last_auto_tick_time
     now = time.time()
     if _cached_spot_status and (now - _last_spot_status_time) < 5.0:
         return _cached_spot_status
@@ -259,10 +260,11 @@ def get_spot_status() -> Dict[str, Any]:
     init_spot_engine()
     exchange = get_spot_exchange()
     
-    # Auto-build grid levels if empty
+    # Auto-run grid tick if empty OR if >30s since last tick (ensures live recentering & Bybit sync)
     has_empty = any(len(eng.grid_levels) == 0 for eng in _grid_engines.values())
-    if has_empty:
+    if has_empty or (now - _last_auto_tick_time) > 30.0:
         try:
+            _last_auto_tick_time = now
             run_spot_grid_tick()
         except Exception as e:
             logger.warning(f"Auto grid tick in get_spot_status failed: {e}")
