@@ -247,8 +247,10 @@ class SpotGridSettings(BaseSettings):
     # ── Master Switch ──────────────────────────────────────────
     enabled: bool = True
     paper_mode: bool = False          # False = live/demo orders on exchange
-    # 12 Screened High-Yield Halal Assets for Bybit Spot (BTC, ETH, SOL, XAUT Gold, XRP, ADA, LINK, AVAX, UNI, DOT, BCH, LTC)
-    assets: str = "BTC/USDT,ETH/USDT,SOL/USDT,XAUT/USDT,XRP/USDT,ADA/USDT,LINK/USDT,AVAX/USDT,UNI/USDT,DOT/USDT,BCH/USDT,LTC/USDT"
+    # 10 Screened High-Yield Halal Assets — performance-weighted by 30-day backtest cycle count
+    # Dropped: LTC (18 cycles, lowest yield), XAUT (gold, low crypto correlation)
+    # Top performers: UNI(93c), ADA(58c), AVAX(45c), BCH(43c), DOT(35c)
+    assets: str = "ETH/USDT,SOL/USDT,XRP/USDT,ADA/USDT,LINK/USDT,AVAX/USDT,UNI/USDT,DOT/USDT,BCH/USDT,BTC/USDT"
 
 
 
@@ -258,11 +260,15 @@ class SpotGridSettings(BaseSettings):
     usdt_hard_reserve_pct: float = 0.05  # 5% hard reserve ($7,125.00 active order liquidity)
 
 
-    # ── Asset Split ────────────────────────────────────────────
-    btc_allocation_pct: float = 0.25  # 25% → BTC
-    eth_allocation_pct: float = 0.25  # 25% → ETH
-    sol_allocation_pct: float = 0.35  # 35% → SOL (top high-volatility daily profit engine)
-    xaut_allocation_pct: float = 0.10 # 10% → XAUT Tether Gold (gold macro anchor)
+    # ── Asset Split (Performance-Weighted by 30-Day Backtest Cycle Count) ──────
+    # Cycle counts from backtest: UNI=93, ADA=58, AVAX=45, BCH=43, DOT=35, ETH=28, SOL=26, LINK=26, XRP=21, BTC=9
+    # Capital weighted proportional to cycle-generating ability for maximum monthly PnL
+    btc_allocation_pct: float = 0.05   # 5%  → BTC  (9 cycles — low freq, strategic anchor)
+    eth_allocation_pct: float = 0.12   # 12% → ETH  (28 cycles)
+    sol_allocation_pct: float = 0.11   # 11% → SOL  (26 cycles)
+    xaut_allocation_pct: float = 0.00  # 0%  → XAUT removed from active trading
+    # Alts get the remaining 72%: UNI, ADA, AVAX, BCH, DOT, LINK, XRP share it
+    # (handled by asset_allocation property — each gets 72%/7 ≈ 10.3% = ~$773 each)
 
     # ── Fees ───────────────────────────────────────────────────
     fee_rate: float = 0.001           # 0.1% per side (Bybit spot maker/taker)
@@ -283,7 +289,7 @@ class SpotGridSettings(BaseSettings):
 
     # ── Grid Params: RANGE (default) ───────────────────────────
     range_grid_spacing: float = 0.0050 # 0.50% range spacing (captures 0.5% intraday price waves)
-    range_buy_levels: int = 10
+    range_buy_levels: int = 12         # 12 buy levels: more dip-catching = more cycles per month
     range_sell_levels: int = 10
     range_capital_deployed: float = 0.85  # 85% capital active in Range
     range_base_hold_pct: float = 0.20
