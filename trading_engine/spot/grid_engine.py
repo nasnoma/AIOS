@@ -187,7 +187,7 @@ class GridEngine:
                             min_cost = m_info.get('limits', {}).get('cost', {}).get('min', 5.0) or 5.0
                             if min_amt is not None and qty_val < float(min_amt):
                                 qty_val = float(min_amt)
-                            required_cost = max(5.2, float(min_cost) * 1.05)
+                            required_cost = max(6.0, float(min_cost) * 1.15)
                             if price_val > 0 and (qty_val * price_val) < required_cost:
                                 qty_val = required_cost / price_val
                                 if hasattr(exchange, 'amount_to_precision'):
