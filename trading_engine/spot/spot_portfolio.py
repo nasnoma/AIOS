@@ -75,6 +75,8 @@ class SpotPortfolio:
 
             self.daily_realised_pnl = data.get('daily_realised_pnl', 0.0)
             self.cycles_today = data.get('cycles_today', 0)
+            self.consecutive_wins = data.get('consecutive_wins', 0)
+            self.consecutive_losses = data.get('consecutive_losses', 0)
             self.last_daily_reset = data.get('last_daily_reset', datetime.datetime.now(datetime.timezone.utc).date().isoformat())
 
             
@@ -98,6 +100,8 @@ class SpotPortfolio:
                 'total_realised_pnl': self.total_realised_pnl,
                 'daily_realised_pnl': self.daily_realised_pnl,
                 'cycles_today': self.cycles_today,
+                'consecutive_wins': self.consecutive_wins,
+                'consecutive_losses': self.consecutive_losses,
                 'last_daily_reset': self.last_daily_reset,
                 'holdings': {k: asdict(v) for k, v in self.holdings.items()},
                 'grid_orders': [asdict(o) for o in self.grid_orders],
@@ -167,6 +171,14 @@ class SpotPortfolio:
         self.reset_daily_if_needed()
         self.daily_realised_pnl += profit
         self.cycles_today += 1
+
+        # Dan Cheung Streak Tracking:
+        if profit > 0:
+            self.consecutive_wins += 1
+            self.consecutive_losses = 0
+        else:
+            self.consecutive_losses += 1
+            self.consecutive_wins = 0
         
         order = GridOrder(
             order_id=order_id,
@@ -188,8 +200,22 @@ class SpotPortfolio:
         if self.last_daily_reset != today:
             self.daily_realised_pnl = 0.0
             self.cycles_today = 0
+            self.consecutive_wins = 0
+            self.consecutive_losses = 0
             self.last_daily_reset = today
             
+    def get_streak_risk_factor(self) -> float:
+        """
+        Dan Cheung 3-Step Risk System (gGjefoUjnJI):
+        De-escalate risk/position size by 50% during losing streaks (consecutive_losses >= 2)
+        Scale up position size by 1.15x during winning streaks (consecutive_wins >= 2).
+        """
+        if self.consecutive_losses >= 2:
+            return 0.50  # Risk De-escalation Protection
+        elif self.consecutive_wins >= 2:
+            return 1.15  # Win-Streak Momentum Scaling
+        return 1.0
+
     def open_grid_orders(self, symbol: Optional[str] = None) -> List[GridOrder]:
         orders = [o for o in self.grid_orders if o.status == 'open']
         if symbol:

@@ -201,8 +201,9 @@ def run_spot_dca_check():
             signal = _dca_manager.check(symbol, exchange, regime)
             if signal:
                 mult = _dca_manager.extra_buy_multiplier(regime, signal.trigger_type)
-                order_size = (engine.allocated_usd * 0.05) * mult if engine else 500.0
-                logger.info(f"🎯 DCA Signal Triggered [{symbol}]: {signal.trigger_type} (RSI: {signal.rsi:.1f}, mult: {mult}x) -> Buying ${order_size:.2f}")
+                streak_factor = _portfolio.get_streak_risk_factor()
+                order_size = (engine.allocated_usd * 0.05) * mult * streak_factor if engine else 500.0
+                logger.info(f"🎯 DCA Signal Triggered [{symbol}]: {signal.trigger_type} (RSI: {signal.rsi:.1f}, mult: {mult}x, streak_factor: {streak_factor:.2f}x) -> Buying ${order_size:.2f}")
                 # Execute DCA Buy
                 if engine and _portfolio.usdt_available >= order_size:
                     ticker = exchange.fetch_ticker(symbol)
