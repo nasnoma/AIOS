@@ -220,7 +220,7 @@
     <div class="stat-card">
       <div class="stat-label">⚡ Active Deployed Capital</div>
       <div class="stat-val" id="spot-active-cap" style="color:var(--teal);">$7,500.00</div>
-      <div class="stat-sub">75% active grid deployment</div>
+      <div class="stat-sub" id="spot-active-sub">99.5% active grid deployment</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">💵 USDT Free Cash</div>
@@ -459,6 +459,9 @@ function renderSpotStatus(data) {
   const totalEquity = usdtFree + totalAssetValue;
   const activeCapPct = data.total_capital_pct || 0.995;
   const activeCap = totalEquity * activeCapPct;
+
+  const activeSubEl = document.getElementById('spot-active-sub');
+  if (activeSubEl) activeSubEl.textContent = (activeCapPct * 100).toFixed(1) + '% active grid deployment';
 
   if (capitalEl) capitalEl.textContent = '$' + totalEquity.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
   if (activeCapEl) activeCapEl.textContent = '$' + activeCap.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
