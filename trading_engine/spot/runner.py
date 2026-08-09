@@ -328,6 +328,19 @@ def run_spot_self_healing_and_optimize() -> Dict[str, Any]:
     if not spot_settings.paper_mode and exchange:
         try:
             open_orders = exchange.fetch_open_orders(params={'category': 'spot'})
+            # Step 1a: Cancel open orders on legacy/removed symbols (e.g. ETH, SOL) to free capital
+            active_symbols = set(spot_settings.asset_list)
+            for o in open_orders:
+                raw_sym = o.get('symbol', '')
+                sym = raw_sym if '/' in raw_sym else (raw_sym.replace('USDT', '/USDT') if 'USDT' in raw_sym else raw_sym)
+                if sym not in active_symbols and o.get('id'):
+                    try:
+                        exchange.cancel_order(o.get('id'), symbol=sym)
+                        logger.info(f"🧹 Self-Healing: Cancelled legacy open order {o.get('id')} on {sym} to free active liquidity.")
+                        healed_count += 1
+                    except Exception as e_canc:
+                        logger.debug(f"Could not cancel legacy order {o.get('id')} on {sym}: {e_canc}")
+
             bybit_order_ids = {o.get('id') for o in open_orders if o.get('id')}
             
             for sym, eng in _grid_engines.items():
