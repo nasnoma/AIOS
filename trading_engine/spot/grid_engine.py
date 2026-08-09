@@ -129,7 +129,8 @@ class GridEngine:
         # missing fills in low-vol. Floor at 0.3% to stay above fees.
         if atr > 0 and current_price > 0:
             atr_pct = atr / current_price
-            dynamic_spacing = max(0.003, min(atr_pct * 0.8, 0.05))  # 0.3% to 5%
+            # Floor lowered 0.003→0.0015 so best_params 0.10% spacings aren't overridden
+            dynamic_spacing = max(0.0015, min(atr_pct * 0.8, 0.05))  # 0.15% to 5%
             # Blend with regime spacing: 50% ATR, 50% regime default
             spacing = (dynamic_spacing + self.params.grid_spacing) / 2
         else:
@@ -220,11 +221,11 @@ class GridEngine:
                         portfolio.record_buy(self.symbol, level.qty, level.price, level.size_usd * self.fee_rate)
                     
                     # Fee-aware sell price: profit must exceed 2× round-trip fees
-                    # Round-trip fee = buy fee + sell fee = 2 × fee_rate × notional
-                    # Min profit = spacing (price gain) must be > 2 × fee_rate
-                    min_profit_pct = 2 * self.fee_rate  # break-even on fees
-                    safety_margin_pct = 0.002  # 0.2% extra profit margin
-                    sell_price = level.price * (1 + self.params.grid_spacing + min_profit_pct + safety_margin_pct)
+                    # min_profit_pct (0.2%) already covers full round-trip fees.
+                    # safety_margin removed: it doubled the required move on tight-
+                    # spacing assets (0.10% spacing), starving cycle completions.
+                    min_profit_pct = 2 * self.fee_rate  # 0.2% — fee break-even
+                    sell_price = level.price * (1 + self.params.grid_spacing + min_profit_pct)
                     new_sell = GridLevel(
                         price=sell_price,
                         side='sell',
