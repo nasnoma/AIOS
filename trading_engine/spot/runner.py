@@ -206,7 +206,7 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 if is_stale:
                     max_buy_p = max(l.price for l in open_buys)
                     logger.info(f"🔄 Grid stale for {symbol} (Live: ${price:.4f}, Highest Buy Order: ${max_buy_p:.4f}). Re-centering grid around current price...")
-                    engine.cancel_all(exchange)
+                engine.cancel_all(exchange)
                 engine.build_grid(price, _portfolio, atr=atr_val)
                 engine.place_grid_orders(_portfolio, exchange)
 
