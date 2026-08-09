@@ -180,7 +180,7 @@
         <div class="sys-row"><span class="sys-key">&#128737; Fees</span><span class="sys-val" style="color:var(--yellow)">0.10% Maker / 0.10% Taker</span></div>
         <div class="sys-row"><span class="sys-key">&#128202; DCA Filter</span><span class="sys-val" style="color:var(--purple)">Dual Stoch K9/K60 &lt; 25 &middot; Multi-TF</span></div>
         <div class="sys-row"><span class="sys-key">&#128640; Squeeze</span><span class="sys-val" style="color:var(--teal)">Hanlin BBW &lt; 85% &middot; 1.8&times; Booster</span></div>
-        <div class="sys-row"><span class="sys-key">&#128300; AutoResearch</span><span class="sys-val"><button class="btn btn-purple" id="btn-optimize" style="padding:2px 10px;font-size:0.68rem;" onclick="triggerOptimizer()">Run 19k Optimizer</button></span></div>
+        <div class="sys-row"><span class="sys-key">&#128300; AutoResearch</span><span class="sys-val" style="color:var(--purple)">19,872 backtests &middot; Auto-ATR Volatility</span></div>
       </div>
     </div>
   </div>
@@ -200,21 +200,6 @@ async function fetchSpotStatus() {
 
 async function triggerSpotTick() {
   try { const r = await fetch('/api/spot/tick',{method:'POST'}); if(r.ok) await fetchSpotStatus(); } catch(e) {}
-}
-
-async function triggerOptimizer() {
-  if (!confirm("Run 19,872 AutoResearch Optimization?\n\nThis will backtest 23 assets across 19,872 combinations to find the highest-yielding parameters in the background.")) {
-    return;
-  }
-  const btn = document.getElementById('btn-optimize');
-  if (btn) { btn.textContent = 'Running...'; btn.disabled = true; }
-  try {
-    const r = await fetch('/api/spot/optimize',{method:'POST'});
-    const d = await r.json();
-    if (d.status === 'started') alert('AutoResearch Optimizer started!\n\n' + d.total_backtests + ' backtests (~10-15 min).\nParams auto-load on restart.');
-    else alert('Error: ' + (d.error || JSON.stringify(d)));
-  } catch(e) { alert('Failed: ' + e); }
-  finally { if (btn) { btn.textContent = 'Run 19k Optimizer'; btn.disabled = false; } }
 }
 
 function fmt(v) { return Number(v) < 10 ? Number(v).toFixed(4) : Number(v).toFixed(2); }
