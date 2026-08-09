@@ -282,9 +282,17 @@ def get_spot_status() -> Dict[str, Any]:
         try:
             open_orders = exchange.fetch_open_orders(params={'category': 'spot'})
             bybit_levels = {}
+            active_symbols = set(spot_settings.asset_list)
             for o in open_orders:
                 raw_sym = o.get('symbol', '')
                 sym = raw_sym if '/' in raw_sym else (raw_sym.replace('USDT', '/USDT') if 'USDT' in raw_sym else raw_sym)
+                if sym not in active_symbols and o.get('id'):
+                    try:
+                        exchange.cancel_order(o['id'], symbol=sym)
+                        logger.info(f"🧹 Cleaned up legacy order {o['id']} on {sym}")
+                    except Exception:
+                        pass
+                    continue
                 if sym not in bybit_levels:
                     bybit_levels[sym] = []
                 bybit_levels[sym].append({
@@ -304,6 +312,10 @@ def get_spot_status() -> Dict[str, Any]:
 
         except Exception as e_orders:
             logger.debug(f"Live open orders fetch in get_spot_status: {e_orders}")
+
+    # Ensure grids contains ONLY active symbols configured in spot_settings.asset_list
+    active_symbols = set(spot_settings.asset_list)
+    grids = {sym: data for sym, data in grids.items() if sym in active_symbols}
         
     # Fetch recent trade execution history from exchange or portfolio
     recent_trades = []
