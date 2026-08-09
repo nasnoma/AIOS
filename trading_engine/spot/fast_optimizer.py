@@ -26,10 +26,13 @@ from trading_engine.spot import grid_engine as ge
 BEST_PARAMS_FILE   = Path(__file__).parent.parent / "spot" / "best_params.json"
 RESULTS_FILE       = Path(__file__).parent.parent / "spot" / "optimizer_results.json"
 
-# ── Quadruple Yield Expansion Search Space (Ultra-Dense Micro-Grid Scalping: 0.10% - 0.25%) ──
-SPACINGS     = [0.0010, 0.0012, 0.0015, 0.0018, 0.0020, 0.0025]
-BUY_LEVELS   = [6, 8, 10, 12, 14]
-SELL_LEVELS  = [6, 8, 10, 12]
+# ── Expanded High-Yield Search Space ──
+# Tighter spacings added: 0.05%–0.07% proven viable (fees covered by min_profit_pct on top)
+# buy_levels expanded to 20: larger ladder = more capital catching dips
+# sell_levels kept conservative: sell side rarely limits cycle rate
+SPACINGS     = [0.0005, 0.0007, 0.0008, 0.0010, 0.0012, 0.0015, 0.0018, 0.0020, 0.0025]
+BUY_LEVELS   = [6, 8, 10, 12, 14, 16, 18, 20]
+SELL_LEVELS  = [4, 6, 8, 10]
 CAPITAL_PCTS = [0.95, 0.98, 0.998]
 
 # 23 Screened High-Volatility Halal Spot Assets + Gold Anchor (99.5% Active Deployed Capital = $9,950)
@@ -72,12 +75,26 @@ class DummyPortfolio:
 
 
 def score(r):
-    if not r: return -999.0
-    return r.get("net_pnl_usd", 0) - 0.1 * r.get("max_drawdown_usd", 0) + 0.05 * r.get("total_cycles", 0)
+    """Pure PnL maximisation score.
+    
+    Previous formula added 0.05*cycles which biased toward high-frequency
+    low-value combos over high-value fewer-cycle combos.
+    max_drawdown_usd penalty removed — backtest only tracks realised PnL
+    drawdown so it was always 0.0 and had no effect.
+    """
+    if not r:
+        return -999.0
+    return r.get("net_pnl_usd", 0.0)
 
 
 def run_combo(df_with_atr, atr_col, symbol, alloc, spacing, buy_lvl, sell_lvl, cap_pct):
-    """Run one backtest combo against pre-loaded dataframe with 1-Hour Candle-by-Candle Profit Compounding."""
+    """Run one backtest combo against pre-loaded dataframe.
+    
+    ATR is passed as 0.0 during optimization so the optimizer actually tests
+    the searched spacing value. Previously the ATR blend overrode searched
+    spacings: e.g. spacing=0.001 became 0.0035 after ATR blend — making all
+    combos converge to a similar blended value regardless of searched param.
+    """
     engine = ge.GridEngine(symbol=symbol, allocated_usd=alloc, paper_mode=True, fee_rate=FEE_RATE)
     engine.current_regime = "RANGE"
     engine.params = ge.RegimeParams(
@@ -89,8 +106,8 @@ def run_combo(df_with_atr, atr_col, symbol, alloc, spacing, buy_lvl, sell_lvl, c
     df          = df_with_atr.copy()
     start_price = df.iloc[0]["open"]
 
-    init_atr = float(df[atr_col].iloc[14]) if (atr_col and pd.notna(df[atr_col].iloc[14])) else 0.0
-    engine.build_grid(start_price, portfolio, atr=init_atr)
+    # Pass atr=0 so build_grid uses spacing directly (no ATR blend distortion)
+    engine.build_grid(start_price, portfolio, atr=0.0)
     engine.place_grid_orders(portfolio, exchange=None)
 
     last_rebuild = df.iloc[0]["timestamp"]
@@ -98,14 +115,14 @@ def run_combo(df_with_atr, atr_col, symbol, alloc, spacing, buy_lvl, sell_lvl, c
     max_dd       = 0.0
 
     for idx, row in df.iterrows():
-        # High-Frequency Compounding Rebalance (Every 6 Hours): reinvest accumulated profits into grid order sizes
+        # Rebalance every 6 hours: reinvest accumulated profits into grid order sizes
         if (row["timestamp"] - last_rebuild).total_seconds() >= 21600:
-            row_atr = float(df.loc[idx, atr_col]) if (atr_col and pd.notna(df.loc[idx, atr_col])) else 0.0
             cum_pnl = sum(c["net_pnl"] for c in engine.completed_cycles)
-            # Dynamic compounding capital expansion
+            # Dynamic compounding: grow grid size with realised profits
             engine.allocated_usd = max(alloc * 0.5, alloc + cum_pnl)
+            # Pass atr=0 during rebuild too — keep searched spacing in effect
             engine.cancel_all()
-            engine.build_grid(row["close"], portfolio, atr=row_atr)
+            engine.build_grid(row["close"], portfolio, atr=0.0)
             engine.place_grid_orders(portfolio, exchange=None)
             last_rebuild = row["timestamp"]
 
@@ -159,11 +176,13 @@ def main():
     n_combos = len(combos)
     total_runs = n_combos * len(ASSETS)
 
-    print(f"\n{'='*68}")
-    print(f"  AutoResearch Optimizer (Fast — data pre-fetched)")
-    print(f"  {len(ASSETS)} assets × {n_combos} combos = {total_runs} simulations")
+    print(f"\n{'='*72}")
+    print(f"  AutoResearch Optimizer (Fast — data pre-fetched, PnL-maximising)")
+    print(f"  {len(ASSETS)} assets × {n_combos} combos = {total_runs:,} simulations")
     print(f"  Search: {len(SPACINGS)} spacings × {len(BUY_LEVELS)} buy_lvl × {len(SELL_LEVELS)} sell_lvl × {len(CAPITAL_PCTS)} cap%")
-    print(f"{'='*68}\n")
+    print(f"  Spacings: {[f'{s*100:.2f}%' for s in SPACINGS]}")
+    print(f"  Note: ATR blend disabled during optimization — searched spacing is exact.")
+    print(f"{'='*72}\n")
 
     # Load any previously completed assets so a crash/resume doesn't re-run them
     all_best_params = json.loads(BEST_PARAMS_FILE.read_text()) if BEST_PARAMS_FILE.exists() else {}
