@@ -112,18 +112,41 @@ class DCAManager:
             prev_candle = df.iloc[-2] if len(df) >= 2 else latest
             is_liquidity_sweep = (latest['low'] < lower_band or latest['low'] < prev_candle['low']) and (latest['close'] > latest['low'] + (latest['high'] - latest['low']) * 0.4) and has_volume_surge
 
+            # ── Dual Stochastic Exhaustion Filter (Quad Stochastic concept, Kurisko) ──
+            # Fast Stoch(9) and Slow Stoch(60) must BOTH be below 25 to confirm
+            # multi-timeframe momentum is genuinely exhausted — not just a single-period dip.
+            # This is the "Quad alignment" principle: multiple oscillator periods aligned oversold.
+            try:
+                stoch_fast = df.ta.stoch(k=9, d=3, smooth_k=3)   # fast %K(9)
+                stoch_slow = df.ta.stoch(k=60, d=9, smooth_k=9)  # slow %K(60)
+                if stoch_fast is not None and not stoch_fast.empty:
+                    fast_k_col = [c for c in stoch_fast.columns if c.startswith('STOCHk')][0]
+                    fast_k = float(stoch_fast[fast_k_col].iloc[-1])
+                else:
+                    fast_k = 50.0
+                if stoch_slow is not None and not stoch_slow.empty:
+                    slow_k_col = [c for c in stoch_slow.columns if c.startswith('STOCHk')][0]
+                    slow_k = float(stoch_slow[slow_k_col].iloc[-1])
+                else:
+                    slow_k = 50.0
+                # Both exhausted = true multi-timeframe oversold confirmation
+                dual_stoch_exhausted = (fast_k < 25.0) and (slow_k < 25.0)
+            except Exception:
+                dual_stoch_exhausted = True  # Fail open: don't block if compute fails
+
             # Day trading signal logic:
             if regime == "RANGE":
-                if (price <= lower_band or is_liquidity_sweep or is_opening_range_reversal) and rsi < 36 and price < vwap and is_discount_zone:
+                if (price <= lower_band or is_liquidity_sweep or is_opening_range_reversal) and rsi < 36 and price < vwap and is_discount_zone and dual_stoch_exhausted:
                     signal = "quick_flip_opening_range_dip" if is_opening_range_reversal else ("liquidity_sweep_poi_dip" if is_liquidity_sweep else "vwap_bb_dip")
             elif regime == "BULL":
                 # In Bull regime: buy dip when price sweeps liquidity or opening range in Discount Zone below VWAP with green Supertrend
-                if (price <= lower_band or is_liquidity_sweep or is_opening_range_reversal or rsi < 40) and price < vwap and st_dir == 1 and is_discount_zone:
+                if (price <= lower_band or is_liquidity_sweep or is_opening_range_reversal or rsi < 40) and price < vwap and st_dir == 1 and is_discount_zone and dual_stoch_exhausted:
                     signal = "quick_flip_opening_range_dip" if is_opening_range_reversal else ("bull_liquidity_sweep" if is_liquidity_sweep else "bull_vwap_pullback")
             elif regime == "BEAR":
                 # In Bear regime: require deep liquidity sweep / opening range reclaim in Discount Zone + extreme oversold (RSI < 22)
                 if (price <= lower_band and rsi < 22 and vwap_diff_pct < -2.0 and is_discount_zone) or ((is_liquidity_sweep or is_opening_range_reversal) and rsi < 20):
                     signal = "bear_sweep_extreme_oversold"
+
 
 
 
