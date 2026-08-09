@@ -103,5 +103,12 @@
     "sell_levels": 6,
     "capital_pct": 0.95,
     "regime": "RANGE"
+  },
+  "XAUT/USDT": {
+    "grid_spacing": 0.0012,
+    "buy_levels": 6,
+    "sell_levels": 6,
+    "capital_pct": 0.998,
+    "regime": "RANGE"
   }
 }
