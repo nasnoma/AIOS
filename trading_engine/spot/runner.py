@@ -45,6 +45,10 @@ def get_spot_exchange() -> ccxt.Exchange:
             })
             if settings.bybit_demo_trading:
                 _exchange.set_sandbox_mode(True)
+            try:
+                _exchange.load_markets()
+            except Exception as e_m:
+                logger.debug(f"load_markets in get_spot_exchange: {e_m}")
             logger.info(f"Spot engine: Bybit LIVE/DEMO mode (authenticated: {api_key[:6]}...)")
 
         else:
@@ -53,6 +57,10 @@ def get_spot_exchange() -> ccxt.Exchange:
                 'options': {'defaultType': 'spot'},
                 'enableRateLimit': True,
             })
+            try:
+                _exchange.load_markets()
+            except Exception as e_m:
+                logger.debug(f"load_markets in paper mode: {e_m}")
             logger.info("Spot engine: PAPER mode (public endpoints, simulated fills)")
     return _exchange
 
@@ -352,10 +360,52 @@ def get_spot_status() -> Dict[str, Any]:
                     'status': 'FILLED'
                 })
 
+    summary_data = _portfolio.summary()
+
+    # If Live / Demo mode: fetch live exchange spot balances for holdings
+    if not spot_settings.paper_mode and exchange:
+        try:
+            bal = exchange.fetch_balance(params={'category': 'spot'})
+            tot = bal.get('total', {})
+            live_holdings = {}
+            active_symbols = set(spot_settings.asset_list)
+            for coin, units in tot.items():
+                if coin in ['USDT', 'USDC']:
+                    continue
+                units_val = float(units or 0)
+                if units_val > 0.0001:
+                    symbol = f"{coin}/USDT"
+                    if symbol not in active_symbols:
+                        continue
+                    cur_price = 0.0
+                    if symbol in _portfolio.holdings:
+                        cur_price = _portfolio.holdings[symbol].last_price
+                    if cur_price <= 0:
+                        try:
+                            t_info = exchange.fetch_ticker(symbol)
+                            cur_price = float(t_info.get('last') or 0)
+                        except Exception:
+                            cur_price = 0.0
+                    value_usd = units_val * cur_price
+                    live_holdings[symbol] = {
+                        'symbol': symbol,
+                        'units_held': round(units_val, 4),
+                        'avg_cost_basis': round(cur_price, 4),
+                        'base_hold_units': 0.0,
+                        'last_price': round(cur_price, 4),
+                        'value_usd': round(value_usd, 2),
+                        'unrealised_pnl': 0.0,
+                        'unrealised_pnl_pct': 0.0
+                    }
+            if live_holdings:
+                summary_data['holdings'] = live_holdings
+        except Exception as e_bal:
+            logger.debug(f"Live balance fetch in get_spot_status: {e_bal}")
+
     return {
         "enabled": spot_settings.enabled,
         "paper_mode": spot_settings.paper_mode,
-        "portfolio": _portfolio.summary(),
+        "portfolio": summary_data,
         "regimes": regimes,
         "grids": grids,
         "recent_trades": recent_trades[:50]
