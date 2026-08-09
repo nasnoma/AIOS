@@ -4,6 +4,7 @@ FastAPI dashboard with WebSocket live updates.
 """
 from __future__ import annotations
 import asyncio
+import concurrent.futures
 import json
 import os
 from datetime import datetime
@@ -25,6 +26,21 @@ from trading_engine.alerts.telegram_bot import send_message
 app = FastAPI(title="Trading Decision Engine", version="1.0.0")
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
+
+# Thread pool for running blocking ccxt network calls off the async event loop
+_executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
+
+
+@app.on_event("startup")
+async def startup_pre_warm():
+    """Pre-warm the spot status cache on startup so the first dashboard request is instant."""
+    loop = asyncio.get_event_loop()
+    try:
+        from trading_engine.spot.runner import get_spot_status
+        await loop.run_in_executor(_executor, get_spot_status)
+        logger.info("✅ Spot status cache pre-warmed on startup")
+    except Exception as e:
+        logger.warning(f"Startup pre-warm failed (non-fatal): {e}")
 
 # In-memory signal history (last 50 signals)
 signal_history: list[dict] = []
@@ -334,7 +350,8 @@ async def get_spot_status_endpoint():
     """Get status of spot grid portfolio, regimes, active grids, and completed cycles."""
     try:
         from trading_engine.spot.runner import get_spot_status
-        return get_spot_status()
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(_executor, get_spot_status)
     except Exception as e:
         logger.error(f"Error fetching spot status: {e}")
         return {"error": str(e)}
