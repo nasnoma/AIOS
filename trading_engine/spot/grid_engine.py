@@ -282,19 +282,27 @@ class GridEngine:
 
     def cancel_all(self, exchange: Optional[ccxt.Exchange] = None):
         exch = exchange or self.exchange
+        if not self.paper_mode and exch:
+            try:
+                params = {'category': 'spot'} if 'bybit' in str(type(exch)).lower() else {}
+                if hasattr(exch, 'cancel_all_orders'):
+                    exch.cancel_all_orders(self.symbol, params=params)
+                    logger.info(f"[LIVE] Bulk cancelled all open orders for {self.symbol} on Bybit")
+            except Exception as e_bulk:
+                logger.debug(f"Bulk cancel for {self.symbol}: {e_bulk}")
+
         for level in self.grid_levels:
             if level.status == 'open':
                 if self.paper_mode:
                     level.status = 'cancelled'
                     logger.info(f"[PAPER] Cancelled order {level.order_id}")
                 else:
+                    level.status = 'cancelled'
                     if exch and level.order_id:
                         try:
                             exch.cancel_order(level.order_id, self.symbol)
-                            level.status = 'cancelled'
-                            logger.info(f"[LIVE] Cancelled order {level.order_id}")
-                        except Exception as e:
-                            logger.error(f"Failed to cancel {level.order_id}: {e}")
+                        except Exception:
+                            pass
 
     def summary(self) -> Dict[str, Any]:
         open_buys = sum(1 for l in self.grid_levels if l.status == 'open' and l.side == 'buy')
