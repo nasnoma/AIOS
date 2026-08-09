@@ -283,6 +283,19 @@
     </div>
   </div>
 
+  <!-- ── Main Section 2.5: Transaction & Execution History ── -->
+  <div class="panel" style="margin-bottom: 16px;">
+    <div class="panel-hd">
+      <span>📜 Live Transaction &amp; Execution History</span>
+      <span style="font-size:0.72rem; color:var(--text-3);">Executed trades &amp; filled orders log</span>
+    </div>
+    <div class="panel-body">
+      <div id="spot-transaction-history" style="font-size:0.8rem; max-height:280px; overflow-y:auto;">
+        <div style="color:var(--text-3); padding:10px; text-align:center;">Loading transaction history...</div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Main Section 3: Active Grids & Completed Cycles ── -->
 
   <div class="dashboard-grid">
@@ -494,6 +507,45 @@ function renderSpotStatus(data) {
       });
       tableHtml += `</tbody></table></div>`;
       openPosEl.innerHTML = tableHtml;
+    }
+  }
+
+  // Render Transaction & Execution History Table
+  const txHistoryEl = document.getElementById('spot-transaction-history');
+  if (txHistoryEl) {
+    const trades = data.recent_trades || [];
+    if (trades.length === 0) {
+      txHistoryEl.innerHTML = '<div style="color:var(--text-3); padding:10px; text-align:center;">No completed transactions recorded yet. Waiting for initial grid order fills.</div>';
+    } else {
+      let txHtml = `<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; text-align:left;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border); color:var(--text-3); font-size:0.72rem;">
+            <th style="padding:6px;">Time (UTC)</th>
+            <th style="padding:6px;">Asset</th>
+            <th style="padding:6px;">Action / Side</th>
+            <th style="padding:6px;">Executed Price</th>
+            <th style="padding:6px;">Quantity</th>
+            <th style="padding:6px;">Total Value ($)</th>
+            <th style="padding:6px;">Status</th>
+          </tr>
+        </thead>
+        <tbody>`;
+      trades.forEach(t => {
+        const sideColor = (t.side || '').toUpperCase() === 'BUY' ? 'var(--green)' : 'var(--red)';
+        const sideBadge = `<span class="pill" style="font-size:0.6rem; background:rgba(255,255,255,0.05); color:${sideColor}; border:1px solid ${sideColor};">${(t.side||'BUY').toUpperCase()}</span>`;
+        const timeStr = t.timestamp ? (t.timestamp.includes('T') ? t.timestamp.replace('T', ' ').split('.')[0] : t.timestamp) : '—';
+        txHtml += `<tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
+          <td style="padding:6px; color:var(--text-3); font-family:'JetBrains Mono', monospace; font-size:0.7rem;">${timeStr}</td>
+          <td style="padding:6px;"><strong>${t.symbol}</strong></td>
+          <td style="padding:6px;">${sideBadge}</td>
+          <td style="padding:6px; font-family:'JetBrains Mono', monospace;">$${(t.price||0).toFixed(2)}</td>
+          <td style="padding:6px;">${(t.qty||0).toFixed(4)}</td>
+          <td style="padding:6px; font-weight:600;">$${(t.size_usd||0).toFixed(2)}</td>
+          <td style="padding:6px; color:var(--green); font-size:0.7rem; font-weight:600;">${t.status||'FILLED'}</td>
+        </tr>`;
+      });
+      txHtml += `</tbody></table></div>`;
+      txHistoryEl.innerHTML = txHtml;
     }
   }
 

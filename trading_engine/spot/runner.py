@@ -305,12 +305,48 @@ def get_spot_status() -> Dict[str, Any]:
         except Exception as e_orders:
             logger.debug(f"Live open orders fetch in get_spot_status: {e_orders}")
         
+    # Fetch recent trade execution history from exchange or portfolio
+    recent_trades = []
+    if not spot_settings.paper_mode and exchange:
+        try:
+            trades = exchange.fetch_my_trades(params={'category': 'spot'}, limit=50)
+            for t in reversed(trades):
+                raw_sym = t.get('symbol', '')
+                sym = raw_sym if '/' in raw_sym else (raw_sym.replace('USDT', '/USDT') if 'USDT' in raw_sym else raw_sym)
+                recent_trades.append({
+                    'id': t.get('id', ''),
+                    'symbol': sym,
+                    'side': (t.get('side') or '').upper(),
+                    'price': float(t.get('price') or 0),
+                    'qty': float(t.get('amount') or 0),
+                    'size_usd': float(t.get('cost') or 0) or (float(t.get('price') or 0) * float(t.get('amount') or 0)),
+                    'timestamp': t.get('datetime') or '',
+                    'status': 'FILLED'
+                })
+        except Exception as e_tr:
+            logger.debug(f"Fetch my trades in get_spot_status: {e_tr}")
+
+    if not recent_trades and hasattr(_portfolio, 'grid_orders'):
+        for o in reversed(_portfolio.grid_orders):
+            if o.status == 'filled':
+                recent_trades.append({
+                    'id': o.order_id,
+                    'symbol': o.symbol,
+                    'side': o.side.upper(),
+                    'price': o.price,
+                    'qty': o.qty,
+                    'size_usd': o.size_usd,
+                    'timestamp': o.filled_at or o.created_at,
+                    'status': 'FILLED'
+                })
+
     return {
         "enabled": spot_settings.enabled,
         "paper_mode": spot_settings.paper_mode,
         "portfolio": _portfolio.summary(),
         "regimes": regimes,
         "grids": grids,
+        "recent_trades": recent_trades[:50]
     }
 
 
