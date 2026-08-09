@@ -386,16 +386,30 @@ def get_spot_status() -> Dict[str, Any]:
                             cur_price = float(t_info.get('last') or 0)
                         except Exception:
                             cur_price = 0.0
+                    # Compute exact cost basis from recent trade fills if available
+                    avg_cost_basis = cur_price
+                    if recent_trades:
+                        sym_buys = [t for t in recent_trades if t.get('symbol') == symbol and t.get('side') == 'BUY']
+                        if sym_buys:
+                            tot_c = sum(t.get('size_usd', 0) for t in sym_buys)
+                            tot_q = sum(t.get('qty', 0) for t in sym_buys)
+                            if tot_q > 0:
+                                avg_cost_basis = tot_c / tot_q
+
+                    unrealised_pnl = (cur_price - avg_cost_basis) * units_val
+                    total_cost = avg_cost_basis * units_val
+                    unrealised_pnl_pct = (unrealised_pnl / total_cost) if total_cost > 0 else 0.0
+
                     value_usd = units_val * cur_price
                     live_holdings[symbol] = {
                         'symbol': symbol,
                         'units_held': round(units_val, 4),
-                        'avg_cost_basis': round(cur_price, 4),
+                        'avg_cost_basis': round(avg_cost_basis, 4),
                         'base_hold_units': 0.0,
                         'last_price': round(cur_price, 4),
                         'value_usd': round(value_usd, 2),
-                        'unrealised_pnl': 0.0,
-                        'unrealised_pnl_pct': 0.0
+                        'unrealised_pnl': round(unrealised_pnl, 2),
+                        'unrealised_pnl_pct': round(unrealised_pnl_pct, 4)
                     }
             if live_holdings:
                 summary_data['holdings'] = live_holdings
