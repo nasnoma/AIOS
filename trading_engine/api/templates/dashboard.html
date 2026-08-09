@@ -446,13 +446,23 @@ function renderSpotStatus(data) {
 
   if (modePill) modePill.textContent = data.paper_mode ? 'Paper Mode' : 'Live Mode';
   
-  const activeCap = (p.usdt_available || 0) + (p.usdt_reserved || 0);
-  const capitalPct = data.total_capital_pct || 0.75;
-  const totalCap = activeCap > 0 ? (activeCap / capitalPct) : 10000;
+  let totalAssetValue = 0;
+  let totalUnrealised = 0;
+  if (p.holdings) {
+    Object.values(p.holdings).forEach(h => {
+      totalAssetValue += (h.value_usd || 0);
+      totalUnrealised += (h.unrealised_pnl || 0);
+    });
+  }
 
-  if (capitalEl) capitalEl.textContent = '$' + totalCap.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  const usdtFree = p.usdt_available || 0;
+  const totalEquity = usdtFree + totalAssetValue;
+  const activeCapPct = data.total_capital_pct || 0.995;
+  const activeCap = totalEquity * activeCapPct;
+
+  if (capitalEl) capitalEl.textContent = '$' + totalEquity.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
   if (activeCapEl) activeCapEl.textContent = '$' + activeCap.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-  if (usdtFreeEl) usdtFreeEl.textContent = '$' + (p.usdt_available || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  if (usdtFreeEl) usdtFreeEl.textContent = '$' + usdtFree.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
   if (cyclesTodayEl) cyclesTodayEl.textContent = p.cycles_today || 0;
   if (pnlTodayEl) pnlTodayEl.textContent = '$' + (p.daily_realised_pnl || 0).toFixed(2);

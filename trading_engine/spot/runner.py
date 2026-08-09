@@ -405,6 +405,7 @@ def get_spot_status() -> Dict[str, Any]:
     return {
         "enabled": spot_settings.enabled,
         "paper_mode": spot_settings.paper_mode,
+        "total_capital_pct": spot_settings.total_capital_pct,
         "portfolio": summary_data,
         "regimes": regimes,
         "grids": grids,
