@@ -540,13 +540,7 @@ function renderSpotStatus(data) {
   if (pnlTodayEl) pnlTodayEl.textContent = '$' + (p.daily_realised_pnl || 0).toFixed(2);
   if (updateEl) updateEl.textContent = 'Updated: ' + new Date().toLocaleTimeString();
 
-  // Calculate & render total Unrealised PnL across all open positions
-  let totalUnrealised = 0;
-  if (p.holdings) {
-    Object.values(p.holdings).forEach(h => {
-      totalUnrealised += (h.unrealised_pnl || 0);
-    });
-  }
+  // Render total Unrealised PnL (already computed above as totalUnrealised)
   const unrealisedEl = document.getElementById('spot-unrealised-pnl');
   if (unrealisedEl) {
     const sign = totalUnrealised >= 0 ? '+$' : '-$';
@@ -633,12 +627,17 @@ function renderSpotStatus(data) {
 
 
 
-  // Render Halal asset cards
+  // Render Halal asset cards — show ALL 23 configured assets from regimes+grids, not just held ones
   const gridEl = document.getElementById('spot-assets-grid');
-  if (gridEl && p.holdings) {
-    const assets = Object.keys(p.holdings);
-    gridEl.innerHTML = assets.map(sym => {
-      const h = p.holdings[sym] || {};
+  if (gridEl) {
+    // Build full asset list: union of regimes, grids, and holdings keys
+    const allAssets = [...new Set([
+      ...Object.keys(regimes),
+      ...Object.keys(grids),
+      ...(p.holdings ? Object.keys(p.holdings) : [])
+    ])].sort();
+    gridEl.innerHTML = allAssets.length ? allAssets.map(sym => {
+      const h = (p.holdings && p.holdings[sym]) || {};
       const reg = regimes[sym] || {};
       const regimeName = reg.regime || 'RANGE';
       const regColor = regimeName === 'BULL' ? 'var(--green)' : (regimeName === 'BEAR' ? 'var(--red)' : 'var(--yellow)');
@@ -658,7 +657,7 @@ function renderSpotStatus(data) {
           <span style="font-size:0.7rem; color:${pnlColor}; font-weight:600;">PnL: ${(h.unrealised_pnl || 0) >= 0 ? '+$' : '-$'}${Math.abs(h.unrealised_pnl || 0).toFixed(2)} (${((h.unrealised_pnl_pct || 0) * 100).toFixed(2)}%)</span>
         </div>
       </div>`;
-    }).join('');
+    }).join('') : '<div style="color:var(--text-3); padding:10px;">Loading asset prices...</div>';
   }
 
   // Render Active Grid Levels Ladder
