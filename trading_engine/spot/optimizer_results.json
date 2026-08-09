@@ -1,9 +1,85 @@
 {
+  "GRASS/USDT": {
+    "best_params": {
+      "grid_spacing": 0.0025,
+      "buy_levels": 6,
+      "sell_levels": 4,
+      "capital_pct": 0.998,
+      "regime": "RANGE"
+    },
+    "best_result": {
+      "symbol": "GRASS/USDT",
+      "days": 30,
+      "regime": "RANGE",
+      "total_cycles": 1121,
+      "net_pnl_usd": 290.6799677760495,
+      "net_pnl_pct": 32.29777419733884,
+      "max_drawdown_usd": 0.0
+    },
+    "best_score": 290.6799677760495
+  },
+  "TAIKO/USDT": {
+    "best_params": {
+      "grid_spacing": 0.0025,
+      "buy_levels": 6,
+      "sell_levels": 4,
+      "capital_pct": 0.998,
+      "regime": "RANGE"
+    },
+    "best_result": {
+      "symbol": "TAIKO/USDT",
+      "days": 30,
+      "regime": "RANGE",
+      "total_cycles": 1002,
+      "net_pnl_usd": 241.5247117160126,
+      "net_pnl_pct": 28.414671966589715,
+      "max_drawdown_usd": 0.0
+    },
+    "best_score": 241.5247117160126
+  },
+  "WLD/USDT": {
+    "best_params": {
+      "grid_spacing": 0.0025,
+      "buy_levels": 6,
+      "sell_levels": 4,
+      "capital_pct": 0.998,
+      "regime": "RANGE"
+    },
+    "best_result": {
+      "symbol": "WLD/USDT",
+      "days": 30,
+      "regime": "RANGE",
+      "total_cycles": 985,
+      "net_pnl_usd": 222.9198387042373,
+      "net_pnl_pct": 27.86497983802966,
+      "max_drawdown_usd": 0.0
+    },
+    "best_score": 222.9198387042373
+  },
+  "AERO/USDT": {
+    "best_params": {
+      "grid_spacing": 0.0025,
+      "buy_levels": 6,
+      "sell_levels": 4,
+      "capital_pct": 0.998,
+      "regime": "RANGE"
+    },
+    "best_result": {
+      "symbol": "AERO/USDT",
+      "days": 30,
+      "regime": "RANGE",
+      "total_cycles": 912,
+      "net_pnl_usd": 191.66796195204847,
+      "net_pnl_pct": 25.55572826027313,
+      "max_drawdown_usd": 0.0
+    },
+    "best_score": 191.66796195204847
+  },
   "UNI/USDT": {
     "best_params": {
       "grid_spacing": 0.0025,
       "buy_levels": 6,
-      "sell_levels": 6,
+      "sell_levels": 4,
       "capital_pct": 0.998,
       "regime": "RANGE"
     },
@@ -11,18 +87,18 @@
       "symbol": "UNI/USDT",
       "days": 30,
       "regime": "RANGE",
-      "total_cycles": 312,
-      "net_pnl_usd": 223.14341740996815,
-      "net_pnl_pct": 12.396856522776007,
+      "total_cycles": 839,
+      "net_pnl_usd": 163.0320170142239,
+      "net_pnl_pct": 23.29028814488913,
       "max_drawdown_usd": 0.0
     },
-    "best_score": 238.74341740996815
+    "best_score": 163.0320170142239
   },
   "TIA/USDT": {
     "best_params": {
-      "grid_spacing": 0.0015,
+      "grid_spacing": 0.002,
       "buy_levels": 6,
-      "sell_levels": 6,
+      "sell_levels": 4,
       "capital_pct": 0.998,
       "regime": "RANGE"
     },
@@ -30,56 +106,18 @@
       "symbol": "TIA/USDT",
       "days": 30,
       "regime": "RANGE",
-      "total_cycles": 396,
-      "net_pnl_usd": 183.3362493071158,
-      "net_pnl_pct": 12.222416620474386,
+      "total_cycles": 988,
+      "net_pnl_usd": 141.711881999734,
+      "net_pnl_pct": 21.801827999959077,
       "max_drawdown_usd": 0.0
     },
-    "best_score": 203.1362493071158
-  },
-  "PENDLE/USDT": {
-    "best_params": {
-      "grid_spacing": 0.0018,
-      "buy_levels": 6,
-      "sell_levels": 6,
-      "capital_pct": 0.998,
-      "regime": "RANGE"
-    },
-    "best_result": {
-      "symbol": "PENDLE/USDT",
-      "days": 30,
-      "regime": "RANGE",
-      "total_cycles": 322,
-      "net_pnl_usd": 160.75608453851643,
-      "net_pnl_pct": 10.717072302567763,
-      "max_drawdown_usd": 0.0
-    },
-    "best_score": 176.85608453851643
-  },
-  "INJ/USDT": {
-    "best_params": {
-      "grid_spacing": 0.002,
-      "buy_levels": 6,
-      "sell_levels": 6,
-      "capital_pct": 0.998,
-      "regime": "RANGE"
-    },
-    "best_result": {
-      "symbol": "INJ/USDT",
-      "days": 30,
-      "regime": "RANGE",
-      "total_cycles": 345,
-      "net_pnl_usd": 170.36936517458014,
-      "net_pnl_pct": 12.169240369612867,
-      "max_drawdown_usd": 0.0
-    },
-    "best_score": 187.61936517458014
+    "best_score": 141.711881999734
   },
   "ARB/USDT": {
     "best_params": {
-      "grid_spacing": 0.0018,
+      "grid_spacing": 0.0025,
       "buy_levels": 6,
-      "sell_levels": 6,
+      "sell_levels": 4,
       "capital_pct": 0.998,
       "regime": "RANGE"
     },
@@ -87,37 +125,75 @@
       "symbol": "ARB/USDT",
       "days": 30,
       "regime": "RANGE",
-      "total_cycles": 335,
-      "net_pnl_usd": 134.05180498143253,
-      "net_pnl_pct": 11.170983748452711,
+      "total_cycles": 737,
+      "net_pnl_usd": 121.15048212880939,
+      "net_pnl_pct": 20.19174702146823,
       "max_drawdown_usd": 0.0
     },
-    "best_score": 150.80180498143253
+    "best_score": 121.15048212880939
   },
-  "JUP/USDT": {
+  "SUI/USDT": {
     "best_params": {
-      "grid_spacing": 0.0018,
+      "grid_spacing": 0.002,
       "buy_levels": 6,
-      "sell_levels": 6,
+      "sell_levels": 4,
       "capital_pct": 0.998,
       "regime": "RANGE"
     },
     "best_result": {
-      "symbol": "JUP/USDT",
+      "symbol": "SUI/USDT",
       "days": 30,
       "regime": "RANGE",
-      "total_cycles": 343,
-      "net_pnl_usd": 126.02770080779345,
-      "net_pnl_pct": 11.457063709799405,
+      "total_cycles": 596,
+      "net_pnl_usd": 69.42470658960634,
+      "net_pnl_pct": 12.622673925382971,
       "max_drawdown_usd": 0.0
     },
-    "best_score": 143.17770080779346
+    "best_score": 69.42470658960634
+  },
+  "SEI/USDT": {
+    "best_params": {
+      "grid_spacing": 0.002,
+      "buy_levels": 6,
+      "sell_levels": 4,
+      "capital_pct": 0.998,
+      "regime": "RANGE"
+    },
+    "best_result": {
+      "symbol": "SEI/USDT",
+      "days": 30,
+      "regime": "RANGE",
+      "total_cycles": 646,
+      "net_pnl_usd": 68.77248231651754,
+      "net_pnl_pct": 13.754496463303509,
+      "max_drawdown_usd": 0.0
+    },
+    "best_score": 68.77248231651754
+  },
+  "RENDER/USDT": {
+    "best_params": {
+      "grid_spacing": 0.002,
+      "buy_levels": 6,
+      "sell_levels": 4,
+      "capital_pct": 0.998,
+      "regime": "RANGE"
+    },
+    "best_result": {
+      "symbol": "RENDER/USDT",
+      "days": 30,
+      "regime": "RANGE",
+      "total_cycles": 588,
+      "net_pnl_usd": 55.99911664306858,
+      "net_pnl_pct": 12.44424814290413,
+      "max_drawdown_usd": 0.0
+    },
+    "best_score": 55.99911664306858
   },
   "ADA/USDT": {
     "best_params": {
-      "grid_spacing": 0.001,
+      "grid_spacing": 0.0018,
       "buy_levels": 6,
-      "sell_levels": 6,
+      "sell_levels": 4,
       "capital_pct": 0.998,
       "regime": "RANGE"
     },
@@ -125,30 +201,239 @@
       "symbol": "ADA/USDT",
       "days": 30,
       "regime": "RANGE",
-      "total_cycles": 372,
-      "net_pnl_usd": 77.82330390625636,
-      "net_pnl_pct": 9.727912988282045,
+      "total_cycles": 918,
+      "net_pnl_usd": 71.69587263968195,
+      "net_pnl_pct": 17.923968159920488,
       "max_drawdown_usd": 0.0
     },
-    "best_score": 96.42330390625636
+    "best_score": 71.69587263968195
+  },
+  "JUP/USDT": {
+    "best_params": {
+      "grid_spacing": 0.0025,
+      "buy_levels": 6,
+      "sell_levels": 4,
+      "capital_pct": 0.998,
+      "regime": "RANGE"
+    },
+    "best_result": {
+      "symbol": "JUP/USDT",
+      "days": 30,
+      "regime": "RANGE",
+      "total_cycles": 675,
+      "net_pnl_usd": 64.17834016900345,
+      "net_pnl_pct": 18.336668619715272,
+      "max_drawdown_usd": 0.0
+    },
+    "best_score": 64.17834016900345
+  },
+  "NEAR/USDT": {
+    "best_params": {
+      "grid_spacing": 0.002,
+      "buy_levels": 6,
+      "sell_levels": 4,
+      "capital_pct": 0.998,
+      "regime": "RANGE"
+    },
+    "best_result": {
+      "symbol": "NEAR/USDT",
+      "days": 30,
+      "regime": "RANGE",
+      "total_cycles": 886,
+      "net_pnl_usd": 58.030416236414624,
+      "net_pnl_pct": 19.343472078804876,
+      "max_drawdown_usd": 0.0
+    },
+    "best_score": 58.030416236414624
+  },
+  "ARKM/USDT": {
+    "best_params": {
+      "grid_spacing": 0.002,
+      "buy_levels": 6,
+      "sell_levels": 4,
+      "capital_pct": 0.998,
+      "regime": "RANGE"
+    },
+    "best_result": {
+      "symbol": "ARKM/USDT",
+      "days": 30,
+      "regime": "RANGE",
+      "total_cycles": 666,
+      "net_pnl_usd": 42.62371971379465,
+      "net_pnl_pct": 14.207906571264884,
+      "max_drawdown_usd": 0.0
+    },
+    "best_score": 42.62371971379465
+  },
+  "ROSE/USDT": {
+    "best_params": {
+      "grid_spacing": 0.002,
+      "buy_levels": 6,
+      "sell_levels": 4,
+      "capital_pct": 0.998,
+      "regime": "RANGE"
+    },
+    "best_result": {
+      "symbol": "ROSE/USDT",
+      "days": 30,
+      "regime": "RANGE",
+      "total_cycles": 856,
+      "net_pnl_usd": 46.565547231659835,
+      "net_pnl_pct": 18.626218892663935,
+      "max_drawdown_usd": 0.0
+    },
+    "best_score": 46.565547231659835
+  },
+  "IMX/USDT": {
+    "best_params": {
+      "grid_spacing": 0.002,
+      "buy_levels": 6,
+      "sell_levels": 4,
+      "capital_pct": 0.998,
+      "regime": "RANGE"
+    },
+    "best_result": {
+      "symbol": "IMX/USDT",
+      "days": 30,
+      "regime": "RANGE",
+      "total_cycles": 631,
+      "net_pnl_usd": 33.52968226369294,
+      "net_pnl_pct": 13.411872905477177,
+      "max_drawdown_usd": 0.0
+    },
+    "best_score": 33.52968226369294
+  },
+  "OP/USDT": {
+    "best_params": {
+      "grid_spacing": 0.002,
+      "buy_levels": 6,
+      "sell_levels": 4,
+      "capital_pct": 0.998,
+      "regime": "RANGE"
+    },
+    "best_result": {
+      "symbol": "OP/USDT",
+      "days": 30,
+      "regime": "RANGE",
+      "total_cycles": 875,
+      "net_pnl_usd": 38.15470037551881,
+      "net_pnl_pct": 19.077350187759404,
+      "max_drawdown_usd": 0.0
+    },
+    "best_score": 38.15470037551881
+  },
+  "APT/USDT": {
+    "best_params": {
+      "grid_spacing": 0.002,
+      "buy_levels": 6,
+      "sell_levels": 4,
+      "capital_pct": 0.998,
+      "regime": "RANGE"
+    },
+    "best_result": {
+      "symbol": "APT/USDT",
+      "days": 30,
+      "regime": "RANGE",
+      "total_cycles": 817,
+      "net_pnl_usd": 35.411841384395316,
+      "net_pnl_pct": 17.705920692197658,
+      "max_drawdown_usd": 0.0
+    },
+    "best_score": 35.411841384395316
+  },
+  "FET/USDT": {
+    "best_params": {
+      "grid_spacing": 0.0025,
+      "buy_levels": 6,
+      "sell_levels": 4,
+      "capital_pct": 0.998,
+      "regime": "RANGE"
+    },
+    "best_result": {
+      "symbol": "FET/USDT",
+      "days": 30,
+      "regime": "RANGE",
+      "total_cycles": 583,
+      "net_pnl_usd": 31.300947220607778,
+      "net_pnl_pct": 15.650473610303889,
+      "max_drawdown_usd": 0.0
+    },
+    "best_score": 31.300947220607778
+  },
+  "AVAX/USDT": {
+    "best_params": {
+      "grid_spacing": 0.002,
+      "buy_levels": 6,
+      "sell_levels": 4,
+      "capital_pct": 0.998,
+      "regime": "RANGE"
+    },
+    "best_result": {
+      "symbol": "AVAX/USDT",
+      "days": 30,
+      "regime": "RANGE",
+      "total_cycles": 718,
+      "net_pnl_usd": 23.1050403608901,
+      "net_pnl_pct": 15.4033602405934,
+      "max_drawdown_usd": 0.0
+    },
+    "best_score": 23.1050403608901
+  },
+  "DOT/USDT": {
+    "best_params": {
+      "grid_spacing": 0.0018,
+      "buy_levels": 6,
+      "sell_levels": 4,
+      "capital_pct": 0.998,
+      "regime": "RANGE"
+    },
+    "best_result": {
+      "symbol": "DOT/USDT",
+      "days": 30,
+      "regime": "RANGE",
+      "total_cycles": 812,
+      "net_pnl_usd": 23.54516916453549,
+      "net_pnl_pct": 15.69677944302366,
+      "max_drawdown_usd": 0.0
+    },
+    "best_score": 23.54516916453549
+  },
+  "SOL/USDT": {
+    "best_params": {
+      "grid_spacing": 0.0015,
+      "buy_levels": 6,
+      "sell_levels": 4,
+      "capital_pct": 0.998,
+      "regime": "RANGE"
+    },
+    "best_result": {
+      "symbol": "SOL/USDT",
+      "days": 30,
+      "regime": "RANGE",
+      "total_cycles": 667,
+      "net_pnl_usd": 15.73314040238958,
+      "net_pnl_pct": 10.48876026825972,
+      "max_drawdown_usd": 0.0
+    },
+    "best_score": 15.73314040238958
   },
   "XAUT/USDT": {
     "best_params": {
-      "grid_spacing": 0.001,
-      "buy_levels": 6,
-      "sell_levels": 6,
-      "capital_pct": 0.998,
+      "grid_spacing": 0.0005,
+      "buy_levels": 20,
+      "sell_levels": 4,
+      "capital_pct": 0.95,
       "regime": "RANGE"
     },
     "best_result": {
       "symbol": "XAUT/USDT",
       "days": 30,
       "regime": "RANGE",
-      "total_cycles": 71,
-      "net_pnl_usd": 12.132871436445589,
-      "net_pnl_pct": 1.7842457994772927,
+      "total_cycles": 743,
+      "net_pnl_usd": 3.6997354904632953,
+      "net_pnl_pct": 3.6997354904632953,
       "max_drawdown_usd": 0.0
     },
-    "best_score": 15.68287143644559
+    "best_score": 3.6997354904632953
   }
 }
