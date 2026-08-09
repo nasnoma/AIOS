@@ -180,12 +180,18 @@ class GridEngine:
                         qty_val = float(exchange.amount_to_precision(self.symbol, level.qty)) if hasattr(exchange, 'amount_to_precision') else level.qty
                         price_val = float(exchange.price_to_precision(self.symbol, level.price)) if hasattr(exchange, 'price_to_precision') else level.price
                         
-                        # Enforce minimum amount limit precision for the exchange
+                        # Enforce minimum amount and minimum notional cost limit (Bybit requires min $5.00 per spot order)
                         if hasattr(exchange, 'market') and self.symbol in exchange.markets:
                             m_info = exchange.market(self.symbol)
                             min_amt = m_info.get('limits', {}).get('amount', {}).get('min', None)
+                            min_cost = m_info.get('limits', {}).get('cost', {}).get('min', 5.0) or 5.0
                             if min_amt is not None and qty_val < float(min_amt):
                                 qty_val = float(min_amt)
+                            required_cost = max(5.2, float(min_cost) * 1.05)
+                            if price_val > 0 and (qty_val * price_val) < required_cost:
+                                qty_val = required_cost / price_val
+                                if hasattr(exchange, 'amount_to_precision'):
+                                    qty_val = float(exchange.amount_to_precision(self.symbol, qty_val))
 
                         params = {'category': 'spot'} if 'bybit' in str(type(exchange)).lower() else {}
                         if level.side == 'buy':
