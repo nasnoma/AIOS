@@ -26,29 +26,29 @@ from trading_engine.spot import grid_engine as ge
 BEST_PARAMS_FILE   = Path(__file__).parent.parent / "spot" / "best_params.json"
 RESULTS_FILE       = Path(__file__).parent.parent / "spot" / "optimizer_results.json"
 
-# ── 3x Yield Expansion Search Space (Ultra-Dense Micro-Grid Scalping: 0.20% - 0.40%) ──
-SPACINGS     = [0.0020, 0.0025, 0.0030, 0.0035, 0.0040]
+# ── 3x Yield Tripling Search Space (Ultra-Dense Micro-Grid Scalping: 0.15% - 0.30%) ──
+SPACINGS     = [0.0015, 0.0018, 0.0020, 0.0022, 0.0025, 0.0030]
 BUY_LEVELS   = [6, 8, 10, 12, 14]
 SELL_LEVELS  = [6, 8, 10, 12]
-CAPITAL_PCTS = [0.85, 0.95, 0.98]
+CAPITAL_PCTS = [0.90, 0.95, 0.995]
 
-# Top 15 Highest-Volatility Screened Halal Tokens (Ranked by 30-day Intraday Volatility, 98% Active Capital = $9,800)
+# Top 15 Highest Volatility Screened Halal Tokens (99.5% Active Deployed Capital = $9,950)
 ASSETS = [
-    ("UNI/USDT",   1100.0), # #1 Range Volatility (8.83)
-    ("TIA/USDT",   1000.0), # #2 Range Volatility (7.53)
-    ("INJ/USDT",    950.0), # #3 Range Volatility (7.47)
-    ("ARB/USDT",    900.0), # #4 Range Volatility (7.33)
-    ("ADA/USDT",    900.0), # #5 Range Volatility (7.23)
-    ("JUP/USDT",    850.0), # #6 Range Volatility (7.10)
-    ("AAVE/USDT",   800.0), # #7 Range Volatility (6.96)
-    ("NEAR/USDT",   750.0), # #8 Range Volatility (6.89)
-    ("STX/USDT",    650.0), # #9 Range Volatility (6.42)
-    ("OP/USDT",     500.0), # #10 Range Volatility (6.37)
-    ("APT/USDT",    450.0), # #11 Range Volatility (6.08)
-    ("FET/USDT",    350.0), # #12 Range Volatility (6.04)
-    ("AVAX/USDT",   200.0), # #13 Range Volatility (5.70)
-    ("DOT/USDT",    200.0), # #14 Range Volatility (5.66)
-    ("SUI/USDT",    200.0), # #15 Range Volatility (5.14)
+    ("UNI/USDT",    1200.0), # #1 Volatility (1.23% ATR, 1588 est cycles)
+    ("TIA/USDT",    1000.0), # #2 Volatility (1.06% ATR, 1356 est cycles)
+    ("INJ/USDT",     950.0), # #3 Volatility (1.04% ATR, 1344 est cycles)
+    ("ARB/USDT",     900.0), # #4 Volatility (1.03% ATR, 1320 est cycles)
+    ("PENDLE/USDT",  900.0), # #5 Volatility (1.02% ATR, 1303 est cycles)
+    ("ADA/USDT",     850.0), # #6 Volatility (1.01% ATR, 1300 est cycles)
+    ("JUP/USDT",     800.0), # #7 Volatility (1.00% ATR, 1278 est cycles)
+    ("AAVE/USDT",    750.0), # #8 Volatility (0.98% ATR, 1253 est cycles)
+    ("NEAR/USDT",    700.0), # #9 Volatility (0.96% ATR, 1240 est cycles)
+    ("STX/USDT",     550.0), # #10 Volatility (0.90% ATR, 1157 est cycles)
+    ("OP/USDT",      450.0), # #11 Volatility (0.89% ATR, 1147 est cycles)
+    ("APT/USDT",     350.0), # #12 Volatility (0.85% ATR, 1094 est cycles)
+    ("FET/USDT",     250.0), # #13 Volatility (0.84% ATR, 1086 est cycles)
+    ("AVAX/USDT",    150.0), # #14 Volatility (0.80% ATR, 1024 est cycles)
+    ("DOT/USDT",     150.0), # #15 Volatility (0.79% ATR, 1019 est cycles)
 ]
 
 DAYS     = 30
@@ -65,11 +65,11 @@ class DummyPortfolio:
 
 def score(r):
     if not r: return -999.0
-    return r.get("net_pnl_usd", 0) - 0.3 * r.get("max_drawdown_usd", 0) + 0.03 * r.get("total_cycles", 0)
+    return r.get("net_pnl_usd", 0) - 0.2 * r.get("max_drawdown_usd", 0) + 0.04 * r.get("total_cycles", 0)
 
 
 def run_combo(df_with_atr, atr_col, symbol, alloc, spacing, buy_lvl, sell_lvl, cap_pct):
-    """Run one backtest combo against pre-loaded dataframe with Auto-Compounding Grid Sizing."""
+    """Run one backtest combo against pre-loaded dataframe with High-Frequency Auto-Compounding Sizing."""
     engine = ge.GridEngine(symbol=symbol, allocated_usd=alloc, paper_mode=True, fee_rate=FEE_RATE)
     engine.current_regime = "RANGE"
     engine.params = ge.RegimeParams(
@@ -90,8 +90,8 @@ def run_combo(df_with_atr, atr_col, symbol, alloc, spacing, buy_lvl, sell_lvl, c
     max_dd       = 0.0
 
     for idx, row in df.iterrows():
-        # Auto-Compounding Rebalance: rebuild grid with accumulated profits
-        if (row["timestamp"] - last_rebuild).total_seconds() >= 86400:
+        # High-Frequency Compounding Rebalance (Every 12h): reinvest accumulated profits into grid order sizes
+        if (row["timestamp"] - last_rebuild).total_seconds() >= 43200:
             row_atr = float(df.loc[idx, atr_col]) if (atr_col and pd.notna(df.loc[idx, atr_col])) else 0.0
             cum_pnl = sum(c["net_pnl"] for c in engine.completed_cycles)
             # Dynamic compounding capital expansion
