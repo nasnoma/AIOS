@@ -211,9 +211,13 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 engine.place_grid_orders(_portfolio, exchange)
 
                 
-            # Process tick (simulates/checks fills & places replacement orders)
-            events = engine.tick(price, _portfolio)
+            # Process tick (checks crossable fills & places replacement orders)
+            events = engine.tick(price, _portfolio, exchange=exchange)
             fill_events.extend(events)
+            
+            if events:
+                # If fills occurred, immediately place new replacement SELL/BUY limit orders on Bybit exchange!
+                engine.place_grid_orders(_portfolio, exchange)
             
         except Exception as e:
             logger.warning(f"Error in grid tick for {symbol}: {e}")

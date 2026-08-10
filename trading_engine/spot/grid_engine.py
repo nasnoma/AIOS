@@ -206,7 +206,8 @@ class GridEngine:
                         logger.error(f"Failed to place {level.side} order for {self.symbol}: {e}")
 
 
-    def tick(self, current_price: float, portfolio) -> List[Dict[str, Any]]:
+    def tick(self, current_price: float, portfolio, exchange=None) -> List[Dict[str, Any]]:
+        """Check grid levels against current price and simulate/process fills."""
         fills = []
         for level in self.grid_levels:
             if level.status != 'open':
@@ -222,6 +223,13 @@ class GridEngine:
                 level.status = 'filled'
                 level.filled_at = datetime.now(timezone.utc).isoformat()
                 
+                # If running live on exchange, attempt to clean up original order from exchange orderbook
+                if exchange and level.order_id and not level.order_id.startswith('PAPER_'):
+                    try:
+                        exchange.cancel_order(level.order_id, self.symbol, {'category': 'spot'})
+                    except Exception:
+                        pass
+
                 if level.side == 'buy':
                     if hasattr(portfolio, 'record_buy'):
                         portfolio.record_buy(self.symbol, level.qty, level.price, level.size_usd * self.fee_rate)
