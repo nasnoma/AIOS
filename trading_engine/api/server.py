@@ -33,14 +33,16 @@ _executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
 
 @app.on_event("startup")
 async def startup_pre_warm():
-    """Pre-warm the spot status cache on startup so the first dashboard request is instant."""
-    loop = asyncio.get_event_loop()
-    try:
-        from trading_engine.spot.runner import get_spot_status
-        await loop.run_in_executor(_executor, get_spot_status)
-        logger.info("✅ Spot status cache pre-warmed on startup")
-    except Exception as e:
-        logger.warning(f"Startup pre-warm failed (non-fatal): {e}")
+    """Pre-warm the spot status cache in a background daemon thread so dashboard opens instantly."""
+    import threading
+    def _pre_warm():
+        try:
+            from trading_engine.spot.runner import get_spot_status
+            get_spot_status()
+            logger.info("✅ Spot status cache pre-warmed on startup")
+        except Exception as e:
+            logger.warning(f"Startup pre-warm failed (non-fatal): {e}")
+    threading.Thread(target=_pre_warm, daemon=True).start()
 
 # In-memory signal history (last 50 signals)
 signal_history: list[dict] = []
