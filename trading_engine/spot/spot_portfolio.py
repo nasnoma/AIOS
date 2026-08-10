@@ -61,6 +61,8 @@ class SpotPortfolio:
         self.total_realised_pnl: float = 0.0
         self.daily_realised_pnl: float = 0.0
         self.cycles_today: int = 0
+        self.consecutive_wins: int = 0
+        self.consecutive_losses: int = 0
         self.last_daily_reset: str = datetime.datetime.now(datetime.timezone.utc).date().isoformat()
         self.load()
         
@@ -72,20 +74,16 @@ class SpotPortfolio:
             self.usdt_available = data.get('usdt_available', 0.0)
             self.usdt_reserved = data.get('usdt_reserved', 0.0)
             self.total_realised_pnl = data.get('total_realised_pnl', 0.0)
-
             self.daily_realised_pnl = data.get('daily_realised_pnl', 0.0)
             self.cycles_today = data.get('cycles_today', 0)
             self.consecutive_wins = data.get('consecutive_wins', 0)
             self.consecutive_losses = data.get('consecutive_losses', 0)
             self.last_daily_reset = data.get('last_daily_reset', datetime.datetime.now(datetime.timezone.utc).date().isoformat())
-
             
-            for symbol, holding_data in data.get('holdings', {}).items():
-                self.holdings[symbol] = AssetHolding(**holding_data)
-                
+            self.holdings = {k: AssetHolding(**v) for k, v in data.get('holdings', {}).items()}
             self.grid_orders = [GridOrder(**o) for o in data.get('grid_orders', [])]
             self.dca_orders = [GridOrder(**o) for o in data.get('dca_orders', [])]
-            
+            logger.info(f"Loaded spot portfolio: {len(self.holdings)} holdings, {len(self.grid_orders)} grid orders")
         except FileNotFoundError:
             logger.info(f"State file {self.state_path} not found, initializing fresh portfolio")
         except Exception as e:
@@ -100,8 +98,8 @@ class SpotPortfolio:
                 'total_realised_pnl': self.total_realised_pnl,
                 'daily_realised_pnl': self.daily_realised_pnl,
                 'cycles_today': self.cycles_today,
-                'consecutive_wins': self.consecutive_wins,
-                'consecutive_losses': self.consecutive_losses,
+                'consecutive_wins': getattr(self, 'consecutive_wins', 0),
+                'consecutive_losses': getattr(self, 'consecutive_losses', 0),
                 'last_daily_reset': self.last_daily_reset,
                 'holdings': {k: asdict(v) for k, v in self.holdings.items()},
                 'grid_orders': [asdict(o) for o in self.grid_orders],
@@ -117,7 +115,7 @@ class SpotPortfolio:
         if symbol in self.holdings:
             self.holdings[symbol].last_price = price
             
-    def record_buy(self, symbol: str, qty: float, price: float, size_usd: float, order_id: str, is_dca: bool = False):
+    def record_buy(self, symbol: str, qty: float, price: float, size_usd: float, order_id: str = '', is_dca: bool = False):
         self.usdt_available -= size_usd
         if symbol not in self.holdings:
             self.holdings[symbol] = AssetHolding(
