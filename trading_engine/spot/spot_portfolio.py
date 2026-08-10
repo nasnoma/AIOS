@@ -229,15 +229,19 @@ class SpotPortfolio:
                 cost = float(v.get('avg_cost_basis') or 0.0)
                 price = float(v.get('last_price') or 0.0)
                 val = float(v.get('value_usd') or (u * price))
-                pnl = float(v.get('unrealised_pnl') or ((price - cost) * u))
-                pnl_pct = float(v.get('unrealised_pnl_pct') or 0.0)
+                if cost <= 0.0 and u > 0 and val > 0:
+                    cost = val / u
+                pnl = (price - cost) * u
+                pnl_pct = (pnl / (cost * u)) if (cost * u) > 0 else 0.0
             else:
                 u = float(getattr(v, 'units_held', getattr(v, 'units', 0.0)))
                 cost = float(getattr(v, 'avg_cost_basis', 0.0))
                 price = float(getattr(v, 'last_price', 0.0))
                 val = float(getattr(v, 'value_usd', u * price))
-                pnl = float(getattr(v, 'unrealised_pnl', (price - cost) * u))
-                pnl_pct = float(getattr(v, 'unrealised_pnl_pct', 0.0))
+                if cost <= 0.0 and u > 0 and val > 0:
+                    cost = val / u
+                pnl = (price - cost) * u
+                pnl_pct = (pnl / (cost * u)) if (cost * u) > 0 else 0.0
             formatted_holdings[k] = {
                 'symbol': k,
                 'units': u,
