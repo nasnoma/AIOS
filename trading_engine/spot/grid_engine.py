@@ -251,7 +251,7 @@ class GridEngine:
 
                 if level.side == 'buy':
                     if hasattr(portfolio, 'record_buy'):
-                        portfolio.record_buy(self.symbol, level.qty, level.price, level.size_usd * self.fee_rate)
+                        portfolio.record_buy(self.symbol, level.qty, level.price, level.size_usd, order_id=level.order_id or '')
                     
                     # Fee-aware sell price: profit must exceed 2× round-trip fees
                     # min_profit_pct (0.2%) already covers full round-trip fees.
@@ -275,7 +275,7 @@ class GridEngine:
                     
                 elif level.side == 'sell':
                     if hasattr(portfolio, 'record_sell'):
-                        portfolio.record_sell(self.symbol, level.qty, level.price, level.size_usd * self.fee_rate)
+                        portfolio.record_sell(self.symbol, level.qty, level.price, level.size_usd, level.order_id or '', level.linked_buy_price or level.price)
                         
                     if level.linked_buy_price:
                         gross_pnl = (level.price - level.linked_buy_price) * level.qty
