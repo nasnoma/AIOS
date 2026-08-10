@@ -63,6 +63,7 @@ class SpotPortfolio:
         self.cycles_today: int = 0
         self.consecutive_wins: int = 0
         self.consecutive_losses: int = 0
+        self.completed_cycles: List[dict] = []
         self.last_daily_reset: str = datetime.datetime.now(datetime.timezone.utc).date().isoformat()
         self.load()
         
@@ -78,6 +79,7 @@ class SpotPortfolio:
             self.cycles_today = data.get('cycles_today', 0)
             self.consecutive_wins = data.get('consecutive_wins', 0)
             self.consecutive_losses = data.get('consecutive_losses', 0)
+            self.completed_cycles = data.get('completed_cycles', [])
             self.last_daily_reset = data.get('last_daily_reset', datetime.datetime.now(datetime.timezone.utc).date().isoformat())
             
             self.holdings = {k: AssetHolding(**v) for k, v in data.get('holdings', {}).items()}
@@ -92,7 +94,6 @@ class SpotPortfolio:
     def save(self):
         try:
             data = {
-
                 'usdt_available': self.usdt_available,
                 'usdt_reserved': self.usdt_reserved,
                 'total_realised_pnl': self.total_realised_pnl,
@@ -100,13 +101,13 @@ class SpotPortfolio:
                 'cycles_today': self.cycles_today,
                 'consecutive_wins': getattr(self, 'consecutive_wins', 0),
                 'consecutive_losses': getattr(self, 'consecutive_losses', 0),
+                'completed_cycles': getattr(self, 'completed_cycles', [])[-50:],
                 'last_daily_reset': self.last_daily_reset,
                 'holdings': {k: asdict(v) for k, v in self.holdings.items()},
                 'grid_orders': [asdict(o) for o in self.grid_orders],
                 'dca_orders': [asdict(o) for o in self.dca_orders]
             }
             with open(self.state_path, 'w') as f:
-
                 json.dump(data, f, indent=2)
         except Exception as e:
             logger.error(f"Error saving portfolio state: {e}")
@@ -169,6 +170,18 @@ class SpotPortfolio:
         self.reset_daily_if_needed()
         self.daily_realised_pnl += profit
         self.cycles_today += 1
+
+        if not hasattr(self, 'completed_cycles'):
+            self.completed_cycles = []
+            
+        self.completed_cycles.append({
+            'symbol': symbol,
+            'buy_price': buy_cost_basis,
+            'sell_price': price,
+            'qty': qty,
+            'net_pnl': profit,
+            'timestamp': datetime.datetime.now(datetime.timezone.utc).isoformat()
+        })
 
         # Dan Cheung Streak Tracking:
         if profit > 0:
@@ -258,5 +271,6 @@ class SpotPortfolio:
             'total_realised_pnl': self.total_realised_pnl,
             'daily_realised_pnl': self.daily_realised_pnl,
             'cycles_today': self.cycles_today,
+            'completed_cycles': getattr(self, 'completed_cycles', [])[-20:],
             'holdings': formatted_holdings
         }
