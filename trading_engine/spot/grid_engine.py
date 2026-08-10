@@ -141,6 +141,9 @@ class GridEngine:
         raw_order_size = (self.allocated_usd * self.params.capital_pct) / total_levels if total_levels > 0 else 0
         order_size_usd = max(10.0, raw_order_size) if raw_order_size > 0 else 0
 
+        if order_size_usd <= 0:
+            return
+
         
         # Build Buy Levels (geometric spacing below current price)
         for i in range(1, self.params.buy_levels + 1):
