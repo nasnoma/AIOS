@@ -403,6 +403,16 @@ def get_spot_status() -> Dict[str, Any]:
 
     summary_data = _portfolio.summary()
 
+    # Collect completed cycles across all grid engines
+    completed = []
+    for sym, eng in _grid_engines.items():
+        if hasattr(eng, 'completed_cycles'):
+            for c in eng.completed_cycles:
+                c_item = dict(c)
+                c_item['symbol'] = sym
+                completed.append(c_item)
+    summary_data['completed_cycles'] = sorted(completed, key=lambda x: str(x.get('timestamp', '')), reverse=True)
+
     # If Live / Demo mode: fetch live exchange spot balances for holdings
     if not spot_settings.paper_mode and exchange:
         try:
