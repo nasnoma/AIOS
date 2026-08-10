@@ -180,6 +180,17 @@ class GridEngine:
                         qty_val = float(exchange.amount_to_precision(self.symbol, level.qty)) if hasattr(exchange, 'amount_to_precision') else level.qty
                         price_val = float(exchange.price_to_precision(self.symbol, level.price)) if hasattr(exchange, 'price_to_precision') else level.price
                         
+                        if hasattr(exchange, 'market') and self.symbol in exchange.markets:
+                            prec = exchange.market(self.symbol).get('precision', {}).get('amount')
+                            if isinstance(prec, (float, int)) and float(prec) > 0:
+                                decimals = max(0, -int(math.floor(math.log10(float(prec)))))
+                                qty_val = round(qty_val, decimals)
+
+                            prec_p = exchange.market(self.symbol).get('precision', {}).get('price')
+                            if isinstance(prec_p, (float, int)) and float(prec_p) > 0:
+                                decimals_p = max(0, -int(math.floor(math.log10(float(prec_p)))))
+                                price_val = round(price_val, decimals_p)
+                        
                         # Enforce minimum amount and minimum notional cost limit (Bybit requires min $5.00 per spot order)
                         if hasattr(exchange, 'market') and self.symbol in exchange.markets:
                             m_info = exchange.market(self.symbol)
@@ -192,6 +203,10 @@ class GridEngine:
                                 qty_val = required_cost / price_val
                                 if hasattr(exchange, 'amount_to_precision'):
                                     qty_val = float(exchange.amount_to_precision(self.symbol, qty_val))
+                                    prec = exchange.market(self.symbol).get('precision', {}).get('amount')
+                                    if isinstance(prec, (float, int)) and float(prec) > 0:
+                                        decimals = max(0, -int(math.floor(math.log10(float(prec)))))
+                                        qty_val = round(qty_val, decimals)
 
                         params = {'category': 'spot'} if 'bybit' in str(type(exchange)).lower() else {}
                         if level.side == 'buy':
