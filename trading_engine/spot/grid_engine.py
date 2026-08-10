@@ -21,22 +21,22 @@ class RegimeParams:
 
 REGIME_PARAMS: Dict[str, RegimeParams] = {
     'BULL': RegimeParams(
-        grid_spacing=0.006,
+        grid_spacing=0.008,
         buy_levels=4,
         sell_levels=8,
         capital_pct=0.80,
         base_hold_pct=0.40
     ),
     'RANGE': RegimeParams(
-        grid_spacing=0.010,
-        buy_levels=8,
-        sell_levels=8,
+        grid_spacing=0.015,
+        buy_levels=6,
+        sell_levels=6,
         capital_pct=0.65,
         base_hold_pct=0.30
     ),
     'BEAR': RegimeParams(
-        grid_spacing=0.025,
-        buy_levels=5,
+        grid_spacing=0.030,
+        buy_levels=4,
         sell_levels=3,
         capital_pct=0.30,
         base_hold_pct=0.20
@@ -130,8 +130,8 @@ class GridEngine:
         # missing fills in low-vol. Floor at 0.3% to stay above fees.
         if atr > 0 and current_price > 0:
             atr_pct = atr / current_price
-            # Floor lowered 0.003→0.0015 so best_params 0.10% spacings aren't overridden
-            dynamic_spacing = max(0.0015, min(atr_pct * 0.8, 0.05))  # 0.15% to 5%
+            # Floor at 0.5% — fees are 0.2% round-trip, so minimum 2.5× fee coverage
+            dynamic_spacing = max(0.005, min(atr_pct * 0.8, 0.05))  # 0.5% to 5%
             # Blend with regime spacing: 50% ATR, 50% regime default
             spacing = (dynamic_spacing + self.params.grid_spacing) / 2
         else:
