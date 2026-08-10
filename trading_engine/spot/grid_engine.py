@@ -120,9 +120,22 @@ class GridEngine:
 
     def build_grid(self, current_price: float, portfolio=None, atr: float = 0.0):
         """Build grid levels. If ATR provided, use it for dynamic spacing."""
+        import time
+        now = time.time()
+        # Throttle rebuilds: don't rebuild more than once per 10 minutes
+        # unless grid is completely empty (first build)
+        has_open_buys = any(l.status == 'open' and l.side == 'buy' for l in self.grid_levels)
+        if has_open_buys and (now - self._last_rebuild_time) < 600:
+            return
+        self._last_rebuild_time = now
+
         logger.info(f"Building grid for {self.symbol} at {current_price} in {self.current_regime} regime.")
         
-        self.grid_levels = [level for level in self.grid_levels if level.status in ['filled']]
+        # Preserve open SELL levels — they represent filled buys awaiting take-profit
+        # Only discard old open BUY levels (stale, will be replaced below)
+        self.grid_levels = [level for level in self.grid_levels
+                            if level.status == 'filled'
+                            or (level.status == 'open' and level.side == 'sell')]
         
         # ── Dynamic spacing: use ATR if available, else config spacing ──
         # Research: ATR-based grid spacing adapts to volatility regime,
@@ -358,4 +371,3 @@ class GridEngine:
             'paper_mode': self.paper_mode,
             'levels': levels_list,
         }
-
