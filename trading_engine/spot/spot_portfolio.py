@@ -222,20 +222,37 @@ class SpotPortfolio:
         
     def summary(self) -> dict:
         self.reset_daily_if_needed()
+        formatted_holdings = {}
+        for k, v in self.holdings.items():
+            if isinstance(v, dict):
+                u = float(v.get('units_held') or v.get('units') or 0.0)
+                cost = float(v.get('avg_cost_basis') or 0.0)
+                price = float(v.get('last_price') or 0.0)
+                val = float(v.get('value_usd') or (u * price))
+                pnl = float(v.get('unrealised_pnl') or ((price - cost) * u))
+                pnl_pct = float(v.get('unrealised_pnl_pct') or 0.0)
+            else:
+                u = float(getattr(v, 'units_held', getattr(v, 'units', 0.0)))
+                cost = float(getattr(v, 'avg_cost_basis', 0.0))
+                price = float(getattr(v, 'last_price', 0.0))
+                val = float(getattr(v, 'value_usd', u * price))
+                pnl = float(getattr(v, 'unrealised_pnl', (price - cost) * u))
+                pnl_pct = float(getattr(v, 'unrealised_pnl_pct', 0.0))
+            formatted_holdings[k] = {
+                'symbol': k,
+                'units': u,
+                'units_held': u,
+                'avg_cost_basis': cost,
+                'last_price': price,
+                'value_usd': val,
+                'unrealised_pnl': pnl,
+                'unrealised_pnl_pct': pnl_pct
+            }
         return {
             'usdt_available': self.usdt_available,
             'usdt_reserved': self.usdt_reserved,
             'total_realised_pnl': self.total_realised_pnl,
             'daily_realised_pnl': self.daily_realised_pnl,
             'cycles_today': self.cycles_today,
-            'holdings': {k: {
-                'symbol': k,
-                'units': v.units_held,
-                'units_held': v.units_held,
-                'avg_cost_basis': getattr(v, 'avg_cost_basis', 0.0),
-                'last_price': getattr(v, 'last_price', 0.0),
-                'value_usd': v.value_usd,
-                'unrealised_pnl': v.unrealised_pnl,
-                'unrealised_pnl_pct': v.unrealised_pnl_pct
-            } for k, v in self.holdings.items()}
+            'holdings': formatted_holdings
         }
