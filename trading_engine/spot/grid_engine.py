@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any
 import json
+import math
 from pathlib import Path
 import ccxt
 from datetime import datetime, timezone
