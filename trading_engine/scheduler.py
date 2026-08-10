@@ -31,8 +31,9 @@ STOP_COOLDOWN_MINUTES = 30
 
 def send_heartbeat():
     """Send heartbeat to the API server."""
-    import time
-    url = f"http://localhost:{settings.api_port}/api/scheduler/heartbeat"
+    import time, os
+    port = int(os.environ.get("PORT", getattr(settings, "api_port", 8000)))
+    url = f"http://127.0.0.1:{port}/api/scheduler/heartbeat"
     for attempt in range(3):
         try:
             requests.post(url, timeout=3)
