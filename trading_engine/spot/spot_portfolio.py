@@ -229,7 +229,11 @@ class SpotPortfolio:
             'daily_realised_pnl': self.daily_realised_pnl,
             'cycles_today': self.cycles_today,
             'holdings': {k: {
+                'symbol': k,
                 'units': v.units_held,
+                'units_held': v.units_held,
+                'avg_cost_basis': getattr(v, 'avg_cost_basis', 0.0),
+                'last_price': getattr(v, 'last_price', 0.0),
                 'value_usd': v.value_usd,
                 'unrealised_pnl': v.unrealised_pnl,
                 'unrealised_pnl_pct': v.unrealised_pnl_pct

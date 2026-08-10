@@ -253,12 +253,13 @@ function renderSpotStatus(data) {
         const price = h.last_price || reg.price || 0;
         const pnl = h.unrealised_pnl || 0;
         const pnlColor = pnl >= 0 ? 'var(--green)' : 'var(--red)';
-        const hasPos = (h.units_held || 0) > 0;
+        const hasPos = (h.units_held || h.units || 0) > 0;
+        const uVal = h.units_held || h.units || 0;
         const bStyle = hasPos ? 'border-color:rgba(0,229,176,0.3)' : '';
         return '<div class="asset-card" style="' + bStyle + '">' +
           '<div class="asset-card-top"><span class="asset-name">' + sym.split('/')[0] + '</span><span class="pill ' + pillCls + '">' + regime + '</span></div>' +
           '<div class="asset-row"><span>Price</span><strong>$' + fmt(price) + '</strong></div>' +
-          (hasPos ? '<div class="asset-row"><span>Held</span><strong>' + (h.units_held||0).toFixed(4) + '</strong></div><div class="asset-row"><span>Cost</span><strong>$' + fmt(h.avg_cost_basis||0) + '</strong></div>' : '') +
+          (hasPos ? '<div class="asset-row"><span>Held</span><strong>' + uVal.toFixed(4) + '</strong></div><div class="asset-row"><span>Cost</span><strong>$' + fmt(h.avg_cost_basis||0) + '</strong></div>' : '') +
           '<div class="asset-row"><span>Orders</span><span><strong style="color:var(--green)">' + (g.open_buys||0) + 'B</strong> <strong style="color:var(--red)">' + (g.open_sells||0) + 'S</strong></span></div>' +
           (reg.adx ? '<div class="asset-row"><span>ADX</span><strong>' + reg.adx + '</strong></div>' : '') +
           (hasPos ? '<div class="asset-pnl" style="color:' + pnlColor + '">' + (pnl>=0?'+$':'-$') + Math.abs(pnl).toFixed(2) + ' (' + ((h.unrealised_pnl_pct||0)*100).toFixed(2) + '%)</div>' : '') +
@@ -270,16 +271,17 @@ function renderSpotStatus(data) {
   // Open positions table
   const openPosEl = document.getElementById('spot-open-positions');
   if (openPosEl) {
-    const held = p.holdings ? Object.entries(p.holdings).filter(([,h]) => (h.units_held||0) > 0) : [];
+    const held = p.holdings ? Object.entries(p.holdings).filter(([,h]) => (h.units_held || h.units || 0) > 0) : [];
     if (!held.length) {
       openPosEl.innerHTML = '<div class="empty">No open positions yet. Waiting for buy limit orders to fill on price dips.</div>';
     } else {
       openPosEl.innerHTML = '<div class="tbl-wrap"><table><thead><tr><th>Asset</th><th>Held</th><th>Price</th><th>Avg Cost</th><th>Value</th><th>Unrealised P&amp;L</th></tr></thead><tbody>' +
         held.map(([sym, h]) => {
           const reg = regimes[sym] || {};
+          const uVal = h.units_held || h.units || 0;
           const pnl = h.unrealised_pnl || 0;
           const pc = pnl >= 0 ? 'var(--green)' : 'var(--red)';
-          return '<tr><td><strong>' + sym + '</strong></td><td class="mono">' + (h.units_held||0).toFixed(4) + '</td><td class="mono">$' + fmt(h.last_price||reg.price||0) + '</td><td class="mono">$' + fmt(h.avg_cost_basis||0) + '</td><td class="mono">$' + (h.value_usd||0).toFixed(2) + '</td><td class="mono" style="color:' + pc + ';font-weight:600">' + (pnl>=0?'+$':'-$') + Math.abs(pnl).toFixed(2) + ' (' + ((h.unrealised_pnl_pct||0)*100).toFixed(2) + '%)</td></tr>';
+          return '<tr><td><strong>' + sym + '</strong></td><td class="mono">' + uVal.toFixed(4) + '</td><td class="mono">$' + fmt(h.last_price||reg.price||0) + '</td><td class="mono">$' + fmt(h.avg_cost_basis||0) + '</td><td class="mono">$' + (h.value_usd||0).toFixed(2) + '</td><td class="mono" style="color:' + pc + ';font-weight:600">' + (pnl>=0?'+$':'-$') + Math.abs(pnl).toFixed(2) + ' (' + ((h.unrealised_pnl_pct||0)*100).toFixed(2) + '%)</td></tr>';
         }).join('') + '</tbody></table></div>';
     }
   }
