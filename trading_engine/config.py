@@ -240,7 +240,7 @@ class SpotGridSettings(BaseSettings):
 
     # ── Master Switch ──────────────────────────────────────────
     enabled: bool = True
-    paper_mode: bool = False          # False = live/demo orders on exchange
+    paper_mode: bool = True           # True = simulate fills on real mainnet prices (accurately reflects real money trading)
     # 23 Screened High-Volatility Halal Spot Assets + Gold Anchor on Bybit
     assets: str = "GRASS/USDT,TAIKO/USDT,WLD/USDT,AERO/USDT,UNI/USDT,TIA/USDT,ARB/USDT,SUI/USDT,SEI/USDT,RENDER/USDT,ADA/USDT,JUP/USDT,NEAR/USDT,ARKM/USDT,ROSE/USDT,IMX/USDT,OP/USDT,APT/USDT,FET/USDT,AVAX/USDT,DOT/USDT,SOL/USDT,XAUT/USDT"
 
