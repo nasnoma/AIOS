@@ -25,6 +25,7 @@ _grid_engines: Dict[str, GridEngine] = {}
 _dca_manager = DCAManager()
 _exchange: ccxt.Exchange | None = None
 _public_exchange: ccxt.Exchange | None = None
+_spot_initialized: bool = False
 
 
 def get_public_exchange() -> ccxt.Exchange:
@@ -83,7 +84,12 @@ def get_spot_exchange() -> ccxt.Exchange:
 
 
 def init_spot_engine():
-    """Initialise portfolio and grid engines for all configured spot assets."""
+    """Initialise portfolio and grid engines for all configured spot assets. Runs only once per process."""
+    global _spot_initialized
+    if _spot_initialized:
+        return
+    _spot_initialized = True
+
     _portfolio.load()
     exchange = get_spot_exchange()
     
@@ -98,13 +104,15 @@ def init_spot_engine():
         except Exception as e:
             logger.debug(f"Could not fetch live balance in init_spot_engine: {e}")
             
-    spot_active_capital = account_size * spot_settings.total_capital_pct  # 50% of account balance ($5,000)
-    expected_free = spot_active_capital * (1.0 - spot_settings.usdt_hard_reserve_pct)  # 95% ($4,750 free)
-    expected_res = spot_active_capital * spot_settings.usdt_hard_reserve_pct          # 5% ($250 reserve)
+    spot_active_capital = account_size * spot_settings.total_capital_pct
+    expected_free = spot_active_capital * (1.0 - spot_settings.usdt_hard_reserve_pct)
+    expected_res = spot_active_capital * spot_settings.usdt_hard_reserve_pct
     
-    _portfolio.usdt_available = expected_free
-    _portfolio.usdt_reserved = expected_res
-    _portfolio.save()
+    # Only set balances if not already loaded from DB (avoid overwriting restored state)
+    if _portfolio.usdt_available == 0.0 and _portfolio.usdt_reserved == 0.0:
+        _portfolio.usdt_available = expected_free
+        _portfolio.usdt_reserved = expected_res
+        _portfolio.save()
 
 
 

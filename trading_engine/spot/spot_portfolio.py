@@ -67,50 +67,72 @@ class SpotPortfolio:
         self.last_daily_reset: str = datetime.datetime.now(datetime.timezone.utc).date().isoformat()
         self.load()
         
+    def _build_state_dict(self) -> dict:
+        return {
+            'usdt_available': self.usdt_available,
+            'usdt_reserved': self.usdt_reserved,
+            'total_realised_pnl': self.total_realised_pnl,
+            'daily_realised_pnl': self.daily_realised_pnl,
+            'cycles_today': self.cycles_today,
+            'consecutive_wins': getattr(self, 'consecutive_wins', 0),
+            'consecutive_losses': getattr(self, 'consecutive_losses', 0),
+            'completed_cycles': getattr(self, 'completed_cycles', [])[-50:],
+            'last_daily_reset': self.last_daily_reset,
+            'holdings': {k: asdict(v) for k, v in self.holdings.items()},
+            'grid_orders': [asdict(o) for o in self.grid_orders],
+            'dca_orders': [asdict(o) for o in self.dca_orders]
+        }
+
+    def _apply_state_dict(self, data: dict):
+        self.usdt_available = data.get('usdt_available', 0.0)
+        self.usdt_reserved = data.get('usdt_reserved', 0.0)
+        self.total_realised_pnl = data.get('total_realised_pnl', 0.0)
+        self.daily_realised_pnl = data.get('daily_realised_pnl', 0.0)
+        self.cycles_today = data.get('cycles_today', 0)
+        self.consecutive_wins = data.get('consecutive_wins', 0)
+        self.consecutive_losses = data.get('consecutive_losses', 0)
+        self.completed_cycles = data.get('completed_cycles', [])
+        self.last_daily_reset = data.get('last_daily_reset', datetime.datetime.now(datetime.timezone.utc).date().isoformat())
+        self.holdings = {k: AssetHolding(**v) for k, v in data.get('holdings', {}).items()}
+        self.grid_orders = [GridOrder(**o) for o in data.get('grid_orders', [])]
+        self.dca_orders = [GridOrder(**o) for o in data.get('dca_orders', [])]
+
     def load(self):
+        # 1. Try PostgreSQL first (survives Railway restarts)
+        try:
+            from trading_engine.storage.db import get_portfolio_state
+            data = get_portfolio_state('spot_portfolio')
+            if data:
+                self._apply_state_dict(data)
+                logger.info(f"Loaded spot portfolio from DB: {len(self.holdings)} holdings, {len(self.grid_orders)} grid orders")
+                return
+        except Exception as e:
+            logger.debug(f"DB load failed, falling back to JSON: {e}")
+        # 2. Fallback to local JSON file
         try:
             with open(self.state_path, 'r') as f:
                 data = json.load(f)
-                
-            self.usdt_available = data.get('usdt_available', 0.0)
-            self.usdt_reserved = data.get('usdt_reserved', 0.0)
-            self.total_realised_pnl = data.get('total_realised_pnl', 0.0)
-            self.daily_realised_pnl = data.get('daily_realised_pnl', 0.0)
-            self.cycles_today = data.get('cycles_today', 0)
-            self.consecutive_wins = data.get('consecutive_wins', 0)
-            self.consecutive_losses = data.get('consecutive_losses', 0)
-            self.completed_cycles = data.get('completed_cycles', [])
-            self.last_daily_reset = data.get('last_daily_reset', datetime.datetime.now(datetime.timezone.utc).date().isoformat())
-            
-            self.holdings = {k: AssetHolding(**v) for k, v in data.get('holdings', {}).items()}
-            self.grid_orders = [GridOrder(**o) for o in data.get('grid_orders', [])]
-            self.dca_orders = [GridOrder(**o) for o in data.get('dca_orders', [])]
-            logger.info(f"Loaded spot portfolio: {len(self.holdings)} holdings, {len(self.grid_orders)} grid orders")
+            self._apply_state_dict(data)
+            logger.info(f"Loaded spot portfolio from JSON: {len(self.holdings)} holdings, {len(self.grid_orders)} grid orders")
         except FileNotFoundError:
             logger.info(f"State file {self.state_path} not found, initializing fresh portfolio")
         except Exception as e:
             logger.error(f"Error loading portfolio state: {e}")
             
     def save(self):
+        data = self._build_state_dict()
+        # 1. Save to PostgreSQL (primary — survives Railway restarts)
         try:
-            data = {
-                'usdt_available': self.usdt_available,
-                'usdt_reserved': self.usdt_reserved,
-                'total_realised_pnl': self.total_realised_pnl,
-                'daily_realised_pnl': self.daily_realised_pnl,
-                'cycles_today': self.cycles_today,
-                'consecutive_wins': getattr(self, 'consecutive_wins', 0),
-                'consecutive_losses': getattr(self, 'consecutive_losses', 0),
-                'completed_cycles': getattr(self, 'completed_cycles', [])[-50:],
-                'last_daily_reset': self.last_daily_reset,
-                'holdings': {k: asdict(v) for k, v in self.holdings.items()},
-                'grid_orders': [asdict(o) for o in self.grid_orders],
-                'dca_orders': [asdict(o) for o in self.dca_orders]
-            }
+            from trading_engine.storage.db import save_portfolio_state
+            save_portfolio_state('spot_portfolio', data)
+        except Exception as e:
+            logger.debug(f"DB save failed, falling back to JSON: {e}")
+        # 2. Also save to local JSON file as backup
+        try:
             with open(self.state_path, 'w') as f:
                 json.dump(data, f, indent=2)
         except Exception as e:
-            logger.error(f"Error saving portfolio state: {e}")
+            logger.debug(f"JSON save failed: {e}")
             
     def update_price(self, symbol: str, price: float):
         if symbol in self.holdings:
