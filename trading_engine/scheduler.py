@@ -259,8 +259,8 @@ def run_bounty_hunter_cycle():
         return
 
     from trading_engine.bounty_hunter import run_bounty_hunt
-    watchlist = settings.bounty_hunter_watchlist_assets
-    scan_mode = settings.bounty_hunter_scan_mode
+    watchlist = getattr(settings, 'bounty_hunter_watchlist', getattr(settings, 'bounty_hunter_watchlist_assets', "BTC/USDT"))
+    scan_mode = getattr(settings, 'bounty_hunter_scan_mode', 'momentum')
     logger.info(f"⚔️ Bounty Hunter scan mode: {scan_mode}")
     results = run_bounty_hunt(
         mode=scan_mode,
