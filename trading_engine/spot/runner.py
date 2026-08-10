@@ -144,9 +144,10 @@ def run_spot_regime_check():
         try:
             state = detector.detect(exchange)
             engine = _grid_engines.get(symbol)
+            regime_name = state.regime.name if hasattr(state.regime, 'name') else str(state.regime)
             if engine:
-                engine.set_regime(state.regime.name)
-            logger.info(f"📊 Regime [{symbol}]: {state.regime.name} (ADX: {state.adx:.1f}, +DI: {state.plus_di:.1f}, -DI: {state.minus_di:.1f})")
+                engine.set_regime(regime_name)
+            logger.info(f"📊 Regime [{symbol}]: {regime_name} (ADX: {state.adx:.1f}, +DI: {state.plus_di:.1f}, -DI: {state.minus_di:.1f})")
         except Exception as e:
             logger.warning(f"Failed regime check for {symbol}: {e}")
 
