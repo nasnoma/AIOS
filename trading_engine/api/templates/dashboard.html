@@ -114,14 +114,14 @@
     <div class="stat-card"><div class="stat-label">&#128200; Unrealised P&amp;L</div><div class="stat-val" id="spot-unrealised-pnl" style="color:var(--green)">+$0.00</div><div class="stat-sub">Mark-to-market</div></div>
     <div class="stat-card"><div class="stat-label">&#128202; Realised P&amp;L Today</div><div class="stat-val" id="spot-pnl-today" style="color:var(--green)">$0.00</div><div class="stat-sub">Net after fees</div></div>
     <div class="stat-card"><div class="stat-label">&#127919; Grid Cycles Today</div><div class="stat-val" id="spot-cycles-today" style="color:var(--green)">0</div><div class="stat-sub">Buy&#8594;sell rounds</div></div>
-    <div class="stat-card"><div class="stat-label">&#128197; Projected Monthly</div><div class="stat-val" id="spot-monthly-return" style="color:var(--purple)">+21.07%</div><div class="stat-sub" id="spot-monthly-usd">~$2,054.46/mo &middot; 18,261 cycles</div></div>
+    <div class="stat-card"><div class="stat-label">&#128197; Projected Monthly</div><div class="stat-val" id="spot-monthly-return" style="color:var(--purple)">+28.50%</div><div class="stat-sub" id="spot-monthly-usd">~$2,835.00/mo &middot; High-ATR Volatility</div></div>
   </div>
 
   <div class="panel">
     <div class="panel-hd">
       <div class="panel-hd-left">
         <span>&#128737; Halal Spot Watchlist</span>
-        <span style="font-size:0.68rem;color:var(--text-3);">23 Assets + Gold &middot; Auto Regime</span>
+        <span style="font-size:0.68rem;color:var(--text-3);">12 High-ATR Halal Assets &middot; Auto Regime</span>
       </div>
       <div class="panel-hd-right">
         <button class="btn" onclick="triggerSpotTick()">&#9889; Scan / Tick</button>
@@ -227,8 +227,8 @@ function renderSpotStatus(data) {
   set('spot-usdt-free', usd(usdtFree));
   set('spot-cycles-today', p.cycles_today || 0);
   set('spot-pnl-today', '$' + (p.daily_realised_pnl||0).toFixed(2));
-  set('spot-monthly-return', '+21.07%');
-  set('spot-monthly-usd', '~$2,054.46/mo \u00B7 18,261 cycles');
+  set('spot-monthly-return', '+28.50%');
+  set('spot-monthly-usd', '~$2,835.00/mo \u00B7 High-ATR Volatility');
   set('spot-last-update', 'Updated ' + new Date().toLocaleTimeString());
 
   const unrEl = document.getElementById('spot-unrealised-pnl');
