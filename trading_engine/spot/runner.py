@@ -412,46 +412,54 @@ def get_spot_status() -> Dict[str, Any]:
     summary_data = _portfolio.summary()
 
     # Collect completed cycles across all grid engines + portfolio DB history
-    completed_dict = {}
-    if hasattr(_portfolio, 'completed_cycles'):
-        for c in _portfolio.completed_cycles:
-            c_item = dict(c)
-            key = f"{c_item.get('symbol')}_{c_item.get('timestamp')}_{c_item.get('qty')}"
-            completed_dict[key] = c_item
+    try:
+        completed_dict = {}
+        if hasattr(_portfolio, 'completed_cycles') and isinstance(_portfolio.completed_cycles, list):
+            for c in _portfolio.completed_cycles:
+                if isinstance(c, dict):
+                    c_item = dict(c)
+                    key = f"{c_item.get('symbol')}_{c_item.get('timestamp')}_{c_item.get('qty')}"
+                    completed_dict[key] = c_item
 
-    for sym, eng in _grid_engines.items():
-        if hasattr(eng, 'completed_cycles'):
-            for c in eng.completed_cycles:
-                c_item = dict(c)
-                c_item['symbol'] = sym
-                key = f"{sym}_{c_item.get('timestamp')}_{c_item.get('qty')}"
-                completed_dict[key] = c_item
+        for sym, eng in _grid_engines.items():
+            if hasattr(eng, 'completed_cycles') and isinstance(eng.completed_cycles, list):
+                for c in eng.completed_cycles:
+                    if isinstance(c, dict):
+                        c_item = dict(c)
+                        c_item['symbol'] = sym
+                        key = f"{sym}_{c_item.get('timestamp')}_{c_item.get('qty')}"
+                        completed_dict[key] = c_item
 
-    completed_list = list(completed_dict.values())
-    fee_rate = getattr(spot_settings, 'fee_rate', 0.001)
-    net_pnl_total = 0.0
-    for c in completed_list:
-        buy_p = float(c.get('buy_price') or 0.0)
-        sell_p = float(c.get('sell_price') or 0.0)
-        qty = float(c.get('qty') or 0.0)
-        if buy_p > 0 and sell_p > 0 and qty > 0:
-            gross = (sell_p - buy_p) * qty
-            fee = (sell_p * qty * fee_rate) + (buy_p * qty * fee_rate)
-            c['gross_pnl'] = round(gross, 4)
-            c['fee'] = round(fee, 4)
-            c['net_pnl'] = round(gross - fee, 4)
-            net_pnl_total += (gross - fee)
+        completed_list = list(completed_dict.values())
+        fee_rate = getattr(spot_settings, 'fee_rate', 0.001)
+        net_pnl_total = 0.0
+        for c in completed_list:
+            buy_p = float(c.get('buy_price') or 0.0)
+            sell_p = float(c.get('sell_price') or 0.0)
+            qty = float(c.get('qty') or 0.0)
+            if buy_p > 0 and sell_p > 0 and qty > 0:
+                gross = (sell_p - buy_p) * qty
+                fee = (sell_p * qty * fee_rate) + (buy_p * qty * fee_rate)
+                c['gross_pnl'] = round(gross, 4)
+                c['fee'] = round(fee, 4)
+                c['net_pnl'] = round(gross - fee, 4)
+                net_pnl_total += (gross - fee)
+            else:
+                net_pnl_total += float(c.get('net_pnl', 0.0))
+
+        if completed_list:
+            summary_data['total_realised_pnl'] = round(net_pnl_total, 4)
+            summary_data['daily_realised_pnl'] = round(net_pnl_total, 4)
+            summary_data['completed_cycles'] = sorted(completed_list, key=lambda x: str(x.get('timestamp', '')), reverse=True)
         else:
-            net_pnl_total += float(c.get('net_pnl', 0.0))
-
-    if completed_list:
-        summary_data['total_realised_pnl'] = round(net_pnl_total, 4)
-        summary_data['daily_realised_pnl'] = round(net_pnl_total, 4)
-        summary_data['completed_cycles'] = sorted(completed_list, key=lambda x: str(x.get('timestamp', '')), reverse=True)
-    else:
+            summary_data['total_realised_pnl'] = float(getattr(_portfolio, 'total_realised_pnl', 0.0) or 0.0)
+            summary_data['daily_realised_pnl'] = float(getattr(_portfolio, 'daily_realised_pnl', 0.0) or 0.0)
+            summary_data['completed_cycles'] = []
+    except Exception as e_cycles:
+        logger.warning(f"Error compiling completed cycles in get_spot_status: {e_cycles}")
         summary_data['total_realised_pnl'] = float(getattr(_portfolio, 'total_realised_pnl', 0.0) or 0.0)
         summary_data['daily_realised_pnl'] = float(getattr(_portfolio, 'daily_realised_pnl', 0.0) or 0.0)
-        summary_data['completed_cycles'] = []
+        summary_data['completed_cycles'] = getattr(_portfolio, 'completed_cycles', [])
 
     # If Live / Demo mode: fetch live exchange spot balances for holdings
     if not spot_settings.paper_mode and exchange:
