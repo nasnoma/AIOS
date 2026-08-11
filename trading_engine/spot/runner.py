@@ -84,21 +84,23 @@ def get_spot_exchange() -> ccxt.Exchange:
 
 
 def init_spot_engine():
-    """Initialise portfolio and grid engines for all configured spot assets. Runs only once per process."""
-    global _spot_initialized
-    if _spot_initialized:
-        return
-    _spot_initialized = True
-
-    _portfolio.load()
-    exchange = get_spot_exchange()
+    """Initialise portfolio and grid engines for all configured spot assets."""
+    global _spot_initialized, _grid_engines, _regime_detectors
     
-    # Calculate active total capital allocated dynamically from exchange balance or config
+    active_symbols = set(spot_settings.asset_list)
+    _grid_engines = {k: v for k, v in _grid_engines.items() if k in active_symbols}
+    _regime_detectors = {k: v for k, v in _regime_detectors.items() if k in active_symbols}
+
+    if not _spot_initialized:
+        _spot_initialized = True
+        _portfolio.load()
+
+    exchange = get_spot_exchange()
     account_size = settings.account_size
     if not spot_settings.paper_mode and exchange:
         try:
             bal = exchange.fetch_balance({'accountType': 'UNIFIED'})
-            usdt_total = float(bal.get('USDT', {}).get('total', 0) or bal.get('total', {}).get('USDT', 0) or 0)
+            usdt_total = float(bal.get('total', {}).get('USDT', 0) or bal.get('USDT', {}).get('total', 0) or 0)
             if usdt_total > 0:
                 account_size = usdt_total
         except Exception as e:
@@ -113,6 +115,26 @@ def init_spot_engine():
         _portfolio.usdt_available = expected_free
         _portfolio.usdt_reserved = expected_res
         _portfolio.save()
+
+    allocations = spot_settings.asset_allocation
+    for symbol in spot_settings.asset_list:
+        if symbol not in _regime_detectors:
+            _regime_detectors[symbol] = RegimeDetector(symbol=symbol, timeframe=spot_settings.regime_timeframe)
+        
+        alloc_pct = allocations.get(symbol, 1.0 / len(active_symbols))
+        asset_usd = spot_active_capital * alloc_pct
+        
+        if symbol not in _grid_engines:
+            _grid_engines[symbol] = GridEngine(
+                symbol=symbol,
+                allocated_usd=asset_usd,
+                paper_mode=spot_settings.paper_mode,
+                fee_rate=spot_settings.fee_rate
+            )
+        else:
+            _grid_engines[symbol].allocated_usd = asset_usd
+            
+    logger.info(f"✅ Spot Engine Initialised ({len(active_symbols)} Assets, Paper Mode: {spot_settings.paper_mode}, Active Capital: ${spot_active_capital:,.2f})")
 
 
 
