@@ -165,12 +165,12 @@ class DCAManager:
             return None
             
     def extra_buy_multiplier(self, regime: str, signal_type: str = "") -> float:
-        if signal_type == "hanlin_squeeze_breakout_dip":
-            return 1.8  # Hanlin Volatility Expansion Squeeze Pyramiding Booster
+        if signal_type in ["hanlin_squeeze_breakout_dip", "bear_sweep_extreme_oversold", "quick_flip_opening_range_dip"]:
+            return 2.0  # 2.0x Extreme Volatility & Oversold Dip Multiplier
         if regime == "BULL":
-            return 1.0
+            return 1.2
         elif regime == "RANGE":
-            return 1.5
+            return 1.6
         elif regime == "BEAR":
             return 2.0
         return 1.0

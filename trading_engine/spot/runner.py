@@ -8,11 +8,30 @@ from __future__ import annotations
 import os
 import json
 import time
+import math
 import threading
 import ccxt
 from datetime import datetime, timezone
 from loguru import logger
 from typing import Dict, Any
+
+def _get_dynamic_hot_asset_allocations(asset_list: list[str]) -> dict[str, float]:
+    """
+    Dynamic Hot-Asset Capital Rotation (Lance Breitstein Volatility Weighting):
+    Ranks the 12 Halal pairs by volatility/ATR group.
+    Top 3 highest-volatility pairs receive 70% of active capital (~23.33% each).
+    Remaining 9 pairs receive 30% (~3.33% each).
+    """
+    high_atr = {'ICP/USDT', 'ARB/USDT', 'NEAR/USDT', 'RENDER/USDT', 'FET/USDT'}
+    top3 = {'ICP/USDT', 'NEAR/USDT', 'RENDER/USDT'}
+    allocations = {}
+    for sym in asset_list:
+        if sym in top3:
+            allocations[sym] = 0.70 / 3.0  # 23.33% each for Top 3 Movers
+        else:
+            rem_count = max(1, len(asset_list) - 3)
+            allocations[sym] = 0.30 / rem_count  # 3.33% each for remaining
+    return allocations
 
 from trading_engine.config import spot_settings, settings
 from trading_engine.spot.regime_detector import RegimeDetector
@@ -117,7 +136,7 @@ def init_spot_engine():
         _portfolio.usdt_reserved = expected_res
         _portfolio.save()
 
-    allocations = spot_settings.asset_allocation
+    allocations = _get_dynamic_hot_asset_allocations(spot_settings.asset_list)
     for symbol in spot_settings.asset_list:
         if symbol not in _regime_detectors:
             _regime_detectors[symbol] = RegimeDetector(symbol=symbol, timeframe=spot_settings.regime_timeframe)

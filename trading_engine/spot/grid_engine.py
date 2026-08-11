@@ -164,11 +164,17 @@ class GridEngine:
             return
 
         
-        # Build Buy Levels (geometric spacing below current price)
-        # Deepest 2 buy levels receive 1.5x capital booster (Oversold DCA Dip Booster)
+        # Build Buy Levels (Dual-Layer Scalp & Swing Grid Structure):
+        # Scalp Layer (Levels 1-3): tight micro spacing (0.5% - 0.8%) for rapid 20-40 daily cycle fills
+        # Swing Dip Layer (Levels 4+): wider dip spacing (1.8% - 2.5%) with 1.8x capital booster for deep dump rebounds
         for i in range(1, self.params.buy_levels + 1):
-            price = current_price * (1 - spacing * i)
-            level_boost = 1.50 if i >= (self.params.buy_levels - 1) else 1.00
+            if i <= 3:
+                price = current_price * (1 - (spacing * 0.45 * i))
+                level_boost = 1.00
+            else:
+                price = current_price * (1 - (spacing * 0.95 * i))
+                level_boost = 1.80
+                
             lvl_size = order_size_usd * level_boost
             qty = lvl_size / price
             self.grid_levels.append(GridLevel(
