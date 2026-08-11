@@ -120,13 +120,19 @@ def init_spot_engine():
 
 
     exchange = get_spot_exchange()
-    allocations = spot_settings.asset_allocation  # e.g. {'BTC/USDT': 0.45, ...}
+    allocations = spot_settings.asset_allocation
+    active_symbols = set(spot_settings.asset_list)
+    
+    # Prune inactive symbols from global dicts
+    global _grid_engines, _regime_detectors
+    _grid_engines = {k: v for k, v in _grid_engines.items() if k in active_symbols}
+    _regime_detectors = {k: v for k, v in _regime_detectors.items() if k in active_symbols}
     
     for symbol in spot_settings.asset_list:
         if symbol not in _regime_detectors:
             _regime_detectors[symbol] = RegimeDetector(symbol=symbol, timeframe=spot_settings.regime_timeframe)
         
-        alloc_pct = allocations.get(symbol, 0.33)
+        alloc_pct = allocations.get(symbol, 1.0 / len(active_symbols))
         asset_usd = spot_active_capital * alloc_pct
         
         if symbol not in _grid_engines:
@@ -136,8 +142,10 @@ def init_spot_engine():
                 paper_mode=spot_settings.paper_mode,
                 fee_rate=spot_settings.fee_rate
             )
+        else:
+            _grid_engines[symbol].allocated_usd = asset_usd
             
-    logger.info(f"✅ Spot Engine Initialised (Paper Mode: {spot_settings.paper_mode}, Active Capital: ${spot_active_capital:,.2f})")
+    logger.info(f"✅ Spot Engine Initialised ({len(active_symbols)} Assets, Paper Mode: {spot_settings.paper_mode}, Active Capital: ${spot_active_capital:,.2f})")
 
 
 def run_spot_regime_check():
