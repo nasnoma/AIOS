@@ -314,10 +314,10 @@ class SpotPortfolio:
                 self.daily_realised_pnl = round(corrected_net, 4)
 
         return {
-            'usdt_available': self.usdt_available,
-            'usdt_reserved': self.usdt_reserved,
-            'total_realised_pnl': self.total_realised_pnl,
-            'daily_realised_pnl': self.daily_realised_pnl,
+            'usdt_available': float(self.usdt_available or 0.0),
+            'usdt_reserved': float(self.usdt_reserved or 0.0),
+            'total_realised_pnl': float(self.total_realised_pnl or 0.0),
+            'daily_realised_pnl': float(self.daily_realised_pnl or 0.0),
             'cycles_today': self.cycles_today,
             'completed_cycles': getattr(self, 'completed_cycles', [])[-20:],
             'holdings': formatted_holdings
