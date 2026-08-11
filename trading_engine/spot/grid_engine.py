@@ -153,6 +153,7 @@ class GridEngine:
             else:
                 spacing = self.params.grid_spacing
         
+        self.current_spacing = spacing
         total_levels = self.params.buy_levels + self.params.sell_levels
         raw_order_size = (self.allocated_usd * self.params.capital_pct) / total_levels if total_levels > 0 else 0
         order_size_usd = max(10.0, raw_order_size) if raw_order_size > 0 else 0
@@ -277,7 +278,8 @@ class GridEngine:
                     # safety_margin removed: it doubled the required move on tight-
                     # spacing assets (0.10% spacing), starving cycle completions.
                     min_profit_pct = 2 * self.fee_rate  # 0.2% — fee break-even
-                    sell_price = level.price * (1 + self.params.grid_spacing + min_profit_pct)
+                    active_spacing = getattr(self, 'current_spacing', self.params.grid_spacing)
+                    sell_price = level.price * (1 + active_spacing + min_profit_pct)
                     new_sell = GridLevel(
                         price=sell_price,
                         side='sell',
@@ -293,35 +295,35 @@ class GridEngine:
                     logger.info(f"BUY filled at {level.price}. Created new SELL level at {sell_price}")
                     
                 elif level.side == 'sell':
+                    buy_orig_p = level.linked_buy_price or (level.price / (1 + getattr(self, 'current_spacing', self.params.grid_spacing)))
                     if hasattr(portfolio, 'record_sell'):
-                        portfolio.record_sell(self.symbol, level.qty, level.price, level.size_usd, level.order_id or '', level.linked_buy_price or level.price)
+                        portfolio.record_sell(self.symbol, level.qty, level.price, level.size_usd, level.order_id or '', buy_orig_p)
                         
-                    if level.linked_buy_price:
-                        gross_pnl = (level.price - level.linked_buy_price) * level.qty
-                        fee = (level.price * level.qty * self.fee_rate) + (level.linked_buy_price * level.qty * self.fee_rate)
-                        net_pnl = gross_pnl - fee
-                        self.completed_cycles.append({
-                            'buy_price': level.linked_buy_price,
-                            'sell_price': level.price,
-                            'qty': level.qty,
-                            'gross_pnl': gross_pnl,
-                            'fee': fee,
-                            'net_pnl': net_pnl,
-                            'timestamp': level.filled_at
-                        })
-                        logger.info(f"SELL filled at {level.price}. Completed cycle. Net PnL: ${net_pnl:.2f}")
-                    
-                        new_buy = GridLevel(
-                            price=level.linked_buy_price,
-                            side='buy',
-                            qty=level.size_usd / level.linked_buy_price,
-                            size_usd=level.size_usd
-                        )
-                        self.grid_levels.append(new_buy)
-                        if self.paper_mode:
-                            new_buy.status = 'open'
-                            new_buy.order_id = f'PAPER_{uuid4().hex[:8]}'
-                            
+                    gross_pnl = (level.price - buy_orig_p) * level.qty
+                    fee = (level.price * level.qty * self.fee_rate) + (buy_orig_p * level.qty * self.fee_rate)
+                    net_pnl = gross_pnl - fee
+                    self.completed_cycles.append({
+                        'buy_price': buy_orig_p,
+                        'sell_price': level.price,
+                        'qty': level.qty,
+                        'gross_pnl': gross_pnl,
+                        'fee': fee,
+                        'net_pnl': net_pnl,
+                        'timestamp': level.filled_at
+                    })
+                    logger.info(f"SELL filled at {level.price}. Completed cycle. Net PnL: ${net_pnl:.2f}")
+                
+                    new_buy = GridLevel(
+                        price=buy_orig_p,
+                        side='buy',
+                        qty=level.size_usd / buy_orig_p if buy_orig_p > 0 else level.qty,
+                        size_usd=level.size_usd
+                    )
+                    self.grid_levels.append(new_buy)
+                    if self.paper_mode:
+                        new_buy.status = 'open'
+                        new_buy.order_id = f'PAPER_{uuid4().hex[:8]}'
+                        
                     fills.append({'side': 'sell', 'price': level.price, 'qty': level.qty})
                     
         return fills

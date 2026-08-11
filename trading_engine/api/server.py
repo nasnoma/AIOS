@@ -33,8 +33,19 @@ _executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
 
 @app.on_event("startup")
 async def startup_pre_warm():
-    """Pre-warm the spot status cache in a background daemon thread so dashboard opens instantly."""
-    import threading
+    """Pre-warm spot cache and start 24/7 spot grid tick daemon thread."""
+    import threading, time
+    def _spot_background_loop():
+        logger.info("🚀 Starting 24/7 Spot Grid Tick background daemon thread (30s interval)...")
+        time.sleep(5)  # Initial delay
+        while True:
+            try:
+                from trading_engine.spot.runner import run_spot_grid_tick
+                run_spot_grid_tick()
+            except Exception as e:
+                logger.warning(f"Background spot grid tick error: {e}")
+            time.sleep(30)
+
     def _pre_warm():
         try:
             from trading_engine.spot.runner import get_spot_status
@@ -42,7 +53,9 @@ async def startup_pre_warm():
             logger.info("✅ Spot status cache pre-warmed on startup")
         except Exception as e:
             logger.warning(f"Startup pre-warm failed (non-fatal): {e}")
+
     threading.Thread(target=_pre_warm, daemon=True).start()
+    threading.Thread(target=_spot_background_loop, daemon=True).start()
 
 # In-memory signal history (last 50 signals)
 signal_history: list[dict] = []
