@@ -237,6 +237,23 @@ function renderSpotStatus(data) {
     unrEl.style.color = totalUnrealised >= 0 ? 'var(--green)' : 'var(--red)';
   }
 
+  // Update Equity Chart dynamically from completed cycles history
+  if (equityChart && p.completed_cycles) {
+    let cumulative = 10000.0;
+    const labels = ['Start'];
+    const dataPts = [10000.0];
+    const sortedCycs = [...p.completed_cycles].sort((a,b) => (a.timestamp||'').localeCompare(b.timestamp||''));
+    sortedCycs.forEach(c => {
+      const ts = c.timestamp ? (c.timestamp.split('T')[1] || '').substring(0,5) : 'Trade';
+      cumulative += (c.net_pnl || 0.0);
+      labels.push(ts);
+      dataPts.push(Number(cumulative.toFixed(2)));
+    });
+    equityChart.data.labels = labels;
+    equityChart.data.datasets[0].data = dataPts;
+    equityChart.update('none');
+  }
+
   // Watchlist cards
   const gridEl = document.getElementById('spot-assets-grid');
   if (gridEl) {
