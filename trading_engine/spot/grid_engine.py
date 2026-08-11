@@ -118,14 +118,14 @@ class GridEngine:
             logger.info(f"Regime changed to {regime}. Spacing changed > 30%. Need to rebuild grid.")
             # Note: actual grid rebuild would require current_price, normally called separately
 
-    def build_grid(self, current_price: float, portfolio=None, atr: float = 0.0):
+    def build_grid(self, current_price: float, portfolio=None, atr: float = 0.0, force: bool = False):
         """Build grid levels. If ATR provided, use it for dynamic spacing."""
         import time
         now = time.time()
         # Throttle rebuilds: don't rebuild more than once per 10 minutes
-        # unless grid is completely empty (first build)
+        # unless grid is completely empty or force=True
         has_open_buys = any(l.status == 'open' and l.side == 'buy' for l in self.grid_levels)
-        if has_open_buys and (now - self._last_rebuild_time) < 600:
+        if not force and has_open_buys and (now - self._last_rebuild_time) < 600:
             return
         self._last_rebuild_time = now
 

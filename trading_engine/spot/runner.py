@@ -206,16 +206,17 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 # Estimate 1h ATR from SMA50/SMA200 volatility or cached indicator state
                 atr_val = price * 0.008  # Default 0.8% volatility estimate
 
-            # Initial grid build if empty or auto-recenter if open buy orders are stale (>1.5% above live price)
+            # Initial grid build if empty, forced reset, or auto-recenter if open buy orders are stale (>1.5% above live price)
             open_buys = [l for l in engine.grid_levels if l.status == 'open' and l.side == 'buy']
             is_stale = bool(open_buys and max(l.price for l in open_buys) > price * 1.015)
+            force_reset = getattr(engine, '_last_rebuild_time', 0) == 0
 
-            if not engine.grid_levels or is_stale:
+            if not engine.grid_levels or is_stale or force_reset:
                 if is_stale:
                     max_buy_p = max(l.price for l in open_buys)
                     logger.info(f"🔄 Grid stale for {symbol} (Live: ${price:.4f}, Highest Buy Order: ${max_buy_p:.4f}). Re-centering grid around current price...")
                 engine.cancel_all(exchange)
-                engine.build_grid(price, _portfolio, atr=atr_val)
+                engine.build_grid(price, _portfolio, atr=atr_val, force=force_reset)
                 engine.place_grid_orders(_portfolio, exchange)
 
                 
