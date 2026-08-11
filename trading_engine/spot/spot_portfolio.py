@@ -292,6 +292,12 @@ class SpotPortfolio:
                 'unrealised_pnl': pnl,
                 'unrealised_pnl_pct': pnl_pct
             }
+        if hasattr(self, 'completed_cycles') and self.completed_cycles:
+            cycle_net_total = sum(float(c.get('net_pnl', 0.0)) for c in self.completed_cycles)
+            if cycle_net_total > 0:
+                self.total_realised_pnl = cycle_net_total
+                self.daily_realised_pnl = cycle_net_total
+
         return {
             'usdt_available': self.usdt_available,
             'usdt_reserved': self.usdt_reserved,
