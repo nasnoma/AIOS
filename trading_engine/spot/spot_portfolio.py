@@ -293,10 +293,25 @@ class SpotPortfolio:
                 'unrealised_pnl_pct': pnl_pct
             }
         if hasattr(self, 'completed_cycles') and self.completed_cycles:
-            cycle_net_total = sum(float(c.get('net_pnl', 0.0)) for c in self.completed_cycles)
-            if cycle_net_total > 0:
-                self.total_realised_pnl = cycle_net_total
-                self.daily_realised_pnl = cycle_net_total
+            fee_rate = getattr(settings, 'fee_rate', 0.001)
+            corrected_net = 0.0
+            for c in self.completed_cycles:
+                buy_p = float(c.get('buy_price') or 0.0)
+                sell_p = float(c.get('sell_price') or 0.0)
+                qty = float(c.get('qty') or 0.0)
+                if buy_p > 0 and sell_p > 0 and qty > 0:
+                    gross = (sell_p - buy_p) * qty
+                    fee = (sell_p * qty * fee_rate) + (buy_p * qty * fee_rate)
+                    net = gross - fee
+                    c['gross_pnl'] = round(gross, 4)
+                    c['fee'] = round(fee, 4)
+                    c['net_pnl'] = round(net, 4)
+                    corrected_net += net
+                else:
+                    corrected_net += float(c.get('net_pnl', 0.0))
+            if corrected_net > 0:
+                self.total_realised_pnl = round(corrected_net, 4)
+                self.daily_realised_pnl = round(corrected_net, 4)
 
         return {
             'usdt_available': self.usdt_available,
