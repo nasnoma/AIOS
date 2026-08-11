@@ -137,18 +137,21 @@ class GridEngine:
                             if level.status == 'filled'
                             or (level.status == 'open' and level.side == 'sell')]
         
-        # ── Dynamic spacing: use ATR if available, else config spacing ──
-        # Research: ATR-based grid spacing adapts to volatility regime,
-        # prevents tight grids getting stopped in high-vol and wide grids
-        # missing fills in low-vol. Floor at 0.3% to stay above fees.
+        # ── Dynamic spacing: asset-specific ATR tuning or ATR indicator ──
         if atr > 0 and current_price > 0:
             atr_pct = atr / current_price
-            # Floor at 0.5% — fees are 0.2% round-trip, so minimum 2.5× fee coverage
             dynamic_spacing = max(0.005, min(atr_pct * 0.8, 0.05))  # 0.5% to 5%
-            # Blend with regime spacing: 50% ATR, 50% regime default
             spacing = (dynamic_spacing + self.params.grid_spacing) / 2
         else:
-            spacing = self.params.grid_spacing
+            # Asset-specific ATR tuning groups
+            high_atr = {'ICP/USDT', 'ARB/USDT', 'NEAR/USDT', 'RENDER/USDT', 'FET/USDT'}
+            low_atr = {'SOL/USDT', 'AVAX/USDT', 'SUI/USDT'}
+            if self.symbol in high_atr:
+                spacing = 0.022  # 2.2% spacing for high-volatility pairs (+ $0.32-$0.45/cycle)
+            elif self.symbol in low_atr:
+                spacing = 0.009  # 0.9% spacing for low-volatility pairs (2x-3x faster fills)
+            else:
+                spacing = self.params.grid_spacing
         
         total_levels = self.params.buy_levels + self.params.sell_levels
         raw_order_size = (self.allocated_usd * self.params.capital_pct) / total_levels if total_levels > 0 else 0
@@ -159,14 +162,17 @@ class GridEngine:
 
         
         # Build Buy Levels (geometric spacing below current price)
+        # Deepest 2 buy levels receive 1.5x capital booster (Oversold DCA Dip Booster)
         for i in range(1, self.params.buy_levels + 1):
             price = current_price * (1 - spacing * i)
-            qty = order_size_usd / price
+            level_boost = 1.50 if i >= (self.params.buy_levels - 1) else 1.00
+            lvl_size = order_size_usd * level_boost
+            qty = lvl_size / price
             self.grid_levels.append(GridLevel(
                 price=price,
                 side='buy',
                 qty=qty,
-                size_usd=order_size_usd
+                size_usd=lvl_size
             ))
             
         # Build Sell Levels (only for coins already held)

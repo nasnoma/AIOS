@@ -305,51 +305,26 @@ class SpotGridSettings(BaseSettings):
     @property
     def asset_allocation(self) -> dict[str, float]:
         active_assets = self.asset_list
-        custom_weights = {
-            "NEAR/USDT":    1.0 / 12.0,
-            "AVAX/USDT":    1.0 / 12.0,
-            "SUI/USDT":     1.0 / 12.0,
-            "FET/USDT":     1.0 / 12.0,
-            "UNI/USDT":     1.0 / 12.0,
-            "ARKM/USDT":    1.0 / 12.0,
-            "ICP/USDT":     1.0 / 12.0,
-            "ARB/USDT":     1.0 / 12.0,
-            "RENDER/USDT": 1.0 / 12.0,
-            "ADA/USDT":     1.0 / 12.0,
-            "SOL/USDT":     1.0 / 12.0,
-            "APT/USDT":     1.0 / 12.0,
+        # Volatility-weighted capital allocation weights:
+        # High-ATR Group (1.30x): ICP, ARB, NEAR, RENDER, FET
+        # Moderate-ATR Group (1.00x): UNI, ARKM, ADA, APT
+        # Low-ATR Group (0.70x): SOL, AVAX, SUI
+        weights = {
+            "ICP/USDT":    1.30,
+            "ARB/USDT":    1.30,
+            "NEAR/USDT":   1.30,
+            "RENDER/USDT": 1.30,
+            "FET/USDT":    1.30,
+            "UNI/USDT":    1.00,
+            "ARKM/USDT":   1.00,
+            "ADA/USDT":    1.00,
+            "APT/USDT":    1.00,
+            "SOL/USDT":    0.70,
+            "AVAX/USDT":   0.70,
+            "SUI/USDT":    0.70,
         }
-        alloc = {}
-        for a in active_assets:
-            alloc[a] = custom_weights.get(a, 1.0 / len(active_assets))
-        return alloc
-    grid_tick_minutes: int = 1        # 1-minute high-frequency tick interval for instant fill processing
-    regime_check_hours: int = 1       # how often to re-evaluate regime
-    sync_minutes: int = 5             # how often to sync balances with exchange
-
-    @property
-    def asset_list(self) -> list[str]:
-        return [a.strip() for a in self.assets.split(",") if a.strip()]
-
-    @property
-    def asset_allocation(self) -> dict[str, float]:
-        active_assets = self.asset_list
-        base_alloc = {
-            "BTC/USDT": self.btc_allocation_pct,
-            "ETH/USDT": self.eth_allocation_pct,
-            "SOL/USDT": self.sol_allocation_pct,
-            "XAUT/USDT": self.xaut_allocation_pct,
-        }
-        remaining_pct = max(0.0, 1.0 - sum(base_alloc.values()))
-        alts = [a for a in active_assets if a not in base_alloc]
-        alt_share = (remaining_pct / len(alts)) if alts else 0.0
-        
-        alloc = {}
-        for a in active_assets:
-            alloc[a] = base_alloc.get(a, alt_share)
-        return alloc
-
-
+        total_w = sum(weights.get(a, 1.0) for a in active_assets) or 1.0
+        return {a: weights.get(a, 1.0) / total_w for a in active_assets}
 
 
 spot_settings = SpotGridSettings()

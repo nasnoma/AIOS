@@ -133,6 +133,7 @@ def init_spot_engine():
             )
         else:
             _grid_engines[symbol].allocated_usd = asset_usd
+            _grid_engines[symbol]._last_rebuild_time = 0  # Force immediate grid rebuild with new spacing
             
     logger.info(f"✅ Spot Engine Initialised ({len(active_symbols)} Assets, Paper Mode: {spot_settings.paper_mode}, Active Capital: ${spot_active_capital:,.2f})")
 
