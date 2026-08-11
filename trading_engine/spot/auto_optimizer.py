@@ -25,16 +25,16 @@ from loguru import logger
 
 # ── Parameter search space ──────────────────────────────────────────────────
 # Each combo is one "hypothesis" in the AutoResearch loop.
-GRID_SPACING_VALUES   = [0.005, 0.008, 0.010, 0.013, 0.016, 0.020, 0.025]
-BUY_LEVELS_VALUES     = [4, 6, 8, 10, 12]
+GRID_SPACING_VALUES   = [0.003, 0.005, 0.008, 0.010, 0.012, 0.015, 0.018, 0.022]
+BUY_LEVELS_VALUES     = [4, 6, 8, 10]
 SELL_LEVELS_VALUES    = [4, 6, 8, 10]
-CAPITAL_PCT_VALUES    = [0.50, 0.65, 0.80]
+CAPITAL_PCT_VALUES    = [0.65, 0.80, 0.95]
 
-# Assets to optimize (subset of full watchlist for speed)
+# 12 High-ATR Halal Spot Watchlist Assets
 DEFAULT_ASSETS = [
-    'BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'XRP/USDT',
-    'ADA/USDT', 'AVAX/USDT', 'LINK/USDT', 'UNI/USDT',
-    'DOT/USDT', 'LTC/USDT', 'BCH/USDT',
+    'ICP/USDT', 'NEAR/USDT', 'RENDER/USDT', 'ARB/USDT',
+    'FET/USDT', 'SUI/USDT', 'AVAX/USDT', 'APT/USDT',
+    'ADA/USDT', 'UNI/USDT', 'ARKM/USDT', 'JUP/USDT'
 ]
 
 RESULTS_FILE    = Path(__file__).parent / 'optimizer_results.json'
