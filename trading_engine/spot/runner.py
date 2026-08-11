@@ -139,6 +139,7 @@ def init_spot_engine():
 
 def run_spot_regime_check():
     """Run regime detection for all symbols."""
+    global _regime_detectors, _grid_engines
     exchange = get_spot_exchange()
     for symbol in spot_settings.asset_list:
         detector = _regime_detectors.get(symbol)
