@@ -185,8 +185,11 @@ class SpotPortfolio:
             h.units_held = 0.0
             h.avg_cost_basis = 0.0
             
-        profit = size_usd - (qty * buy_cost_basis)
-        self.usdt_available += size_usd
+        fee_rate = getattr(settings, 'fee_rate', 0.001)
+        gross_profit = size_usd - (qty * buy_cost_basis)
+        fee = (size_usd * fee_rate) + (qty * buy_cost_basis * fee_rate)
+        profit = gross_profit - fee
+        self.usdt_available += (size_usd - (size_usd * fee_rate))
         self.total_realised_pnl += profit
         
         self.reset_daily_if_needed()
@@ -201,6 +204,8 @@ class SpotPortfolio:
             'buy_price': buy_cost_basis,
             'sell_price': price,
             'qty': qty,
+            'gross_pnl': gross_profit,
+            'fee': fee,
             'net_pnl': profit,
             'timestamp': datetime.datetime.now(datetime.timezone.utc).isoformat()
         })
