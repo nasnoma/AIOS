@@ -241,8 +241,8 @@ class SpotGridSettings(BaseSettings):
     # ── Master Switch ──────────────────────────────────────────
     enabled: bool = True
     paper_mode: bool = True           # True = simulate fills on real mainnet prices (accurately reflects real money trading)
-    # 12 Screened High-Volatility Liquid Halal Spot Assets on Bybit
-    assets: str = "NEAR/USDT,AVAX/USDT,SUI/USDT,FET/USDT,UNI/USDT,ARKM/USDT,ROSE/USDT,RENDER/USDT,ADA/USDT,SOL/USDT,GRASS/USDT,APT/USDT"
+    # 12 Screened High-Volatility Liquid Halal Spot Assets on Bybit (ICP & ARB High-Yield Swap)
+    assets: str = "NEAR/USDT,AVAX/USDT,SUI/USDT,FET/USDT,UNI/USDT,ARKM/USDT,ICP/USDT,ARB/USDT,RENDER/USDT,ADA/USDT,SOL/USDT,APT/USDT"
 
     # ── Capital ────────────────────────────────────────────────
     total_capital_pct: float = 0.995  # 99.5% of account balance deployed ($9,950.00 active grid capital)
@@ -312,11 +312,11 @@ class SpotGridSettings(BaseSettings):
             "FET/USDT":     1.0 / 12.0,
             "UNI/USDT":     1.0 / 12.0,
             "ARKM/USDT":    1.0 / 12.0,
-            "ROSE/USDT":    1.0 / 12.0,
+            "ICP/USDT":     1.0 / 12.0,
+            "ARB/USDT":     1.0 / 12.0,
             "RENDER/USDT": 1.0 / 12.0,
             "ADA/USDT":     1.0 / 12.0,
             "SOL/USDT":     1.0 / 12.0,
-            "GRASS/USDT":   1.0 / 12.0,
             "APT/USDT":     1.0 / 12.0,
         }
         alloc = {}
