@@ -185,7 +185,11 @@ class SpotPortfolio:
             h.units_held = 0.0
             h.avg_cost_basis = 0.0
             
-        fee_rate = getattr(settings, 'fee_rate', 0.001)
+        try:
+            from trading_engine.config import spot_settings
+            fee_rate = getattr(spot_settings, 'fee_rate', 0.001)
+        except Exception:
+            fee_rate = 0.001
         gross_profit = size_usd - (qty * buy_cost_basis)
         fee = (size_usd * fee_rate) + (qty * buy_cost_basis * fee_rate)
         profit = gross_profit - fee
@@ -293,7 +297,12 @@ class SpotPortfolio:
                 'unrealised_pnl_pct': pnl_pct
             }
         if hasattr(self, 'completed_cycles') and self.completed_cycles:
-            fee_rate = getattr(settings, 'fee_rate', 0.001)
+            try:
+                from trading_engine.config import spot_settings
+                fee_rate = getattr(spot_settings, 'fee_rate', 0.001)
+            except Exception:
+                fee_rate = 0.001
+
             corrected_net = 0.0
             for c in self.completed_cycles:
                 buy_p = float(c.get('buy_price') or 0.0)
