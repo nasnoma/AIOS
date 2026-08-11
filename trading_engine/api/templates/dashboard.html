@@ -227,8 +227,11 @@ function renderSpotStatus(data) {
   set('spot-usdt-free', usd(usdtFree));
   set('spot-cycles-today', p.cycles_today || 0);
   set('spot-pnl-today', '$' + (p.daily_realised_pnl||0).toFixed(2));
-  set('spot-monthly-return', '+28.50%');
-  set('spot-monthly-usd', '~$2,835.00/mo \u00B7 High-ATR Volatility');
+  const dailyPnl = p.daily_realised_pnl || 0;
+  const projMonthlyUsd = Math.max(0, dailyPnl * 30);
+  const projMonthlyPct = totalEquity > 0 ? (projMonthlyUsd / totalEquity * 100).toFixed(2) : '0.00';
+  set('spot-monthly-return', '+' + projMonthlyPct + '%');
+  set('spot-monthly-usd', '~$'+ projMonthlyUsd.toFixed(2) + '/mo \u00B7 Dynamic ATR');
   set('spot-last-update', 'Updated ' + new Date().toLocaleTimeString());
 
   const unrEl = document.getElementById('spot-unrealised-pnl');
@@ -238,10 +241,11 @@ function renderSpotStatus(data) {
   }
 
   // Update Equity Chart dynamically from completed cycles history
-  if (equityChart && p.completed_cycles) {
-    let cumulative = 10000.0;
+  if (equityChart && Array.isArray(p.completed_cycles)) {
+    const totalCycleNet = p.completed_cycles.reduce((sum, c) => sum + (c.net_pnl || 0), 0);
+    let cumulative = totalEquity - totalCycleNet;
     const labels = ['Start'];
-    const dataPts = [10000.0];
+    const dataPts = [Number(cumulative.toFixed(2))];
     const sortedCycs = [...p.completed_cycles].sort((a,b) => (a.timestamp||'').localeCompare(b.timestamp||''));
     sortedCycs.forEach(c => {
       const ts = c.timestamp ? (c.timestamp.split('T')[1] || '').substring(0,5) : 'Trade';
@@ -327,23 +331,27 @@ function renderSpotStatus(data) {
     Object.entries(grids).forEach(([sym,g]) => { if (g && g.levels) g.levels.forEach(lvl => rows.push({sym,lvl})); });
     rows.sort((a,b) => b.lvl.price - a.lvl.price);
     ladderEl.innerHTML = rows.length ? rows.map(({sym,lvl}) => {
-      const isB = lvl.side === 'buy';
-      return '<div class="ladder-row"><span><strong style="color:' + (isB?'var(--green)':'var(--red)') + '">' + lvl.side.toUpperCase() + '</strong> <span style="color:var(--text-2)">' + sym.split('/')[0] + '</span></span><span>$' + Number(lvl.price).toFixed(4) + '</span><span style="color:var(--text-3)">' + lvl.status + '</span></div>';
+      const isB = (lvl.side || '').toLowerCase() === 'buy';
+      const sideText = (lvl.side || 'BUY').toUpperCase();
+      return '<div class="ladder-row"><span><strong style="color:' + (isB?'var(--green)':'var(--red)') + '">' + sideText + '</strong> <span style="color:var(--text-2)">' + sym.split('/')[0] + '</span></span><span>$' + Number(lvl.price).toFixed(4) + '</span><span style="color:var(--text-3)">' + lvl.status + '</span></div>';
     }).join('') : '<div class="empty">No active grid levels. Click Scan / Tick to build grid.</div>';
   }
 
   // Completed cycles
   const cyclesEl = document.getElementById('spot-cycles-list');
-  if (cyclesEl && p.completed_cycles) {
-    const cycs = p.completed_cycles.slice(-15).reverse();
+  if (cyclesEl && Array.isArray(p.completed_cycles)) {
+    const cycs = [...p.completed_cycles].slice(-15).reverse();
     cyclesEl.innerHTML = cycs.length ? cycs.map(c =>
       '<div class="ladder-row"><span><strong>' + (c.symbol||'').split('/')[0] + '</strong> $' + (c.buy_price||0).toFixed(4) + ' &rarr; $' + (c.sell_price||0).toFixed(4) + '</span><span style="color:var(--green);font-weight:700">+$' + (c.net_pnl||0).toFixed(2) + '</span></div>'
     ).join('') : '<div class="empty">No completed cycles today.</div>';
   }
 }
 
-fetchSpotStatus();
-setInterval(fetchSpotStatus, 3000);
+async function pollSpotStatus() {
+  await fetchSpotStatus();
+  setTimeout(pollSpotStatus, 3000);
+}
+pollSpotStatus();
 
 (function loadChart() {
   const s = document.createElement('script');

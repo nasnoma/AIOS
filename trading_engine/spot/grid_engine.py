@@ -73,6 +73,8 @@ class GridEngine:
         self.grid_levels: List[GridLevel] = []
         self.completed_cycles: List[Dict[str, Any]] = []
         self.exchange: Optional[ccxt.Exchange] = None
+        self._last_rebuild_time: float = 0.0
+        self.current_spacing: float = self.params.grid_spacing
 
         # Load optimizer-tuned params for this symbol if available
         self._apply_best_params()
@@ -114,9 +116,9 @@ class GridEngine:
         self.params = REGIME_PARAMS[regime]
         
         spacing_diff = abs(old_params.grid_spacing - self.params.grid_spacing) / old_params.grid_spacing
-        if spacing_diff > 0.30:
-            logger.info(f"Regime changed to {regime}. Spacing changed > 30%. Need to rebuild grid.")
-            # Note: actual grid rebuild would require current_price, normally called separately
+        if spacing_diff > 0.30 or old_params.buy_levels != self.params.buy_levels:
+            logger.info(f"Regime changed to {regime}. Spacing/levels changed > 30%. Forcing grid rebuild.")
+            self._last_rebuild_time = 0.0
 
     def build_grid(self, current_price: float, portfolio=None, atr: float = 0.0, force: bool = False):
         """Build grid levels. If ATR provided, use it for dynamic spacing."""
@@ -131,11 +133,11 @@ class GridEngine:
 
         logger.info(f"Building grid for {self.symbol} at {current_price} in {self.current_regime} regime.")
         
-        # Preserve open SELL levels — they represent filled buys awaiting take-profit
+        # Preserve open/pending SELL levels — they represent filled buys awaiting take-profit
         # Only discard old open BUY levels (stale, will be replaced below)
         self.grid_levels = [level for level in self.grid_levels
                             if level.status == 'filled'
-                            or (level.status == 'open' and level.side == 'sell')]
+                            or (level.status in ['open', 'pending'] and level.side == 'sell')]
         
         # ── Dynamic spacing: asset-specific ATR tuning or ATR indicator ──
         if atr > 0 and current_price > 0:
@@ -188,7 +190,8 @@ class GridEngine:
                     price=price,
                     side='sell',
                     qty=qty,
-                    size_usd=order_size_usd
+                    size_usd=order_size_usd,
+                    linked_buy_price=current_price
                 ))
 
     def place_grid_orders(self, portfolio, exchange: ccxt.Exchange):
@@ -248,7 +251,7 @@ class GridEngine:
     def tick(self, current_price: float, portfolio, exchange=None) -> List[Dict[str, Any]]:
         """Check grid levels against current price and simulate/process fills."""
         fills = []
-        for level in self.grid_levels:
+        for level in list(self.grid_levels):
             if level.status != 'open':
                 continue
                 

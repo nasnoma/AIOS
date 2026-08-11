@@ -63,7 +63,9 @@ class SpotPortfolio:
         self.cycles_today: int = 0
         self.consecutive_wins: int = 0
         self.consecutive_losses: int = 0
-        self.completed_cycles: List[dict] = []
+        import threading
+        self._lock = threading.Lock()
+        self.processed_order_ids = set()
         self.last_daily_reset: str = datetime.datetime.now(datetime.timezone.utc).date().isoformat()
         self.load()
         
@@ -139,6 +141,10 @@ class SpotPortfolio:
             self.holdings[symbol].last_price = price
             
     def record_buy(self, symbol: str, qty: float, price: float, size_usd: float, order_id: str = '', is_dca: bool = False):
+        if order_id and order_id in self.processed_order_ids:
+            return
+        if order_id:
+            self.processed_order_ids.add(order_id)
         self.usdt_available -= size_usd
         if symbol not in self.holdings:
             self.holdings[symbol] = AssetHolding(
@@ -174,6 +180,10 @@ class SpotPortfolio:
         self.save()
         
     def record_sell(self, symbol: str, qty: float, price: float, size_usd: float, order_id: str, buy_cost_basis: float):
+        if order_id and order_id in self.processed_order_ids:
+            return
+        if order_id:
+            self.processed_order_ids.add(order_id)
         if symbol not in self.holdings or self.holdings[symbol].units_held < qty:
             logger.error(f"Cannot sell {qty} {symbol}: insufficient holdings")
             return
@@ -318,9 +328,6 @@ class SpotPortfolio:
                     corrected_net += net
                 else:
                     corrected_net += float(c.get('net_pnl', 0.0))
-            if corrected_net > 0:
-                self.total_realised_pnl = round(corrected_net, 4)
-                self.daily_realised_pnl = round(corrected_net, 4)
 
         return {
             'usdt_available': float(self.usdt_available or 0.0),

@@ -132,8 +132,9 @@ def init_spot_engine():
                 fee_rate=spot_settings.fee_rate
             )
         else:
-            _grid_engines[symbol].allocated_usd = asset_usd
-            _grid_engines[symbol]._last_rebuild_time = 0  # Force immediate grid rebuild with new spacing
+            if abs(_grid_engines[symbol].allocated_usd - asset_usd) > 1.0:
+                _grid_engines[symbol].allocated_usd = asset_usd
+                _grid_engines[symbol]._last_rebuild_time = 0.0  # Allocation changed, force rebuild
             
     logger.info(f"✅ Spot Engine Initialised ({len(active_symbols)} Assets, Paper Mode: {spot_settings.paper_mode}, Active Capital: ${spot_active_capital:,.2f})")
 
@@ -159,78 +160,86 @@ def run_spot_regime_check():
             logger.warning(f"Failed regime check for {symbol}: {e}")
 
 
+_tick_lock = threading.Lock()
+
 def run_spot_grid_tick() -> Dict[str, Any]:
     """
     Main spot tick job — fetches latest prices, updates portfolio, checks limit fills,
-    and places new grid orders.
+    and places new grid orders. Thread-safe lock prevents concurrent race conditions.
     """
-    exchange = get_spot_exchange()
-    _portfolio.reset_daily_if_needed()
+    if not _tick_lock.acquire(blocking=False):
+        return {"status": "skipped", "reason": "tick_in_progress"}
     
-    fill_events = []
-    asset_list = spot_settings.asset_list
-    
-    # ── Bulk Ticker Fetch (Real-world Mainnet Prices) ──
-    pub_exchange = get_public_exchange()
-    tickers = {}
     try:
-        tickers = pub_exchange.fetch_tickers(asset_list)
-    except Exception as e_bulk:
-        logger.debug(f"Bulk ticker fetch failed ({e_bulk}), falling back to individual fetches")
-        for sym in asset_list:
-            try:
-                tickers[sym] = pub_exchange.fetch_ticker(sym)
-            except Exception:
-                pass
-    
-    for symbol in asset_list:
-        engine = _grid_engines.get(symbol)
-        if not engine:
-            continue
-            
+        init_spot_engine()
+        exchange = get_spot_exchange()
+        _portfolio.reset_daily_if_needed()
+        
+        fill_events = []
+        asset_list = spot_settings.asset_list
+        
+        # ── Bulk Ticker Fetch (Real-world Mainnet Prices) ──
+        pub_exchange = get_public_exchange()
+        tickers = {}
         try:
-            ticker = tickers.get(symbol)
-            if not ticker or "last" not in ticker or not ticker["last"]:
+            tickers = pub_exchange.fetch_tickers(asset_list)
+        except Exception as e_bulk:
+            logger.debug(f"Bulk ticker fetch failed ({e_bulk}), falling back to individual fetches")
+            for sym in asset_list:
                 try:
-                    ticker = exchange.fetch_ticker(symbol)
+                    tickers[sym] = pub_exchange.fetch_ticker(sym)
                 except Exception:
-                    continue
-                    
-            price = float(ticker["last"])
-            _portfolio.update_price(symbol, price)
-            
-            # Compute ATR volatility for dynamic volatility scaling (Lance Breitstein method)
-            detector = _regime_detectors.get(symbol)
-            atr_val = 0.0
-            if detector and detector._cached_state and hasattr(detector._cached_state, 'price') and detector._cached_state.price > 0:
-                # Estimate 1h ATR from SMA50/SMA200 volatility or cached indicator state
-                atr_val = price * 0.008  # Default 0.8% volatility estimate
-
-            # Initial grid build if empty, forced reset, or auto-recenter if open buy orders are stale (>1.5% away in either direction)
-            open_buys = [l for l in engine.grid_levels if l.status == 'open' and l.side == 'buy']
-            max_buy_p = max((l.price for l in open_buys), default=0.0)
-            is_stale = bool(open_buys and max_buy_p > 0 and (max_buy_p > price * 1.015 or max_buy_p < price * 0.985))
-            force_reset = getattr(engine, '_last_rebuild_time', 0) == 0
-
-            if not engine.grid_levels or is_stale or force_reset:
-                if is_stale:
-                    logger.info(f"🔄 Grid stale for {symbol} (Live: ${price:.4f}, Highest Buy Order: ${max_buy_p:.4f}). Re-centering grid around current price...")
-                engine.cancel_all(exchange)
-                engine.build_grid(price, _portfolio, atr=atr_val, force=force_reset)
-                engine.place_grid_orders(_portfolio, exchange)
-
+                    pass
+        
+        for symbol in asset_list:
+            engine = _grid_engines.get(symbol)
+            if not engine:
+                continue
                 
-            # Process tick (checks crossable fills & places replacement orders)
-            events = engine.tick(price, _portfolio, exchange=exchange)
-            fill_events.extend(events)
+            try:
+                ticker = tickers.get(symbol)
+                if not ticker or "last" not in ticker or not ticker["last"]:
+                    try:
+                        ticker = exchange.fetch_ticker(symbol)
+                    except Exception:
+                        continue
+                        
+                price = float(ticker["last"])
+                _portfolio.update_price(symbol, price)
+                
+                # Compute ATR volatility for dynamic volatility scaling (Lance Breitstein method)
+                detector = _regime_detectors.get(symbol)
+                atr_val = 0.0
+                if detector and detector._cached_state and hasattr(detector._cached_state, 'price') and detector._cached_state.price > 0:
+                    # Estimate 1h ATR from SMA50/SMA200 volatility or cached indicator state
+                    atr_val = price * 0.008  # Default 0.8% volatility estimate
+
+                # Initial grid build if empty, forced reset, or auto-recenter if open buy orders are stale (>1.5% away in either direction)
+                open_buys = [l for l in engine.grid_levels if l.status in ['open', 'pending'] and l.side == 'buy']
+                max_buy_p = max((l.price for l in open_buys), default=0.0)
+                has_no_buys = not open_buys and len(engine.grid_levels) > 0
+                is_stale = bool(has_no_buys or (max_buy_p > 0 and (max_buy_p > price * 1.015 or max_buy_p < price * 0.985)))
+                force_reset = getattr(engine, '_last_rebuild_time', 0) == 0
+
+                if not engine.grid_levels or is_stale or force_reset:
+                    if is_stale:
+                        logger.info(f"🔄 Grid stale for {symbol} (Live: ${price:.4f}, Highest Buy Order: ${max_buy_p:.4f}). Re-centering grid around current price...")
+                    engine.cancel_all(exchange)
+                    engine.build_grid(price, _portfolio, atr=atr_val, force=force_reset)
+                    engine.place_grid_orders(_portfolio, exchange)
+
+                # Process tick (checks crossable fills & places replacement orders)
+                events = engine.tick(price, _portfolio, exchange=exchange)
+                fill_events.extend(events)
+                
+                if events:
+                    # If fills occurred, immediately place new replacement SELL/BUY limit orders on Bybit exchange!
+                    engine.place_grid_orders(_portfolio, exchange)
+            except Exception as e:
+                logger.warning(f"Error in grid tick for {symbol}: {e}")
             
-            if events:
-                # If fills occurred, immediately place new replacement SELL/BUY limit orders on Bybit exchange!
-                engine.place_grid_orders(_portfolio, exchange)
-            
-        except Exception as e:
-            logger.warning(f"Error in grid tick for {symbol}: {e}")
-            
+    finally:
+        _tick_lock.release()
     _portfolio.save()
     return {"status": "ok", "fills": fill_events, "portfolio": _portfolio.summary()}
 
