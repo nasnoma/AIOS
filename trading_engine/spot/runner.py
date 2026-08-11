@@ -206,14 +206,14 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 # Estimate 1h ATR from SMA50/SMA200 volatility or cached indicator state
                 atr_val = price * 0.008  # Default 0.8% volatility estimate
 
-            # Initial grid build if empty, forced reset, or auto-recenter if open buy orders are stale (>1.5% above live price)
+            # Initial grid build if empty, forced reset, or auto-recenter if open buy orders are stale (>1.5% away in either direction)
             open_buys = [l for l in engine.grid_levels if l.status == 'open' and l.side == 'buy']
-            is_stale = bool(open_buys and max(l.price for l in open_buys) > price * 1.015)
+            max_buy_p = max((l.price for l in open_buys), default=0.0)
+            is_stale = bool(open_buys and max_buy_p > 0 and (max_buy_p > price * 1.015 or max_buy_p < price * 0.985))
             force_reset = getattr(engine, '_last_rebuild_time', 0) == 0
 
             if not engine.grid_levels or is_stale or force_reset:
                 if is_stale:
-                    max_buy_p = max(l.price for l in open_buys)
                     logger.info(f"🔄 Grid stale for {symbol} (Live: ${price:.4f}, Highest Buy Order: ${max_buy_p:.4f}). Re-centering grid around current price...")
                 engine.cancel_all(exchange)
                 engine.build_grid(price, _portfolio, atr=atr_val, force=force_reset)
@@ -319,16 +319,28 @@ def get_spot_status() -> Dict[str, Any]:
 
     regimes = {}
     grids = {}
-    for sym, det in _regime_detectors.items():
-        if det._cached_state:
+    for sym in spot_settings.asset_list:
+        det = _regime_detectors.get(sym)
+        last_p = _portfolio.holdings[sym].last_price if (hasattr(_portfolio, 'holdings') and sym in _portfolio.holdings) else 0.0
+        if det and det._cached_state:
             regimes[sym] = {
                 "regime": det._cached_state.regime,
                 "adx": round(det._cached_state.adx, 1),
                 "plus_di": round(det._cached_state.plus_di, 1),
                 "minus_di": round(det._cached_state.minus_di, 1),
-                "sma_50": round(det._cached_state.sma_50, 2),
-                "sma_200": round(det._cached_state.sma_200, 2),
-                "price": round(det._cached_state.price, 2),
+                "sma_50": round(det._cached_state.sma_50, 4),
+                "sma_200": round(det._cached_state.sma_200, 4),
+                "price": round(det._cached_state.price or last_p, 4),
+            }
+        else:
+            regimes[sym] = {
+                "regime": "RANGE",
+                "adx": 20.0,
+                "plus_di": 15.0,
+                "minus_di": 15.0,
+                "sma_50": round(last_p, 4),
+                "sma_200": round(last_p, 4),
+                "price": round(last_p, 4),
             }
             
     for sym, eng in _grid_engines.items():
