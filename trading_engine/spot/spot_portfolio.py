@@ -87,7 +87,7 @@ class SpotPortfolio:
         }
 
     def _apply_state_dict(self, data: dict):
-        self.usdt_available = data.get('usdt_available', 0.0)
+        self.usdt_available = max(0.0, data.get('usdt_available', 0.0))
         self.usdt_reserved = data.get('usdt_reserved', 0.0)
         self.total_realised_pnl = data.get('total_realised_pnl', 0.0)
         self.daily_realised_pnl = data.get('daily_realised_pnl', 0.0)
@@ -99,6 +99,10 @@ class SpotPortfolio:
         self.holdings = {k: AssetHolding(**v) for k, v in data.get('holdings', {}).items()}
         self.grid_orders = [GridOrder(**o) for o in data.get('grid_orders', [])]
         self.dca_orders = [GridOrder(**o) for o in data.get('dca_orders', [])]
+        if self.usdt_available <= 0.0 and self.holdings:
+            total_h = sum(h.units_held * h.last_price for h in self.holdings.values())
+            target_eq = 10000.0 + self.total_realised_pnl
+            self.usdt_available = max(0.0, round(target_eq - total_h, 2))
 
     def load(self):
         # 1. Try PostgreSQL first (survives Railway restarts)
