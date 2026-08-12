@@ -12,10 +12,10 @@ class DummyPortfolio:
         self.positions = {}
     def get_position(self, symbol):
         return self.positions.get(symbol, 0.0)
-    def record_buy(self, symbol, qty, price, fee):
+    def record_buy(self, symbol, qty, price, *args, **kwargs):
         base = symbol.split('/')[0]
         self.positions[base] = self.positions.get(base, 0.0) + qty
-    def record_sell(self, symbol, qty, price, fee):
+    def record_sell(self, symbol, qty, price, *args, **kwargs):
         base = symbol.split('/')[0]
         self.positions[base] = max(0.0, self.positions.get(base, 0.0) - qty)
 
