@@ -129,8 +129,28 @@ class DCAManager:
                 is_tight_compression = False
                 is_squeeze_expansion = False
 
+            # ── Christopher Creamer Orderflow & CVD Absorption (Robbins Cup Winner) ──
+            # Calculate 5-candle Cumulative Volume Delta (CVD)
+            vol_delta = (df['close'] - df['open']).apply(lambda x: 1 if x >= 0 else -1) * df['volume']
+            cvd_series = vol_delta.cumsum()
+            
+            # Detect Bullish CVD Absorption: price makes lower low over last 5 candles, but CVD makes higher low
+            price_low5 = df['low'].tail(5)
+            cvd_low5 = cvd_series.tail(5)
+            is_cvd_absorption = (price_low5.iloc[-1] <= price_low5.min()) and (cvd_low5.iloc[-1] > cvd_low5.min()) and (rsi < 40)
+            
+            # Detect Trapped Trader Exhaustion: long lower wick (> 2x candle body) with high relative volume (> 1.6x)
+            candle_body = (df['close'] - df['open']).abs()
+            lower_wick = df[['open', 'close']].min(axis=1) - df['low']
+            is_trapped_trader_exhaustion = (lower_wick.iloc[-1] > 2.0 * candle_body.iloc[-1]) and (latest['volume'] > 1.6 * vol_sma20)
+
             # Day trading signal logic:
-            if regime == "RANGE":
+            signal = None
+            if is_cvd_absorption:
+                signal = "creamer_cvd_absorption_dip"
+            elif is_trapped_trader_exhaustion:
+                signal = "trapped_trader_exhaustion_dip"
+            elif regime == "RANGE":
                 if is_squeeze_expansion and price < vwap and is_discount_zone and dual_stoch_exhausted:
                     signal = "hanlin_squeeze_breakout_dip"
                 elif (price <= lower_band or is_liquidity_sweep or is_opening_range_reversal) and rsi < 36 and price < vwap and is_discount_zone and dual_stoch_exhausted:
@@ -165,8 +185,8 @@ class DCAManager:
             return None
             
     def extra_buy_multiplier(self, regime: str, signal_type: str = "") -> float:
-        if signal_type in ["hanlin_squeeze_breakout_dip", "bear_sweep_extreme_oversold", "quick_flip_opening_range_dip"]:
-            return 2.0  # 2.0x Extreme Volatility & Oversold Dip Multiplier
+        if signal_type in ["creamer_cvd_absorption_dip", "trapped_trader_exhaustion_dip", "hanlin_squeeze_breakout_dip", "bear_sweep_extreme_oversold", "quick_flip_opening_range_dip"]:
+            return 2.0  # 2.0x Orderflow & CVD Absorption Multiplier
         if regime == "BULL":
             return 1.2
         elif regime == "RANGE":
