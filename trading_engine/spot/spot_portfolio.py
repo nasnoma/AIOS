@@ -107,6 +107,10 @@ class SpotPortfolio:
                 for h in self.holdings.values():
                     h.units_held = h.units_held * scale
                 self.usdt_available = 0.0
+                try:
+                    self.save()
+                except Exception:
+                    pass
             else:
                 self.usdt_available = max(0.0, round(target_eq - total_h, 2))
 
