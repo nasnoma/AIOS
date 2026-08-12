@@ -371,7 +371,9 @@ def get_spot_status() -> Dict[str, Any]:
             }
             
     for sym, eng in _grid_engines.items():
-        grids[sym] = eng.summary()
+        summary_dict = eng.summary()
+        summary_dict['allocated_usd'] = float(getattr(eng, 'allocated_usd', 0.0))
+        grids[sym] = summary_dict
 
     # If Live / Demo mode: merge live open orders directly from Bybit
     if not spot_settings.paper_mode and exchange:
