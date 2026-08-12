@@ -17,20 +17,18 @@ from typing import Dict, Any
 
 def _get_dynamic_hot_asset_allocations(asset_list: list[str]) -> dict[str, float]:
     """
-    Dynamic Hot-Asset Capital Rotation (Lance Breitstein Volatility Weighting):
-    Ranks the 12 Halal pairs by volatility/ATR group.
-    Top 3 highest-volatility pairs receive 70% of active capital (~23.33% each).
-    Remaining 9 pairs receive 30% (~3.33% each).
+    3x Yield Volatility Weighting (Top 2 Capital Concentration):
+    Concentrates 80% of active capital into Top 2 Volatility Leaders (40.0% each = ~$3,940/pair on $10k equity).
+    Remaining 10 pairs share 20% (~2.0% each).
     """
-    high_atr = {'ICP/USDT', 'ARB/USDT', 'NEAR/USDT', 'RENDER/USDT', 'FET/USDT'}
-    top3 = {'ICP/USDT', 'NEAR/USDT', 'RENDER/USDT'}
+    top2 = {'ICP/USDT', 'NEAR/USDT'}
     allocations = {}
     for sym in asset_list:
-        if sym in top3:
-            allocations[sym] = 0.70 / 3.0  # 23.33% each for Top 3 Movers
+        if sym in top2:
+            allocations[sym] = 0.80 / 2.0  # 40.0% each for Top 2 Volatility Leaders
         else:
-            rem_count = max(1, len(asset_list) - 3)
-            allocations[sym] = 0.30 / rem_count  # 3.33% each for remaining
+            rem_count = max(1, len(asset_list) - 2)
+            allocations[sym] = 0.20 / rem_count  # 2.0% each for remaining 10
     return allocations
 
 from trading_engine.config import spot_settings, settings
