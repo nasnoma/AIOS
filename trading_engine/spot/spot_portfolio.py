@@ -146,7 +146,7 @@ class SpotPortfolio:
             return
         if order_id:
             self.processed_order_ids.add(order_id)
-        self.usdt_available -= size_usd
+        self.usdt_available = max(0.0, self.usdt_available - size_usd)
         if symbol not in self.holdings:
             self.holdings[symbol] = AssetHolding(
                 symbol=symbol,
@@ -336,8 +336,14 @@ class SpotPortfolio:
                 else:
                     corrected_net += float(c.get('net_pnl', 0.0))
 
+        total_holdings_val = sum(h['value_usd'] for h in formatted_holdings.values())
+        if self.usdt_available < 0:
+            target_equity = 10000.0 + self.total_realised_pnl
+            self.usdt_available = max(0.0, round(target_equity - total_holdings_val, 2))
+            self.save()
+
         return {
-            'usdt_available': float(self.usdt_available or 0.0),
+            'usdt_available': float(max(0.0, self.usdt_available or 0.0)),
             'usdt_reserved': float(self.usdt_reserved or 0.0),
             'total_realised_pnl': float(self.total_realised_pnl or 0.0),
             'daily_realised_pnl': float(self.daily_realised_pnl or 0.0),
