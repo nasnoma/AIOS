@@ -137,16 +137,16 @@ class DCAManager:
             # Detect Bullish CVD Absorption: price makes lower low over last 5 candles, but CVD makes higher low
             price_low5 = df['low'].tail(5)
             cvd_low5 = cvd_series.tail(5)
-            is_cvd_absorption = (price_low5.iloc[-1] <= price_low5.min()) and (cvd_low5.iloc[-1] > cvd_low5.min()) and (rsi < 40)
-            
-            # Detect Trapped Trader Exhaustion: long lower wick (> 2x candle body) with high relative volume (> 1.6x)
-            candle_body = (df['close'] - df['open']).abs()
-            lower_wick = df[['open', 'close']].min(axis=1) - df['low']
-            is_trapped_trader_exhaustion = (lower_wick.iloc[-1] > 2.0 * candle_body.iloc[-1]) and (latest['volume'] > 1.6 * vol_sma20)
+            # ── Video Timestamp 353s: Delta Turnaround & Limit Wall Defense ──
+            # Detects when price closes in top 35% of its candle range with positive volume delta after dipping to VAL/Support
+            is_delta_turnaround = (latest['close'] > latest['low'] + 0.35 * (latest['high'] - latest['low'])) and (latest['close'] >= latest['open']) and (latest['volume'] >= vol_sma20)
+            is_confirmed_creamer_signal = is_cvd_absorption and is_delta_turnaround
 
             # Day trading signal logic:
             signal = None
-            if is_cvd_absorption:
+            if is_confirmed_creamer_signal:
+                signal = "creamer_high_confluence_cvd_absorption"
+            elif is_cvd_absorption:
                 signal = "creamer_cvd_absorption_dip"
             elif is_trapped_trader_exhaustion:
                 signal = "trapped_trader_exhaustion_dip"
