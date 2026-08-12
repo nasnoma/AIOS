@@ -149,11 +149,11 @@ class GridEngine:
             high_atr = {'ICP/USDT', 'ARB/USDT', 'NEAR/USDT', 'RENDER/USDT', 'FET/USDT'}
             low_atr = {'SOL/USDT', 'AVAX/USDT', 'SUI/USDT'}
             if self.symbol in high_atr:
-                spacing = 0.022  # 2.2% spacing for high-volatility pairs (+ $0.32-$0.45/cycle)
+                spacing = 0.012  # 1.20% spacing for high-volatility pairs (84% net retention after fees)
             elif self.symbol in low_atr:
-                spacing = 0.009  # 0.9% spacing for low-volatility pairs (2x-3x faster fills)
+                spacing = 0.009  # 0.90% spacing for low-volatility pairs (78% net retention after fees)
             else:
-                spacing = self.params.grid_spacing
+                spacing = max(0.009, self.params.grid_spacing)
         
         self.current_spacing = spacing
         total_levels = self.params.buy_levels + self.params.sell_levels
@@ -241,7 +241,7 @@ class GridEngine:
                                         decimals = max(0, -int(math.floor(math.log10(float(prec)))))
                                         qty_val = round(qty_val, decimals)
 
-                        params = {'category': 'spot'} if 'bybit' in str(type(exchange)).lower() else {}
+                        params = {'category': 'spot', 'postOnly': True} if 'bybit' in str(type(exchange)).lower() else {}
                         if level.side == 'buy':
                             order = exchange.create_limit_buy_order(self.symbol, qty_val, price_val, params)
                         else:
@@ -282,12 +282,9 @@ class GridEngine:
                     if hasattr(portfolio, 'record_buy'):
                         portfolio.record_buy(self.symbol, level.qty, level.price, level.size_usd, order_id=level.order_id or '')
                     
-                    # Fee-aware sell price: profit must exceed 2× round-trip fees
-                    # min_profit_pct (0.2%) already covers full round-trip fees.
-                    # safety_margin removed: it doubled the required move on tight-
-                    # spacing assets (0.10% spacing), starving cycle completions.
-                    min_profit_pct = 2 * self.fee_rate  # 0.2% — fee break-even
-                    active_spacing = getattr(self, 'current_spacing', self.params.grid_spacing)
+                    # Fee-aware sell price: net profit retention floor (3.5x fee rate = 0.35% min net profit floor)
+                    min_profit_pct = 3.5 * self.fee_rate  # 0.35% net profit floor above entry
+                    active_spacing = max(0.009, getattr(self, 'current_spacing', self.params.grid_spacing))
                     sell_price = level.price * (1 + active_spacing + min_profit_pct)
                     new_sell = GridLevel(
                         price=sell_price,
