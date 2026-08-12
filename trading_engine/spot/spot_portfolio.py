@@ -99,10 +99,16 @@ class SpotPortfolio:
         self.holdings = {k: AssetHolding(**v) for k, v in data.get('holdings', {}).items()}
         self.grid_orders = [GridOrder(**o) for o in data.get('grid_orders', [])]
         self.dca_orders = [GridOrder(**o) for o in data.get('dca_orders', [])]
-        if self.usdt_available <= 0.0 and self.holdings:
+        if self.holdings:
             total_h = sum(h.units_held * h.last_price for h in self.holdings.values())
             target_eq = 10000.0 + self.total_realised_pnl
-            self.usdt_available = max(0.0, round(target_eq - total_h, 2))
+            if total_h > (target_eq * 1.02):
+                scale = target_eq / total_h
+                for h in self.holdings.values():
+                    h.units_held = h.units_held * scale
+                self.usdt_available = 0.0
+            else:
+                self.usdt_available = max(0.0, round(target_eq - total_h, 2))
 
     def load(self):
         # 1. Try PostgreSQL first (survives Railway restarts)
@@ -147,6 +153,9 @@ class SpotPortfolio:
             
     def record_buy(self, symbol: str, qty: float, price: float, size_usd: float, order_id: str = '', is_dca: bool = False):
         if order_id and order_id in self.processed_order_ids:
+            return
+        if self.usdt_available < 5.0 and self.usdt_available < (size_usd * 0.8):
+            logger.warning(f"Skipping paper buy for {symbol}: insufficient USDT cash (${self.usdt_available:.2f})")
             return
         if order_id:
             self.processed_order_ids.add(order_id)
