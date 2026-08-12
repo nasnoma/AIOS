@@ -250,12 +250,18 @@ class SpotPortfolio:
         
     def reset_daily_if_needed(self):
         today = datetime.datetime.now(datetime.timezone.utc).date().isoformat()
-        if self.last_daily_reset != today:
-            self.daily_realised_pnl = 0.0
-            self.cycles_today = 0
+        if not getattr(self, 'last_daily_reset', None) or self.last_daily_reset != today:
             self.consecutive_wins = 0
             self.consecutive_losses = 0
             self.last_daily_reset = today
+            
+        today_cycles = [
+            c for c in getattr(self, 'completed_cycles', [])
+            if str(c.get('timestamp', '')).startswith(today)
+        ]
+        self.daily_realised_pnl = round(sum(float(c.get('net_pnl', 0.0)) for c in today_cycles), 4)
+        self.cycles_today = len(today_cycles)
+        self.total_realised_pnl = round(sum(float(c.get('net_pnl', 0.0)) for c in getattr(self, 'completed_cycles', [])), 4)
             
     def get_streak_risk_factor(self) -> float:
         """
