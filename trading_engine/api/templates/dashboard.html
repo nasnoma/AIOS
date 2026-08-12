@@ -344,7 +344,7 @@ function renderSpotStatus(data) {
   // Completed cycles
   const cyclesEl = document.getElementById('spot-cycles-list');
   if (cyclesEl && Array.isArray(p.completed_cycles)) {
-    const cycs = [...p.completed_cycles].slice(-25).reverse();
+    const cycs = [...p.completed_cycles].sort((a,b) => (b.timestamp||'').localeCompare(a.timestamp||'')).slice(0, 30);
     cyclesEl.innerHTML = cycs.length ? cycs.map(c => {
       const ts = c.timestamp || '';
       let timeBadge = '';
