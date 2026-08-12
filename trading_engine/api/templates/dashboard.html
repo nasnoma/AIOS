@@ -283,6 +283,7 @@ function renderSpotStatus(data) {
         return '<div class="asset-card" style="' + bStyle + '">' +
           '<div class="asset-card-top"><span class="asset-name">' + sym.split('/')[0] + '</span><span class="pill ' + pillCls + '">' + regime + '</span></div>' +
           '<div class="asset-row"><span>Price</span><strong>$' + fmt(price) + '</strong></div>' +
+          (g.allocated_usd ? '<div class="asset-row"><span>Cap</span><strong style="color:var(--yellow)">$' + Number(g.allocated_usd).toFixed(0) + '</strong></div>' : '') +
           (hasPos ? '<div class="asset-row"><span>Held</span><strong>' + uVal.toFixed(4) + '</strong></div><div class="asset-row"><span>Cost</span><strong>$' + fmt(h.avg_cost_basis||0) + '</strong></div>' : '') +
           '<div class="asset-row"><span>Orders</span><span><strong style="color:var(--green)">' + (g.open_buys||0) + 'B</strong> <strong style="color:var(--red)">' + (g.open_sells||0) + 'S</strong></span></div>' +
           (reg.adx ? '<div class="asset-row"><span>ADX</span><strong>' + reg.adx + '</strong></div>' : '') +

@@ -381,6 +381,7 @@ class GridEngine:
         return {
             'symbol': self.symbol,
             'regime': self.current_regime,
+            'allocated_usd': float(self.allocated_usd),
             'open_buys': open_buys,
             'open_sells': open_sells,
             'completed_cycles': len(self.completed_cycles),
