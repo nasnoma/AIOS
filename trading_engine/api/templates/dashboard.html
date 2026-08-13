@@ -272,14 +272,20 @@ function renderSpotStatus(data) {
   // Watchlist cards
   const gridEl = document.getElementById('spot-assets-grid');
   if (gridEl) {
-    const allAssets = [...new Set([...Object.keys(regimes),...Object.keys(grids),...(p.holdings?Object.keys(p.holdings):[])])].sort((a,b) => {
-      const capA = (grids[a] && grids[a].allocated_usd) || 0;
-      const capB = (grids[b] && grids[b].allocated_usd) || 0;
-      if (capB !== capA) return capB - capA;
-      const adxA = (regimes[a] && regimes[a].adx) || 0;
-      const adxB = (regimes[b] && regimes[b].adx) || 0;
-      return adxB - adxA;
-    });
+    const activeHalalAssets = new Set([
+      'NEAR/USDT','AVAX/USDT','SUI/USDT','FET/USDT','UNI/USDT','ARKM/USDT',
+      'ICP/USDT','ARB/USDT','RENDER/USDT','ADA/USDT','SOL/USDT','APT/USDT'
+    ]);
+    const allAssets = [...new Set([...Object.keys(regimes),...Object.keys(grids),...(p.holdings?Object.keys(p.holdings):[])])]
+      .filter(sym => activeHalalAssets.has(sym))
+      .sort((a,b) => {
+        const capA = (grids[a] && grids[a].allocated_usd) || 0;
+        const capB = (grids[b] && grids[b].allocated_usd) || 0;
+        if (capB !== capA) return capB - capA;
+        const adxA = (regimes[a] && regimes[a].adx) || 0;
+        const adxB = (regimes[b] && regimes[b].adx) || 0;
+        return adxB - adxA;
+      });
     if (!allAssets.length) {
       gridEl.innerHTML = '<div class="empty" style="grid-column:1/-1">Loading asset prices &amp; regimes&hellip;</div>';
     } else {
