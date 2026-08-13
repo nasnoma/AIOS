@@ -270,10 +270,18 @@ function renderSpotStatus(data) {
   // Watchlist cards
   const gridEl = document.getElementById('spot-assets-grid');
   if (gridEl) {
-    const allAssets = [...new Set([...Object.keys(regimes),...Object.keys(grids),...(p.holdings?Object.keys(p.holdings):[])])].sort();
+    const allAssets = [...new Set([...Object.keys(regimes),...Object.keys(grids),...(p.holdings?Object.keys(p.holdings):[])])].sort((a,b) => {
+      const capA = (grids[a] && grids[a].allocated_usd) || 0;
+      const capB = (grids[b] && grids[b].allocated_usd) || 0;
+      if (capB !== capA) return capB - capA;
+      const adxA = (regimes[a] && regimes[a].adx) || 0;
+      const adxB = (regimes[b] && regimes[b].adx) || 0;
+      return adxB - adxA;
+    });
     if (!allAssets.length) {
       gridEl.innerHTML = '<div class="empty" style="grid-column:1/-1">Loading asset prices &amp; regimes&hellip;</div>';
     } else {
+      const maxCap = Math.max(...allAssets.map(s => (grids[s] && grids[s].allocated_usd) || 0));
       gridEl.innerHTML = allAssets.map(sym => {
         const h = (p.holdings && p.holdings[sym]) || {};
         const reg = regimes[sym] || {};
@@ -285,11 +293,13 @@ function renderSpotStatus(data) {
         const pnlColor = pnl >= 0 ? 'var(--green)' : 'var(--red)';
         const hasPos = (h.units_held || h.units || 0) > 0;
         const uVal = h.units_held || h.units || 0;
-        const bStyle = hasPos ? 'border-color:rgba(0,229,176,0.3)' : '';
+        const cap = g.allocated_usd || 0;
+        const isTop = (maxCap > 500 && cap >= maxCap * 0.9);
+        const bStyle = isTop ? 'border-color:rgba(255,184,0,0.6);background:rgba(255,184,0,0.03)' : (hasPos ? 'border-color:rgba(0,229,176,0.3)' : '');
         return '<div class="asset-card" style="' + bStyle + '">' +
-          '<div class="asset-card-top"><span class="asset-name">' + sym.split('/')[0] + '</span><span class="pill ' + pillCls + '">' + regime + '</span></div>' +
+          '<div class="asset-card-top"><span class="asset-name">' + sym.split('/')[0] + (isTop ? ' <span style="font-size:0.7rem">&#128293;</span>' : '') + '</span><span class="pill ' + pillCls + '">' + regime + '</span></div>' +
           '<div class="asset-row"><span>Price</span><strong>$' + fmt(price) + '</strong></div>' +
-          (g.allocated_usd ? '<div class="asset-row"><span>Cap</span><strong style="color:var(--yellow)">$' + Number(g.allocated_usd).toFixed(0) + '</strong></div>' : '') +
+          (cap ? '<div class="asset-row"><span>Cap</span><strong style="color:' + (isTop ? 'var(--yellow)' : 'var(--text-2)') + '">$' + Number(cap).toFixed(0) + (isTop ? ' &#128293;' : '') + '</strong></div>' : '') +
           (hasPos ? '<div class="asset-row"><span>Held</span><strong>' + uVal.toFixed(4) + '</strong></div><div class="asset-row"><span>Cost</span><strong>$' + fmt(h.avg_cost_basis||0) + '</strong></div>' : '') +
           '<div class="asset-row"><span>Orders</span><span><strong style="color:var(--green)">' + (g.open_buys||0) + 'B</strong> <strong style="color:var(--red)">' + (g.open_sells||0) + 'S</strong></span></div>' +
           (reg.adx ? '<div class="asset-row"><span>ADX</span><strong>' + reg.adx + '</strong></div>' : '') +
