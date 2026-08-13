@@ -313,15 +313,24 @@ def run_spot_dca_check():
                     ticker = exchange.fetch_ticker(symbol)
                     price = ticker["last"]
                     qty = order_size / price
-                    _portfolio.record_buy(symbol, qty, price, order_size, f"DCA_{int(datetime.now(timezone.utc).timestamp())}", is_dca=True)
+                    order_id_str = f"DCA_{int(datetime.now(timezone.utc).timestamp())}"
+                    
+                    if not spot_settings.paper_mode and exchange:
+                        try:
+                            buy_ord = exchange.create_market_buy_order(symbol, qty)
+                            if buy_ord and buy_ord.get('id'):
+                                order_id_str = str(buy_ord['id'])
+                        except Exception as buy_err:
+                            logger.error(f"Live DCA market buy failed [{symbol}]: {buy_err}")
+                            continue
+
+                    _portfolio.record_buy(symbol, qty, price, order_size, order_id_str, is_dca=True)
                     _portfolio.save()
 
                     # ── DCA Exit Target: place limit sell at +1.5% above entry ──
-                    # After fees (0.1% each side = 0.2% round-trip), this yields ~1.3% net gain.
-                    # Prevents DCA positions sitting open through prolonged downtrends.
                     exit_price = round(price * 1.015, 6)
                     try:
-                        if not spot_settings.paper_mode:
+                        if not spot_settings.paper_mode and exchange:
                             exchange.create_limit_sell_order(symbol, qty, exit_price)
                             logger.info(f"📤 DCA Exit Limit Sell placed [{symbol}]: qty={qty:.6f} @ ${exit_price:.4f} (+1.5% target)")
                         else:
@@ -362,15 +371,13 @@ def get_spot_status() -> Dict[str, Any]:
         try:
             bal = exchange.fetch_balance({'accountType': 'UNIFIED'})
             usdt_total = float(bal.get('total', {}).get('USDT', 0) or bal.get('USDT', {}).get('total', 0) or 0)
-            account_equity = 10000.0 if (usdt_total > 0 and usdt_total < 8000) else (usdt_total if usdt_total > 0 else 10000.0)
-            active_capital = account_equity * spot_settings.total_capital_pct  # 75% of account ($7,500.00)
-            _portfolio.usdt_available = round(active_capital * (1.0 - spot_settings.usdt_hard_reserve_pct), 2)  # 95% ($7,125.00 free)
-            _portfolio.usdt_reserved = round(active_capital * spot_settings.usdt_hard_reserve_pct, 2)          # 5% ($375.00 reserve)
-            _portfolio.save()
-
-
-
-
+            usdt_free = float(bal.get('free', {}).get('USDT', 0) or bal.get('USDT', {}).get('free', 0) or 0)
+            if usdt_total > 0:
+                account_equity = usdt_total
+                active_capital = account_equity * spot_settings.total_capital_pct
+                _portfolio.usdt_available = round(min(usdt_free, active_capital * (1.0 - spot_settings.usdt_hard_reserve_pct)), 2)
+                _portfolio.usdt_reserved = round(active_capital * spot_settings.usdt_hard_reserve_pct, 2)
+                _portfolio.save()
         except Exception as e_bal:
             logger.debug(f"Live balance fetch in get_spot_status: {e_bal}")
 
