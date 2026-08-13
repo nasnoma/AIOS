@@ -274,7 +274,9 @@ function renderSpotStatus(data) {
   if (gridEl) {
     const activeHalalAssets = new Set([
       'NEAR/USDT','AVAX/USDT','SUI/USDT','FET/USDT','UNI/USDT','ARKM/USDT',
-      'ICP/USDT','ARB/USDT','RENDER/USDT','ADA/USDT','SOL/USDT','APT/USDT'
+      'ICP/USDT','ARB/USDT','RENDER/USDT','ADA/USDT','SOL/USDT','APT/USDT',
+      'LINK/USDT','INJ/USDT','DOT/USDT','ATOM/USDT','ALGO/USDT','OP/USDT',
+      'TIA/USDT','SEI/USDT','BTC/USDT','ETH/USDT'
     ]);
     const allAssets = [...new Set([...Object.keys(regimes),...Object.keys(grids),...(p.holdings?Object.keys(p.holdings):[])])]
       .filter(sym => activeHalalAssets.has(sym))
@@ -285,7 +287,7 @@ function renderSpotStatus(data) {
         const adxA = (regimes[a] && regimes[a].adx) || 0;
         const adxB = (regimes[b] && regimes[b].adx) || 0;
         return adxB - adxA;
-      });
+      }).slice(0, 12);
     if (!allAssets.length) {
       gridEl.innerHTML = '<div class="empty" style="grid-column:1/-1">Loading asset prices &amp; regimes&hellip;</div>';
     } else {
