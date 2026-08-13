@@ -99,9 +99,9 @@ class SpotPortfolio:
         self.holdings = {k: AssetHolding(**v) for k, v in data.get('holdings', {}).items()}
         self.grid_orders = [GridOrder(**o) for o in data.get('grid_orders', [])]
         self.dca_orders = [GridOrder(**o) for o in data.get('dca_orders', [])]
+        target_eq = 10000.0 + self.total_realised_pnl
         if self.holdings:
             total_h = sum(h.units_held * h.last_price for h in self.holdings.values())
-            target_eq = 10000.0 + self.total_realised_pnl
             if total_h > (target_eq * 1.02):
                 scale = target_eq / total_h
                 for h in self.holdings.values():
@@ -113,6 +113,9 @@ class SpotPortfolio:
                     pass
             else:
                 self.usdt_available = max(0.0, round(target_eq - total_h, 2))
+        else:
+            self.usdt_available = max(0.0, round(target_eq - self.usdt_reserved, 2))
+
 
     def load(self):
         # 1. Try PostgreSQL first (survives Railway restarts)
