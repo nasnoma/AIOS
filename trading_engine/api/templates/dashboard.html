@@ -121,7 +121,7 @@
     <div class="panel-hd">
       <div class="panel-hd-left">
         <span>&#128737; Halal Spot Watchlist</span>
-        <span style="font-size:0.68rem;color:var(--text-3);">12 High-ATR Halal Assets &middot; Auto Regime</span>
+        <span style="font-size:0.68rem;color:var(--text-3);">23 Screened Halal Assets &middot; Pinned BTC/ETH &amp; Top Volatility Leaders</span>
       </div>
       <div class="panel-hd-right">
         <button class="btn" onclick="triggerSpotTick()">&#9889; Scan / Tick</button>
@@ -273,26 +273,35 @@ function renderSpotStatus(data) {
   const gridEl = document.getElementById('spot-assets-grid');
   if (gridEl) {
     const activeHalalAssets = new Set([
-      'NEAR/USDT','AVAX/USDT','SUI/USDT','FET/USDT','UNI/USDT','ARKM/USDT',
-      'ICP/USDT','ARB/USDT','RENDER/USDT','ADA/USDT','SOL/USDT','APT/USDT',
+      'BTC/USDT','ETH/USDT','SOL/USDT','NEAR/USDT','AVAX/USDT','SUI/USDT','FET/USDT','UNI/USDT','ARKM/USDT',
+      'ICP/USDT','ARB/USDT','RENDER/USDT','ADA/USDT','APT/USDT',
       'LINK/USDT','INJ/USDT','DOT/USDT','ATOM/USDT','ALGO/USDT','OP/USDT',
-      'TIA/USDT','SEI/USDT','BTC/USDT','ETH/USDT'
+      'TIA/USDT','SEI/USDT'
     ]);
     const allAssets = [...new Set([...Object.keys(regimes),...Object.keys(grids),...(p.holdings?Object.keys(p.holdings):[])])]
       .filter(sym => activeHalalAssets.has(sym))
       .sort((a,b) => {
+        // Pin BTC and ETH first so major foundational assets are always visible
+        const isMajorA = (a === 'BTC/USDT' || a === 'ETH/USDT') ? 1 : 0;
+        const isMajorB = (b === 'BTC/USDT' || b === 'ETH/USDT') ? 1 : 0;
+        if (isMajorB !== isMajorA) return isMajorB - isMajorA;
+
+        // Next sort by capital allocation (Top Movers get $3,980)
         const capA = (grids[a] && grids[a].allocated_usd) || 0;
         const capB = (grids[b] && grids[b].allocated_usd) || 0;
         if (capB !== capA) return capB - capA;
+
+        // Next sort by ADX volatility
         const adxA = (regimes[a] && regimes[a].adx) || 0;
         const adxB = (regimes[b] && regimes[b].adx) || 0;
         return adxB - adxA;
-      }).slice(0, 12);
+      });
     if (!allAssets.length) {
       gridEl.innerHTML = '<div class="empty" style="grid-column:1/-1">Loading asset prices &amp; regimes&hellip;</div>';
     } else {
       const maxCap = Math.max(...allAssets.map(s => (grids[s] && grids[s].allocated_usd) || 0));
       gridEl.innerHTML = allAssets.map(sym => {
+
         const h = (p.holdings && p.holdings[sym]) || {};
         const reg = regimes[sym] || {};
         const g = grids[sym] || {};
