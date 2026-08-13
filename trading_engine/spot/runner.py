@@ -17,24 +17,43 @@ from typing import Dict, Any
 
 def _get_dynamic_hot_asset_allocations(asset_list: list[str], regime_detectors: dict = None) -> dict[str, float]:
     """
-    Dynamic Hot-Asset Capital Rotation (Lance Breitstein Volatility Weighting):
-    Ranks all 12 Halal pairs by real-time ATR / ADX Volatility.
-    The Top 2 highest-volatility movers automatically receive 80% of active capital (40% each).
-    Remaining 10 pairs share 20% (~2.0% each).
+    Multi-Timeframe Optimal Volatility Weighting (60% 24h Real-Time Range + 40% Multi-Day ADX Baseline):
+    Combines 24h real-time price range volatility with multi-day trend strength to select
+    the absolute highest-yielding, most liquid Top 2 Volatility Leaders.
     """
     scored_pairs = []
+    pub_ex = None
+    tickers = {}
+    try:
+        pub_ex = get_public_exchange()
+        if pub_ex:
+            tickers = pub_ex.fetch_tickers(asset_list)
+    except Exception:
+        pass
+
     for sym in asset_list:
-        vol_score = 0.0
+        adx_score = 0.0
         if regime_detectors and sym in regime_detectors:
             det = regime_detectors[sym]
             if det and getattr(det, '_cached_state', None):
                 st = det._cached_state
-                vol_score = float(getattr(st, 'adx', 0.0)) + float(abs(getattr(st, 'plus_di', 0.0) - getattr(st, 'minus_di', 0.0)))
+                adx_score = float(getattr(st, 'adx', 0.0)) + float(abs(getattr(st, 'plus_di', 0.0) - getattr(st, 'minus_di', 0.0)))
+        
+        range_24h_pct = 0.0
+        if tickers and sym in tickers:
+            t = tickers[sym]
+            high = float(t.get('high', 0) or 0)
+            low = float(t.get('low', 1) or 1)
+            if low > 0:
+                range_24h_pct = ((high - low) / low) * 100.0
+
+        # Multi-Timeframe Optimal Score: 60% 24h Real-Time Range + 40% Multi-Day ADX
+        vol_score = (0.60 * range_24h_pct * 10.0) + (0.40 * adx_score)
         if vol_score <= 0.0:
-            default_scores = {'ICP/USDT': 95.0, 'NEAR/USDT': 90.0, 'RENDER/USDT': 85.0, 'FET/USDT': 80.0, 'SOL/USDT': 75.0}
+            default_scores = {'ARB/USDT': 95.0, 'ICP/USDT': 92.0, 'AVAX/USDT': 88.0, 'NEAR/USDT': 85.0, 'RENDER/USDT': 80.0}
             vol_score = default_scores.get(sym, 50.0)
         scored_pairs.append((sym, vol_score))
-        
+
     scored_pairs.sort(key=lambda x: x[1], reverse=True)
     top2 = {scored_pairs[0][0], scored_pairs[1][0]}
     
