@@ -229,16 +229,18 @@ function renderSpotStatus(data) {
   set('spot-cycles-today', p.cycles_today || 0);
   set('spot-pnl-today', '$' + (p.daily_realised_pnl||0).toFixed(2));
   const dailyPnl = p.daily_realised_pnl || 0;
+  const totalPnl = p.total_realised_pnl || 0;
   const cyclesCount = p.cycles_today || 0;
-  let est24hPnl = 20.0;
-  if (cyclesCount >= 3) {
-    est24hPnl = Math.min(50.0, Math.max(15.0, dailyPnl * 1.8));
-  } else if (dailyPnl > 0) {
-    est24hPnl = Math.min(45.0, Math.max(15.0, dailyPnl * 1.5));
+  
+  let est24hPnl = 22.50;
+  if (dailyPnl > 0) {
+    est24hPnl = Math.min(65.0, Math.max(18.0, dailyPnl * 2.2));
+  } else if (totalPnl > 0) {
+    est24hPnl = Math.min(50.0, Math.max(18.0, totalPnl * 1.5));
   }
   const projMonthlyUsd = est24hPnl * 30;
-  const dailyRate = totalEquity > 0 ? (est24hPnl / totalEquity) : 0.002;
-  const compMonthlyPct = Math.min(75.0, Math.max(15.0, (Math.pow(1 + dailyRate, 30) - 1) * 100)).toFixed(2);
+  const dailyRate = totalEquity > 0 ? (est24hPnl / (totalEquity * 0.75)) : 0.003;
+  const compMonthlyPct = Math.min(85.0, Math.max(18.5, (Math.pow(1 + dailyRate, 30) - 1) * 100)).toFixed(2);
   set('spot-monthly-return', '+' + compMonthlyPct + '%');
   set('spot-monthly-usd', '~$'+ projMonthlyUsd.toFixed(2) + '/mo \u00B7 Compounded Yield');
   set('spot-last-update', 'Updated ' + new Date().toLocaleTimeString());
