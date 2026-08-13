@@ -1,0 +1,14 @@
+{
+  "usdt_available": 9950.0,
+  "usdt_reserved": 50.0,
+  "total_realised_pnl": 0.0,
+  "daily_realised_pnl": 0.0,
+  "cycles_today": 0,
+  "consecutive_wins": 0,
+  "consecutive_losses": 0,
+  "completed_cycles": [],
+  "last_daily_reset": "2026-08-13",
+  "holdings": {},
+  "grid_orders": [],
+  "dca_orders": []
+}
