@@ -156,55 +156,57 @@ class SpotPortfolio:
             self.holdings[symbol].last_price = price
             
     def record_buy(self, symbol: str, qty: float, price: float, size_usd: float, order_id: str = '', is_dca: bool = False):
-        if order_id and order_id in self.processed_order_ids:
-            return
-        if self.usdt_available < 5.0 and self.usdt_available < (size_usd * 0.8):
-            logger.warning(f"Skipping paper buy for {symbol}: insufficient USDT cash (${self.usdt_available:.2f})")
-            return
-        if order_id:
-            self.processed_order_ids.add(order_id)
-        self.usdt_available = max(0.0, self.usdt_available - size_usd)
-        if symbol not in self.holdings:
-            self.holdings[symbol] = AssetHolding(
+        with self._lock:
+            if order_id and order_id in self.processed_order_ids:
+                return
+            if self.usdt_available < 5.0 and self.usdt_available < (size_usd * 0.8):
+                logger.warning(f"Skipping paper buy for {symbol}: insufficient USDT cash (${self.usdt_available:.2f})")
+                return
+            if order_id:
+                self.processed_order_ids.add(order_id)
+            self.usdt_available = max(0.0, self.usdt_available - size_usd)
+            if symbol not in self.holdings:
+                self.holdings[symbol] = AssetHolding(
+                    symbol=symbol,
+                    units_held=0.0,
+                    avg_cost_basis=0.0,
+                    base_hold_units=0.0,
+                    last_price=price
+                )
+                
+            h = self.holdings[symbol]
+            total_cost = (h.units_held * h.avg_cost_basis) + size_usd
+            h.units_held += qty
+            h.avg_cost_basis = total_cost / h.units_held if h.units_held > 0 else 0.0
+            h.last_price = price
+            
+            order = GridOrder(
+                order_id=order_id,
                 symbol=symbol,
-                units_held=0.0,
-                avg_cost_basis=0.0,
-                base_hold_units=0.0,
-                last_price=price
+                side='buy',
+                price=price,
+                qty=qty,
+                size_usd=size_usd,
+                status='filled',
+                created_at=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                filled_at=datetime.datetime.now(datetime.timezone.utc).isoformat()
             )
+            if is_dca:
+                self.dca_orders.append(order)
+            else:
+                self.grid_orders.append(order)
+                
+            self.save()
             
-        h = self.holdings[symbol]
-        total_cost = (h.units_held * h.avg_cost_basis) + size_usd
-        h.units_held += qty
-        h.avg_cost_basis = total_cost / h.units_held if h.units_held > 0 else 0.0
-        h.last_price = price
-        
-        order = GridOrder(
-            order_id=order_id,
-            symbol=symbol,
-            side='buy',
-            price=price,
-            qty=qty,
-            size_usd=size_usd,
-            status='filled',
-            created_at=datetime.datetime.now(datetime.timezone.utc).isoformat(),
-            filled_at=datetime.datetime.now(datetime.timezone.utc).isoformat()
-        )
-        if is_dca:
-            self.dca_orders.append(order)
-        else:
-            self.grid_orders.append(order)
-            
-        self.save()
-        
     def record_sell(self, symbol: str, qty: float, price: float, size_usd: float, order_id: str, buy_cost_basis: float):
-        if order_id and order_id in self.processed_order_ids:
-            return
-        if order_id:
-            self.processed_order_ids.add(order_id)
-        if symbol not in self.holdings or self.holdings[symbol].units_held < qty:
-            logger.error(f"Cannot sell {qty} {symbol}: insufficient holdings")
-            return
+        with self._lock:
+            if order_id and order_id in self.processed_order_ids:
+                return
+            if order_id:
+                self.processed_order_ids.add(order_id)
+            if symbol not in self.holdings or self.holdings[symbol].units_held < qty:
+                logger.error(f"Cannot sell {qty} {symbol}: insufficient holdings")
+                return
             
         h = self.holdings[symbol]
         h.units_held -= qty

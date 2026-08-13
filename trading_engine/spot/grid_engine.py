@@ -115,7 +115,10 @@ class GridEngine:
         self.current_regime = regime
         self.params = REGIME_PARAMS[regime]
         
-        spacing_diff = abs(old_params.grid_spacing - self.params.grid_spacing) / old_params.grid_spacing
+        if old_params and old_params.grid_spacing > 0:
+            spacing_diff = abs(old_params.grid_spacing - self.params.grid_spacing) / old_params.grid_spacing
+        else:
+            spacing_diff = 1.0
         if spacing_diff > 0.30 or old_params.buy_levels != self.params.buy_levels:
             logger.info(f"Regime changed to {regime}. Spacing/levels changed > 30%. Forcing grid rebuild.")
             self._last_rebuild_time = 0.0
@@ -262,10 +265,23 @@ class GridEngine:
                 continue
                 
             is_filled = False
-            if level.side == 'buy' and current_price <= level.price:
-                is_filled = True
-            elif level.side == 'sell' and current_price >= level.price:
-                is_filled = True
+            if not self.paper_mode and exchange and level.order_id and not level.order_id.startswith('PAPER_'):
+                try:
+                    order_info = exchange.fetch_order(level.order_id, self.symbol, {'category': 'spot'})
+                    st = (order_info.get('status') or '').lower()
+                    if st in ['closed', 'filled']:
+                        is_filled = True
+                    elif st in ['canceled', 'cancelled', 'rejected']:
+                        level.status = 'cancelled'
+                        continue
+                except Exception as e_ord:
+                    logger.debug(f"Fetch live order status failed for {level.order_id}: {e_ord}")
+                    continue
+            else:
+                if level.side == 'buy' and current_price <= level.price:
+                    is_filled = True
+                elif level.side == 'sell' and current_price >= level.price:
+                    is_filled = True
                 
             if is_filled:
                 level.status = 'filled'

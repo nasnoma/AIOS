@@ -133,13 +133,27 @@ class DCAManager:
             # Calculate 5-candle Cumulative Volume Delta (CVD)
             vol_delta = (df['close'] - df['open']).apply(lambda x: 1 if x >= 0 else -1) * df['volume']
             cvd_series = vol_delta.cumsum()
-            
-            # Detect Bullish CVD Absorption: price makes lower low over last 5 candles, but CVD makes higher low
+            # Detect Bullish CVD Absorption: price low5 made lower low while CVD low5 made higher low
             price_low5 = df['low'].tail(5)
             cvd_low5 = cvd_series.tail(5)
+            is_cvd_absorption = False
+            try:
+                if len(price_low5) >= 5 and len(cvd_low5) >= 5:
+                    is_cvd_absorption = (price_low5.iloc[-1] < price_low5.iloc[0]) and (cvd_low5.iloc[-1] > cvd_low5.iloc[0])
+            except Exception:
+                is_cvd_absorption = False
+
+            # Trapped Trader Exhaustion: Lower shadow > 2x body and high volume surge
+            candle_body = max(0.0001, abs(latest['close'] - latest['open']))
+            lower_shadow = max(0.0, min(latest['open'], latest['close']) - latest['low'])
+            is_trapped_trader_exhaustion = (lower_shadow >= 1.8 * candle_body) and (latest['volume'] >= 1.4 * vol_sma20)
+
+            # Dual Stoch / RSI Exhaustion: RSI below threshold
+            dual_stoch_exhausted = (rsi < 45)
+
             # ── Video Timestamp 353s: Delta Turnaround & Limit Wall Defense ──
-            # Detects when price closes in top 35% of its candle range with positive volume delta after dipping to VAL/Support
-            is_delta_turnaround = (latest['close'] > latest['low'] + 0.35 * (latest['high'] - latest['low'])) and (latest['close'] >= latest['open']) and (latest['volume'] >= vol_sma20)
+            range_span = max(0.0001, latest['high'] - latest['low'])
+            is_delta_turnaround = (latest['close'] > latest['low'] + 0.35 * range_span) and (latest['close'] >= latest['open']) and (latest['volume'] >= vol_sma20)
             is_confirmed_creamer_signal = is_cvd_absorption and is_delta_turnaround
 
             # Day trading signal logic:
