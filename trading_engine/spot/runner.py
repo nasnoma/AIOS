@@ -15,13 +15,29 @@ from datetime import datetime, timezone
 from loguru import logger
 from typing import Dict, Any
 
-def _get_dynamic_hot_asset_allocations(asset_list: list[str]) -> dict[str, float]:
+def _get_dynamic_hot_asset_allocations(asset_list: list[str], regime_detectors: dict = None) -> dict[str, float]:
     """
-    3x Yield Volatility Weighting (Top 2 Capital Concentration):
-    Concentrates 80% of active capital into Top 2 Volatility Leaders (40.0% each = ~$3,940/pair on $10k equity).
+    Dynamic Hot-Asset Capital Rotation (Lance Breitstein Volatility Weighting):
+    Ranks all 12 Halal pairs by real-time ATR / ADX Volatility.
+    The Top 2 highest-volatility movers automatically receive 80% of active capital (40% each).
     Remaining 10 pairs share 20% (~2.0% each).
     """
-    top2 = {'ICP/USDT', 'NEAR/USDT'}
+    scored_pairs = []
+    for sym in asset_list:
+        vol_score = 0.0
+        if regime_detectors and sym in regime_detectors:
+            det = regime_detectors[sym]
+            if det and getattr(det, '_cached_state', None):
+                st = det._cached_state
+                vol_score = float(getattr(st, 'adx', 0.0)) + float(abs(getattr(st, 'plus_di', 0.0) - getattr(st, 'minus_di', 0.0)))
+        if vol_score <= 0.0:
+            default_scores = {'ICP/USDT': 95.0, 'NEAR/USDT': 90.0, 'RENDER/USDT': 85.0, 'FET/USDT': 80.0, 'SOL/USDT': 75.0}
+            vol_score = default_scores.get(sym, 50.0)
+        scored_pairs.append((sym, vol_score))
+        
+    scored_pairs.sort(key=lambda x: x[1], reverse=True)
+    top2 = {scored_pairs[0][0], scored_pairs[1][0]}
+    
     allocations = {}
     for sym in asset_list:
         if sym in top2:
@@ -134,7 +150,7 @@ def init_spot_engine():
         _portfolio.usdt_reserved = expected_res
         _portfolio.save()
 
-    allocations = _get_dynamic_hot_asset_allocations(spot_settings.asset_list)
+    allocations = _get_dynamic_hot_asset_allocations(spot_settings.asset_list, _regime_detectors)
     for symbol in spot_settings.asset_list:
         if symbol not in _regime_detectors:
             _regime_detectors[symbol] = RegimeDetector(symbol=symbol, timeframe=spot_settings.regime_timeframe)
@@ -158,7 +174,7 @@ def init_spot_engine():
 
 
 def run_spot_regime_check():
-    """Run regime detection for all symbols."""
+    """Run regime detection for all symbols and dynamically rebalance capital to Top 2 Movers."""
     global _regime_detectors, _grid_engines
     exchange = get_spot_exchange()
     for symbol in spot_settings.asset_list:
@@ -176,6 +192,21 @@ def run_spot_regime_check():
             logger.info(f"📊 Regime [{symbol}]: {regime_name} (ADX: {state.adx:.1f}, +DI: {state.plus_di:.1f}, -DI: {state.minus_di:.1f})")
         except Exception as e:
             logger.warning(f"Failed regime check for {symbol}: {e}")
+
+    # Re-evaluate Hot-Asset Capital Rotation based on fresh regime scores
+    try:
+        allocations = _get_dynamic_hot_asset_allocations(spot_settings.asset_list, _regime_detectors)
+        total_eq = _portfolio.usdt_available + sum(h.units_held * h.last_price for h in _portfolio.holdings.values())
+        active_cap = total_eq * spot_settings.total_capital_pct
+        for symbol, engine in _grid_engines.items():
+            alloc_pct = allocations.get(symbol, 0.0833)
+            new_asset_usd = active_cap * alloc_pct
+            if abs(engine.allocated_usd - new_asset_usd) > 5.0:
+                engine.allocated_usd = new_asset_usd
+                engine._last_rebuild_time = 0.0  # Force grid rebuild for new Top Mover
+                logger.info(f"🔄 Rotated Capital Allocation for {symbol}: ${new_asset_usd:,.2f} ({alloc_pct*100:.1f}%)")
+    except Exception as e_rot:
+        logger.debug(f"Capital rotation rebalance: {e_rot}")
 
 
 _tick_lock = threading.Lock()
