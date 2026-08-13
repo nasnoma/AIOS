@@ -386,6 +386,57 @@ async def trigger_spot_tick_endpoint():
         return {"error": str(e)}
 
 
+@app.api_route("/api/spot/reset", methods=["GET", "POST"])
+async def trigger_clean_slate_reset():
+    """Perform a complete clean-slate portfolio and grid order reset."""
+    try:
+        import datetime
+        from trading_engine.spot.runner import _portfolio, init_spot_engine, run_spot_grid_tick, _grid_engines
+        from trading_engine.storage.db import save_portfolio_state
+
+        with _portfolio._lock:
+            _portfolio.usdt_available = 9950.0
+            _portfolio.usdt_reserved = 50.0
+            _portfolio.total_realised_pnl = 0.0
+            _portfolio.daily_realised_pnl = 0.0
+            _portfolio.cycles_today = 0
+            _portfolio.consecutive_wins = 0
+            _portfolio.consecutive_losses = 0
+            _portfolio.completed_cycles = []
+            _portfolio.processed_order_ids = set()
+            _portfolio.holdings = {}
+            _portfolio.grid_orders = []
+            _portfolio.dca_orders = []
+            _portfolio.last_daily_reset = datetime.datetime.now(datetime.timezone.utc).date().isoformat()
+
+        clean_state = _portfolio._build_state_dict()
+        try:
+            save_portfolio_state('spot_portfolio', clean_state)
+        except Exception as e_db:
+            logger.warning(f"Reset DB save error: {e_db}")
+
+        for sym, eng in list(_grid_engines.items()):
+            eng.completed_cycles = []
+            eng.grid_levels = []
+            eng._last_rebuild_time = 0.0
+
+        init_spot_engine()
+        tick_res = run_spot_grid_tick()
+
+        return {
+            "status": "ok",
+            "message": "Clean-slate portfolio reset completed successfully.",
+            "usdt_available": _portfolio.usdt_available,
+            "completed_cycles_count": len(_portfolio.completed_cycles),
+            "holdings_count": len(_portfolio.holdings),
+            "tick_status": tick_res.get("status")
+        }
+    except Exception as e:
+        logger.error(f"Error executing clean-slate reset: {e}")
+        return {"status": "error", "error": str(e)}
+
+
+
 @app.api_route("/api/spot/self-heal", methods=["GET", "POST"])
 async def trigger_self_heal_endpoint():
     """Trigger self-healing audit and automated event-driven backtesting."""
