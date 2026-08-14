@@ -241,8 +241,9 @@ class SpotGridSettings(BaseSettings):
     # ── Master Switch ──────────────────────────────────────────
     enabled: bool = True
     paper_mode: bool = True           # True = simulate fills on real mainnet prices (accurately reflects real money trading)
-    # 23 Screened High-Volatility Liquid Halal Spot Assets on Bybit
-    assets: str = "NEAR/USDT,AVAX/USDT,SUI/USDT,FET/USDT,UNI/USDT,ARKM/USDT,ICP/USDT,ARB/USDT,RENDER/USDT,ADA/USDT,SOL/USDT,APT/USDT,LINK/USDT,INJ/USDT,DOT/USDT,ATOM/USDT,ALGO/USDT,OP/USDT,TIA/USDT,SEI/USDT,BTC/USDT,ETH/USDT"
+    # 24 Screened High-Volatility Liquid & Commodity Halal Spot Assets on Bybit (includes XAUT/USDT Tether Gold)
+    assets: str = "NEAR/USDT,AVAX/USDT,SUI/USDT,FET/USDT,UNI/USDT,ARKM/USDT,ICP/USDT,ARB/USDT,RENDER/USDT,ADA/USDT,SOL/USDT,APT/USDT,LINK/USDT,INJ/USDT,DOT/USDT,ATOM/USDT,ALGO/USDT,OP/USDT,TIA/USDT,SEI/USDT,BTC/USDT,ETH/USDT,XAUT/USDT"
+
 
     # ── Capital ────────────────────────────────────────────────
     total_capital_pct: float = 0.995  # 99.5% of account balance deployed ($9,950.00 active grid capital)

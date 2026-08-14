@@ -276,8 +276,9 @@ function renderSpotStatus(data) {
       'BTC/USDT','ETH/USDT','SOL/USDT','NEAR/USDT','AVAX/USDT','SUI/USDT','FET/USDT','UNI/USDT','ARKM/USDT',
       'ICP/USDT','ARB/USDT','RENDER/USDT','ADA/USDT','APT/USDT',
       'LINK/USDT','INJ/USDT','DOT/USDT','ATOM/USDT','ALGO/USDT','OP/USDT',
-      'TIA/USDT','SEI/USDT'
+      'TIA/USDT','SEI/USDT','XAUT/USDT'
     ]);
+
     const allAssets = [...new Set([...Object.keys(regimes),...Object.keys(grids),...(p.holdings?Object.keys(p.holdings):[])])]
       .filter(sym => activeHalalAssets.has(sym))
       .sort((a,b) => {
