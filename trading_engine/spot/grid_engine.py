@@ -142,23 +142,25 @@ class GridEngine:
                             if level.status == 'filled'
                             or (level.status in ['open', 'pending'] and level.side == 'sell')]
         
-        # ── Dynamic spacing: asset-specific ATR tuning or ATR indicator ──
+        # ── Dynamic ATR-Expanded Spacing (Institutional Scaling) ──
         if atr > 0 and current_price > 0:
             atr_pct = atr / current_price
-            dynamic_spacing = max(0.005, min(atr_pct * 0.8, 0.05))  # 0.5% to 5%
-            spacing = (dynamic_spacing + self.params.grid_spacing) / 2
+            # Scale grid spacing dynamically between 0.80% (quiet markets) and 2.50% (high-volatility flushes)
+            dynamic_spacing = max(0.008, min(atr_pct * 0.90, 0.025))
+            spacing = dynamic_spacing
         else:
-            # Asset-specific ATR tuning groups
-            high_atr = {'ICP/USDT', 'ARB/USDT', 'NEAR/USDT', 'RENDER/USDT', 'FET/USDT'}
+            # Asset-specific ATR tuning groups fallback
+            high_atr = {'ICP/USDT', 'ARB/USDT', 'NEAR/USDT', 'RENDER/USDT', 'FET/USDT', 'ATOM/USDT', 'SEI/USDT'}
             low_atr = {'SOL/USDT', 'AVAX/USDT', 'SUI/USDT'}
             if self.symbol in high_atr:
-                spacing = 0.012  # 1.20% spacing for high-volatility pairs (84% net retention after fees)
+                spacing = 0.012  # 1.20% spacing for high-volatility pairs
             elif self.symbol in low_atr:
-                spacing = 0.009  # 0.90% spacing for low-volatility pairs (78% net retention after fees)
+                spacing = 0.009  # 0.90% spacing for low-volatility pairs
             else:
                 spacing = max(0.009, self.params.grid_spacing)
         
         self.current_spacing = spacing
+
         total_levels = self.params.buy_levels + self.params.sell_levels
         raw_order_size = (self.allocated_usd * self.params.capital_pct) / total_levels if total_levels > 0 else 0
         order_size_usd = max(10.0, raw_order_size) if raw_order_size > 0 else 0

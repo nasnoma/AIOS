@@ -275,12 +275,13 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 price = float(ticker["last"])
                 _portfolio.update_price(symbol, price)
                 
-                # Compute ATR volatility for dynamic volatility scaling (Lance Breitstein method)
-                detector = _regime_detectors.get(symbol)
-                atr_val = 0.0
-                if detector and detector._cached_state and hasattr(detector._cached_state, 'price') and detector._cached_state.price > 0:
-                    # Estimate 1h ATR from SMA50/SMA200 volatility or cached indicator state
-                    atr_val = price * 0.008  # Default 0.8% volatility estimate
+                # Compute real 24h ATR volatility for dynamic grid spacing (Lance Breitstein method)
+                high_24h = float(ticker.get("high") or (price * 1.01))
+                low_24h = float(ticker.get("low") or (price * 0.99))
+                range_24h_pct = ((high_24h - low_24h) / low_24h) if low_24h > 0 else 0.02
+                # Convert 24h High-Low range % into hourly ATR estimate (range % / 4.5)
+                atr_val = price * max(0.004, (range_24h_pct / 4.5))
+
 
                 # Initial grid build if empty, forced reset, or auto-recenter if open buy orders are stale (>1.5% away in either direction)
                 open_buys = [l for l in engine.grid_levels if l.status in ['open', 'pending'] and l.side == 'buy']
