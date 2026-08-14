@@ -401,6 +401,8 @@ class GridEngine:
             'open_sells': open_sells,
             'completed_cycles': len(self.completed_cycles),
             'total_net_pnl_usd': total_pnl,
+            'current_spacing': getattr(self, 'current_spacing', self.params.grid_spacing),
             'paper_mode': self.paper_mode,
             'levels': levels_list,
         }
+
