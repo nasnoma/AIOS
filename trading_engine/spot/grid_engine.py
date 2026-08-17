@@ -54,7 +54,25 @@ class GridLevel:
     filled_at: Optional[str] = None
     linked_buy_price: Optional[float] = None
 
+def is_weekend_window() -> bool:
+    """
+    Returns True during the low-liquidity weekend flush window:
+    Friday 18:00 UTC through Sunday 18:00 UTC (including all of Saturday).
+    """
+    now_utc = datetime.now(timezone.utc)
+    weekday = now_utc.weekday()  # 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri, 5=Sat, 6=Sun
+    hour = now_utc.hour
+    if weekday == 4 and hour >= 18:       # Friday evening
+        return True
+    elif weekday == 5:                     # Saturday all day
+        return True
+    elif weekday == 6 and hour < 18:       # Sunday before 18:00 UTC
+        return True
+    return False
+
+
 class GridEngine:
+
     def __init__(
         self,
         symbol: str,
@@ -159,6 +177,12 @@ class GridEngine:
             else:
                 spacing = max(0.009, self.params.grid_spacing)
         
+        # ── Weekend Dip Multiplier (1.45x Spacing & Deeper Wick Targets) ──
+        is_wknd = is_weekend_window()
+        if is_wknd:
+            spacing = spacing * 1.45
+            logger.info(f"🌙 Weekend Dip Mode Active [{self.symbol}]: Spacing expanded 1.45x -> {spacing*100:.2f}%")
+
         self.current_spacing = spacing
 
         total_levels = self.params.buy_levels + self.params.sell_levels
@@ -170,15 +194,17 @@ class GridEngine:
 
         
         # Build Buy Levels (Dual-Layer Scalp & Swing Grid Structure):
-        # Scalp Layer (Levels 1-3): tight micro spacing (0.5% - 0.8%) for rapid 20-40 daily cycle fills
-        # Swing Dip Layer (Levels 4+): wider dip spacing (1.8% - 2.5%) with 1.8x capital booster for deep dump rebounds
+        # Scalp Layer (Levels 1-3): micro spacing for rapid cycle fills
+        # Swing Dip Layer (Levels 4+): wider dip spacing with capital booster for deep dump rebounds
         for i in range(1, self.params.buy_levels + 1):
             if i <= 3:
-                price = current_price * (1 - (spacing * 0.45 * i))
+                scale_factor = 0.65 if is_wknd else 0.45
+                price = current_price * (1 - (spacing * scale_factor * i))
                 level_boost = 1.00
             else:
-                price = current_price * (1 - (spacing * 0.95 * i))
-                level_boost = 1.80
+                scale_factor = 1.20 if is_wknd else 0.95
+                price = current_price * (1 - (spacing * scale_factor * i))
+                level_boost = 2.20 if is_wknd else 1.80
                 
             lvl_size = order_size_usd * level_boost
             qty = lvl_size / price
@@ -188,6 +214,7 @@ class GridEngine:
                 qty=qty,
                 size_usd=lvl_size
             ))
+
             
         # Build Sell Levels (only for coins already held)
         base_asset = self.symbol.split('/')[0]
@@ -402,7 +429,9 @@ class GridEngine:
             'completed_cycles': len(self.completed_cycles),
             'total_net_pnl_usd': total_pnl,
             'current_spacing': getattr(self, 'current_spacing', self.params.grid_spacing),
+            'is_weekend_mode': is_weekend_window(),
             'paper_mode': self.paper_mode,
             'levels': levels_list,
         }
+
 
