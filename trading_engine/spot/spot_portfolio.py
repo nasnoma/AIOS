@@ -154,7 +154,30 @@ class SpotPortfolio:
         except Exception as e:
             logger.debug(f"JSON save failed: {e}")
             
+    def get_position(self, symbol_or_base: str) -> float:
+        """Return units held for a symbol (e.g. 'BTC/USDT') or base asset (e.g. 'BTC')."""
+        with self._lock:
+            if symbol_or_base in self.holdings:
+                return float(self.holdings[symbol_or_base].units_held)
+            clean_base = symbol_or_base.split('/')[0]
+            for sym, h in self.holdings.items():
+                if sym.split('/')[0] == clean_base:
+                    return float(h.units_held)
+        return 0.0
+
+    def get_holding(self, symbol_or_base: str) -> Optional[AssetHolding]:
+        """Return AssetHolding object for a symbol or base asset."""
+        with self._lock:
+            if symbol_or_base in self.holdings:
+                return self.holdings[symbol_or_base]
+            clean_base = symbol_or_base.split('/')[0]
+            for sym, h in self.holdings.items():
+                if sym.split('/')[0] == clean_base:
+                    return h
+        return None
+
     def update_price(self, symbol: str, price: float):
+
         if symbol in self.holdings:
             self.holdings[symbol].last_price = price
             

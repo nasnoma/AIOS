@@ -216,21 +216,46 @@ class GridEngine:
             ))
 
             
-        # Build Sell Levels (only for coins already held)
-        base_asset = self.symbol.split('/')[0]
-        base_qty_held = portfolio.get_position(base_asset) if portfolio and hasattr(portfolio, 'get_position') else 0.0
-        
-        if base_qty_held > 0 or not portfolio:
-            for i in range(1, self.params.sell_levels + 1):
-                price = current_price * (1 + spacing * i)
-                qty = order_size_usd / price
+        # Build Sell Levels (for all coins already held in portfolio)
+        holding = None
+        if portfolio:
+            if hasattr(portfolio, 'get_holding'):
+                holding = portfolio.get_holding(self.symbol)
+            elif hasattr(portfolio, 'holdings'):
+                holding = portfolio.holdings.get(self.symbol)
+                if not holding:
+                    base_asset = self.symbol.split('/')[0]
+                    for sym, h in portfolio.holdings.items():
+                        if sym.split('/')[0] == base_asset:
+                            holding = h
+                            break
+
+        base_qty_held = (holding.units_held - holding.base_hold_units) if holding else 0.0
+        avg_cost = holding.avg_cost_basis if (holding and holding.avg_cost_basis > 0) else current_price
+
+        if base_qty_held > 0.000001:
+            sell_levels_count = max(1, min(self.params.sell_levels, 4))
+            qty_per_sell = base_qty_held / sell_levels_count
+            min_profit_pct = 3.5 * self.fee_rate  # 0.35% net profit floor
+
+            for i in range(1, sell_levels_count + 1):
+                # If holding is already in profit (current_price >= avg_cost * 1.0035):
+                # Place take-profit sell at current price or slight micro-ladder to lock in profit immediately
+                if current_price >= avg_cost * (1 + min_profit_pct):
+                    target_p = current_price * (1 + (0.001 * (i - 1)))
+                else:
+                    # Below cost: place sell target at breakeven + fee profit or spacing step
+                    target_p = max(avg_cost * (1 + (min_profit_pct * i)), current_price * (1 + (spacing * i)))
+
+                sell_lvl_size = qty_per_sell * target_p
                 self.grid_levels.append(GridLevel(
-                    price=price,
+                    price=target_p,
                     side='sell',
-                    qty=qty,
-                    size_usd=order_size_usd,
-                    linked_buy_price=current_price
+                    qty=qty_per_sell,
+                    size_usd=sell_lvl_size,
+                    linked_buy_price=avg_cost
                 ))
+
 
     def place_grid_orders(self, portfolio, exchange: ccxt.Exchange):
         self.exchange = exchange
