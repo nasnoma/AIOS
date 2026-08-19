@@ -285,17 +285,25 @@ def run_spot_grid_tick() -> Dict[str, Any]:
 
                 # Initial grid build if empty, forced reset, or auto-recenter if open buy orders are stale (>1.5% away in either direction)
                 open_buys = [l for l in engine.grid_levels if l.status in ['open', 'pending'] and l.side == 'buy']
+                open_sells = [l for l in engine.grid_levels if l.status in ['open', 'pending'] and l.side == 'sell']
                 max_buy_p = max((l.price for l in open_buys), default=0.0)
                 has_no_buys = not open_buys and len(engine.grid_levels) > 0
                 is_stale = bool(has_no_buys or (max_buy_p > 0 and (max_buy_p > price * 1.015 or max_buy_p < price * 0.985)))
                 force_reset = getattr(engine, '_last_rebuild_time', 0) == 0
 
-                if not engine.grid_levels or is_stale or force_reset:
+                # Also check if we hold coins for this asset but have 0 open sell orders (critical for profit taking)
+                holding_qty = _portfolio.get_position(symbol) if hasattr(_portfolio, 'get_position') else 0.0
+                missing_sells = bool(holding_qty > 0.000001 and len(open_sells) == 0)
+
+                if not engine.grid_levels or is_stale or force_reset or missing_sells:
                     if is_stale:
                         logger.info(f"🔄 Grid stale for {symbol} (Live: ${price:.4f}, Highest Buy Order: ${max_buy_p:.4f}). Re-centering grid around current price...")
+                    elif missing_sells:
+                        logger.info(f"🎯 Creating profit-taking sell orders for {symbol} (Holding: {holding_qty:.4f})...")
                     engine.cancel_all(exchange)
-                    engine.build_grid(price, _portfolio, atr=atr_val, force=force_reset)
+                    engine.build_grid(price, _portfolio, atr=atr_val, force=True)
                     engine.place_grid_orders(_portfolio, exchange)
+
 
                 # Process tick (checks crossable fills & places replacement orders)
                 events = engine.tick(price, _portfolio, exchange=exchange)
