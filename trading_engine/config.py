@@ -30,9 +30,10 @@ class Settings(BaseSettings):
     massive_api_base: str = "https://api.massive.com"
     binance_api_key: str = ""
     binance_api_secret: str = ""
-    bybit_api_key: str = ""
-    bybit_api_secret: str = ""
-    bybit_demo_trading: bool = True
+    bybit_api_key: str = "NzSg7VszfTXPjy2VdS"
+    bybit_api_secret: str = "K9hHCNRooqs5Jik2Ez4Huis9XpxjCSkOAFcL"
+    bybit_demo_trading: bool = False
+
 
     # ── Broker ──────────────────────────────
     crypto_exchange: str = "binance"
@@ -53,7 +54,8 @@ class Settings(BaseSettings):
     signal_interval_minutes: int = 240
 
     # ── Risk ────────────────────────────────
-    account_size: float = 211028.58
+    account_size: float = 999.83
+
     max_risk_per_trade: float = 0.02
     max_portfolio_heat: float = 0.06
     kelly_fraction: float = 0.25
@@ -240,7 +242,8 @@ class SpotGridSettings(BaseSettings):
 
     # ── Master Switch ──────────────────────────────────────────
     enabled: bool = True
-    paper_mode: bool = True           # True = simulate fills on real mainnet prices (accurately reflects real money trading)
+    paper_mode: bool = False          # False = Live Real-Money Trading with Bybit Spot Limit Orders
+
     # 24 Screened High-Volatility Liquid & Commodity Halal Spot Assets on Bybit (includes XAUT/USDT Tether Gold)
     assets: str = "NEAR/USDT,AVAX/USDT,SUI/USDT,FET/USDT,UNI/USDT,ARKM/USDT,ICP/USDT,ARB/USDT,RENDER/USDT,ADA/USDT,SOL/USDT,APT/USDT,LINK/USDT,INJ/USDT,DOT/USDT,ATOM/USDT,ALGO/USDT,OP/USDT,TIA/USDT,SEI/USDT,BTC/USDT,ETH/USDT,XAUT/USDT"
 
