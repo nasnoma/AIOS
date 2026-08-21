@@ -619,8 +619,14 @@ def get_spot_status() -> Dict[str, Any]:
         if completed_list:
             summary_data['total_realised_pnl'] = round(net_pnl_total, 4)
             summary_data['daily_realised_pnl'] = round(net_pnl_total, 4)
+            summary_data['cycles_today'] = len(completed_list)
             summary_data['completed_cycles'] = sorted(completed_list, key=lambda x: str(x.get('timestamp', '')), reverse=True)
+            _portfolio.completed_cycles = summary_data['completed_cycles']
+            _portfolio.cycles_today = len(completed_list)
+            _portfolio.total_realised_pnl = round(net_pnl_total, 4)
+            _portfolio.daily_realised_pnl = round(net_pnl_total, 4)
         else:
+
             summary_data['total_realised_pnl'] = float(getattr(_portfolio, 'total_realised_pnl', 0.0) or 0.0)
             summary_data['daily_realised_pnl'] = float(getattr(_portfolio, 'daily_realised_pnl', 0.0) or 0.0)
             summary_data['completed_cycles'] = []
