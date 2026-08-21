@@ -394,11 +394,23 @@ async def trigger_clean_slate_reset():
         from trading_engine.spot.runner import _portfolio, init_spot_engine, run_spot_grid_tick, _grid_engines
         from trading_engine.storage.db import save_portfolio_state
 
+        from trading_engine.config import spot_settings
+        from trading_engine.spot.runner import get_spot_exchange
+        exchange = get_spot_exchange()
+        live_usdt = 999.83
+        if not spot_settings.paper_mode and exchange:
+            try:
+                bal = exchange.fetch_balance()
+                live_usdt = float(bal.get('total', {}).get('USDT', 0) or bal.get('USDT', {}).get('total', 0) or 999.83)
+            except Exception:
+                pass
+
         with _portfolio._lock:
-            _portfolio.usdt_available = 9950.0
-            _portfolio.usdt_reserved = 50.0
+            _portfolio.usdt_available = max(10.0, round(live_usdt * 0.995, 2))
+            _portfolio.usdt_reserved = round(live_usdt * 0.005, 2)
             _portfolio.total_realised_pnl = 0.0
             _portfolio.daily_realised_pnl = 0.0
+
             _portfolio.cycles_today = 0
             _portfolio.consecutive_wins = 0
             _portfolio.consecutive_losses = 0
