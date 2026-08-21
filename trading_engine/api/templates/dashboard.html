@@ -398,8 +398,12 @@ function renderSpotStatus(data) {
         const tStr = parts[1].substring(0,5); // HH:MM
         timeBadge = '<span style="color:var(--text-3);font-size:0.65rem;margin-right:6px;">' + dStr + ' ' + tStr + '</span>';
       }
-      return '<div class="ladder-row"><span>' + timeBadge + '<strong>' + (c.symbol||'').split('/')[0] + '</strong> $' + (c.buy_price||0).toFixed(4) + ' &rarr; $' + (c.sell_price||0).toFixed(4) + '</span><span style="color:var(--green);font-weight:700">+$' + (c.net_pnl||0).toFixed(2) + '</span></div>';
+      const pnlVal = Number(c.net_pnl || 0);
+      const pnlText = pnlVal < 0.01 && pnlVal > 0 ? ('+$' + pnlVal.toFixed(4)) : ('+$' + pnlVal.toFixed(2));
+      return '<div class="ladder-row"><span>' + timeBadge + '<strong>' + (c.symbol||'').split('/')[0] + '</strong> $' + (c.buy_price||0).toFixed(4) + ' &rarr; $' + (c.sell_price||0).toFixed(4) + '</span><span style="color:var(--green);font-weight:700">' + pnlText + '</span></div>';
+
     }).join('') : '<div class="empty">No completed cycles today.</div>';
+
   }
 }
 
