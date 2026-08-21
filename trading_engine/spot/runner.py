@@ -266,8 +266,9 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 tot = bal.get('total', {})
                 active_symbols = set(spot_settings.asset_list)
                 for coin, units in tot.items():
-                    if coin in ['USDT', 'USDC']:
+                    if coin in ['USDT', 'USDC', 'MNT']:
                         continue
+
                     u_val = float(units or 0)
                     if u_val > 0.0001:
                         sym = f"{coin}/USDT"
