@@ -216,9 +216,11 @@ function renderSpotStatus(data) {
 
   const usdtFree = p.usdt_available || 0;
   const usdtInOrders = p.usdt_in_orders || 0;
-  const totalEquity = Number(data.total_capital || p.total_capital || (usdtFree + usdtInOrders + totalAssetValue) || 999.83);
+  const usdtTotal = Number(data.total_capital || p.total_capital || (usdtFree + usdtInOrders));
+  const totalEquity = usdtTotal + totalAssetValue;
   const activeCapPct = data.total_capital_pct || 0.995;
   const activeCap = totalEquity * activeCapPct;
+
 
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
   const modePill = document.getElementById('spot-mode-pill');
