@@ -274,7 +274,10 @@ class GridEngine:
                             prec = exchange.market(self.symbol).get('precision', {}).get('amount')
                             if isinstance(prec, (float, int)) and float(prec) > 0:
                                 decimals = max(0, -int(math.floor(math.log10(float(prec)))))
-                                qty_val = round(qty_val, decimals)
+                                if level.side == 'sell':
+                                    qty_val = math.floor(qty_val * (10 ** decimals)) / (10 ** decimals)
+                                else:
+                                    qty_val = round(qty_val, decimals)
 
                             prec_p = exchange.market(self.symbol).get('precision', {}).get('price')
                             if isinstance(prec_p, (float, int)) and float(prec_p) > 0:
@@ -289,7 +292,7 @@ class GridEngine:
                             if min_amt is not None and qty_val < float(min_amt):
                                 qty_val = float(min_amt)
                             required_cost = max(6.0, float(min_cost) * 1.15)
-                            if price_val > 0 and (qty_val * price_val) < required_cost:
+                            if price_val > 0 and (qty_val * price_val) < required_cost and level.side == 'buy':
                                 qty_val = required_cost / price_val
                                 if hasattr(exchange, 'amount_to_precision'):
                                     qty_val = float(exchange.amount_to_precision(self.symbol, qty_val))
@@ -303,6 +306,7 @@ class GridEngine:
                             order = exchange.create_limit_buy_order(self.symbol, qty_val, price_val, params)
                         else:
                             order = exchange.create_limit_sell_order(self.symbol, qty_val, price_val, params)
+
                         level.status = 'open'
                         level.order_id = order['id']
                         logger.info(f"[LIVE] Placed {level.side} limit order for {self.symbol} at {price_val} (Qty: {qty_val}, ID: {order['id']})")
