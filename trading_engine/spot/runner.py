@@ -568,14 +568,24 @@ def get_spot_status() -> Dict[str, Any]:
         summary_data['daily_realised_pnl'] = float(getattr(_portfolio, 'daily_realised_pnl', 0.0) or 0.0)
         summary_data['completed_cycles'] = getattr(_portfolio, 'completed_cycles', [])
 
-    # If Live / Demo mode: fetch live exchange spot balances for holdings
+    # If Live / Demo mode: fetch live exchange spot balances for holdings and total capital
     if not spot_settings.paper_mode and exchange:
         try:
-            bal = exchange.fetch_balance(params={'category': 'spot'})
+            bal = exchange.fetch_balance()
             tot = bal.get('total', {})
+            usdt_tot = float(tot.get('USDT', 0) or 0)
+            usdt_free_val = float(bal.get('free', {}).get('USDT', 0) or 0)
+            usdt_used_val = float(bal.get('used', {}).get('USDT', 0) or 0)
+            
+            if usdt_tot > 0:
+                summary_data['usdt_available'] = usdt_free_val
+                summary_data['usdt_in_orders'] = usdt_used_val
+                summary_data['total_capital'] = usdt_tot
+
             live_holdings = {}
             active_symbols = set(spot_settings.asset_list)
             for coin, units in tot.items():
+
                 if coin in ['USDT', 'USDC']:
                     continue
                 units_val = float(units or 0)

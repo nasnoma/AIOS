@@ -215,17 +215,19 @@ function renderSpotStatus(data) {
   if (p.holdings) Object.values(p.holdings).forEach(h => { totalAssetValue += (h.value_usd||0); totalUnrealised += (h.unrealised_pnl||0); });
 
   const usdtFree = p.usdt_available || 0;
-  const totalEquity = usdtFree + totalAssetValue;
+  const usdtInOrders = p.usdt_in_orders || 0;
+  const totalEquity = p.total_capital || (usdtFree + usdtInOrders + totalAssetValue);
   const activeCapPct = data.total_capital_pct || 0.995;
   const activeCap = totalEquity * activeCapPct;
 
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
   const modePill = document.getElementById('spot-mode-pill');
-  if (modePill) modePill.textContent = data.paper_mode ? 'Paper Mode' : 'Live Mode';
+  if (modePill) modePill.textContent = data.paper_mode ? 'Paper Mode' : '🟢 Live Bybit';
   set('spot-active-sub', (activeCapPct*100).toFixed(1) + '% deployed');
   set('spot-capital', usd(totalEquity));
   set('spot-active-cap', usd(activeCap));
   set('spot-usdt-free', usd(usdtFree));
+
   set('spot-cycles-today', p.cycles_today || 0);
   set('spot-pnl-today', '$' + (p.daily_realised_pnl||0).toFixed(2));
   const dailyPnl = p.daily_realised_pnl || 0;
