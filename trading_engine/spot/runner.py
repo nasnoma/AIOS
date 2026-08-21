@@ -636,13 +636,16 @@ def get_spot_status() -> Dict[str, Any]:
         except Exception as e_bal:
             logger.debug(f"Live balance fetch in get_spot_status: {e_bal}")
 
+    tot_cap_val = float(summary_data.get('total_capital') or settings.account_size or 999.83)
     res = {
         "enabled": spot_settings.enabled,
         "paper_mode": spot_settings.paper_mode,
+        "total_capital": tot_cap_val,
         "total_capital_pct": spot_settings.total_capital_pct,
         "portfolio": summary_data,
         "regimes": regimes,
         "grids": grids,
+
         "recent_trades": recent_trades[:50]
     }
     _cached_spot_status = res

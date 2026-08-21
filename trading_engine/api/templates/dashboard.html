@@ -216,7 +216,7 @@ function renderSpotStatus(data) {
 
   const usdtFree = p.usdt_available || 0;
   const usdtInOrders = p.usdt_in_orders || 0;
-  const totalEquity = p.total_capital || (usdtFree + usdtInOrders + totalAssetValue);
+  const totalEquity = Number(data.total_capital || p.total_capital || (usdtFree + usdtInOrders + totalAssetValue) || 999.83);
   const activeCapPct = data.total_capital_pct || 0.995;
   const activeCap = totalEquity * activeCapPct;
 
@@ -227,6 +227,7 @@ function renderSpotStatus(data) {
   set('spot-capital', usd(totalEquity));
   set('spot-active-cap', usd(activeCap));
   set('spot-usdt-free', usd(usdtFree));
+
 
   set('spot-cycles-today', p.cycles_today || 0);
   set('spot-pnl-today', '$' + (p.daily_realised_pnl||0).toFixed(2));
