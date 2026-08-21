@@ -258,6 +258,37 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                     tickers[sym] = pub_exchange.fetch_ticker(sym)
                 except Exception:
                     pass
+
+        # ── Live Exchange Portfolio Sync ──
+        if not spot_settings.paper_mode and exchange:
+            try:
+                bal = exchange.fetch_balance()
+                tot = bal.get('total', {})
+                active_symbols = set(spot_settings.asset_list)
+                for coin, units in tot.items():
+                    if coin in ['USDT', 'USDC']:
+                        continue
+                    u_val = float(units or 0)
+                    if u_val > 0.0001:
+                        sym = f"{coin}/USDT"
+                        if sym in active_symbols:
+                            cur_p = float(tickers.get(sym, {}).get('last', 0.0) or 0.0)
+                            if sym not in _portfolio.holdings:
+                                from trading_engine.spot.spot_portfolio import AssetHolding
+                                _portfolio.holdings[sym] = AssetHolding(
+                                    symbol=sym,
+                                    units_held=u_val,
+                                    avg_cost_basis=cur_p,
+                                    base_hold_units=0.0,
+                                    last_price=cur_p
+                                )
+                            else:
+                                _portfolio.holdings[sym].units_held = u_val
+                                if cur_p > 0:
+                                    _portfolio.holdings[sym].last_price = cur_p
+            except Exception as e_sync:
+                logger.debug(f"Live balance sync in tick failed: {e_sync}")
+
         
         for symbol in asset_list:
             engine = _grid_engines.get(symbol)
