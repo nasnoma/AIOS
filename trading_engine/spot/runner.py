@@ -290,6 +290,40 @@ def run_spot_grid_tick() -> Dict[str, Any]:
             except Exception as e_sync:
                 logger.debug(f"Live balance sync in tick failed: {e_sync}")
 
+        # ── Auto-Refill MNT Fee Buffer (Maintains 25% Fee Discount Continuously) ──
+        if not spot_settings.paper_mode and exchange:
+            try:
+                mnt_balance = float(bal.get('total', {}).get('MNT', 0) or 0)
+                usdt_free_bal = float(bal.get('free', {}).get('USDT', 0) or 0)
+                if mnt_balance < 10.0 and usdt_free_bal >= 20.0:
+                    mnt_ticker = tickers.get('MNT/USDT')
+                    if not mnt_ticker:
+                        try:
+                            mnt_ticker = exchange.fetch_ticker('MNT/USDT')
+                        except Exception:
+                            mnt_ticker = {}
+                    mnt_p = float(mnt_ticker.get('last') or 0.51)
+                    if mnt_p > 0:
+                        import math
+                        target_buy_usdt = 15.0  # Refill with $15 worth of MNT
+                        raw_qty = target_buy_usdt / mnt_p
+                        prec = 0.01
+                        if hasattr(exchange, 'market') and 'MNT/USDT' in exchange.markets:
+                            prec = exchange.market('MNT/USDT').get('precision', {}).get('amount', 0.01)
+                        decimals = max(0, -int(math.floor(math.log10(float(prec)))))
+                        buy_qty = math.floor(raw_qty * (10 ** decimals)) / (10 ** decimals)
+                        logger.info(f"🪙 MNT Fee Balance low ({mnt_balance:.2f} MNT). Auto-refilling {buy_qty} MNT (~${target_buy_usdt:.2f})...")
+                        try:
+                            exchange.create_market_buy_order('MNT/USDT', buy_qty, params={'category': 'spot'})
+                            logger.info(f"✅ Auto-refilled {buy_qty} MNT successfully! 25% fee discount maintained.")
+                        except Exception:
+                            ask_p = float(mnt_ticker.get('ask') or (mnt_p * 1.002))
+                            exchange.create_limit_buy_order('MNT/USDT', buy_qty, ask_p, params={'category': 'spot'})
+                            logger.info(f"✅ Auto-refilled {buy_qty} MNT via limit order at ${ask_p:.4f}!")
+            except Exception as e_mnt_refill:
+                logger.debug(f"MNT auto-refill check: {e_mnt_refill}")
+
+
         
         for symbol in asset_list:
             engine = _grid_engines.get(symbol)
