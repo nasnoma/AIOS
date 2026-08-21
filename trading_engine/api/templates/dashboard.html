@@ -319,7 +319,8 @@ function renderSpotStatus(data) {
         const hasPos = (h.units_held || h.units || 0) > 0;
         const uVal = h.units_held || h.units || 0;
         const cap = g.allocated_usd || 0;
-        const isTop = (maxCap > 500 && cap >= maxCap * 0.9);
+        const isTop = (maxCap > 50 && cap >= maxCap * 0.85);
+
         const bStyle = isTop ? 'border-color:rgba(255,184,0,0.6);background:rgba(255,184,0,0.03)' : (hasPos ? 'border-color:rgba(0,229,176,0.3)' : '');
         return '<div class="asset-card" style="' + bStyle + '">' +
           '<div class="asset-card-top"><span class="asset-name">' + sym.split('/')[0] + (isTop ? ' <span style="font-size:0.7rem">&#128293;</span>' : '') + '</span><span class="pill ' + pillCls + '">' + regime + '</span></div>' +
