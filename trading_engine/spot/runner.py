@@ -564,11 +564,42 @@ def get_spot_status() -> Dict[str, Any]:
                 for c in eng.completed_cycles:
                     if isinstance(c, dict):
                         c_item = dict(c)
-                        c_item['symbol'] = sym
-                        key = f"{sym}_{c_item.get('timestamp')}_{c_item.get('qty')}"
-                        completed_dict[key] = c_item
+        # ── Reconcile Completed Cycles from Live Exchange Fills ──
+        if not spot_settings.paper_mode and recent_trades:
+            buys_by_sym = {}
+            for t in sorted(recent_trades, key=lambda x: str(x.get('timestamp') or '')):
+                sym = t.get('symbol', '')
+                side = (t.get('side') or '').lower()
+                p = float(t.get('price') or 0.0)
+                qty = float(t.get('qty') or 0.0)
+                ts = t.get('timestamp') or ''
+                if side == 'buy':
+                    if sym not in buys_by_sym:
+                        buys_by_sym[sym] = []
+                    buys_by_sym[sym].append({'price': p, 'qty': qty, 'timestamp': ts})
+                elif side == 'sell':
+                    buy_info = None
+                    if sym in buys_by_sym and buys_by_sym[sym]:
+                        buy_info = buys_by_sym[sym].pop(0)
+                    buy_orig_p = buy_info['price'] if buy_info else (p * 0.995)
+                    fee_rate = getattr(spot_settings, 'fee_rate', 0.001)
+                    gross = (p - buy_orig_p) * qty
+                    fee = (p * qty * fee_rate) + (buy_orig_p * qty * fee_rate)
+                    net_pnl = gross - fee
+                    key = f"{sym}_{ts}_{qty}"
+                    completed_dict[key] = {
+                        'symbol': sym,
+                        'buy_price': round(buy_orig_p, 4),
+                        'sell_price': round(p, 4),
+                        'qty': round(qty, 4),
+                        'gross_pnl': round(gross, 4),
+                        'fee': round(fee, 4),
+                        'net_pnl': round(net_pnl, 4),
+                        'timestamp': ts
+                    }
 
         completed_list = list(completed_dict.values())
+
         fee_rate = getattr(spot_settings, 'fee_rate', 0.001)
         net_pnl_total = 0.0
         for c in completed_list:
