@@ -17,9 +17,12 @@ from typing import Dict, Any
 
 def _get_dynamic_hot_asset_allocations(asset_list: list[str], regime_detectors: dict = None) -> dict[str, float]:
     """
-    Multi-Timeframe Optimal Volatility Weighting (60% 24h Real-Time Range + 40% Multi-Day ADX Baseline):
-    Combines 24h real-time price range volatility with multi-day trend strength to select
-    the absolute highest-yielding, most liquid Top 2 Volatility Leaders.
+    Dynamic Top-8 Concentrated Volatility Allocation:
+    Ranks all 23 Halal assets by 60% 24h Real-Time Range + 40% ADX Trend Strength.
+    Concentrates 100% of active capital into the Top 8 highest-yielding movers:
+      - Rank 1 & 2 (Top 2 Primary Leaders): 20.0% each (~$420 each)
+      - Rank 3 to 8 (Next 6 Power Movers): 10.0% each (~$210 each)
+      - Rank 9 to 23: 0.0% new buy allocation (freed capital rotates to Top 8)
     """
     scored_pairs = []
     pub_ex = None
@@ -50,20 +53,25 @@ def _get_dynamic_hot_asset_allocations(asset_list: list[str], regime_detectors: 
         # Multi-Timeframe Optimal Score: 60% 24h Real-Time Range + 40% Multi-Day ADX
         vol_score = (0.60 * range_24h_pct * 10.0) + (0.40 * adx_score)
         if vol_score <= 0.0:
-            default_scores = {'ARB/USDT': 95.0, 'ICP/USDT': 92.0, 'AVAX/USDT': 88.0, 'NEAR/USDT': 85.0, 'RENDER/USDT': 80.0}
+            default_scores = {'TIA/USDT': 98.0, 'FET/USDT': 96.0, 'ARB/USDT': 95.0, 'ICP/USDT': 92.0, 'AVAX/USDT': 88.0, 'NEAR/USDT': 85.0, 'RENDER/USDT': 80.0, 'SOL/USDT': 78.0, 'DOT/USDT': 75.0, 'INJ/USDT': 74.0}
             vol_score = default_scores.get(sym, 50.0)
         scored_pairs.append((sym, vol_score))
 
     scored_pairs.sort(key=lambda x: x[1], reverse=True)
-    top2 = {scored_pairs[0][0], scored_pairs[1][0]}
     
+    # Top 8 Allocation Distribution (100% total):
+    # Rank 1-2: 20% each (40% total)
+    # Rank 3-8: 10% each (60% total)
+    # Rank 9-23: 0%
     allocations = {}
-    for sym in asset_list:
-        if sym in top2:
-            allocations[sym] = 0.80 / 2.0  # 40.0% each for Top 2 Volatility Leaders
+    for rank, (sym, _) in enumerate(scored_pairs):
+        if rank < 2:
+            allocations[sym] = 0.20
+        elif rank < 8:
+            allocations[sym] = 0.10
         else:
-            rem_count = max(1, len(asset_list) - 2)
-            allocations[sym] = 0.20 / rem_count  # 2.0% each for remaining 10
+            allocations[sym] = 0.0
+
     return allocations
 
 from trading_engine.config import spot_settings, settings
