@@ -79,8 +79,9 @@ class SpotPortfolio:
             'cycles_today': self.cycles_today,
             'consecutive_wins': getattr(self, 'consecutive_wins', 0),
             'consecutive_losses': getattr(self, 'consecutive_losses', 0),
-            'completed_cycles': getattr(self, 'completed_cycles', [])[-50:],
+            'completed_cycles': getattr(self, 'completed_cycles', [])[-1000:],
             'last_daily_reset': self.last_daily_reset,
+
             'holdings': {k: asdict(v) for k, v in self.holdings.items()},
             'grid_orders': [asdict(o) for o in self.grid_orders],
             'dca_orders': [asdict(o) for o in self.dca_orders]
