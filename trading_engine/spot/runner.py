@@ -148,6 +148,9 @@ def init_spot_engine():
     """Initialise portfolio and grid engines for all configured spot assets."""
     global _spot_initialized, _grid_engines, _regime_detectors
     
+    if _spot_initialized and len(_grid_engines) >= len(spot_settings.asset_list):
+        return
+
     active_symbols = set(spot_settings.asset_list)
     _grid_engines = {k: v for k, v in _grid_engines.items() if k in active_symbols}
     _regime_detectors = {k: v for k, v in _regime_detectors.items() if k in active_symbols}
@@ -155,6 +158,7 @@ def init_spot_engine():
     if not _spot_initialized:
         _spot_initialized = True
         _portfolio.load()
+
 
     exchange = get_spot_exchange()
     account_size = settings.account_size
@@ -461,21 +465,6 @@ def get_spot_status() -> Dict[str, Any]:
     
     # The 24/7 background daemon thread ticks continuously every 30s, so get_spot_status stays non-blocking and instant
 
-
-    # If Live / Demo mode: fetch exact live Bybit account balance & open orders
-    if not spot_settings.paper_mode and exchange:
-        try:
-            bal = exchange.fetch_balance({'accountType': 'UNIFIED'})
-            usdt_total = float(bal.get('total', {}).get('USDT', 0) or bal.get('USDT', {}).get('total', 0) or 0)
-            usdt_free = float(bal.get('free', {}).get('USDT', 0) or bal.get('USDT', {}).get('free', 0) or 0)
-            if usdt_total > 0:
-                account_equity = usdt_total
-                active_capital = account_equity * spot_settings.total_capital_pct
-                _portfolio.usdt_available = round(min(usdt_free, active_capital * (1.0 - spot_settings.usdt_hard_reserve_pct)), 2)
-                _portfolio.usdt_reserved = round(active_capital * spot_settings.usdt_hard_reserve_pct, 2)
-                _portfolio.save()
-        except Exception as e_bal:
-            logger.debug(f"Live balance fetch in get_spot_status: {e_bal}")
 
 
     regimes = {}
