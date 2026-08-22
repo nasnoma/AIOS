@@ -459,14 +459,8 @@ def get_spot_status() -> Dict[str, Any]:
     init_spot_engine()
     exchange = get_spot_exchange()
     
-    # Auto-run grid tick if empty OR if >30s since last tick (ensures live recentering & Bybit sync)
-    has_empty = any(len(eng.grid_levels) == 0 for eng in _grid_engines.values())
-    if has_empty or (now - _last_auto_tick_time) > 30.0:
-        try:
-            _last_auto_tick_time = now
-            run_spot_grid_tick()
-        except Exception as e:
-            logger.warning(f"Auto grid tick in get_spot_status failed: {e}")
+    # The 24/7 background daemon thread ticks continuously every 30s, so get_spot_status stays non-blocking and instant
+
 
     # If Live / Demo mode: fetch exact live Bybit account balance & open orders
     if not spot_settings.paper_mode and exchange:
@@ -708,6 +702,14 @@ def get_spot_status() -> Dict[str, Any]:
                 summary_data['total_capital'] = usdt_tot
                 summary_data['total_unified_equity'] = official_tot_equity if official_tot_equity > 0 else usdt_tot
 
+            # Group recent trades in memory to eliminate 15+ sequential network roundtrips to Bybit
+            trades_by_sym = {}
+            for t in (recent_trades if recent_trades else []):
+                s_name = t.get('symbol', '')
+                if s_name not in trades_by_sym:
+                    trades_by_sym[s_name] = []
+                trades_by_sym[s_name].append(t)
+
             live_holdings = {}
             active_symbols = set(spot_settings.asset_list)
             for coin, units in tot.items():
@@ -721,33 +723,25 @@ def get_spot_status() -> Dict[str, Any]:
                     cur_price = 0.0
                     if symbol in _portfolio.holdings:
                         cur_price = _portfolio.holdings[symbol].last_price
-                    if cur_price <= 0:
-                        try:
-                            t_info = exchange.fetch_ticker(symbol)
-                            cur_price = float(t_info.get('last') or 0)
-                        except Exception:
-                            cur_price = 0.0
+                    if cur_price <= 0 and symbol in latest_tickers:
+                        cur_price = float(latest_tickers[symbol].get('last') or 0.0)
 
-                    # Compute exact FIFO cost basis from most recent buy fills
+                    # Compute exact FIFO cost basis in-memory (0ms network latency)
                     avg_cost_basis = cur_price
-                    try:
-                        sym_trades = exchange.fetch_my_trades(symbol, params={'category': 'spot'}, limit=20)
-                        sym_buys = [t for t in sym_trades if (t.get('side') or '').lower() == 'buy']
-                        if sym_buys:
-                            acc_q = 0.0
-                            acc_c = 0.0
-                            for b in reversed(sym_buys):
-                                b_q = float(b.get('amount') or 0)
-                                b_p = float(b.get('price') or 0)
-                                needed = min(b_q, max(0.0, units_val - acc_q))
-                                acc_c += needed * b_p
-                                acc_q += needed
-                                if acc_q >= units_val:
-                                    break
-                            if acc_q > 0:
-                                avg_cost_basis = acc_c / acc_q
-                    except Exception:
-                        pass
+                    sym_buys = [t for t in trades_by_sym.get(symbol, []) if (t.get('side') or '').lower() == 'buy']
+                    if sym_buys:
+                        acc_q = 0.0
+                        acc_c = 0.0
+                        for b in sym_buys:
+                            b_q = float(b.get('qty') or b.get('amount') or 0)
+                            b_p = float(b.get('price') or 0)
+                            needed = min(b_q, max(0.0, units_val - acc_q))
+                            acc_c += needed * b_p
+                            acc_q += needed
+                            if acc_q >= units_val:
+                                break
+                        if acc_q > 0:
+                            avg_cost_basis = acc_c / acc_q
 
                     unrealised_pnl = (cur_price - avg_cost_basis) * units_val
                     total_cost = avg_cost_basis * units_val
