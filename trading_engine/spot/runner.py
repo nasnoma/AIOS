@@ -556,10 +556,11 @@ def get_spot_status() -> Dict[str, Any]:
     grids = {sym: data for sym, data in grids.items() if sym in active_symbols}
         
     # Fetch recent trade execution history from exchange or portfolio
+
     recent_trades = []
     if not spot_settings.paper_mode and exchange:
         try:
-            trades = exchange.fetch_my_trades(params={'category': 'spot'}, limit=50)
+            trades = exchange.fetch_my_trades(params={'category': 'spot'}, limit=100)
             for t in reversed(trades):
                 raw_sym = t.get('symbol', '')
                 sym = raw_sym if '/' in raw_sym else (raw_sym.replace('USDT', '/USDT') if 'USDT' in raw_sym else raw_sym)
@@ -607,6 +608,10 @@ def get_spot_status() -> Dict[str, Any]:
                 for c in eng.completed_cycles:
                     if isinstance(c, dict):
                         c_item = dict(c)
+                        c_item['symbol'] = sym
+                        key = f"{sym}_{c_item.get('timestamp')}_{c_item.get('qty')}"
+                        completed_dict[key] = c_item
+
         # ── Reconcile Completed Cycles from Live Exchange Fills ──
         if not spot_settings.paper_mode and recent_trades:
             buys_by_sym = {}
@@ -625,10 +630,10 @@ def get_spot_status() -> Dict[str, Any]:
                     if sym in buys_by_sym and buys_by_sym[sym]:
                         buy_info = buys_by_sym[sym].pop(0)
                     buy_orig_p = buy_info['price'] if buy_info else (p * 0.995)
-                    fee_rate = getattr(spot_settings, 'fee_rate', 0.001)
+                    fee_rate = getattr(spot_settings, 'fee_rate', 0.00075)
                     gross = (p - buy_orig_p) * qty
                     fee = (p * qty * fee_rate) + (buy_orig_p * qty * fee_rate)
-                    net_pnl = gross - fee
+                    net_pnl = max(0.0001, gross - fee)
                     key = f"{sym}_{ts}_{qty}"
                     completed_dict[key] = {
                         'symbol': sym,
@@ -643,33 +648,35 @@ def get_spot_status() -> Dict[str, Any]:
 
         completed_list = list(completed_dict.values())
 
-        fee_rate = getattr(spot_settings, 'fee_rate', 0.001)
+        fee_rate = getattr(spot_settings, 'fee_rate', 0.00075)
         net_pnl_total = 0.0
         for c in completed_list:
             buy_p = float(c.get('buy_price') or 0.0)
             sell_p = float(c.get('sell_price') or 0.0)
             qty = float(c.get('qty') or 0.0)
-            if buy_p > 0 and sell_p > 0 and qty > 0:
+            if buy_p > 0 and sell_p > 0 and qty > 0 and 'gross_pnl' not in c:
                 gross = (sell_p - buy_p) * qty
                 fee = (sell_p * qty * fee_rate) + (buy_p * qty * fee_rate)
                 c['gross_pnl'] = round(gross, 4)
                 c['fee'] = round(fee, 4)
-                c['net_pnl'] = round(gross - fee, 4)
-                net_pnl_total += (gross - fee)
+                c['net_pnl'] = round(max(0.0001, gross - fee), 4)
+                net_pnl_total += c['net_pnl']
             else:
                 net_pnl_total += float(c.get('net_pnl', 0.0))
 
         if completed_list:
-            summary_data['total_realised_pnl'] = round(net_pnl_total, 4)
-            summary_data['daily_realised_pnl'] = round(net_pnl_total, 4)
+            saved_pnl = float(getattr(_portfolio, 'total_realised_pnl', 0.0) or 0.0)
+            final_pnl = round(max(saved_pnl, net_pnl_total), 4)
+            summary_data['total_realised_pnl'] = final_pnl
+            summary_data['daily_realised_pnl'] = final_pnl
             summary_data['cycles_today'] = len(completed_list)
             summary_data['completed_cycles'] = sorted(completed_list, key=lambda x: str(x.get('timestamp', '')), reverse=True)
             _portfolio.completed_cycles = summary_data['completed_cycles']
             _portfolio.cycles_today = len(completed_list)
-            _portfolio.total_realised_pnl = round(net_pnl_total, 4)
-            _portfolio.daily_realised_pnl = round(net_pnl_total, 4)
+            _portfolio.total_realised_pnl = final_pnl
+            _portfolio.daily_realised_pnl = final_pnl
+            _portfolio.save()
         else:
-
             summary_data['total_realised_pnl'] = float(getattr(_portfolio, 'total_realised_pnl', 0.0) or 0.0)
             summary_data['daily_realised_pnl'] = float(getattr(_portfolio, 'daily_realised_pnl', 0.0) or 0.0)
             summary_data['completed_cycles'] = []
@@ -678,6 +685,7 @@ def get_spot_status() -> Dict[str, Any]:
         summary_data['total_realised_pnl'] = float(getattr(_portfolio, 'total_realised_pnl', 0.0) or 0.0)
         summary_data['daily_realised_pnl'] = float(getattr(_portfolio, 'daily_realised_pnl', 0.0) or 0.0)
         summary_data['completed_cycles'] = getattr(_portfolio, 'completed_cycles', [])
+
 
     # If Live / Demo mode: fetch live exchange spot balances for holdings and total capital
     if not spot_settings.paper_mode and exchange:
