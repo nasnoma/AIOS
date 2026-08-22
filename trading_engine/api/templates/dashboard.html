@@ -217,10 +217,9 @@ function renderSpotStatus(data) {
   const usdtFree = p.usdt_available || 0;
   const usdtInOrders = p.usdt_in_orders || 0;
   const usdtTotal = Number(data.total_capital || p.total_capital || (usdtFree + usdtInOrders));
-  const totalEquity = usdtTotal + totalAssetValue;
+  const totalEquity = p.total_unified_equity ? Number(p.total_unified_equity) : (usdtTotal + totalAssetValue);
   const activeCapPct = data.total_capital_pct || 0.995;
   const activeCap = totalEquity * activeCapPct;
-
 
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
   const modePill = document.getElementById('spot-mode-pill');
@@ -229,6 +228,7 @@ function renderSpotStatus(data) {
   set('spot-capital', usd(totalEquity));
   set('spot-active-cap', usd(activeCap));
   set('spot-usdt-free', usd(usdtFree));
+
 
 
   const cyclesTodayCount = (p.completed_cycles && p.completed_cycles.length) ? p.completed_cycles.length : (p.cycles_today || 0);

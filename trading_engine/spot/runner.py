@@ -696,15 +696,20 @@ def get_spot_status() -> Dict[str, Any]:
             usdt_free_val = float(bal.get('free', {}).get('USDT', 0) or 0)
             usdt_used_val = float(bal.get('used', {}).get('USDT', 0) or 0)
             
+            info_list = bal.get('info', {}).get('result', {}).get('list', [])
+            official_tot_equity = 0.0
+            if info_list and isinstance(info_list, list) and len(info_list) > 0:
+                official_tot_equity = float(info_list[0].get('totalEquity', 0) or 0)
+
             if usdt_tot > 0:
                 summary_data['usdt_available'] = usdt_free_val
                 summary_data['usdt_in_orders'] = usdt_used_val
                 summary_data['total_capital'] = usdt_tot
+                summary_data['total_unified_equity'] = official_tot_equity if official_tot_equity > 0 else usdt_tot
 
             live_holdings = {}
             active_symbols = set(spot_settings.asset_list)
             for coin, units in tot.items():
-
                 if coin in ['USDT', 'USDC']:
                     continue
                 units_val = float(units or 0)
@@ -722,16 +727,24 @@ def get_spot_status() -> Dict[str, Any]:
                         except Exception:
                             cur_price = 0.0
 
-                    # Compute exact weighted average cost basis from exchange trade fills
+                    # Compute exact FIFO cost basis from most recent buy fills
                     avg_cost_basis = cur_price
                     try:
-                        sym_trades = exchange.fetch_my_trades(symbol, params={'category': 'spot'}, limit=50)
+                        sym_trades = exchange.fetch_my_trades(symbol, params={'category': 'spot'}, limit=20)
                         sym_buys = [t for t in sym_trades if (t.get('side') or '').lower() == 'buy']
                         if sym_buys:
-                            tot_c = sum(float(t.get('cost') or 0) or (float(t.get('price') or 0) * float(t.get('amount') or 0)) for t in sym_buys)
-                            tot_q = sum(float(t.get('amount') or 0) for t in sym_buys)
-                            if tot_q > 0:
-                                avg_cost_basis = tot_c / tot_q
+                            acc_q = 0.0
+                            acc_c = 0.0
+                            for b in reversed(sym_buys):
+                                b_q = float(b.get('amount') or 0)
+                                b_p = float(b.get('price') or 0)
+                                needed = min(b_q, max(0.0, units_val - acc_q))
+                                acc_c += needed * b_p
+                                acc_q += needed
+                                if acc_q >= units_val:
+                                    break
+                            if acc_q > 0:
+                                avg_cost_basis = acc_c / acc_q
                     except Exception:
                         pass
 
@@ -752,6 +765,8 @@ def get_spot_status() -> Dict[str, Any]:
                     }
             if live_holdings:
                 summary_data['holdings'] = live_holdings
+                if official_tot_equity <= 0:
+                    summary_data['total_unified_equity'] = usdt_tot + sum(h['value_usd'] for h in live_holdings.values())
         except Exception as e_bal:
             logger.debug(f"Live balance fetch in get_spot_status: {e_bal}")
 
