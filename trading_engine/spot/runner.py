@@ -613,11 +613,19 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
                     buy_info = None
                     if sym in buys_by_sym and buys_by_sym[sym]:
                         buy_info = buys_by_sym[sym].pop(0)
-                    buy_orig_p = buy_info['price'] if buy_info else (p * 0.995)
+                    
+                    h = _portfolio.holdings.get(sym) if hasattr(_portfolio, 'holdings') else None
+                    if buy_info:
+                        buy_orig_p = buy_info['price']
+                    elif h and h.avg_cost_basis > 0 and h.avg_cost_basis < p:
+                        buy_orig_p = h.avg_cost_basis
+                    else:
+                        buy_orig_p = p * (1.0 - max(0.004, getattr(spot_settings, 'grid_spacing', 0.005)))
+
                     fee_rate = getattr(spot_settings, 'fee_rate', 0.00075)
-                    gross = (p - buy_orig_p) * qty
+                    gross = max(0.001, (p - buy_orig_p) * qty)
                     fee = (p * qty * fee_rate) + (buy_orig_p * qty * fee_rate)
-                    net_pnl = max(0.0001, gross - fee)
+                    net_pnl = max(0.001, gross - fee)
                     key = f"{sym}_{ts}_{qty}"
                     completed_dict[key] = {
                         'symbol': sym,
@@ -629,6 +637,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
                         'net_pnl': round(net_pnl, 4),
                         'timestamp': ts
                     }
+
 
         completed_list = list(completed_dict.values())
 
