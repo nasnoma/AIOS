@@ -660,7 +660,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
             _portfolio.cycles_today = len(completed_list)
             _portfolio.total_realised_pnl = final_pnl
             _portfolio.daily_realised_pnl = final_pnl
-            _portfolio.save()
+
         else:
             summary_data['total_realised_pnl'] = float(getattr(_portfolio, 'total_realised_pnl', 0.0) or 0.0)
             summary_data['daily_realised_pnl'] = float(getattr(_portfolio, 'daily_realised_pnl', 0.0) or 0.0)
