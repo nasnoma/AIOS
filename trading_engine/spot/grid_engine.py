@@ -177,36 +177,39 @@ class GridEngine:
             else:
                 spacing = max(0.009, self.params.grid_spacing)
         
-        # ── Weekend Dip Multiplier (1.45x Spacing & Deeper Wick Targets) ──
-        is_wknd = is_weekend_window()
-        if is_wknd:
-            spacing = spacing * 1.45
-            logger.info(f"🌙 Weekend Dip Mode Active [{self.symbol}]: Spacing expanded 1.45x -> {spacing*100:.2f}%")
-
-        self.current_spacing = spacing
-
+        # ── Asymmetric 3-Tier Grid Structure (Institutional High-Frequency + Crash-Proof Anchor) ──
+        # Base unit sizing per level
         total_levels = self.params.buy_levels + self.params.sell_levels
         raw_order_size = (self.allocated_usd * self.params.capital_pct) / total_levels if total_levels > 0 else 0
-        order_size_usd = max(10.0, raw_order_size) if raw_order_size > 0 else 0
+        base_order_size = max(10.0, raw_order_size) if raw_order_size > 0 else 0
 
-        if order_size_usd <= 0:
+        if base_order_size <= 0:
             return
 
-        
-        # Build Buy Levels (Dual-Layer Scalp & Swing Grid Structure):
-        # Scalp Layer (Levels 1-3): micro spacing for rapid cycle fills
-        # Swing Dip Layer (Levels 4+): wider dip spacing with capital booster for deep dump rebounds
-        for i in range(1, self.params.buy_levels + 1):
-            if i <= 3:
-                scale_factor = 0.65 if is_wknd else 0.45
-                price = current_price * (1 - (spacing * scale_factor * i))
-                level_boost = 1.00
-            else:
-                scale_factor = 1.20 if is_wknd else 0.95
-                price = current_price * (1 - (spacing * scale_factor * i))
-                level_boost = 2.20 if is_wknd else 1.80
-                
-            lvl_size = order_size_usd * level_boost
+        # Tier 1 (Levels 1-2): Micro-Scalp Harvester (0.38% & 0.75% dip - high velocity cash flow)
+        # Tier 2 (Levels 3-4): Medium Swing Pullbacks (1.40% & 2.30% dip - standard daily swings)
+        # Tier 3 (Levels 5-6): Flash-Crash Deep Anchor (3.60% & 5.20% dip - 2.5x heavy bottom firepower)
+        tier_configs = [
+            # (dip_pct, size_multiplier)
+            (0.0038, 0.85),  # Level 1: Ultra-tight micro scalp
+            (0.0075, 1.00),  # Level 2: High-frequency daily chop
+            (0.0140, 1.40),  # Level 3: Intraday pullback
+            (0.0230, 1.80),  # Level 4: Volatility wave
+            (0.0360, 2.40),  # Level 5: Flash-wick dump buyer
+            (0.0520, 2.80),  # Level 6: Extreme bottom anchor (max firepower)
+        ]
+
+        buy_count = min(self.params.buy_levels, len(tier_configs))
+        for i in range(buy_count):
+            dip_pct, level_boost = tier_configs[i]
+            
+            # If ATR is unusually elevated, scale Tier 2 & Tier 3 dynamically while keeping Tier 1 tight
+            if atr > 0 and current_price > 0 and i >= 2:
+                atr_factor = max(1.0, min(1.6, (atr / current_price) / 0.015))
+                dip_pct = dip_pct * atr_factor
+
+            price = current_price * (1.0 - dip_pct)
+            lvl_size = base_order_size * level_boost
             qty = lvl_size / price
             self.grid_levels.append(GridLevel(
                 price=price,
@@ -214,6 +217,9 @@ class GridEngine:
                 qty=qty,
                 size_usd=lvl_size
             ))
+
+        self.current_spacing = 0.0038
+
 
             
         # Build Sell Levels (for all coins already held in portfolio)
