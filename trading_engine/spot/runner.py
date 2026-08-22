@@ -453,15 +453,16 @@ _last_spot_status_time: float = 0.0
 _last_auto_tick_time: float = 0.0
 
 
-def get_spot_status() -> Dict[str, Any]:
-    """Returns full JSON state for API / dashboard."""
-    global _cached_spot_status, _last_spot_status_time, _last_auto_tick_time
+def get_spot_status(force: bool = False) -> Dict[str, Any]:
+    """Returns full JSON state for API / dashboard (Sub-20ms Fast Cache)."""
+    global _cached_spot_status, _last_spot_status_time
     now = time.time()
-    if _cached_spot_status and (now - _last_spot_status_time) < 5.0:
+    if not force and _cached_spot_status and (now - _last_spot_status_time) < 15.0:
         return _cached_spot_status
 
     init_spot_engine()
     exchange = get_spot_exchange()
+
     
     # The 24/7 background daemon thread ticks continuously every 30s, so get_spot_status stays non-blocking and instant
 
