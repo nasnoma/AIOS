@@ -341,9 +341,19 @@ function renderSpotStatus(data) {
   // Open positions table
   const openPosEl = document.getElementById('spot-open-positions');
   if (openPosEl) {
-    const held = p.holdings ? Object.entries(p.holdings).filter(([,h]) => (h.units_held || h.units || 0) > 0) : [];
+    const held = p.holdings ? Object.entries(p.holdings)
+      .filter(([,h]) => {
+        const val = (h.value_usd || 0) || ((h.units_held || h.units || 0) * (h.last_price || 0));
+        return val >= 0.50;
+      })
+      .sort(([,a], [,b]) => {
+        const valA = (a.value_usd || 0) || ((a.units_held || a.units || 0) * (a.last_price || 0));
+        const valB = (b.value_usd || 0) || ((b.units_held || b.units || 0) * (b.last_price || 0));
+        return valB - valA;
+      }) : [];
+
     if (!held.length) {
-      openPosEl.innerHTML = '<div class="empty">No open positions yet. Waiting for buy limit orders to fill on price dips.</div>';
+      openPosEl.innerHTML = '<div class="empty">No active open positions. Cash is 100% liquid in USDT.</div>';
     } else {
       openPosEl.innerHTML = '<div class="tbl-wrap"><table><thead><tr><th>Asset</th><th>Held</th><th>Price</th><th>Avg Cost</th><th>Value</th><th>Unrealised P&amp;L</th></tr></thead><tbody>' +
         held.map(([sym, h]) => {
@@ -354,9 +364,9 @@ function renderSpotStatus(data) {
           const pnlFmt = (Math.abs(pnl) > 0 && Math.abs(pnl) < 0.01) ? Math.abs(pnl).toFixed(4) : Math.abs(pnl).toFixed(2);
           return '<tr><td><strong>' + sym + '</strong></td><td class="mono">' + uVal.toFixed(4) + '</td><td class="mono">$' + fmt(h.last_price||reg.price||0) + '</td><td class="mono">$' + fmt(h.avg_cost_basis||0) + '</td><td class="mono">$' + (h.value_usd||0).toFixed(2) + '</td><td class="mono" style="color:' + pc + ';font-weight:600">' + (pnl>=0?'+$':'-$') + pnlFmt + ' (' + ((h.unrealised_pnl_pct||0)*100).toFixed(2) + '%)</td></tr>';
         }).join('') + '</tbody></table></div>';
-
     }
   }
+
 
   // Transaction history
   const txEl = document.getElementById('spot-transaction-history');
