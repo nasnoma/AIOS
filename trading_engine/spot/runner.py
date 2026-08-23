@@ -556,13 +556,15 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
                 trades = exchange.fetch_my_trades(params={'category': 'spot'}, limit=100)
 
             for t in trades:
-                f_info = t.get('fee')
-                if isinstance(f_info, dict):
-                    real_exchange_fees_all += float(f_info.get('cost', 0) or 0)
-                elif f_info:
-                    real_exchange_fees_all += float(f_info or 0)
+                f_cost = 0.0
+                if isinstance(t.get('fee'), dict):
+                    f_cost = float(t['fee'].get('cost', 0) or 0)
+                if f_cost == 0 and 'info' in t:
+                    f_cost = float(t['info'].get('execFee', 0) or 0)
+                real_exchange_fees_all += f_cost
                 
             trades = sorted(trades, key=lambda x: str(x.get('timestamp') or ''))
+
             for t in reversed(trades):
                 raw_sym = t.get('symbol', '')
                 sym = raw_sym if '/' in raw_sym else (raw_sym.replace('USDT', '/USDT') if 'USDT' in raw_sym else raw_sym)
