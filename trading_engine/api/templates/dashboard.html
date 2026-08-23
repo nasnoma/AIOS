@@ -310,9 +310,9 @@ function renderSpotStatus(data) {
 
 
 
-  const dailyPnl = p.daily_realised_pnl || 0;
   const totalPnl = p.total_realised_pnl || 0;
   const cyclesCount = p.cycles_today || 0;
+
   
   const scaleFactor = totalEquity > 100 ? (totalEquity / 2100.0) : 1.0;
   let est24hPnl = 28.0 * scaleFactor;
