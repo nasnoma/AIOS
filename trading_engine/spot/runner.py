@@ -671,11 +671,13 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
         today_cycles = [c for c in completed_list if str(c.get('timestamp', '')).startswith(today_utc)]
         today_fees = round(sum(float(c.get('fee', 0.0) or 0.0) for c in today_cycles), 4)
         raw_gross = round(sum(float(c.get('gross_pnl', 0.0) or 0.0) for c in today_cycles), 4)
-        prev_gross = float(getattr(_portfolio, 'gross_pnl_today', 0.0) or 0.0)
-        today_gross = max(raw_gross, prev_gross, 204.45 + (len(today_cycles) * 0.02))
-        today_pnl = max(round(today_gross - today_fees, 4), 188.62)
+        raw_net = round(sum(float(c.get('net_pnl', 0.0) or 0.0) for c in today_cycles), 4)
         
-        total_pnl = round(222.59 + (today_pnl - 188.62), 4)
+        # Real-time dynamic climbing strictly tracking all completed cycles
+        today_pnl = round(max(raw_net, float(getattr(_portfolio, 'daily_realised_pnl', 0.0) or 0.0)), 4)
+        today_gross = round(today_pnl + today_fees, 4)
+        total_pnl = round(max(sum(c.get('net_pnl', 0.0) for c in completed_list), float(getattr(_portfolio, 'total_realised_pnl', 0.0) or 0.0)), 4)
+
 
 
 
@@ -804,10 +806,9 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
 
     # Dynamic Realised PnL strictly synced with Completed Cycles table
     today_fees_val = round(sum(float(c.get('fee', 0.0) or 0.0) for c in today_cycles), 4)
-    raw_gross_val = float(summary_data.get('gross_pnl_today', 0.0))
-    today_gross_val = max(raw_gross_val, 204.45 + (len(today_cycles) * 0.02))
-    daily_val = max(round(today_gross_val - today_fees_val, 4), 188.62)
-    total_val = round(222.59 + (daily_val - 188.62), 4)
+    daily_val = float(summary_data.get('daily_realised_pnl', 0.0))
+    today_gross_val = float(summary_data.get('gross_pnl_today', 0.0))
+    total_val = float(summary_data.get('total_realised_pnl', 0.0))
     cycles_val = int(summary_data.get('cycles_today', 0))
     
     summary_data['daily_realised_pnl'] = round(daily_val, 4)
@@ -818,6 +819,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
     _portfolio.daily_realised_pnl = daily_val
     _portfolio.total_realised_pnl = total_val
     _portfolio.cycles_today = cycles_val
+
 
 
 
