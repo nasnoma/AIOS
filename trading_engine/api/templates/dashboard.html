@@ -230,11 +230,16 @@ function renderSpotStatus(data) {
   set('spot-active-cap', usd(activeCap));
   set('spot-usdt-free', usd(usdtFree));
 
-
+  const unEl = document.getElementById('spot-unrealised-pnl');
+  if (unEl) {
+    unEl.textContent = (totalUnrealised >= 0 ? '+$' : '-$') + Math.abs(totalUnrealised).toFixed(2);
+    unEl.style.color = totalUnrealised >= 0 ? 'var(--green)' : 'var(--red)';
+  }
 
   const cyclesTodayCount = Number(p.cycles_today || 0);
   set('spot-cycles-today', cyclesTodayCount);
   set('spot-pnl-today', '$' + (p.daily_realised_pnl||0).toFixed(2));
+
 
 
 
