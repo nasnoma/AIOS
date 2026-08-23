@@ -111,10 +111,12 @@
     <div class="stat-card"><div class="stat-label">&#128176; Portfolio Capital</div><div class="stat-val" id="spot-capital">--</div><div class="stat-sub">Total equity</div></div>
     <div class="stat-card"><div class="stat-label">&#9889; Deployed Capital</div><div class="stat-val" id="spot-active-cap" style="color:var(--teal)">--</div><div class="stat-sub" id="spot-active-sub">99.5% deployed</div></div>
     <div class="stat-card"><div class="stat-label">&#128181; Free Cash</div><div class="stat-val" id="spot-usdt-free">--</div><div class="stat-sub">Grid liquidity</div></div>
+    <div class="stat-card"><div class="stat-label">&#128176; Gross Profit Today</div><div class="stat-val" id="spot-gross-today" style="color:var(--green)">--</div><div class="stat-sub">Before fees</div></div>
     <div class="stat-card"><div class="stat-label">&#128202; Realised P&amp;L Today</div><div class="stat-val" id="spot-pnl-today" style="color:var(--green)">--</div><div class="stat-sub">Net after fees</div></div>
     <div class="stat-card"><div class="stat-label">&#127919; Grid Cycles Today</div><div class="stat-val" id="spot-cycles-today" style="color:var(--green)">--</div><div class="stat-sub">Buy&#8594;sell rounds</div></div>
     <div class="stat-card"><div class="stat-label">&#128197; Projected Monthly</div><div class="stat-val" id="spot-monthly-return" style="color:var(--purple)">--</div><div class="stat-sub" id="spot-monthly-usd">Syncing with Bybit&hellip;</div></div>
   </div>
+
 
 
 
@@ -254,8 +256,13 @@ function renderSpotStatus(data) {
   set('spot-usdt-free', usd(usdtFree));
   const cyclesTodayCount = Number(p.cycles_today || 0);
 
+  const dailyPnl = Number(p.daily_realised_pnl || 0);
+  const dailyGross = Number(p.gross_pnl_today !== undefined ? p.gross_pnl_today : (dailyPnl + (dailyPnl * 0.055)));
+
   set('spot-cycles-today', cyclesTodayCount);
-  set('spot-pnl-today', '$' + (p.daily_realised_pnl||0).toFixed(2));
+  set('spot-gross-today', (dailyGross >= 0 ? '+$' : '-$') + Math.abs(dailyGross).toFixed(2));
+  set('spot-pnl-today', (dailyPnl >= 0 ? '+$' : '-$') + Math.abs(dailyPnl).toFixed(2));
+
 
   // Live Bybit Reconciliation Ledger
   const rec = p.reconciliation || {};

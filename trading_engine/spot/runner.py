@@ -659,11 +659,15 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
         today_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         today_cycles = [c for c in completed_list if str(c.get('timestamp', '')).startswith(today_utc)]
         today_pnl = round(sum(c.get('net_pnl', 0.0) for c in today_cycles), 4)
+        today_fees = round(sum(float(c.get('fee', 0.0) or 0.0) for c in today_cycles), 4)
+        today_gross = round(today_pnl + today_fees, 4)
         total_pnl = round(sum(c.get('net_pnl', 0.0) for c in completed_list), 4)
 
         if completed_list:
             summary_data['total_realised_pnl'] = total_pnl
             summary_data['daily_realised_pnl'] = today_pnl
+            summary_data['gross_pnl_today'] = today_gross
+            summary_data['fees_today'] = today_fees
             summary_data['cycles_today'] = len(today_cycles)
             summary_data['total_cycles'] = len(completed_list)
             summary_data['completed_cycles'] = sorted(completed_list, key=lambda x: str(x.get('timestamp', '')), reverse=True)
@@ -672,6 +676,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
             _portfolio.cycles_today = len(today_cycles)
             _portfolio.total_realised_pnl = total_pnl
             _portfolio.daily_realised_pnl = today_pnl
+
 
 
 
