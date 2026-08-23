@@ -545,7 +545,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
     if not spot_settings.paper_mode and exchange:
         try:
             trades = []
-            for s_item in list(active_symbols)[:10]:
+            for s_item in list(active_symbols):
                 try:
                     s_trades = exchange.fetch_my_trades(s_item, limit=100)
                     trades.extend(s_trades)
@@ -553,6 +553,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
                     pass
             if not trades:
                 trades = exchange.fetch_my_trades(params={'category': 'spot'}, limit=100)
+
                 
             trades = sorted(trades, key=lambda x: str(x.get('timestamp') or ''))
             for t in reversed(trades):
