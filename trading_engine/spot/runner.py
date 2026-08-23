@@ -623,9 +623,9 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
                         buy_orig_p = p * 0.996
 
                     fee_rate = getattr(spot_settings, 'fee_rate', 0.00075)
-                    gross = max(0.001, (p - buy_orig_p) * qty)
+                    gross = (p - buy_orig_p) * qty
                     fee = (p * qty * fee_rate) + (buy_orig_p * qty * fee_rate)
-                    net_pnl = max(0.001, gross - fee)
+                    net_pnl = gross - fee
                     key = f"{sym}_{ts}_{qty}"
                     completed_dict[key] = {
                         'symbol': sym,
@@ -641,7 +641,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
         completed_list = list(completed_dict.values())
 
         fee_rate = getattr(spot_settings, 'fee_rate', 0.00075)
-        net_pnl_total = 0.0
+        net_pnl_total = sum(c.get('net_pnl', 0.0) for c in completed_list)
         for c in completed_list:
             buy_p = float(c.get('buy_price') or 0.0)
             sell_p = float(c.get('sell_price') or 0.0)
@@ -657,7 +657,6 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
             c['gross_pnl'] = round(gross, 4)
             c['fee'] = round(fee, 4)
             c['net_pnl'] = round(max(0.001, gross - fee), 4)
-            net_pnl_total += c['net_pnl']
 
         if completed_list:
             final_pnl = round(max(52.78, net_pnl_total), 4)
