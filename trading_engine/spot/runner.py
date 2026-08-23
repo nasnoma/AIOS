@@ -814,8 +814,8 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
     # True Gross Gains Before Fees
     true_gross_gains = round(total_val + total_fee_ledger, 2)
     
-    # Net Growth = Total Net Realised PnL - Rebalance Loss
-    net_growth = round(total_val - rebalance_loss, 2)
+    # Net Growth = Gross Gains - Fees - Rebalance Loss + Live Inventory Dip
+    net_growth = round(true_gross_gains - total_fee_ledger - rebalance_loss + inv_dip_drag, 2)
 
     summary_data['reconciliation'] = {
         'gross_cycle_gains': true_gross_gains,
@@ -825,6 +825,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
         'inventory_dip_drag': inv_dip_drag,
         'net_true_account_growth': net_growth
     }
+
 
 
 
