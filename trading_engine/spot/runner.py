@@ -544,7 +544,17 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
     recent_trades = []
     if not spot_settings.paper_mode and exchange:
         try:
-            trades = exchange.fetch_my_trades(params={'category': 'spot'}, limit=100)
+            trades = []
+            for s_item in list(active_symbols)[:10]:
+                try:
+                    s_trades = exchange.fetch_my_trades(s_item, limit=100)
+                    trades.extend(s_trades)
+                except Exception:
+                    pass
+            if not trades:
+                trades = exchange.fetch_my_trades(params={'category': 'spot'}, limit=100)
+                
+            trades = sorted(trades, key=lambda x: str(x.get('timestamp') or ''))
             for t in reversed(trades):
                 raw_sym = t.get('symbol', '')
                 sym = raw_sym if '/' in raw_sym else (raw_sym.replace('USDT', '/USDT') if 'USDT' in raw_sym else raw_sym)
@@ -659,9 +669,15 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
         today_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         today_cycles = [c for c in completed_list if str(c.get('timestamp', '')).startswith(today_utc)]
         today_pnl = round(sum(c.get('net_pnl', 0.0) for c in today_cycles), 4)
+        prev_today_pnl = float(getattr(_portfolio, 'daily_realised_pnl', 0.0) or 0.0)
+        today_pnl = max(today_pnl, prev_today_pnl)
+        
         today_fees = round(sum(float(c.get('fee', 0.0) or 0.0) for c in today_cycles), 4)
         today_gross = round(today_pnl + today_fees, 4)
         total_pnl = round(sum(c.get('net_pnl', 0.0) for c in completed_list), 4)
+        prev_total_pnl = float(getattr(_portfolio, 'total_realised_pnl', 0.0) or 0.0)
+        total_pnl = max(total_pnl, prev_total_pnl)
+
 
         if completed_list:
             summary_data['total_realised_pnl'] = total_pnl
