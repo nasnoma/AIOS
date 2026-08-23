@@ -656,19 +656,23 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
             c['fee'] = round(fee, 4)
             c['net_pnl'] = round(gross - fee, 4)
 
-        net_pnl_total = round(sum(c.get('net_pnl', 0.0) for c in completed_list), 4)
+        today_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        today_cycles = [c for c in completed_list if str(c.get('timestamp', '')).startswith(today_utc)]
+        today_pnl = round(sum(c.get('net_pnl', 0.0) for c in today_cycles), 4)
+        total_pnl = round(sum(c.get('net_pnl', 0.0) for c in completed_list), 4)
 
         if completed_list:
-            final_pnl = round(max(52.78, net_pnl_total), 4)
-            summary_data['total_realised_pnl'] = final_pnl
-            summary_data['daily_realised_pnl'] = final_pnl
-            summary_data['cycles_today'] = len(completed_list)
+            summary_data['total_realised_pnl'] = total_pnl
+            summary_data['daily_realised_pnl'] = today_pnl
+            summary_data['cycles_today'] = len(today_cycles)
+            summary_data['total_cycles'] = len(completed_list)
             summary_data['completed_cycles'] = sorted(completed_list, key=lambda x: str(x.get('timestamp', '')), reverse=True)
 
             _portfolio.completed_cycles = summary_data['completed_cycles']
-            _portfolio.cycles_today = summary_data['cycles_today']
-            _portfolio.total_realised_pnl = final_pnl
-            _portfolio.daily_realised_pnl = final_pnl
+            _portfolio.cycles_today = len(today_cycles)
+            _portfolio.total_realised_pnl = total_pnl
+            _portfolio.daily_realised_pnl = today_pnl
+
 
 
 
@@ -769,13 +773,16 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
             logger.debug(f"Live balance fetch in get_spot_status: {e_bal}")
 
     # Dynamic Realised PnL strictly synced with Completed Cycles table
-    live_pnl = float(summary_data.get('daily_realised_pnl', 0.0) or getattr(_portfolio, 'daily_realised_pnl', 0.0) or 52.78)
-    live_cycles = int(summary_data.get('cycles_today', 0) or getattr(_portfolio, 'cycles_today', 0) or 349)
-    summary_data['daily_realised_pnl'] = round(live_pnl, 4)
-    summary_data['total_realised_pnl'] = round(live_pnl, 4)
-    summary_data['cycles_today'] = live_cycles
-    _portfolio.daily_realised_pnl = live_pnl
-    _portfolio.cycles_today = live_cycles
+    daily_val = float(summary_data.get('daily_realised_pnl', 0.0))
+    total_val = float(summary_data.get('total_realised_pnl', 0.0))
+    cycles_val = int(summary_data.get('cycles_today', 0))
+    summary_data['daily_realised_pnl'] = round(daily_val, 4)
+    summary_data['total_realised_pnl'] = round(total_val, 4)
+    summary_data['cycles_today'] = cycles_val
+    _portfolio.daily_realised_pnl = daily_val
+    _portfolio.total_realised_pnl = total_val
+    _portfolio.cycles_today = cycles_val
+
 
 
     tot_cap_val = float(summary_data.get('total_unified_equity') or summary_data.get('total_capital') or 5112.44)
