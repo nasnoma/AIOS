@@ -789,12 +789,18 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
     daily_val = float(summary_data.get('daily_realised_pnl', 0.0))
     total_val = float(summary_data.get('total_realised_pnl', 0.0))
     cycles_val = int(summary_data.get('cycles_today', 0))
+    today_fees_val = round(sum(float(c.get('fee', 0.0) or 0.0) for c in today_cycles), 4)
+    today_gross_val = round(daily_val + today_fees_val, 4)
+    
     summary_data['daily_realised_pnl'] = round(daily_val, 4)
+    summary_data['gross_pnl_today'] = round(today_gross_val, 4)
+    summary_data['fees_today'] = round(today_fees_val, 4)
     summary_data['total_realised_pnl'] = round(total_val, 4)
     summary_data['cycles_today'] = cycles_val
     _portfolio.daily_realised_pnl = daily_val
     _portfolio.total_realised_pnl = total_val
     _portfolio.cycles_today = cycles_val
+
 
     # Live Real-Time Inventory Dip (Distance from current live price to resting take-profit sell targets)
     held_val_total = sum(float(h.get('value_usd', 0) or 0) for h in summary_data.get('holdings', {}).values())
