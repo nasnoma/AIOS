@@ -670,24 +670,19 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
         today_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         today_cycles = [c for c in completed_list if str(c.get('timestamp', '')).startswith(today_utc)]
         today_fees = round(sum(float(c.get('fee', 0.0) or 0.0) for c in today_cycles), 4)
-        
-        # Real-time dynamic climbing strictly synced with new completed cycles
-        num_cycles = len(today_cycles)
-        cycle_increment = max(0, num_cycles - 305) * 0.13
-        today_pnl = round(188.62 + cycle_increment, 2)
-        today_gross = round(today_pnl + today_fees, 2)
-        total_pnl = round(222.59 + cycle_increment, 2)
-
-
-
-
-
+        today_gross = round(sum(float(c.get('gross_pnl', 0.0) or 0.0) for c in today_cycles), 4)
+        today_pnl = round(sum(float(c.get('net_pnl', 0.0) or 0.0) for c in today_cycles), 4)
+        total_pnl = round(sum(float(c.get('net_pnl', 0.0) or 0.0) for c in completed_list), 4)
+        total_gross = round(sum(float(c.get('gross_pnl', 0.0) or 0.0) for c in completed_list), 4)
+        total_fees_all = round(sum(float(c.get('fee', 0.0) or 0.0) for c in completed_list), 4)
 
         if completed_list:
             summary_data['total_realised_pnl'] = total_pnl
             summary_data['daily_realised_pnl'] = today_pnl
             summary_data['gross_pnl_today'] = today_gross
             summary_data['fees_today'] = today_fees
+            summary_data['total_gross_all_time'] = total_gross
+            summary_data['total_fees_all_time'] = total_fees_all
             summary_data['cycles_today'] = len(today_cycles)
             summary_data['total_cycles'] = len(completed_list)
             summary_data['completed_cycles'] = sorted(completed_list, key=lambda x: str(x.get('timestamp', '')), reverse=True)
@@ -696,11 +691,6 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
             _portfolio.cycles_today = len(today_cycles)
             _portfolio.total_realised_pnl = total_pnl
             _portfolio.daily_realised_pnl = today_pnl
-
-
-
-
-
 
         else:
             summary_data['total_realised_pnl'] = float(getattr(_portfolio, 'total_realised_pnl', 0.0) or 0.0)
@@ -806,36 +796,35 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
             logger.debug(f"Live balance fetch in get_spot_status: {e_bal}")
 
     # Dynamic Realised PnL strictly synced with Completed Cycles table
-    today_fees_val = round(sum(float(c.get('fee', 0.0) or 0.0) for c in today_cycles), 4)
+    # ── Final sync: use whatever completed_list computed above ──
     daily_val = float(summary_data.get('daily_realised_pnl', 0.0))
     today_gross_val = float(summary_data.get('gross_pnl_today', 0.0))
     total_val = float(summary_data.get('total_realised_pnl', 0.0))
+    total_gross_all = float(summary_data.get('total_gross_all_time', 0.0))
+    total_fees_all = float(summary_data.get('total_fees_all_time', 0.0))
     cycles_val = int(summary_data.get('cycles_today', 0))
+    total_cycles_val = int(summary_data.get('total_cycles', 0))
     
-    summary_data['daily_realised_pnl'] = round(daily_val, 4)
-    summary_data['gross_pnl_today'] = round(today_gross_val, 4)
-    summary_data['fees_today'] = round(today_fees_val, 4)
-    summary_data['total_realised_pnl'] = round(total_val, 4)
+    summary_data['daily_realised_pnl'] = round(daily_val, 2)
+    summary_data['gross_pnl_today'] = round(today_gross_val, 2)
+    summary_data['total_realised_pnl'] = round(total_val, 2)
     summary_data['cycles_today'] = cycles_val
     _portfolio.daily_realised_pnl = daily_val
     _portfolio.total_realised_pnl = total_val
     _portfolio.cycles_today = cycles_val
-
-
-
-
 
     # Live Real-Time Inventory Dip (Distance from current live price to resting take-profit sell targets)
     held_val_total = sum(float(h.get('value_usd', 0) or 0) for h in summary_data.get('holdings', {}).values())
     target_sell_val = sum((float(h.get('value_usd', 0) or 0) * 1.008) for h in summary_data.get('holdings', {}).values())
     inv_dip_drag = round(min(-0.01, held_val_total - target_sell_val), 2)
     
-    total_fee_ledger = round(50.46 + sum(float(c.get('fee', 0.0) or 0.0) for c in today_cycles), 2)
-    total_trade_count = 899 + len(today_cycles)
-    rebalance_loss = 15.03
+    # True reconciliation — all from real computed cycle sums, no hardcoded values
+    total_fee_ledger = round(total_fees_all, 2)
+    total_trade_count = total_cycles_val
+    rebalance_loss = 0.0  # removed hardcoded guess
     
     # True Gross Gains Before Fees
-    true_gross_gains = round(total_val + total_fee_ledger, 2)
+    true_gross_gains = round(total_gross_all, 2)
     
     # Net Growth = Gross Gains - Fees - Rebalance Loss + Live Inventory Dip
     net_growth = round(true_gross_gains - total_fee_ledger - rebalance_loss + inv_dip_drag, 2)
@@ -849,16 +838,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
         'net_true_account_growth': net_growth
     }
 
-
-
-
-
-
-
-
-
-
-    tot_cap_val = float(summary_data.get('total_unified_equity') or summary_data.get('total_capital') or 5112.44)
+    tot_cap_val = float(summary_data.get('total_unified_equity') or summary_data.get('total_capital') or 0.0)
     res = {
         "enabled": spot_settings.enabled,
         "paper_mode": spot_settings.paper_mode,
