@@ -783,16 +783,20 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
     _portfolio.total_realised_pnl = total_val
     _portfolio.cycles_today = cycles_val
 
-    # Live Balance Sheet & Transparency Reconciliation (True Cost vs Live Value)
+    # Live Balance Sheet & Transparency Reconciliation (Exact Live Real-Time Dip)
+    held_cost_total = sum((float(h.get('avg_cost_basis', 0) or 0) * float(h.get('units_held', 0) or 0)) for h in summary_data.get('holdings', {}).values())
     held_val_total = sum(float(h.get('value_usd', 0) or 0) for h in summary_data.get('holdings', {}).values())
     
-    # Active inventory dip is strictly negative (-$26.10) while resting below take-profit limits
-    inv_dip_drag = -26.10
+    # Exact real-time mark-to-market dip of held coin inventory
+    inv_dip_drag = round(min(0.0, held_val_total - held_cost_total), 2)
+    if inv_dip_drag == 0.0 and held_cost_total > held_val_total:
+        inv_dip_drag = round(held_val_total - held_cost_total, 2)
     
     total_fee_ledger = round(50.46 + sum(float(c.get('fee', 0.0) or 0.0) for c in today_cycles), 2)
     total_trade_count = 899 + len(today_cycles)
     rebalance_loss = 15.03
     net_growth = round(total_val - total_fee_ledger - rebalance_loss + inv_dip_drag, 2)
+
 
 
     summary_data['reconciliation'] = {

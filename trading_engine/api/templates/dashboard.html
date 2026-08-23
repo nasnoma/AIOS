@@ -279,7 +279,7 @@ function renderSpotStatus(data) {
   const dipEl = document.getElementById('recon-dip-drag');
   const dipLabel = document.getElementById('recon-dip-label');
   const dipSub = document.getElementById('recon-dip-sub');
-  const liveDip = Math.abs(recDip > 0 ? 26.10 : (recDip !== 0 ? recDip : 26.10));
+  const liveDip = Math.abs(recDip !== undefined ? recDip : 0.0);
   if (dipEl) {
     dipEl.textContent = '-$' + liveDip.toFixed(2);
     dipEl.style.color = 'var(--yellow)';
@@ -290,6 +290,7 @@ function renderSpotStatus(data) {
   if (dipSub) {
     dipSub.textContent = 'Coins waiting for take-profit bounce';
   }
+
 
 
   set('recon-net-growth', (recNet >= 0 ? '+$' : '-$') + Math.abs(recNet).toFixed(2));
