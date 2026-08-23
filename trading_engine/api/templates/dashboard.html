@@ -244,16 +244,17 @@ function renderSpotStatus(data) {
   const usdtInOrders = p.usdt_in_orders || 0;
   const usdtTotal = Number(data.total_capital || p.total_capital || (usdtFree + usdtInOrders));
   const totalEquity = p.total_unified_equity ? Number(p.total_unified_equity) : (usdtTotal + totalAssetValue);
-  const activeCapPct = data.total_capital_pct || 0.995;
-  const activeCap = totalEquity * activeCapPct;
+  const deployedCap = p.total_deployed_usd !== undefined ? Number(p.total_deployed_usd) : (usdtInOrders + totalAssetValue);
+  const deployedPct = p.deployed_pct !== undefined ? Number(p.deployed_pct) : (totalEquity > 0 ? ((deployedCap / totalEquity) * 100) : 0);
 
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
   const modePill = document.getElementById('spot-mode-pill');
   if (modePill) modePill.textContent = data.paper_mode ? 'Paper Mode' : '🟢 Live Bybit';
-  set('spot-active-sub', (activeCapPct*100).toFixed(1) + '% deployed');
   set('spot-capital', usd(totalEquity));
-  set('spot-active-cap', usd(activeCap));
+  set('spot-active-cap', usd(deployedCap));
+  set('spot-active-sub', deployedPct.toFixed(1) + '% deployed');
   set('spot-usdt-free', usd(usdtFree));
+
   const cyclesTodayCount = Number(p.cycles_today || 0);
 
   const dailyPnl = Number(p.daily_realised_pnl || 0);

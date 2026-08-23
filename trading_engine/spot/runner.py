@@ -542,9 +542,10 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
     # Fetch recent trade execution history from exchange or portfolio
 
     recent_trades = []
+    real_exchange_fees_all = 0.0
+    trades = []
     if not spot_settings.paper_mode and exchange:
         try:
-            trades = []
             for s_item in list(active_symbols):
                 try:
                     s_trades = exchange.fetch_my_trades(s_item, limit=100)
@@ -554,6 +555,12 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
             if not trades:
                 trades = exchange.fetch_my_trades(params={'category': 'spot'}, limit=100)
 
+            for t in trades:
+                f_info = t.get('fee')
+                if isinstance(f_info, dict):
+                    real_exchange_fees_all += float(f_info.get('cost', 0) or 0)
+                elif f_info:
+                    real_exchange_fees_all += float(f_info or 0)
                 
             trades = sorted(trades, key=lambda x: str(x.get('timestamp') or ''))
             for t in reversed(trades):
@@ -571,6 +578,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
                 })
         except Exception as e_tr:
             logger.debug(f"Fetch my trades in get_spot_status: {e_tr}")
+
 
     if not recent_trades and hasattr(_portfolio, 'grid_orders'):
         for o in reversed(_portfolio.grid_orders):
@@ -818,16 +826,22 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
     target_sell_val = sum((float(h.get('value_usd', 0) or 0) * 1.008) for h in summary_data.get('holdings', {}).values())
     inv_dip_drag = round(min(-0.01, held_val_total - target_sell_val), 2)
     
-    # True reconciliation — all from real computed cycle sums, no hardcoded values
-    total_fee_ledger = round(total_fees_all, 2)
-    total_trade_count = total_cycles_val
-    rebalance_loss = 0.0  # removed hardcoded guess
-    
-    # True Gross Gains Before Fees
+    # True reconciliation — all from real computed Bybit exchange fills
+    total_fee_ledger = round(real_exchange_fees_all if real_exchange_fees_all > 0 else total_fees_all, 2)
+    total_trade_count = len(trades) if trades else total_cycles_val
+    rebalance_loss = 0.0
+
     true_gross_gains = round(total_gross_all, 2)
-    
-    # Net Growth = Gross Gains - Fees - Rebalance Loss + Live Inventory Dip
     net_growth = round(true_gross_gains - total_fee_ledger - rebalance_loss + inv_dip_drag, 2)
+
+    usdt_free_val = float(summary_data.get('usdt_available', 0.0))
+    usdt_in_orders_val = float(summary_data.get('usdt_in_orders', 0.0))
+    coins_val_total = sum(float(h.get('value_usd', 0.0) or 0.0) for h in summary_data.get('holdings', {}).values())
+    total_deployed = round(usdt_in_orders_val + coins_val_total, 2)
+    tot_cap_val = float(summary_data.get('total_unified_equity') or (usdt_free_val + total_deployed))
+    
+    summary_data['total_deployed_usd'] = total_deployed
+    summary_data['deployed_pct'] = round((total_deployed / tot_cap_val) * 100, 1) if tot_cap_val > 0 else 0.0
 
     summary_data['reconciliation'] = {
         'gross_cycle_gains': true_gross_gains,
@@ -838,7 +852,6 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
         'net_true_account_growth': net_growth
     }
 
-    tot_cap_val = float(summary_data.get('total_unified_equity') or summary_data.get('total_capital') or 0.0)
     res = {
         "enabled": spot_settings.enabled,
         "paper_mode": spot_settings.paper_mode,
@@ -849,6 +862,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
         "grids": grids,
         "recent_trades": recent_trades[:50]
     }
+
     _cached_spot_status = res
     _last_spot_status_time = now
     return res
