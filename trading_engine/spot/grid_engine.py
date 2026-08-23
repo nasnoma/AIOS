@@ -242,16 +242,21 @@ class GridEngine:
         if base_qty_held > 0.000001:
             sell_levels_count = max(1, min(self.params.sell_levels, 4))
             qty_per_sell = base_qty_held / sell_levels_count
-            min_profit_pct = 3.5 * self.fee_rate  # 0.35% net profit floor
+            min_profit_pct = max(0.0035, 3.5 * self.fee_rate)  # 0.35% net profit floor
+
+            # CRITICAL: Never place a sell order below average purchase cost + fee margin
+            min_allowed_sell_price = avg_cost * (1.0 + min_profit_pct) if avg_cost > 0 else current_price * (1.0 + min_profit_pct)
 
             for i in range(1, sell_levels_count + 1):
-                # If holding is already in profit (current_price >= avg_cost * 1.0035):
-                # Place take-profit sell at current price or slight micro-ladder to lock in profit immediately
-                if current_price >= avg_cost * (1 + min_profit_pct):
-                    target_p = current_price * (1 + (0.001 * (i - 1)))
+                if current_price >= min_allowed_sell_price:
+                    target_p = current_price * (1.0 + (0.0015 * (i - 1)))
                 else:
-                    # Below cost: place sell target at breakeven + fee profit or spacing step
-                    target_p = max(avg_cost * (1 + (min_profit_pct * i)), current_price * (1 + (spacing * i)))
+                    # Place sell ladder strictly above cost basis
+                    step_pct = min_profit_pct + (0.002 * (i - 1))
+                    target_p = max(min_allowed_sell_price * (1.0 + (0.002 * (i - 1))), current_price * (1.0 + (self.current_spacing * i)))
+
+                # Absolute safety clamp: target_p must strictly be >= min_allowed_sell_price
+                target_p = max(target_p, min_allowed_sell_price)
 
                 sell_lvl_size = qty_per_sell * target_p
                 self.grid_levels.append(GridLevel(
@@ -261,6 +266,7 @@ class GridEngine:
                     size_usd=sell_lvl_size,
                     linked_buy_price=avg_cost
                 ))
+
 
 
     def place_grid_orders(self, portfolio, exchange: ccxt.Exchange):
