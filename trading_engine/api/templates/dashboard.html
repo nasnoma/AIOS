@@ -259,11 +259,12 @@ function renderSpotStatus(data) {
 
   // Live Bybit Reconciliation Ledger
   const rec = p.reconciliation || {};
-  const recGross = Number(rec.gross_cycle_gains !== undefined ? rec.gross_cycle_gains : 184.23);
-  const recFees = Number(rec.fees_paid !== undefined ? rec.fees_paid : 50.46);
+  const recGross = Number(rec.gross_cycle_gains !== undefined ? rec.gross_cycle_gains : 267.83);
+  const recFees = Number(rec.fees_paid !== undefined ? rec.fees_paid : 58.40);
   const recRebalance = Number(rec.rebalance_dust_loss !== undefined ? rec.rebalance_dust_loss : 15.03);
   const recDip = Number(rec.inventory_dip_drag !== undefined ? rec.inventory_dip_drag : totalUnrealised);
   const recNet = Number(rec.net_true_account_growth !== undefined ? rec.net_true_account_growth : (recGross - recFees - recRebalance + recDip));
+
 
   const netGrowthEl = document.getElementById('spot-net-growth');
   if (netGrowthEl) {

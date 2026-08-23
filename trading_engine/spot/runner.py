@@ -795,18 +795,22 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
     total_fee_ledger = round(50.46 + sum(float(c.get('fee', 0.0) or 0.0) for c in today_cycles), 2)
     total_trade_count = 899 + len(today_cycles)
     rebalance_loss = 15.03
-    net_growth = round(total_val - total_fee_ledger - rebalance_loss + inv_dip_drag, 2)
-
-
+    
+    # True Gross Gains Before Fees
+    true_gross_gains = round(total_val + total_fee_ledger, 2)
+    
+    # Net Growth = Total Net Realised PnL - Rebalance Loss + Live Inventory Dip
+    net_growth = round(total_val - rebalance_loss + inv_dip_drag, 2)
 
     summary_data['reconciliation'] = {
-        'gross_cycle_gains': round(total_val, 2),
+        'gross_cycle_gains': true_gross_gains,
         'fees_paid': total_fee_ledger,
         'trade_count': total_trade_count,
         'rebalance_dust_loss': rebalance_loss,
         'inventory_dip_drag': inv_dip_drag,
         'net_true_account_growth': net_growth
     }
+
 
 
 
