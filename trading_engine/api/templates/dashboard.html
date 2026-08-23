@@ -111,11 +111,12 @@
     <div class="stat-card"><div class="stat-label">&#128176; Portfolio Capital</div><div class="stat-val" id="spot-capital">--</div><div class="stat-sub">Total equity</div></div>
     <div class="stat-card"><div class="stat-label">&#9889; Deployed Capital</div><div class="stat-val" id="spot-active-cap" style="color:var(--teal)">--</div><div class="stat-sub" id="spot-active-sub">99.5% deployed</div></div>
     <div class="stat-card"><div class="stat-label">&#128181; Free Cash</div><div class="stat-val" id="spot-usdt-free">--</div><div class="stat-sub">Grid liquidity</div></div>
-    <div class="stat-card"><div class="stat-label">&#128200; Unrealised P&amp;L</div><div class="stat-val" id="spot-unrealised-pnl" style="color:var(--green)">--</div><div class="stat-sub">Mark-to-market</div></div>
+    <div class="stat-card"><div class="stat-label">&#127942; Net True Growth</div><div class="stat-val" id="spot-net-growth" style="color:var(--teal)">--</div><div class="stat-sub">Real wallet profit</div></div>
     <div class="stat-card"><div class="stat-label">&#128202; Realised P&amp;L Today</div><div class="stat-val" id="spot-pnl-today" style="color:var(--green)">--</div><div class="stat-sub">Net after fees</div></div>
     <div class="stat-card"><div class="stat-label">&#127919; Grid Cycles Today</div><div class="stat-val" id="spot-cycles-today" style="color:var(--green)">--</div><div class="stat-sub">Buy&#8594;sell rounds</div></div>
     <div class="stat-card"><div class="stat-label">&#128197; Projected Monthly</div><div class="stat-val" id="spot-monthly-return" style="color:var(--purple)">--</div><div class="stat-sub" id="spot-monthly-usd">Syncing with Bybit&hellip;</div></div>
   </div>
+
 
   <!-- Live Bybit Balance Sheet & Profit Transparency Panel -->
   <div class="panel" style="border-left:3px solid var(--teal);background:rgba(0,229,176,0.02);margin-bottom:18px;">
@@ -248,14 +249,8 @@ function renderSpotStatus(data) {
   set('spot-capital', usd(totalEquity));
   set('spot-active-cap', usd(activeCap));
   set('spot-usdt-free', usd(usdtFree));
-
-  const unEl = document.getElementById('spot-unrealised-pnl');
-  if (unEl) {
-    unEl.textContent = (totalUnrealised >= 0 ? '+$' : '-$') + Math.abs(totalUnrealised).toFixed(2);
-    unEl.style.color = totalUnrealised >= 0 ? 'var(--green)' : 'var(--red)';
-  }
-
   const cyclesTodayCount = Number(p.cycles_today || 0);
+
   set('spot-cycles-today', cyclesTodayCount);
   set('spot-pnl-today', '$' + (p.daily_realised_pnl||0).toFixed(2));
 
@@ -267,11 +262,18 @@ function renderSpotStatus(data) {
   const recDip = Number(rec.inventory_dip_drag !== undefined ? rec.inventory_dip_drag : totalUnrealised);
   const recNet = Number(rec.net_true_account_growth !== undefined ? rec.net_true_account_growth : (recGross - recFees - recRebalance + recDip));
 
+  const netGrowthEl = document.getElementById('spot-net-growth');
+  if (netGrowthEl) {
+    netGrowthEl.textContent = (recNet >= 0 ? '+$' : '-$') + Math.abs(recNet).toFixed(2);
+    netGrowthEl.style.color = recNet >= 0 ? 'var(--teal)' : 'var(--red)';
+  }
+
   set('recon-gross-gains', (recGross >= 0 ? '+$' : '-$') + Math.abs(recGross).toFixed(2));
   set('recon-fees-paid', '-$' + Math.abs(recFees).toFixed(2));
   set('recon-rebalance-loss', '-$' + Math.abs(recRebalance).toFixed(2));
   set('recon-dip-drag', (recDip >= 0 ? '+$' : '-$') + Math.abs(recDip).toFixed(2));
   set('recon-net-growth', (recNet >= 0 ? '+$' : '-$') + Math.abs(recNet).toFixed(2));
+
 
 
 
