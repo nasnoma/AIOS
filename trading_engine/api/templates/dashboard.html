@@ -232,9 +232,10 @@ function renderSpotStatus(data) {
 
 
 
-  const cyclesTodayCount = Math.max(p.cycles_today || 0, (p.completed_cycles && p.completed_cycles.length) ? p.completed_cycles.length : 0);
+  const cyclesTodayCount = Number(p.cycles_today || 0);
   set('spot-cycles-today', cyclesTodayCount);
   set('spot-pnl-today', '$' + (p.daily_realised_pnl||0).toFixed(2));
+
 
 
   const dailyPnl = p.daily_realised_pnl || 0;
