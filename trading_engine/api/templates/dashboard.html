@@ -131,15 +131,13 @@
     <div class="panel-body" style="padding:14px 18px;">
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
         <div class="stat-card" style="background:rgba(255,255,255,0.03);padding:10px 14px;"><div class="stat-label">&#128176; 1. Gross Cycle Gains</div><div class="stat-val" id="recon-gross-gains" style="color:var(--green);font-size:1.15rem">+$184.23</div><div class="stat-sub">Sum of all winning sells</div></div>
-        <div class="stat-card" style="background:rgba(255,255,255,0.03);padding:10px 14px;"><div class="stat-label">&#128179; 2. Bybit Fees Paid</div><div class="stat-val" id="recon-fees-paid" style="color:var(--red);font-size:1.15rem">-$50.46</div><div class="stat-sub" id="recon-fees-sub">899 trades (25% MNT rebate)</div></div>
-
-        <div class="stat-card" style="background:rgba(255,255,255,0.03);padding:10px 14px;"><div class="stat-label">&#9888;&#65039; 3. Rebalance &amp; Dust</div><div class="stat-val" id="recon-rebalance-loss" style="color:var(--yellow);font-size:1.15rem">-$15.03</div><div class="stat-sub">Saturday rebalance (fixed)</div></div>
+        <div class="stat-card" style="background:rgba(255,255,255,0.03);padding:10px 14px;"><div class="stat-label">&#128179; 2. Bybit Fees Paid</div><div class="stat-val" id="recon-fees-paid" style="color:var(--red);font-size:1.15rem">-$50.46</div><div class="stat-sub" id="recon-fees-sub">1146 trades (25% MNT rebate)</div></div>
+        <div class="stat-card" style="background:rgba(255,255,255,0.03);padding:10px 14px;"><div class="stat-label">&#129689; 3. Active Coin Inventory</div><div class="stat-val" id="recon-coins-held" style="color:var(--teal);font-size:1.15rem">$0.00</div><div class="stat-sub" id="recon-coins-sub">Coins awaiting take-profit</div></div>
         <div class="stat-card" style="background:rgba(255,255,255,0.03);padding:10px 14px;"><div class="stat-label" id="recon-dip-label">&#128201; 4. Active Inventory Dip</div><div class="stat-val" id="recon-dip-drag" style="color:var(--yellow);font-size:1.15rem">-$26.10</div><div class="stat-sub" id="recon-dip-sub">Coins waiting for take-profit bounce</div></div>
-        <div class="stat-card" style="background:rgba(0,229,176,0.06);border:1px solid rgba(0,229,176,0.3);padding:10px 14px;"><div class="stat-label">&#127942; Net True Growth</div><div class="stat-val" id="recon-net-growth" style="color:var(--teal);font-size:1.15rem">+$92.64</div><div class="stat-sub">Real wallet profit on Bybit</div></div>
-
-
+        <div class="stat-card" style="background:rgba(0,229,176,0.06);border:1px solid rgba(0,229,176,0.3);padding:10px 14px;"><div class="stat-label">&#127942; 5. Net True Growth</div><div class="stat-val" id="recon-net-growth" style="color:var(--teal);font-size:1.15rem">+$92.64</div><div class="stat-sub">Real wallet profit on Bybit</div></div>
       </div>
     </div>
+
   </div>
 
   <div class="panel">
@@ -282,8 +280,11 @@ function renderSpotStatus(data) {
 
   set('recon-gross-gains', (recGross >= 0 ? '+$' : '-$') + Math.abs(recGross).toFixed(2));
   set('recon-fees-paid', '-$' + Math.abs(recFees).toFixed(2));
-  set('recon-fees-sub', (rec.trade_count || 899) + ' trades (25% MNT rebate)');
-  set('recon-rebalance-loss', '-$' + Math.abs(recRebalance).toFixed(2));
+  set('recon-fees-sub', (rec.trade_count || 1146) + ' trades (25% MNT rebate)');
+  
+  const heldCoinsCount = Object.keys(p.holdings || {}).length;
+  set('recon-coins-held', usd(totalAssetValue));
+  set('recon-coins-sub', heldCoinsCount + ' assets awaiting take-profit');
 
   const dipEl = document.getElementById('recon-dip-drag');
   const dipLabel = document.getElementById('recon-dip-label');
@@ -300,9 +301,8 @@ function renderSpotStatus(data) {
     dipSub.textContent = 'Coins waiting for take-profit bounce';
   }
 
-
-
   set('recon-net-growth', (recNet >= 0 ? '+$' : '-$') + Math.abs(recNet).toFixed(2));
+
 
 
 
