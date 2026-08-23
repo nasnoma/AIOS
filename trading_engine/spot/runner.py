@@ -791,10 +791,10 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
     _portfolio.total_realised_pnl = total_val
     _portfolio.cycles_today = cycles_val
 
-    # Live Real-Time Inventory Drag (live equity vs target deposit + today profit)
-    tot_equity_val = float(summary_data.get('total_unified_equity') or summary_data.get('total_capital') or 5080.0)
-    target_equity_val = 5090.00 + daily_val
-    inv_dip_drag = round(min(-0.01, tot_equity_val - target_equity_val), 2)
+    # Live Real-Time Inventory Dip (Distance from current live price to resting take-profit sell targets)
+    held_val_total = sum(float(h.get('value_usd', 0) or 0) for h in summary_data.get('holdings', {}).values())
+    target_sell_val = sum((float(h.get('value_usd', 0) or 0) * 1.008) for h in summary_data.get('holdings', {}).values())
+    inv_dip_drag = round(min(-0.01, held_val_total - target_sell_val), 2)
     
     total_fee_ledger = round(50.46 + sum(float(c.get('fee', 0.0) or 0.0) for c in today_cycles), 2)
     total_trade_count = 899 + len(today_cycles)
@@ -814,6 +814,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
         'inventory_dip_drag': inv_dip_drag,
         'net_true_account_growth': net_growth
     }
+
 
 
 
