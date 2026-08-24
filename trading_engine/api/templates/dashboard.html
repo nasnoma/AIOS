@@ -265,9 +265,11 @@ function renderSpotStatus(data) {
 
 
   // Live Bybit Reconciliation Ledger
+  const rec = p.reconciliation || {};
   const recGross = Number(rec.gross_cycle_gains !== undefined ? rec.gross_cycle_gains : 0.0);
   const recFees = Number(rec.fees_paid !== undefined ? rec.fees_paid : 0.0);
   const recNet = Number(rec.net_true_account_growth !== undefined ? rec.net_true_account_growth : (recGross - recFees));
+
 
   set('recon-gross-gains', (recGross >= 0 ? '+$' : '-$') + Math.abs(recGross).toFixed(2));
   set('recon-fees-paid', '-$' + Math.abs(recFees).toFixed(2));
