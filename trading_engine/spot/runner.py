@@ -831,33 +831,29 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
     # True reconciliation — all from real computed Bybit exchange fills
     total_fee_ledger = round(real_exchange_fees_all if real_exchange_fees_all > 0 else total_fees_all, 2)
     total_trade_count = len(trades) if trades else total_cycles_val
-    rebalance_loss = 0.0
-
-    deposit_base = 5115.83
-    true_gross_gains = round(total_gross_all, 2)
-    net_growth = round(true_gross_gains - total_fee_ledger, 2)
 
     usdt_free_val = float(summary_data.get('usdt_available', 0.0))
     usdt_in_orders_val = float(summary_data.get('usdt_in_orders', 0.0))
     coins_val_total = sum(float(h.get('value_usd', 0.0) or 0.0) for h in summary_data.get('holdings', {}).values())
     total_deployed = round(usdt_in_orders_val + coins_val_total, 2)
     tot_cap_val = float(summary_data.get('total_unified_equity') or summary_data.get('total_capital') or (usdt_free_val + total_deployed))
-    
-    # Exact Broad Market Altcoin Drawdown on Held Coins
-    market_drawdown = round(tot_cap_val - (deposit_base + net_growth), 2)
 
+    # ── GROUND TRUTH: Real wallet growth = Bybit equity − total deposits ──
+    # This is the ONLY number that cannot be distorted by trade buffer limits,
+    # buy/sell pairing heuristics, or fee estimation errors.
+    deposit_base = 5115.83
+    real_account_growth = round(tot_cap_val - deposit_base, 2)
 
     summary_data['total_deployed_usd'] = total_deployed
     summary_data['deployed_pct'] = round((total_deployed / tot_cap_val) * 100, 1) if tot_cap_val > 0 else 0.0
 
     summary_data['reconciliation'] = {
-        'gross_cycle_gains': true_gross_gains,
+        'gross_cycle_gains': round(total_gross_all, 2),
         'fees_paid': total_fee_ledger,
         'trade_count': total_trade_count,
-        'rebalance_dust_loss': rebalance_loss,
-        'inventory_dip_drag': inv_dip_drag,
-        'market_drawdown': market_drawdown,
-        'net_true_account_growth': net_growth
+        'net_true_account_growth': real_account_growth,
+        'deposit_base': deposit_base,
+        'bybit_equity': round(tot_cap_val, 2),
     }
 
 
