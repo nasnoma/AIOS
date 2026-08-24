@@ -177,7 +177,7 @@ class GridEngine:
             else:
                 spacing = max(0.009, self.params.grid_spacing)
         
-        # ── Asymmetric Dual-Grid Geometry (High-Frequency Inner Scalp + Deep Dip Bottom-Harvester) ──
+        # ── High-Velocity Rapid-Pulse Geometry ($0.75 - $1.20 Net Profit / Fill Sweet Spot) ──
         # Base unit sizing per level
         total_levels = self.params.buy_levels + self.params.sell_levels
         raw_order_size = (self.allocated_usd * self.params.capital_pct) / total_levels if total_levels > 0 else 0
@@ -186,16 +186,16 @@ class GridEngine:
         if base_order_size <= 0:
             return
 
-        # Tier 1 (Levels 1-2): Rapid Intraday Velocity Scalp (0.95% & 1.75% dip — rapid, continuous cash flow)
-        # Tier 2 (Levels 3-4): Core Volatility Swing Pullbacks (2.80% & 4.20% dip — heavy profit captures)
-        # Tier 3 (Level 5): Flash-Crash Deep Bottom Weapon (6.20% dip — max discount firepower)
+        # Tier 1 (Levels 1-2): High-Frequency Pulse (0.78% & 1.45% dip — rapid-fire 100+ rounds/day)
+        # Tier 2 (Levels 3-4): Intraday Pullback Capture (2.40% & 3.80% dip — high cash yield)
+        # Tier 3 (Level 5): Flash Capitulation Floor (5.80% dip — bottom buyer)
         tier_configs = [
             # (dip_pct, size_multiplier)
-            (0.0095, 1.00),  # Level 1: Rapid 0.95% intraday ping-pong fill ($75-$120 size)
-            (0.0175, 1.25),  # Level 2: 1.75% standard oscillation level ($95-$150 size)
-            (0.0280, 1.60),  # Level 3: 2.80% high-alpha pullback tier ($120-$190 size)
-            (0.0420, 2.00),  # Level 4: 4.20% major intraday dip tier ($150-$240 size)
-            (0.0620, 2.50),  # Level 5: 6.20% flash-crash bottom cushion ($180-$300 size)
+            (0.0078, 1.00),  # Level 1: Rapid 0.78% dip -> targets +0.90% bounce (+$0.75 net / $100 fill)
+            (0.0145, 1.25),  # Level 2: 1.45% pullback -> targets +1.55% bounce (+$1.40 net / $100 fill)
+            (0.0240, 1.60),  # Level 3: 2.40% wave dip -> targets +2.50% bounce (+$2.35 net / $100 fill)
+            (0.0380, 2.00),  # Level 4: 3.80% flush dip -> targets +3.90% bounce (+$3.75 net / $100 fill)
+            (0.0580, 2.50),  # Level 5: 5.80% deep floor -> targets +5.90% bounce (+$5.75 net / $100 fill)
         ]
 
         buy_count = min(self.params.buy_levels, len(tier_configs))
@@ -204,7 +204,7 @@ class GridEngine:
             
             # If ATR is unusually elevated, scale Tier 2 & Tier 3 dynamically
             if atr > 0 and current_price > 0 and i >= 2:
-                atr_factor = max(1.0, min(1.5, (atr / current_price) / 0.015))
+                atr_factor = max(1.0, min(1.4, (atr / current_price) / 0.015))
                 dip_pct = dip_pct * atr_factor
 
             price = current_price * (1.0 - dip_pct)
@@ -217,7 +217,7 @@ class GridEngine:
                 size_usd=lvl_size
             ))
 
-        self.current_spacing = 0.0095
+        self.current_spacing = 0.0078
 
 
 
@@ -242,12 +242,11 @@ class GridEngine:
         if base_qty_held > 0.000001:
             sell_levels_count = max(1, min(self.params.sell_levels, 4))
             qty_per_sell = base_qty_held / sell_levels_count
-            min_profit_pct = 0.0140  # 1.40% minimum profit floor above cost
 
-            # Stagger sell tiers: +1.40%, +2.20%, +3.20%, +4.50% strictly above cost basis
-            sell_stagger_steps = [0.0140, 0.0220, 0.0320, 0.0450]
+            # Stagger sell tiers: +0.90% (rapid-fire), +1.50%, +2.40%, +3.80% strictly above cost
+            sell_stagger_steps = [0.0090, 0.0150, 0.0240, 0.0380]
             for i in range(sell_levels_count):
-                step = sell_stagger_steps[i] if i < len(sell_stagger_steps) else (0.0140 + (0.010 * i))
+                step = sell_stagger_steps[i] if i < len(sell_stagger_steps) else (0.0090 + (0.008 * i))
                 target_p = max(avg_cost * (1.0 + step), current_price * (1.0 + step))
                 self.grid_levels.append(GridLevel(
                     price=target_p,
@@ -256,6 +255,7 @@ class GridEngine:
                     size_usd=qty_per_sell * target_p,
                     linked_buy_price=avg_cost
                 ))
+
 
 
 
@@ -358,10 +358,11 @@ class GridEngine:
                     if hasattr(portfolio, 'record_buy'):
                         portfolio.record_buy(self.symbol, level.qty, level.price, level.size_usd, order_id=level.order_id or '')
                     
-                    # Fee-aware sell price: enforce strict +1.45% minimum net profit target above entry
-                    min_profit_pct = max(0.0050, 5.0 * self.fee_rate)  # 0.50% profit floor above spacing
-                    active_spacing = max(0.0095, getattr(self, 'current_spacing', self.params.grid_spacing))
+                    # Fee-aware sell price: enforce high-velocity +0.95% to +1.10% target (+$0.75 - $1.00 net / $100 fill)
+                    min_profit_pct = max(0.0020, 2.0 * self.fee_rate)  # 0.20% profit floor above spacing
+                    active_spacing = max(0.0078, getattr(self, 'current_spacing', self.params.grid_spacing))
                     sell_price = level.price * (1.0 + active_spacing + min_profit_pct)
+
 
                     new_sell = GridLevel(
                         price=sell_price,
