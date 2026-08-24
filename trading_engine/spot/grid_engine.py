@@ -272,25 +272,20 @@ class GridEngine:
             for i in range(sell_levels_count):
                 min_net_usd = min_net_profit_tiers[i] if i < len(min_net_profit_tiers) else (0.60 + 0.50 * i)
                 
-                # Mathematical formula to guarantee exact net profit after fees:
-                # (P_sell - avg_cost) * qty - (P_sell * qty * fee_factor) >= min_net_usd
-                # P_sell * qty * (1 - fee_factor) >= avg_cost * qty + min_net_usd
-                # P_sell >= (avg_cost * qty + min_net_usd) / (qty * (1 - fee_factor))
-                
+                # Reference cost basis: Must protect BOTH the overall purchase cost AND the current market price
+                # so that sells during market rallies never sell for a micro-step that yields < $0.60 net profit!
+                cost_ref = max(avg_cost, current_price)
                 denom = qty_per_sell * (1.0 - fee_factor)
-                min_fee_proof_price = (avg_cost * qty_per_sell + min_net_usd) / denom if denom > 0 else avg_cost * 1.01
+                min_fee_proof_price = (cost_ref * qty_per_sell + min_net_usd) / denom if denom > 0 else cost_ref * 1.015
+                
+                # Dynamic staggering for higher tiers
+                stagger_step = 0.0050 * i
+                target_p = max(min_fee_proof_price, min_fee_proof_price * (1.0 + stagger_step))
 
-                # If current_price is already in profit (e.g. INJ is rallying above cost),
-                # ride the trend with a small step above current_price (+0.40% to +1.60%)
-                stagger_step = 0.0040 * (i + 1)
-                if current_price >= avg_cost:
-                    target_p = max(min_fee_proof_price, current_price * (1.0 + stagger_step))
-                else:
-                    target_p = min_fee_proof_price
-
-                actual_net_pnl = (target_p - avg_cost) * qty_per_sell - (target_p * qty_per_sell * fee_factor)
+                actual_net_pnl = (target_p - cost_ref) * qty_per_sell - (target_p * qty_per_sell * fee_factor)
                 logger.info(f"🎯 [{self.symbol}] High-Velocity Sell Level {i+1}/{sell_levels_count}: Target=${target_p:.4f} "
-                            f"(AvgCost: ${avg_cost:.4f}, Live: ${current_price:.4f}, Net Profit: +${actual_net_pnl:.2f} USD)")
+                            f"(CostRef: ${cost_ref:.4f}, Live: ${current_price:.4f}, Net Profit: +${actual_net_pnl:.2f} USD)")
+
 
                 self.grid_levels.append(GridLevel(
                     price=target_p,
