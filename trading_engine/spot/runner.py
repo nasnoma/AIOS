@@ -625,9 +625,19 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
                         c_item = dict(c)
                         c_item['symbol'] = sym
                         key = f"{sym}_{c_item.get('timestamp')}_{c_item.get('qty')}"
-                        completed_dict[key] = c_item
+        # In live mode, strictly exclude any simulated PAPER orders or test artifacts
+        if not spot_settings.paper_mode:
+            filtered_dict = {}
+            for k, c in completed_dict.items():
+                s_id = str(c.get('sell_order_id', ''))
+                b_id = str(c.get('buy_order_id', ''))
+                gross = float(c.get('gross_pnl', 0.0) or 0.0)
+                if not s_id.startswith('PAPER') and not b_id.startswith('PAPER') and gross < 50.0:
+                    filtered_dict[k] = c
+            completed_dict = filtered_dict
 
         # ── Reconcile Completed Cycles from Live Exchange Fills ──
+
         if not spot_settings.paper_mode and recent_trades:
             buys_by_sym = {}
             for t in sorted(recent_trades, key=lambda x: str(x.get('timestamp') or '')):

@@ -406,13 +406,14 @@ class GridEngine:
                         'net_pnl': net_pnl,
                         'timestamp': level.filled_at or datetime.now(timezone.utc).isoformat()
                     }
-                    self.completed_cycles.append(cycle_record)
-                    try:
-                        from trading_engine.spot.trade_db import record_completed_cycle
-                        record_completed_cycle(cycle_record)
-                    except Exception as e_db:
-                        logger.debug(f"Failed to record cycle to SQLite: {e_db}")
+                    if not self.paper_mode and level.order_id and not str(level.order_id).startswith('PAPER'):
+                        try:
+                            from trading_engine.spot.trade_db import record_completed_cycle
+                            record_completed_cycle(cycle_record)
+                        except Exception as e_db:
+                            logger.debug(f"Failed to record cycle to SQLite: {e_db}")
                     logger.info(f"SELL filled at {level.price}. Completed cycle for {self.symbol}. Net PnL: ${net_pnl:.2f}")
+
 
                 
                     new_buy = GridLevel(
