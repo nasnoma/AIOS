@@ -223,9 +223,15 @@ class GridEngine:
 
             
         # Build Sell Levels (strictly above average purchase cost basis)
+        def _get_val(obj, key, default=0.0):
+            if obj is None:
+                return default
+            if isinstance(obj, dict):
+                return obj.get(key, default)
+            return getattr(obj, key, default)
+
         holding = None
         if portfolio and hasattr(portfolio, 'holdings') and isinstance(portfolio.holdings, dict):
-            # Direct match
             holding = portfolio.holdings.get(self.symbol)
             if not holding:
                 base_asset = self.symbol.split('/')[0]
@@ -234,8 +240,8 @@ class GridEngine:
                         holding = h
                         break
 
-        base_qty_held = float(getattr(holding, 'units_held', 0) or 0) if holding else 0.0
-        avg_cost = float(getattr(holding, 'avg_cost_basis', 0) or 0) if holding else 0.0
+        base_qty_held = float(_get_val(holding, 'units_held', 0.0) or 0.0)
+        avg_cost = float(_get_val(holding, 'avg_cost_basis', 0.0) or 0.0)
 
         # Safety: If avg_cost is 0 or missing, ensure we never sell below current_price * 1.015
         if avg_cost <= 0:
@@ -245,7 +251,7 @@ class GridEngine:
             sell_levels_count = max(1, min(self.params.sell_levels, 4))
             qty_per_sell = base_qty_held / sell_levels_count
 
-            # Stagger sell tiers strictly above AVERAGE COST BASIS:
+            # Stagger sell tiers strictly above AVERAGE PURCHASE COST BASIS:
             # Tier 1: Cost + 0.90% (rapid profit fill)
             # Tier 2: Cost + 1.50%
             # Tier 3: Cost + 2.40%
@@ -253,9 +259,11 @@ class GridEngine:
             sell_stagger_steps = [0.0090, 0.0150, 0.0240, 0.0380]
             for i in range(sell_levels_count):
                 step = sell_stagger_steps[i] if i < len(sell_stagger_steps) else (0.0090 + (0.008 * i))
-                # Absolute guarantee: Target price must be AT LEAST avg_cost * (1.0 + step) AND above current_price
+                # Absolute guarantee: Target price must be AT LEAST avg_cost * (1.0 + step) AND strictly above current_price
                 min_cost_target = avg_cost * (1.0 + step)
                 target_p = max(min_cost_target, current_price * (1.0 + 0.0030))
+                # Ensure target_p is never below min_cost_target under any circumstance
+                target_p = max(target_p, min_cost_target)
                 self.grid_levels.append(GridLevel(
                     price=target_p,
                     side='sell',
@@ -263,6 +271,7 @@ class GridEngine:
                     size_usd=qty_per_sell * target_p,
                     linked_buy_price=avg_cost
                 ))
+
 
 
 
