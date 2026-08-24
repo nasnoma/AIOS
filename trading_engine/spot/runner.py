@@ -873,13 +873,16 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
     summary_data['daily_realised_pnl'] = round(daily_val, 2)
     summary_data['daily_gross_pnl'] = round(today_gross_val, 2)
     summary_data['gross_pnl_today'] = round(today_gross_val, 2)
+    summary_data['fees_today'] = round(today_fees, 2)
     summary_data['total_realised_pnl'] = round(total_val, 2)
     summary_data['cycles_today'] = cycles_val
     _portfolio.daily_realised_pnl = daily_val
     _portfolio.daily_gross_pnl = today_gross_val
     _portfolio.gross_pnl_today = today_gross_val
+    _portfolio.fees_today = today_fees
     _portfolio.total_realised_pnl = total_val
     _portfolio.cycles_today = cycles_val
+
 
 
     # Live Real-Time Inventory Dip (Distance from current live price to resting take-profit sell targets)
