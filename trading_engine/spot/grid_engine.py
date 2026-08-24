@@ -250,27 +250,36 @@ class GridEngine:
             sell_levels_count = max(1, min(self.params.sell_levels, 4))
             qty_per_sell = base_qty_held / sell_levels_count
 
-            # Stagger sell tiers strictly above AVERAGE PURCHASE COST BASIS:
-            # Tier 1: Cost + 0.90% (rapid profit fill)
-            # Tier 2: Cost + 1.50%
-            # Tier 3: Cost + 2.40%
-            # Tier 4: Cost + 3.80%
-            sell_stagger_steps = [0.0090, 0.0150, 0.0240, 0.0380]
-            for i in range(sell_levels_count):
-                step = sell_stagger_steps[i] if i < len(sell_stagger_steps) else (0.0090 + (0.008 * i))
-                
-                # CRITICAL: Target price MUST strictly be above avg_cost
-                min_cost_target = avg_cost * (1.0 + step)
-                
-                # If current_price is already in profit (e.g. INJ is $5.88 while cost is $5.39),
-                # sell above current_price (+step). But if price is BELOW cost (e.g. UNI is $4.27 while cost is $4.324),
-                # sell target MUST strictly stay at min_cost_target ($4.363)!
-                if current_price >= avg_cost:
-                    target_p = max(min_cost_target, current_price * (1.0 + step))
-                else:
-                    target_p = min_cost_target
+            # Tiered net profit guarantee:
+            # Tier 1: Minimum +$0.60 NET profit after all maker/taker fees (rapid release)
+            # Tier 2: Minimum +$0.90 NET profit after all maker/taker fees
+            # Tier 3: Minimum +$1.40 NET profit after all maker/taker fees
+            # Tier 4: Minimum +$2.20 NET profit after all maker/taker fees
+            min_net_profit_tiers = [0.60, 0.90, 1.40, 2.20]
+            fee_factor = 0.0010  # 0.10% Bybit taker fee safety buffer
 
-                logger.info(f"🎯 [{self.symbol}] Sell Level {i+1}: Target=${target_p:.4f} (AvgCost: ${avg_cost:.4f}, Live: ${current_price:.4f}, Profit Margin: +{step*100:.2f}%)")
+            for i in range(sell_levels_count):
+                min_net_usd = min_net_profit_tiers[i] if i < len(min_net_profit_tiers) else (0.60 + 0.50 * i)
+                
+                # Mathematical formula to guarantee exact net profit after fees:
+                # (P_sell - avg_cost) * qty - (P_sell * qty * fee_factor) >= min_net_usd
+                # P_sell * qty * (1 - fee_factor) >= avg_cost * qty + min_net_usd
+                # P_sell >= (avg_cost * qty + min_net_usd) / (qty * (1 - fee_factor))
+                
+                denom = qty_per_sell * (1.0 - fee_factor)
+                min_fee_proof_price = (avg_cost * qty_per_sell + min_net_usd) / denom if denom > 0 else avg_cost * 1.01
+
+                # If current_price is already in profit (e.g. INJ is rallying above cost),
+                # ride the trend with a small step above current_price (+0.40% to +1.60%)
+                stagger_step = 0.0040 * (i + 1)
+                if current_price >= avg_cost:
+                    target_p = max(min_fee_proof_price, current_price * (1.0 + stagger_step))
+                else:
+                    target_p = min_fee_proof_price
+
+                actual_net_pnl = (target_p - avg_cost) * qty_per_sell - (target_p * qty_per_sell * fee_factor)
+                logger.info(f"🎯 [{self.symbol}] High-Velocity Sell Level {i+1}: Target=${target_p:.4f} "
+                            f"(AvgCost: ${avg_cost:.4f}, Live: ${current_price:.4f}, Net Profit: +${actual_net_pnl:.2f} USD)")
 
                 self.grid_levels.append(GridLevel(
                     price=target_p,
@@ -279,6 +288,7 @@ class GridEngine:
                     size_usd=qty_per_sell * target_p,
                     linked_buy_price=avg_cost
                 ))
+
 
 
 
