@@ -242,28 +242,18 @@ class GridEngine:
         if base_qty_held > 0.000001:
             sell_levels_count = max(1, min(self.params.sell_levels, 4))
             qty_per_sell = base_qty_held / sell_levels_count
-            min_profit_pct = max(0.0035, 3.5 * self.fee_rate)  # 0.35% net profit floor
+            min_profit_pct = 0.0140  # 1.40% minimum profit floor above cost
 
-            # CRITICAL: Never place a sell order below average purchase cost + fee margin
-            min_allowed_sell_price = avg_cost * (1.0 + min_profit_pct) if avg_cost > 0 else current_price * (1.0 + min_profit_pct)
-
-            for i in range(1, sell_levels_count + 1):
-                if current_price >= min_allowed_sell_price:
-                    target_p = current_price * (1.0 + (0.0015 * (i - 1)))
-                else:
-                    # Place sell ladder strictly above cost basis
-                    step_pct = min_profit_pct + (0.002 * (i - 1))
-                    target_p = max(min_allowed_sell_price * (1.0 + (0.002 * (i - 1))), current_price * (1.0 + (self.current_spacing * i)))
-
-                # Absolute safety clamp: target_p must strictly be >= min_allowed_sell_price
-                target_p = max(target_p, min_allowed_sell_price)
-
-                sell_lvl_size = qty_per_sell * target_p
+            # Stagger sell tiers: +1.40%, +2.20%, +3.20%, +4.50% strictly above cost basis
+            sell_stagger_steps = [0.0140, 0.0220, 0.0320, 0.0450]
+            for i in range(sell_levels_count):
+                step = sell_stagger_steps[i] if i < len(sell_stagger_steps) else (0.0140 + (0.010 * i))
+                target_p = max(avg_cost * (1.0 + step), current_price * (1.0 + step))
                 self.grid_levels.append(GridLevel(
                     price=target_p,
                     side='sell',
                     qty=qty_per_sell,
-                    size_usd=sell_lvl_size,
+                    size_usd=qty_per_sell * target_p,
                     linked_buy_price=avg_cost
                 ))
 
@@ -368,10 +358,11 @@ class GridEngine:
                     if hasattr(portfolio, 'record_buy'):
                         portfolio.record_buy(self.symbol, level.qty, level.price, level.size_usd, order_id=level.order_id or '')
                     
-                    # Fee-aware sell price: net profit retention floor (3.5x fee rate = 0.35% min net profit floor)
-                    min_profit_pct = 3.5 * self.fee_rate  # 0.35% net profit floor above entry
-                    active_spacing = max(0.009, getattr(self, 'current_spacing', self.params.grid_spacing))
-                    sell_price = level.price * (1 + active_spacing + min_profit_pct)
+                    # Fee-aware sell price: enforce strict +1.45% minimum net profit target above entry
+                    min_profit_pct = max(0.0050, 5.0 * self.fee_rate)  # 0.50% profit floor above spacing
+                    active_spacing = max(0.0095, getattr(self, 'current_spacing', self.params.grid_spacing))
+                    sell_price = level.price * (1.0 + active_spacing + min_profit_pct)
+
                     new_sell = GridLevel(
                         price=sell_price,
                         side='sell',
