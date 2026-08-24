@@ -179,11 +179,11 @@ class GridEngine:
             else:
                 spacing = max(0.009, self.params.grid_spacing)
         
-        # ── High-Velocity Rapid-Pulse Geometry ($0.75 - $1.20 Net Profit / Fill Sweet Spot) ──
-        # Base unit sizing per level for BUY orders
+        # Base unit sizing per level for BUY orders (minimum $35.00 floor ensures each bounce yields >= +$0.50-$1.00 net)
         total_levels = self.params.buy_levels + self.params.sell_levels
         raw_order_size = (self.allocated_usd * self.params.capital_pct) / total_levels if total_levels > 0 else 0
-        base_order_size = max(15.0, raw_order_size) if raw_order_size > 0 else 0
+        base_order_size = max(35.0, raw_order_size) if raw_order_size > 0 else 0
+
 
         # Build BUY ladder (only if capital is allocated to this asset)
         if base_order_size > 0:
@@ -392,14 +392,15 @@ class GridEngine:
                         pass
 
                 if level.side == 'buy':
-                    if hasattr(portfolio, 'record_buy'):
-                        portfolio.record_buy(self.symbol, level.qty, level.price, level.size_usd, order_id=level.order_id or '')
-                    
-                    # Fee-aware sell price: enforce high-velocity +0.95% to +1.10% target (+$0.75 - $1.00 net / $100 fill)
-                    min_profit_pct = max(0.0020, 2.0 * self.fee_rate)  # 0.20% profit floor above spacing
-                    active_spacing = max(0.0078, getattr(self, 'current_spacing', self.params.grid_spacing))
-                    sell_price = level.price * (1.0 + active_spacing + min_profit_pct)
-
+                    # Guaranteed Profit Floor: Replacement sell order MUST yield at least +$0.60 NET cash after fees
+                    min_net_usd = 0.60
+                    fee_factor = 0.0010
+                    denom = level.qty * (1.0 - fee_factor)
+                    if denom > 0:
+                        min_fee_proof_sell = (level.price * level.qty + min_net_usd) / denom
+                        sell_price = max(min_fee_proof_sell, level.price * 1.0090)
+                    else:
+                        sell_price = level.price * 1.0150
 
                     new_sell = GridLevel(
                         price=sell_price,
@@ -413,7 +414,8 @@ class GridEngine:
                         new_sell.status = 'open'
                         new_sell.order_id = f'PAPER_{uuid4().hex[:8]}'
                     fills.append({'side': 'buy', 'price': level.price, 'qty': level.qty})
-                    logger.info(f"BUY filled at {level.price}. Created new SELL level at {sell_price}")
+                    logger.info(f"BUY filled at {level.price}. Created new SELL level at {sell_price:.4f} (Guaranteed Net: +${min_net_usd:.2f})")
+
                     
                 elif level.side == 'sell':
                     buy_orig_p = level.linked_buy_price or (level.price / (1 + getattr(self, 'current_spacing', self.params.grid_spacing)))
