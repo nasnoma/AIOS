@@ -180,46 +180,43 @@ class GridEngine:
                 spacing = max(0.009, self.params.grid_spacing)
         
         # ── High-Velocity Rapid-Pulse Geometry ($0.75 - $1.20 Net Profit / Fill Sweet Spot) ──
-        # Base unit sizing per level
+        # Base unit sizing per level for BUY orders
         total_levels = self.params.buy_levels + self.params.sell_levels
         raw_order_size = (self.allocated_usd * self.params.capital_pct) / total_levels if total_levels > 0 else 0
         base_order_size = max(15.0, raw_order_size) if raw_order_size > 0 else 0
 
-        if base_order_size <= 0:
-            return
+        # Build BUY ladder (only if capital is allocated to this asset)
+        if base_order_size > 0:
+            tier_configs = [
+                # (dip_pct, size_multiplier)
+                (0.0078, 1.00),  # Level 1: Rapid 0.78% dip -> targets +0.90% bounce (+$0.75 net / $100 fill)
+                (0.0145, 1.25),  # Level 2: 1.45% pullback -> targets +1.55% bounce (+$1.40 net / $100 fill)
+                (0.0240, 1.60),  # Level 3: 2.40% wave dip -> targets +2.50% bounce (+$2.35 net / $100 fill)
+                (0.0380, 2.00),  # Level 4: 3.80% flush dip -> targets +3.90% bounce (+$3.75 net / $100 fill)
+                (0.0580, 2.50),  # Level 5: 5.80% deep floor -> targets +5.90% bounce (+$5.75 net / $100 fill)
+            ]
 
-        # Tier 1 (Levels 1-2): High-Frequency Pulse (0.78% & 1.45% dip — rapid-fire 100+ rounds/day)
-        # Tier 2 (Levels 3-4): Intraday Pullback Capture (2.40% & 3.80% dip — high cash yield)
-        # Tier 3 (Level 5): Flash Capitulation Floor (5.80% dip — bottom buyer)
-        tier_configs = [
-            # (dip_pct, size_multiplier)
-            (0.0078, 1.00),  # Level 1: Rapid 0.78% dip -> targets +0.90% bounce (+$0.75 net / $100 fill)
-            (0.0145, 1.25),  # Level 2: 1.45% pullback -> targets +1.55% bounce (+$1.40 net / $100 fill)
-            (0.0240, 1.60),  # Level 3: 2.40% wave dip -> targets +2.50% bounce (+$2.35 net / $100 fill)
-            (0.0380, 2.00),  # Level 4: 3.80% flush dip -> targets +3.90% bounce (+$3.75 net / $100 fill)
-            (0.0580, 2.50),  # Level 5: 5.80% deep floor -> targets +5.90% bounce (+$5.75 net / $100 fill)
-        ]
+            buy_count = min(self.params.buy_levels, len(tier_configs))
+            for i in range(buy_count):
+                dip_pct, level_boost = tier_configs[i]
+                
+                # If ATR is unusually elevated, scale Tier 2 & Tier 3 dynamically
+                if atr > 0 and current_price > 0 and i >= 2:
+                    atr_factor = max(1.0, min(1.4, (atr / current_price) / 0.015))
+                    dip_pct = dip_pct * atr_factor
 
-        buy_count = min(self.params.buy_levels, len(tier_configs))
-        for i in range(buy_count):
-            dip_pct, level_boost = tier_configs[i]
-            
-            # If ATR is unusually elevated, scale Tier 2 & Tier 3 dynamically
-            if atr > 0 and current_price > 0 and i >= 2:
-                atr_factor = max(1.0, min(1.4, (atr / current_price) / 0.015))
-                dip_pct = dip_pct * atr_factor
-
-            price = current_price * (1.0 - dip_pct)
-            lvl_size = base_order_size * level_boost
-            qty = lvl_size / price
-            self.grid_levels.append(GridLevel(
-                price=price,
-                side='buy',
-                qty=qty,
-                size_usd=lvl_size
-            ))
+                price = current_price * (1.0 - dip_pct)
+                lvl_size = base_order_size * level_boost
+                qty = lvl_size / price
+                self.grid_levels.append(GridLevel(
+                    price=price,
+                    side='buy',
+                    qty=qty,
+                    size_usd=lvl_size
+                ))
 
         self.current_spacing = 0.0078
+
 
 
 
