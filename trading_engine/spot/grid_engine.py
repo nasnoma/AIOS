@@ -330,7 +330,8 @@ class GridEngine:
                             min_cost = m_info.get('limits', {}).get('cost', {}).get('min', 5.0) or 5.0
                             if min_amt is not None and qty_val < float(min_amt):
                                 qty_val = float(min_amt)
-                            required_cost = max(6.0, float(min_cost) * 1.15)
+                            # Hard floor: every buy order must be >= $35 USD to guarantee >= +$0.50 net profit per fill
+                            required_cost = max(35.0, float(min_cost))
                             if price_val > 0 and (qty_val * price_val) < required_cost and level.side == 'buy':
                                 qty_val = required_cost / price_val
                                 if hasattr(exchange, 'amount_to_precision'):
@@ -339,6 +340,7 @@ class GridEngine:
                                     if isinstance(prec, (float, int)) and float(prec) > 0:
                                         decimals = max(0, -int(math.floor(math.log10(float(prec)))))
                                         qty_val = round(qty_val, decimals)
+
 
                         params = {'category': 'spot', 'postOnly': True} if 'bybit' in str(type(exchange)).lower() else {}
                         if level.side == 'buy':
