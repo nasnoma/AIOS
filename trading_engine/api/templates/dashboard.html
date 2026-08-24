@@ -193,31 +193,30 @@
       <div class="panel-body-sm"><div class="scroll" id="spot-grid-levels" style="max-height:300px;"><div class="empty">Loading grid levels&hellip;</div></div></div>
     </div>
     <div class="panel">
-      <div class="panel-hd"><span>&#10003; Completed Cycles</span><span style="font-size:0.68rem;color:var(--text-3);">~0.2% net / cycle</span></div>
+      <div class="panel-hd"><span>&#10003; Completed Cycles</span><span style="font-size:0.68rem;color:var(--text-3);">1.2% &ndash; 1.6% net / cycle</span></div>
       <div class="panel-body-sm"><div class="scroll" id="spot-cycles-list" style="max-height:300px;"><div class="empty">No completed cycles today.</div></div></div>
     </div>
   </div>
 
   <div class="two-col">
     <div class="panel">
-      <div class="panel-hd"><span>&#128200; Equity Curve</span><span style="font-size:0.68rem;color:var(--text-3);">Cumulative realised P&amp;L</span></div>
+      <div class="panel-hd"><span>&#128200; Equity Curve</span><span style="font-size:0.68rem;color:var(--text-3);">Live Bybit account balance</span></div>
       <div class="chart-wrap"><canvas id="equity-chart"></canvas></div>
     </div>
     <div class="panel">
       <div class="panel-hd"><span>&#128187; System &amp; Strategy Config</span></div>
       <div class="panel-body-sm" style="overflow-y:auto;max-height:240px;">
-        <div class="sys-row"><span class="sys-key">&#129302; Agents</span><span class="sys-val" style="color:var(--teal)">VWAP | Supertrend | RSI | CVD Orderflow</span></div>
-        <div class="sys-row"><span class="sys-key">&#128268; Data</span><span class="sys-val" style="color:var(--green)">Bybit Public Ticker</span></div>
-        <div class="sys-row"><span class="sys-key">&#8987; Jobs</span><span class="sys-val" style="color:var(--green)">Grid (1m) &middot; Regime (1h) &middot; DCA (1h)</span></div>
-        <div class="sys-row"><span class="sys-key">&#128208; Mode</span><span class="sys-val" style="color:var(--teal)">Spot Post-Only Limit &middot; Live</span></div>
-        <div class="sys-row"><span class="sys-key">&#128737; Fees</span><span class="sys-val" style="color:var(--yellow)">84.0% Net Retention (3.5&times; Fee Floor)</span></div>
-        <div class="sys-row"><span class="sys-key">&#127942; Orderflow</span><span class="sys-val" style="color:var(--teal)">CVD Absorption &middot; 353s Delta Turnaround</span></div>
-        <div class="sys-row"><span class="sys-key">&#128202; DCA Filter</span><span class="sys-val" style="color:var(--purple)">Dual Stoch K9/K60 &lt; 25 &middot; Multi-TF</span></div>
-        <div class="sys-row"><span class="sys-key">&#128640; Squeeze</span><span class="sys-val" style="color:var(--teal)">Hanlin BBW &lt; 85% &middot; 2.0&times; Booster</span></div>
-        <div class="sys-row"><span class="sys-key">&#128300; AutoResearch</span><span class="sys-val" style="color:var(--purple)">19,872 backtests &middot; Auto-ATR Volatility</span></div>
+        <div class="sys-row"><span class="sys-key">&#129302; Strategy</span><span class="sys-val" style="color:var(--teal)">Regime-Adaptive Spot Grid + DCA</span></div>
+        <div class="sys-row"><span class="sys-key">&#128268; Data</span><span class="sys-val" style="color:var(--green)">Bybit Spot Mainnet (Live API)</span></div>
+        <div class="sys-row"><span class="sys-key">&#8987; Spacing</span><span class="sys-val" style="color:var(--green)">1.20% &ndash; 1.60% (Fee-Proof Margin)</span></div>
+        <div class="sys-row"><span class="sys-key">&#128208; Mode</span><span class="sys-val" style="color:var(--teal)">Spot Limit &middot; 100% Halal / Zero Leverage</span></div>
+        <div class="sys-row"><span class="sys-key">&#128737; Allocation</span><span class="sys-val" style="color:var(--yellow)">Top 8 Volatility Leaders ($75 &ndash; $120 / order)</span></div>
+        <div class="sys-row"><span class="sys-key">&#127942; Database</span><span class="sys-val" style="color:var(--teal)">Persistent SQLite Ledger (trades.db)</span></div>
+        <div class="sys-row"><span class="sys-key">&#128202; Verification</span><span class="sys-val" style="color:var(--purple)">Strict Ground Truth vs Deposits ($5,115.83)</span></div>
       </div>
     </div>
   </div>
+
 </main>
 
 <script>
