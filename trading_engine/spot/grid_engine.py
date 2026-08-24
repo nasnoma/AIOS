@@ -152,13 +152,15 @@ class GridEngine:
             return
         self._last_rebuild_time = now
 
-        logger.info(f"Building grid for {self.symbol} at {current_price} in {self.current_regime} regime.")
-        
-        # Preserve open/pending SELL levels — they represent filled buys awaiting take-profit
-        # Only discard old open BUY levels (stale, will be replaced below)
-        self.grid_levels = [level for level in self.grid_levels
-                            if level.status == 'filled'
-                            or (level.status in ['open', 'pending'] and level.side == 'sell')]
+        # If force=True, clear all pending/open levels to recalculate fresh fee-proof levels
+        # Otherwise, preserve open SELL levels
+        if force:
+            self.grid_levels = [level for level in self.grid_levels if level.status == 'filled']
+        else:
+            self.grid_levels = [level for level in self.grid_levels
+                                if level.status == 'filled'
+                                or (level.status in ['open', 'pending'] and level.side == 'sell')]
+
         
         # ── Dynamic ATR-Expanded Spacing (Institutional Scaling) ──
         if atr > 0 and current_price > 0:
