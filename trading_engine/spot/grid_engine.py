@@ -247,7 +247,18 @@ class GridEngine:
             avg_cost = current_price
 
         if base_qty_held > 0.000001:
-            sell_levels_count = max(1, min(self.params.sell_levels, 4))
+            total_held_usd = base_qty_held * current_price
+            # Dynamic Tier Consolidation:
+            # If total holding is < $60 USD, use 1 SINGLE order (e.g. all 287 ALGO in 1 order) to avoid tiny micro-orders
+            # If total holding is $60 - $120 USD, use 2 orders (~$50 each)
+            # If total holding is > $120 USD, use up to 4 orders (~$30-$300 each)
+            if total_held_usd < 60.0:
+                sell_levels_count = 1
+            elif total_held_usd < 120.0:
+                sell_levels_count = 2
+            else:
+                sell_levels_count = max(1, min(self.params.sell_levels, 4))
+
             qty_per_sell = base_qty_held / sell_levels_count
 
             # Tiered net profit guarantee:
@@ -278,7 +289,7 @@ class GridEngine:
                     target_p = min_fee_proof_price
 
                 actual_net_pnl = (target_p - avg_cost) * qty_per_sell - (target_p * qty_per_sell * fee_factor)
-                logger.info(f"🎯 [{self.symbol}] High-Velocity Sell Level {i+1}: Target=${target_p:.4f} "
+                logger.info(f"🎯 [{self.symbol}] High-Velocity Sell Level {i+1}/{sell_levels_count}: Target=${target_p:.4f} "
                             f"(AvgCost: ${avg_cost:.4f}, Live: ${current_price:.4f}, Net Profit: +${actual_net_pnl:.2f} USD)")
 
                 self.grid_levels.append(GridLevel(
@@ -288,6 +299,7 @@ class GridEngine:
                     size_usd=qty_per_sell * target_p,
                     linked_buy_price=avg_cost
                 ))
+
 
 
 
