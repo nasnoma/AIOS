@@ -374,14 +374,16 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 holding_qty = _portfolio.get_position(symbol) if hasattr(_portfolio, 'get_position') else 0.0
                 missing_sells = bool(holding_qty > 0.000001 and len(open_sells) == 0)
 
-                # Cost basis safety audit: detect if any resting sell orders are priced below average purchase cost
+                # Cost basis safety & high-velocity audit: detect if resting sells are below cost or excessively wide
                 h_obj = _portfolio.get_holding(symbol) if hasattr(_portfolio, 'get_holding') else None
                 h_cost = float(getattr(h_obj, 'avg_cost_basis', 0) or 0) if h_obj else 0.0
                 invalid_sells = False
                 if h_cost > 0 and open_sells:
-                    if any(l.price < (h_cost * 1.008) for l in open_sells):
+                    # Below cost check (loss protection) or excessively wide Tier 1 check (high-velocity optimization)
+                    if any(l.price < (h_cost * 1.008) for l in open_sells) or (open_sells[0].price > max(h_cost * 1.025, price * 1.025)):
                         invalid_sells = True
-                        logger.info(f"🛡️ Detected sell orders below cost basis for {symbol} (Cost: ${h_cost:.4f}). Rebuilding sell ladder strictly above cost...")
+                        logger.info(f"🛡️ Re-aligning sell orders for {symbol} to High-Velocity Rapid-Pulse geometry (Cost: ${h_cost:.4f}, Live: ${price:.4f})...")
+
 
                 if not engine.grid_levels or is_stale or force_reset or missing_sells or invalid_sells:
                     if is_stale:
