@@ -261,11 +261,20 @@ class GridEngine:
             sell_stagger_steps = [0.0090, 0.0150, 0.0240, 0.0380]
             for i in range(sell_levels_count):
                 step = sell_stagger_steps[i] if i < len(sell_stagger_steps) else (0.0090 + (0.008 * i))
-                # Absolute guarantee: Target price must be AT LEAST avg_cost * (1.0 + step) AND strictly above current_price
+                
+                # CRITICAL: Target price MUST strictly be above avg_cost
                 min_cost_target = avg_cost * (1.0 + step)
-                target_p = max(min_cost_target, current_price * (1.0 + 0.0030))
-                # Ensure target_p is never below min_cost_target under any circumstance
-                target_p = max(target_p, min_cost_target)
+                
+                # If current_price is already in profit (e.g. INJ is $5.88 while cost is $5.39),
+                # sell above current_price (+step). But if price is BELOW cost (e.g. UNI is $4.27 while cost is $4.324),
+                # sell target MUST strictly stay at min_cost_target ($4.363)!
+                if current_price >= avg_cost:
+                    target_p = max(min_cost_target, current_price * (1.0 + step))
+                else:
+                    target_p = min_cost_target
+
+                logger.info(f"🎯 [{self.symbol}] Sell Level {i+1}: Target=${target_p:.4f} (AvgCost: ${avg_cost:.4f}, Live: ${current_price:.4f}, Profit Margin: +{step*100:.2f}%)")
+
                 self.grid_levels.append(GridLevel(
                     price=target_p,
                     side='sell',
@@ -273,6 +282,7 @@ class GridEngine:
                     size_usd=qty_per_sell * target_p,
                     linked_buy_price=avg_cost
                 ))
+
 
 
 
