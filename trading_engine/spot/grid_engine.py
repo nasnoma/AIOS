@@ -421,12 +421,41 @@ class GridEngine:
                     
                 elif level.side == 'sell':
                     buy_orig_p = level.linked_buy_price or (level.price / (1 + getattr(self, 'current_spacing', self.params.grid_spacing)))
-                    if hasattr(portfolio, 'record_sell'):
-                        portfolio.record_sell(self.symbol, level.qty, level.price, level.size_usd, level.order_id or '', buy_orig_p)
-                        
+
+                    # ── HARD GATE: Block any fill that yields < $0.50 net profit after all fees ──
+                    MIN_NET_PROFIT_USD = 0.50
                     gross_pnl = (level.price - buy_orig_p) * level.qty
                     fee = (level.price * level.qty * self.fee_rate) + (buy_orig_p * level.qty * self.fee_rate)
                     net_pnl = gross_pnl - fee
+
+                    if net_pnl < MIN_NET_PROFIT_USD and level.qty > 0 and buy_orig_p > 0:
+                        # Recalculate and replace this sell order with one that guarantees >= $0.50 net
+                        fee_factor = self.fee_rate
+                        denom = level.qty * (1.0 - fee_factor)
+                        min_sell_price = (buy_orig_p * level.qty + MIN_NET_PROFIT_USD) / denom if denom > 0 else buy_orig_p * 1.015
+                        logger.warning(
+                            f"⛔ [{self.symbol}] BLOCKED sub-$0.50 sell fill: would have netted ${net_pnl:.4f} "
+                            f"(Sell @ ${level.price:.4f}, Cost @ ${buy_orig_p:.4f}, Qty: {level.qty:.2f}). "
+                            f"Replacing with min-profit sell @ ${min_sell_price:.4f}"
+                        )
+                        level.status = 'open'  # Revert status so it doesn't get counted as filled
+                        if exchange and level.order_id and not str(level.order_id).startswith('PAPER'):
+                            try:
+                                exchange.cancel_order(level.order_id, self.symbol, {'category': 'spot'})
+                                new_params = {'category': 'spot', 'postOnly': True}
+                                qty_val = float(exchange.amount_to_precision(self.symbol, level.qty)) if hasattr(exchange, 'amount_to_precision') else level.qty
+                                p_val = float(exchange.price_to_precision(self.symbol, min_sell_price)) if hasattr(exchange, 'price_to_precision') else min_sell_price
+                                new_order = exchange.create_limit_sell_order(self.symbol, qty_val, p_val, new_params)
+                                level.price = min_sell_price
+                                level.order_id = new_order['id']
+                                logger.info(f"✅ [{self.symbol}] Replaced with guaranteed sell @ ${min_sell_price:.4f} (Net >= +${MIN_NET_PROFIT_USD:.2f} USD)")
+                            except Exception as e_rep:
+                                logger.error(f"Failed to replace sub-$0.50 sell for {self.symbol}: {e_rep}")
+                        continue  # Skip recording this as a completed cycle
+
+                    if hasattr(portfolio, 'record_sell'):
+                        portfolio.record_sell(self.symbol, level.qty, level.price, level.size_usd, level.order_id or '', buy_orig_p)
+
                     cycle_record = {
                         'symbol': self.symbol,
                         'buy_order_id': getattr(level, 'linked_order_id', ''),
@@ -445,7 +474,9 @@ class GridEngine:
                             record_completed_cycle(cycle_record)
                         except Exception as e_db:
                             logger.debug(f"Failed to record cycle to SQLite: {e_db}")
-                    logger.info(f"SELL filled at {level.price}. Completed cycle for {self.symbol}. Net PnL: ${net_pnl:.2f}")
+                    logger.info(f"✅ SELL filled at {level.price}. Completed cycle for {self.symbol}. Net PnL: +${net_pnl:.2f} USD")
+
+
 
 
                 
