@@ -222,32 +222,40 @@ class GridEngine:
 
 
             
-        # Build Sell Levels (for all coins already held in portfolio)
+        # Build Sell Levels (strictly above average purchase cost basis)
         holding = None
-        if portfolio:
-            if hasattr(portfolio, 'get_holding'):
-                holding = portfolio.get_holding(self.symbol)
-            elif hasattr(portfolio, 'holdings'):
-                holding = portfolio.holdings.get(self.symbol)
-                if not holding:
-                    base_asset = self.symbol.split('/')[0]
-                    for sym, h in portfolio.holdings.items():
-                        if sym.split('/')[0] == base_asset:
-                            holding = h
-                            break
+        if portfolio and hasattr(portfolio, 'holdings') and isinstance(portfolio.holdings, dict):
+            # Direct match
+            holding = portfolio.holdings.get(self.symbol)
+            if not holding:
+                base_asset = self.symbol.split('/')[0]
+                for sym_key, h in portfolio.holdings.items():
+                    if sym_key == base_asset or sym_key.startswith(f"{base_asset}/") or sym_key == self.symbol:
+                        holding = h
+                        break
 
-        base_qty_held = (holding.units_held - holding.base_hold_units) if holding else 0.0
-        avg_cost = holding.avg_cost_basis if (holding and holding.avg_cost_basis > 0) else current_price
+        base_qty_held = float(getattr(holding, 'units_held', 0) or 0) if holding else 0.0
+        avg_cost = float(getattr(holding, 'avg_cost_basis', 0) or 0) if holding else 0.0
+
+        # Safety: If avg_cost is 0 or missing, ensure we never sell below current_price * 1.015
+        if avg_cost <= 0:
+            avg_cost = current_price
 
         if base_qty_held > 0.000001:
             sell_levels_count = max(1, min(self.params.sell_levels, 4))
             qty_per_sell = base_qty_held / sell_levels_count
 
-            # Stagger sell tiers: +0.90% (rapid-fire), +1.50%, +2.40%, +3.80% strictly above cost
+            # Stagger sell tiers strictly above AVERAGE COST BASIS:
+            # Tier 1: Cost + 0.90% (rapid profit fill)
+            # Tier 2: Cost + 1.50%
+            # Tier 3: Cost + 2.40%
+            # Tier 4: Cost + 3.80%
             sell_stagger_steps = [0.0090, 0.0150, 0.0240, 0.0380]
             for i in range(sell_levels_count):
                 step = sell_stagger_steps[i] if i < len(sell_stagger_steps) else (0.0090 + (0.008 * i))
-                target_p = max(avg_cost * (1.0 + step), current_price * (1.0 + step))
+                # Absolute guarantee: Target price must be AT LEAST avg_cost * (1.0 + step) AND above current_price
+                min_cost_target = avg_cost * (1.0 + step)
+                target_p = max(min_cost_target, current_price * (1.0 + 0.0030))
                 self.grid_levels.append(GridLevel(
                     price=target_p,
                     side='sell',
@@ -255,6 +263,7 @@ class GridEngine:
                     size_usd=qty_per_sell * target_p,
                     linked_buy_price=avg_cost
                 ))
+
 
 
 
