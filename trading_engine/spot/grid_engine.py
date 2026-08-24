@@ -177,35 +177,34 @@ class GridEngine:
             else:
                 spacing = max(0.009, self.params.grid_spacing)
         
-        # ── Asymmetric 3-Tier Grid Structure (Institutional High-Frequency + Crash-Proof Anchor) ──
+        # ── Asymmetric Dual-Grid Geometry (High-Frequency Inner Scalp + Deep Dip Bottom-Harvester) ──
         # Base unit sizing per level
         total_levels = self.params.buy_levels + self.params.sell_levels
         raw_order_size = (self.allocated_usd * self.params.capital_pct) / total_levels if total_levels > 0 else 0
-        base_order_size = max(10.0, raw_order_size) if raw_order_size > 0 else 0
+        base_order_size = max(15.0, raw_order_size) if raw_order_size > 0 else 0
 
         if base_order_size <= 0:
             return
 
-        # Tier 1 (Levels 1-2): Micro-Scalp Harvester (0.38% & 0.75% dip - high velocity cash flow)
-        # Tier 2 (Levels 3-4): Medium Swing Pullbacks (1.40% & 2.30% dip - standard daily swings)
-        # Tier 3 (Levels 5-6): Flash-Crash Deep Anchor (3.60% & 5.20% dip - 2.5x heavy bottom firepower)
+        # Tier 1 (Levels 1-2): Rapid Intraday Velocity Scalp (0.95% & 1.75% dip — rapid, continuous cash flow)
+        # Tier 2 (Levels 3-4): Core Volatility Swing Pullbacks (2.80% & 4.20% dip — heavy profit captures)
+        # Tier 3 (Level 5): Flash-Crash Deep Bottom Weapon (6.20% dip — max discount firepower)
         tier_configs = [
             # (dip_pct, size_multiplier)
-            (0.0038, 0.85),  # Level 1: Ultra-tight micro scalp
-            (0.0075, 1.00),  # Level 2: High-frequency daily chop
-            (0.0140, 1.40),  # Level 3: Intraday pullback
-            (0.0230, 1.80),  # Level 4: Volatility wave
-            (0.0360, 2.40),  # Level 5: Flash-wick dump buyer
-            (0.0520, 2.80),  # Level 6: Extreme bottom anchor (max firepower)
+            (0.0095, 1.00),  # Level 1: Rapid 0.95% intraday ping-pong fill ($75-$120 size)
+            (0.0175, 1.25),  # Level 2: 1.75% standard oscillation level ($95-$150 size)
+            (0.0280, 1.60),  # Level 3: 2.80% high-alpha pullback tier ($120-$190 size)
+            (0.0420, 2.00),  # Level 4: 4.20% major intraday dip tier ($150-$240 size)
+            (0.0620, 2.50),  # Level 5: 6.20% flash-crash bottom cushion ($180-$300 size)
         ]
 
         buy_count = min(self.params.buy_levels, len(tier_configs))
         for i in range(buy_count):
             dip_pct, level_boost = tier_configs[i]
             
-            # If ATR is unusually elevated, scale Tier 2 & Tier 3 dynamically while keeping Tier 1 tight
+            # If ATR is unusually elevated, scale Tier 2 & Tier 3 dynamically
             if atr > 0 and current_price > 0 and i >= 2:
-                atr_factor = max(1.0, min(1.6, (atr / current_price) / 0.015))
+                atr_factor = max(1.0, min(1.5, (atr / current_price) / 0.015))
                 dip_pct = dip_pct * atr_factor
 
             price = current_price * (1.0 - dip_pct)
@@ -218,7 +217,8 @@ class GridEngine:
                 size_usd=lvl_size
             ))
 
-        self.current_spacing = 0.0038
+        self.current_spacing = 0.0095
+
 
 
             

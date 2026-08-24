@@ -59,20 +59,21 @@ def _get_dynamic_hot_asset_allocations(asset_list: list[str], regime_detectors: 
 
     scored_pairs.sort(key=lambda x: x[1], reverse=True)
     
-    # Top 8 Allocation Distribution (100% total):
-    # Rank 1-2: 20% each (40% total)
-    # Rank 3-8: 10% each (60% total)
-    # Rank 9-23: 0%
+    # Maximum Alpha Top-6 Turbo Concentration (100% total active deployment):
+    # Rank 1 & 2 (Top 2 Turbo Volatility Leaders): 25.0% each (50% total -> ~$1,250 each)
+    # Rank 3, 4, 5, 6 (Next 4 High-Velocity Movers): 12.5% each (50% total -> ~$625 each)
+    # Rank 7 to 23 (Slow/Sleeping Assets): 0.0% new buy allocation (100% focused on highest yielders)
     allocations = {}
     for rank, (sym, _) in enumerate(scored_pairs):
         if rank < 2:
-            allocations[sym] = 0.20
-        elif rank < 8:
-            allocations[sym] = 0.10
+            allocations[sym] = 0.25
+        elif rank < 6:
+            allocations[sym] = 0.125
         else:
             allocations[sym] = 0.0
 
     return allocations
+
 
 from trading_engine.config import spot_settings, settings
 from trading_engine.spot.regime_detector import RegimeDetector
