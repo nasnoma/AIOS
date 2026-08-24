@@ -134,8 +134,9 @@
         <div class="stat-card" style="background:rgba(255,255,255,0.03);padding:10px 14px;"><div class="stat-label">&#128176; 1. Gross Cycle Gains</div><div class="stat-val" id="recon-gross-gains" style="color:var(--green);font-size:1.15rem">+$184.23</div><div class="stat-sub">Sum of all winning sells</div></div>
         <div class="stat-card" style="background:rgba(255,255,255,0.03);padding:10px 14px;"><div class="stat-label">&#128179; 2. Bybit Fees Paid</div><div class="stat-val" id="recon-fees-paid" style="color:var(--red);font-size:1.15rem">-$50.46</div><div class="stat-sub" id="recon-fees-sub">1146 trades (25% MNT rebate)</div></div>
         <div class="stat-card" style="background:rgba(255,255,255,0.03);padding:10px 14px;"><div class="stat-label">&#129689; 3. Active Coin Inventory</div><div class="stat-val" id="recon-coins-held" style="color:var(--teal);font-size:1.15rem">$0.00</div><div class="stat-sub" id="recon-coins-sub">Coins awaiting take-profit</div></div>
-        <div class="stat-card" style="background:rgba(255,255,255,0.03);padding:10px 14px;"><div class="stat-label" id="recon-dip-label">&#128201; 4. Active Inventory Dip</div><div class="stat-val" id="recon-dip-drag" style="color:var(--yellow);font-size:1.15rem">-$26.10</div><div class="stat-sub" id="recon-dip-sub">Coins waiting for take-profit bounce</div></div>
+        <div class="stat-card" style="background:rgba(255,255,255,0.03);padding:10px 14px;"><div class="stat-label" id="recon-dip-label">&#128201; 4. Inventory P&amp;L (Live vs Cost)</div><div class="stat-val" id="recon-dip-drag" style="color:var(--yellow);font-size:1.15rem">-$0.00</div><div class="stat-sub" id="recon-dip-sub">Cost: $0.00 | Live: $0.00</div></div>
         <div class="stat-card" style="background:rgba(0,229,176,0.06);border:1px solid rgba(0,229,176,0.3);padding:10px 14px;"><div class="stat-label">&#127942; 5. Net True Growth</div><div class="stat-val" id="recon-net-growth" style="color:var(--teal);font-size:1.15rem">+$92.64</div><div class="stat-sub">Real wallet profit on Bybit</div></div>
+
       </div>
     </div>
 
@@ -234,10 +235,20 @@ function usd(v) { return '$' + Number(v).toLocaleString('en-US',{minimumFraction
 function renderSpotStatus(data) {
   const p = data.portfolio || {};
   const regimes = data.regimes || {};
-  const grids = data.grids || {};
+  let totalAssetValue = 0, totalCostBasis = 0, totalUnrealised = 0;
+  if (p.holdings) {
 
-  let totalAssetValue = 0, totalUnrealised = 0;
-  if (p.holdings) Object.values(p.holdings).forEach(h => { totalAssetValue += (h.value_usd||0); totalUnrealised += (h.unrealised_pnl||0); });
+    Object.values(p.holdings).forEach(h => {
+      const u = Number(h.units_held || h.units || 0);
+      const curPrice = Number(h.last_price || 0);
+      const costBasis = Number(h.avg_cost_basis || curPrice);
+      const val = Number(h.value_usd !== undefined ? h.value_usd : (u * curPrice));
+      const cost = u * costBasis;
+      totalAssetValue += val;
+      totalCostBasis += (cost > 0 ? cost : val);
+      totalUnrealised += (h.unrealised_pnl !== undefined ? Number(h.unrealised_pnl) : (val - cost));
+    });
+  }
 
   const usdtFree = p.usdt_available || 0;
   const usdtInOrders = p.usdt_in_orders || 0;
@@ -268,10 +279,11 @@ function renderSpotStatus(data) {
   const rec = p.reconciliation || {};
   const recGross = Number(rec.gross_cycle_gains !== undefined ? rec.gross_cycle_gains : 267.83);
   const recFees = Number(rec.fees_paid !== undefined ? rec.fees_paid : 58.40);
-  const recRebalance = Number(rec.rebalance_dust_loss !== undefined ? rec.rebalance_dust_loss : 15.03);
-  const recDip = Number(rec.inventory_dip_drag !== undefined ? rec.inventory_dip_drag : totalUnrealised);
-  const recNet = Number(rec.net_true_account_growth !== undefined ? rec.net_true_account_growth : (recGross - recFees - recRebalance + recDip));
-
+  const recRebalance = Number(rec.rebalance_dust_loss !== undefined ? rec.rebalance_dust_loss : 0.0);
+  
+  const invDiff = totalAssetValue - totalCostBasis;
+  const invDiffPct = totalCostBasis > 0 ? ((invDiff / totalCostBasis) * 100) : 0;
+  const recNet = Number(rec.net_true_account_growth !== undefined ? rec.net_true_account_growth : (recGross - recFees - recRebalance + invDiff));
 
   const netGrowthEl = document.getElementById('spot-net-growth');
   if (netGrowthEl) {
@@ -290,19 +302,20 @@ function renderSpotStatus(data) {
   const dipEl = document.getElementById('recon-dip-drag');
   const dipLabel = document.getElementById('recon-dip-label');
   const dipSub = document.getElementById('recon-dip-sub');
-  const liveDip = Math.abs(recDip !== undefined ? recDip : 0.0);
+  
   if (dipEl) {
-    dipEl.textContent = '-$' + liveDip.toFixed(2);
-    dipEl.style.color = 'var(--yellow)';
+    dipEl.textContent = (invDiff >= 0 ? '+$' : '-$') + Math.abs(invDiff).toFixed(2);
+    dipEl.style.color = invDiff >= 0 ? 'var(--green)' : 'var(--yellow)';
   }
   if (dipLabel) {
-    dipLabel.innerHTML = '&#128201; 4. Active Inventory Dip';
+    dipLabel.innerHTML = '&#128201; 4. Inventory P&amp;L (Live vs Cost)';
   }
   if (dipSub) {
-    dipSub.textContent = 'Coins waiting for take-profit bounce';
+    dipSub.textContent = 'Cost: $' + totalCostBasis.toFixed(2) + ' | Live: $' + totalAssetValue.toFixed(2) + ' (' + (invDiff >= 0 ? '+' : '') + invDiffPct.toFixed(2) + '%)';
   }
 
   set('recon-net-growth', (recNet >= 0 ? '+$' : '-$') + Math.abs(recNet).toFixed(2));
+
 
 
 
