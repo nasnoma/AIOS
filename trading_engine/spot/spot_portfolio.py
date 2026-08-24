@@ -100,22 +100,7 @@ class SpotPortfolio:
         self.holdings = {k: AssetHolding(**v) for k, v in data.get('holdings', {}).items()}
         self.grid_orders = [GridOrder(**o) for o in data.get('grid_orders', [])]
         self.dca_orders = [GridOrder(**o) for o in data.get('dca_orders', [])]
-        target_eq = 10000.0 + self.total_realised_pnl
-        if self.holdings:
-            total_h = sum(h.units_held * h.last_price for h in self.holdings.values())
-            if total_h > (target_eq * 1.02):
-                scale = target_eq / total_h
-                for h in self.holdings.values():
-                    h.units_held = h.units_held * scale
-                self.usdt_available = 0.0
-                try:
-                    self.save()
-                except Exception:
-                    pass
-            else:
-                self.usdt_available = max(0.0, round(target_eq - total_h, 2))
-        else:
-            self.usdt_available = max(0.0, round(target_eq - self.usdt_reserved, 2))
+
 
 
     def load(self):
@@ -235,64 +220,65 @@ class SpotPortfolio:
                 logger.error(f"Cannot sell {qty} {symbol}: insufficient holdings")
                 return
             
-        h = self.holdings[symbol]
-        h.units_held -= qty
-        h.last_price = price
-        if h.units_held <= 0.000001:
-            h.units_held = 0.0
-            h.avg_cost_basis = 0.0
+            h = self.holdings[symbol]
+            h.units_held -= qty
+            h.last_price = price
+            if h.units_held <= 0.000001:
+                h.units_held = 0.0
+                h.avg_cost_basis = 0.0
+                
+            try:
+                from trading_engine.config import spot_settings
+                fee_rate = getattr(spot_settings, 'fee_rate', 0.001)
+            except Exception:
+                fee_rate = 0.001
+            gross_profit = size_usd - (qty * buy_cost_basis)
+            fee = (size_usd * fee_rate) + (qty * buy_cost_basis * fee_rate)
+            profit = gross_profit - fee
+            self.usdt_available += (size_usd - (size_usd * fee_rate))
+            self.total_realised_pnl += profit
             
-        try:
-            from trading_engine.config import spot_settings
-            fee_rate = getattr(spot_settings, 'fee_rate', 0.001)
-        except Exception:
-            fee_rate = 0.001
-        gross_profit = size_usd - (qty * buy_cost_basis)
-        fee = (size_usd * fee_rate) + (qty * buy_cost_basis * fee_rate)
-        profit = gross_profit - fee
-        self.usdt_available += (size_usd - (size_usd * fee_rate))
-        self.total_realised_pnl += profit
-        
-        self.reset_daily_if_needed()
-        self.daily_realised_pnl += profit
-        self.cycles_today += 1
+            self.reset_daily_if_needed()
+            self.daily_realised_pnl += profit
+            self.cycles_today += 1
 
-        if not hasattr(self, 'completed_cycles'):
-            self.completed_cycles = []
+            if not hasattr(self, 'completed_cycles'):
+                self.completed_cycles = []
+                
+            self.completed_cycles.append({
+                'symbol': symbol,
+                'buy_price': buy_cost_basis,
+                'sell_price': price,
+                'qty': qty,
+                'gross_pnl': gross_profit,
+                'fee': fee,
+                'net_pnl': profit,
+                'timestamp': datetime.datetime.now(datetime.timezone.utc).isoformat()
+            })
+
+            # Streak Tracking:
+            if profit > 0:
+                self.consecutive_wins += 1
+                self.consecutive_losses = 0
+            else:
+                self.consecutive_losses += 1
+                self.consecutive_wins = 0
             
-        self.completed_cycles.append({
-            'symbol': symbol,
-            'buy_price': buy_cost_basis,
-            'sell_price': price,
-            'qty': qty,
-            'gross_pnl': gross_profit,
-            'fee': fee,
-            'net_pnl': profit,
-            'timestamp': datetime.datetime.now(datetime.timezone.utc).isoformat()
-        })
+            order = GridOrder(
+                order_id=order_id,
+                symbol=symbol,
+                side='sell',
+                price=price,
+                qty=qty,
+                size_usd=size_usd,
+                status='filled',
+                created_at=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                filled_at=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                profit_usd=profit
+            )
+            self.grid_orders.append(order)
+            self.save()
 
-        # Dan Cheung Streak Tracking:
-        if profit > 0:
-            self.consecutive_wins += 1
-            self.consecutive_losses = 0
-        else:
-            self.consecutive_losses += 1
-            self.consecutive_wins = 0
-        
-        order = GridOrder(
-            order_id=order_id,
-            symbol=symbol,
-            side='sell',
-            price=price,
-            qty=qty,
-            size_usd=size_usd,
-            status='filled',
-            created_at=datetime.datetime.now(datetime.timezone.utc).isoformat(),
-            filled_at=datetime.datetime.now(datetime.timezone.utc).isoformat(),
-            profit_usd=profit
-        )
-        self.grid_orders.append(order)
-        self.save()
         
     def reset_daily_if_needed(self):
         today = datetime.datetime.now(datetime.timezone.utc).date().isoformat()

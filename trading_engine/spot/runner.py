@@ -458,8 +458,9 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
     """Returns full JSON state for API / dashboard (Sub-20ms Fast Cache)."""
     global _cached_spot_status, _last_spot_status_time
     now = time.time()
-    if not force and _cached_spot_status and (now - _last_spot_status_time) < 15.0:
+    if not force and _cached_spot_status and (now - _last_spot_status_time) < 3.0:
         return _cached_spot_status
+
 
     init_spot_engine()
     exchange = get_spot_exchange()
