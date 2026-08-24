@@ -379,10 +379,12 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 h_cost = float(getattr(h_obj, 'avg_cost_basis', 0) or 0) if h_obj else 0.0
                 invalid_sells = False
                 if h_cost > 0 and open_sells:
+                    min_sell_p = min((l.price for l in open_sells), default=0.0)
                     # Below cost check (loss protection) or excessively wide Tier 1 check (high-velocity optimization)
-                    if any(l.price < (h_cost * 1.008) for l in open_sells) or (open_sells[0].price > max(h_cost * 1.025, price * 1.025)):
+                    if any(l.price < (h_cost * 1.008) for l in open_sells) or (min_sell_p > max(h_cost * 1.025, price * 1.025)):
                         invalid_sells = True
                         logger.info(f"🛡️ Re-aligning sell orders for {symbol} to High-Velocity Rapid-Pulse geometry (Cost: ${h_cost:.4f}, Live: ${price:.4f})...")
+
 
 
                 if not engine.grid_levels or is_stale or force_reset or missing_sells or invalid_sells:
@@ -644,6 +646,8 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
                         c_item = dict(c)
                         c_item['symbol'] = sym
                         key = f"{sym}_{c_item.get('timestamp')}_{c_item.get('qty')}"
+                        completed_dict[key] = c_item
+
         # In live mode, strictly exclude any simulated PAPER orders or test artifacts
         if not spot_settings.paper_mode:
             filtered_dict = {}
@@ -794,8 +798,9 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
                     cur_price = 0.0
                     if symbol in _portfolio.holdings:
                         cur_price = _portfolio.holdings[symbol].last_price
-                    if cur_price <= 0 and symbol in latest_tickers:
-                        cur_price = float(latest_tickers[symbol].get('last') or 0.0)
+                    if cur_price <= 0 and symbol in tickers and isinstance(tickers.get(symbol), dict):
+                        cur_price = float(tickers[symbol].get('last') or 0.0)
+
 
                     # Compute exact FIFO cost basis in-memory (0ms network latency)
                     avg_cost_basis = cur_price

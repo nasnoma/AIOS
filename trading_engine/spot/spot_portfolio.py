@@ -65,8 +65,9 @@ class SpotPortfolio:
         self.consecutive_wins: int = 0
         self.consecutive_losses: int = 0
         import threading
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self.processed_order_ids = set()
+
         self.last_daily_reset: str = datetime.datetime.now(datetime.timezone.utc).date().isoformat()
         self.load()
         
@@ -216,13 +217,23 @@ class SpotPortfolio:
                 return
             if order_id:
                 self.processed_order_ids.add(order_id)
-            if symbol not in self.holdings or self.holdings[symbol].units_held < qty:
-                logger.error(f"Cannot sell {qty} {symbol}: insufficient holdings")
+            if symbol not in self.holdings:
+                logger.error(f"Cannot sell {qty} {symbol}: symbol not in holdings")
                 return
-            
+
             h = self.holdings[symbol]
+            # Epsilon tolerance for exchange rounding differences (1e-6 or 0.1%)
+            tolerance = max(1e-6, qty * 0.001)
+            if h.units_held < qty:
+                if (qty - h.units_held) <= tolerance:
+                    qty = h.units_held
+                else:
+                    logger.error(f"Cannot sell {qty} {symbol}: insufficient holdings ({h.units_held:.6f})")
+                    return
+
             h.units_held -= qty
             h.last_price = price
+
             if h.units_held <= 0.000001:
                 h.units_held = 0.0
                 h.avg_cost_basis = 0.0

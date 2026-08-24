@@ -143,8 +143,12 @@ class GridEngine:
 
     def build_grid(self, current_price: float, portfolio=None, atr: float = 0.0, force: bool = False):
         """Build grid levels. If ATR provided, use it for dynamic spacing."""
+        if current_price <= 0:
+            logger.warning(f"[{self.symbol}] Invalid current_price {current_price} in build_grid, skipping.")
+            return
         import time
         now = time.time()
+
         # Throttle rebuilds: don't rebuild more than once per 10 minutes
         # unless grid is completely empty or force=True
         has_open_buys = any(l.status == 'open' and l.side == 'buy' for l in self.grid_levels)
@@ -276,11 +280,13 @@ class GridEngine:
                 # so that sells during market rallies never sell for a micro-step that yields < $0.60 net profit!
                 cost_ref = max(avg_cost, current_price)
                 denom = qty_per_sell * (1.0 - fee_factor)
-                min_fee_proof_price = (cost_ref * qty_per_sell + min_net_usd) / denom if denom > 0 else cost_ref * 1.015
+                # Two-sided fee formula: Accounts for both 0.1% buy-side fee AND 0.1% sell-side fee
+                min_fee_proof_price = (cost_ref * qty_per_sell * (1.0 + fee_factor) + min_net_usd) / denom if denom > 0 else cost_ref * 1.015
                 
                 # Dynamic staggering for higher tiers
                 stagger_step = 0.0050 * i
                 target_p = max(min_fee_proof_price, min_fee_proof_price * (1.0 + stagger_step))
+
 
                 actual_net_pnl = (target_p - cost_ref) * qty_per_sell - (target_p * qty_per_sell * fee_factor)
                 logger.info(f"🎯 [{self.symbol}] High-Velocity Sell Level {i+1}/{sell_levels_count}: Target=${target_p:.4f} "
@@ -418,10 +424,11 @@ class GridEngine:
                     fee_factor = 0.0010
                     denom = level.qty * (1.0 - fee_factor)
                     if denom > 0:
-                        min_fee_proof_sell = (level.price * level.qty + min_net_usd) / denom
+                        min_fee_proof_sell = (level.price * level.qty * (1.0 + fee_factor) + min_net_usd) / denom
                         sell_price = max(min_fee_proof_sell, level.price * 1.0090)
                     else:
                         sell_price = level.price * 1.0150
+
 
                     new_sell = GridLevel(
                         price=sell_price,
@@ -528,7 +535,7 @@ class GridEngine:
                 logger.debug(f"Bulk cancel for {self.symbol}: {e_bulk}")
 
         for level in self.grid_levels:
-            if level.status == 'open':
+            if level.status in ['open', 'pending']:
                 if self.paper_mode:
                     level.status = 'cancelled'
                     logger.info(f"[PAPER] Cancelled order {level.order_id}")
@@ -539,6 +546,7 @@ class GridEngine:
                             exch.cancel_order(level.order_id, self.symbol)
                         except Exception:
                             pass
+
 
     def summary(self) -> Dict[str, Any]:
         open_buys = sum(1 for l in self.grid_levels if l.status == 'open' and l.side == 'buy')
