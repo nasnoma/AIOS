@@ -841,10 +841,11 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
     usdt_in_orders_val = float(summary_data.get('usdt_in_orders', 0.0))
     coins_val_total = sum(float(h.get('value_usd', 0.0) or 0.0) for h in summary_data.get('holdings', {}).values())
     total_deployed = round(usdt_in_orders_val + coins_val_total, 2)
-    tot_cap_val = float(summary_data.get('total_unified_equity') or (usdt_free_val + total_deployed))
+    tot_cap_val = float(summary_data.get('total_unified_equity') or summary_data.get('total_capital') or (usdt_free_val + total_deployed))
     
     # Exact Broad Market Altcoin Drawdown on Held Coins
     market_drawdown = round(tot_cap_val - (deposit_base + net_growth), 2)
+
 
     summary_data['total_deployed_usd'] = total_deployed
     summary_data['deployed_pct'] = round((total_deployed / tot_cap_val) * 100, 1) if tot_cap_val > 0 else 0.0
