@@ -350,14 +350,26 @@ class GridEngine:
 
 
                         params = {'category': 'spot', 'postOnly': True} if 'bybit' in str(type(exchange)).lower() else {}
-                        if level.side == 'buy':
-                            order = exchange.create_limit_buy_order(self.symbol, qty_val, price_val, params)
-                        else:
-                            order = exchange.create_limit_sell_order(self.symbol, qty_val, price_val, params)
+                        try:
+                            if level.side == 'buy':
+                                order = exchange.create_limit_buy_order(self.symbol, qty_val, price_val, params)
+                            else:
+                                order = exchange.create_limit_sell_order(self.symbol, qty_val, price_val, params)
+                        except Exception as e_post:
+                            # If postOnly was rejected because price is at or across spread, retry with standard limit order
+                            if 'postonly' in str(e_post).lower() or 'post_only' in str(e_post).lower() or '170193' in str(e_post):
+                                fallback_params = {'category': 'spot'} if 'bybit' in str(type(exchange)).lower() else {}
+                                if level.side == 'buy':
+                                    order = exchange.create_limit_buy_order(self.symbol, qty_val, price_val, fallback_params)
+                                else:
+                                    order = exchange.create_limit_sell_order(self.symbol, qty_val, price_val, fallback_params)
+                            else:
+                                raise e_post
 
                         level.status = 'open'
                         level.order_id = order['id']
                         logger.info(f"[LIVE] Placed {level.side} limit order for {self.symbol} at {price_val} (Qty: {qty_val}, ID: {order['id']})")
+
 
                     except Exception as e:
                         logger.error(f"Failed to place {level.side} order for {self.symbol}: {e}")
@@ -475,6 +487,7 @@ class GridEngine:
                         'net_pnl': net_pnl,
                         'timestamp': level.filled_at or datetime.now(timezone.utc).isoformat()
                     }
+                    self.completed_cycles.append(cycle_record)
                     if not self.paper_mode and level.order_id and not str(level.order_id).startswith('PAPER'):
                         try:
                             from trading_engine.spot.trade_db import record_completed_cycle
@@ -482,6 +495,7 @@ class GridEngine:
                         except Exception as e_db:
                             logger.debug(f"Failed to record cycle to SQLite: {e_db}")
                     logger.info(f"✅ SELL filled at {level.price}. Completed cycle for {self.symbol}. Net PnL: +${net_pnl:.2f} USD")
+
 
 
 

@@ -425,7 +425,8 @@ def run_spot_dca_check():
             if signal:
                 mult = _dca_manager.extra_buy_multiplier(regime, signal.trigger_type)
                 streak_factor = _portfolio.get_streak_risk_factor()
-                order_size = (engine.allocated_usd * 0.05) * mult * streak_factor if engine else 500.0
+                raw_size = (engine.allocated_usd * 0.20) * mult * streak_factor if engine else 50.0
+                order_size = max(35.0, raw_size)  # Guaranteed minimum $35 USD size for DCA buys
                 logger.info(f"🎯 DCA Signal Triggered [{symbol}]: {signal.trigger_type} (RSI: {signal.rsi:.1f}, mult: {mult}x, streak_factor: {streak_factor:.2f}x) -> Buying ${order_size:.2f}")
                 # Execute DCA Buy
                 if engine and _portfolio.usdt_available >= order_size:
@@ -446,16 +447,20 @@ def run_spot_dca_check():
                     _portfolio.record_buy(symbol, qty, price, order_size, order_id_str, is_dca=True)
                     _portfolio.save()
 
-                    # ── DCA Exit Target: place limit sell at +1.5% above entry ──
-                    exit_price = round(price * 1.015, 6)
+                    # ── DCA Exit Target: place limit sell guaranteeing >= +$0.60 NET profit ──
+                    fee_factor = spot_settings.fee_rate
+                    denom = qty * (1.0 - fee_factor)
+                    min_fee_proof_exit = (price * qty + 0.60) / denom if denom > 0 else price * 1.015
+                    exit_price = round(max(price * 1.015, min_fee_proof_exit), 6)
                     try:
                         if not spot_settings.paper_mode and exchange:
                             exchange.create_limit_sell_order(symbol, qty, exit_price)
-                            logger.info(f"📤 DCA Exit Limit Sell placed [{symbol}]: qty={qty:.6f} @ ${exit_price:.4f} (+1.5% target)")
+                            logger.info(f"📤 DCA Exit Limit Sell placed [{symbol}]: qty={qty:.6f} @ ${exit_price:.4f} (Guaranteed Net: >= +$0.60 USD)")
                         else:
-                            logger.info(f"📤 [PAPER] DCA Exit Limit Sell [{symbol}]: qty={qty:.6f} @ ${exit_price:.4f} (+1.5% target)")
+                            logger.info(f"📤 [PAPER] DCA Exit Limit Sell [{symbol}]: qty={qty:.6f} @ ${exit_price:.4f} (Guaranteed Net: >= +$0.60 USD)")
                     except Exception as sell_err:
                         logger.warning(f"DCA exit sell placement failed [{symbol}]: {sell_err}")
+
         except Exception as e:
             logger.warning(f"DCA check failed for {symbol}: {e}")
 
@@ -946,9 +951,11 @@ def run_spot_self_healing_and_optimize() -> Dict[str, Any]:
                         lvl.status = 'filled'
                         healed_count += 1
                         if lvl.side == 'buy':
-                            _portfolio.record_buy(sym, lvl.qty, lvl.price, lvl.size_usd * spot_settings.fee_rate)
+                            _portfolio.record_buy(sym, lvl.qty, lvl.price, lvl.size_usd, order_id=lvl.order_id or '')
                         elif lvl.side == 'sell':
-                            _portfolio.record_sell(sym, lvl.qty, lvl.price, lvl.size_usd * spot_settings.fee_rate)
+                            buy_cost = getattr(lvl, 'linked_buy_price', 0.0) or (lvl.price / (1.0 + getattr(eng, 'current_spacing', 0.01)))
+                            _portfolio.record_sell(sym, lvl.qty, lvl.price, lvl.size_usd, lvl.order_id or '', buy_cost)
+
             _portfolio.save()
         except Exception as e_heal:
             logger.warning(f"Self-healing audit encounter exception: {e_heal}")
