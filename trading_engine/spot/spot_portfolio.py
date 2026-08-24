@@ -302,9 +302,14 @@ class SpotPortfolio:
             c for c in getattr(self, 'completed_cycles', [])
             if str(c.get('timestamp', '')).startswith(today)
         ]
-        self.daily_realised_pnl = round(sum(float(c.get('net_pnl', 0.0)) for c in today_cycles), 4)
+        self.daily_realised_pnl = round(sum(float(c.get('net_pnl', 0.0) or 0.0) for c in today_cycles), 4)
+        self.daily_gross_pnl = round(sum(float(c.get('gross_pnl', c.get('net_pnl', 0.0)) or 0.0) for c in today_cycles), 4)
+        self.fees_today = round(sum(float(c.get('fee', 0.0) or 0.0) for c in today_cycles), 4)
         self.cycles_today = len(today_cycles)
-        self.total_realised_pnl = round(sum(float(c.get('net_pnl', 0.0)) for c in getattr(self, 'completed_cycles', [])), 4)
+        self.total_realised_pnl = round(sum(float(c.get('net_pnl', 0.0) or 0.0) for c in getattr(self, 'completed_cycles', [])), 4)
+        self.total_gross_pnl = round(sum(float(c.get('gross_pnl', c.get('net_pnl', 0.0)) or 0.0) for c in getattr(self, 'completed_cycles', [])), 4)
+        self.total_fees_pnl = round(sum(float(c.get('fee', 0.0) or 0.0) for c in getattr(self, 'completed_cycles', [])), 4)
+
             
     def get_streak_risk_factor(self) -> float:
         """
@@ -390,7 +395,11 @@ class SpotPortfolio:
             'usdt_reserved': float(self.usdt_reserved or 0.0),
             'total_realised_pnl': float(self.total_realised_pnl or 0.0),
             'daily_realised_pnl': float(self.daily_realised_pnl or 0.0),
+            'daily_gross_pnl': float(getattr(self, 'daily_gross_pnl', self.daily_realised_pnl) or 0.0),
+            'gross_pnl_today': float(getattr(self, 'daily_gross_pnl', self.daily_realised_pnl) or 0.0),
+            'fees_today': float(getattr(self, 'fees_today', 0.0) or 0.0),
             'cycles_today': self.cycles_today,
             'completed_cycles': getattr(self, 'completed_cycles', [])[-20:],
             'holdings': formatted_holdings
         }
+

@@ -732,6 +732,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
         if completed_list:
             summary_data['total_realised_pnl'] = total_pnl
             summary_data['daily_realised_pnl'] = today_pnl
+            summary_data['daily_gross_pnl'] = today_gross
             summary_data['gross_pnl_today'] = today_gross
             summary_data['fees_today'] = today_fees
             summary_data['total_gross_all_time'] = total_gross
@@ -744,16 +745,26 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
             _portfolio.cycles_today = len(today_cycles)
             _portfolio.total_realised_pnl = total_pnl
             _portfolio.daily_realised_pnl = today_pnl
+            _portfolio.daily_gross_pnl = today_gross
+            _portfolio.gross_pnl_today = today_gross
+            _portfolio.fees_today = today_fees
 
         else:
             summary_data['total_realised_pnl'] = float(getattr(_portfolio, 'total_realised_pnl', 0.0) or 0.0)
             summary_data['daily_realised_pnl'] = float(getattr(_portfolio, 'daily_realised_pnl', 0.0) or 0.0)
+            summary_data['daily_gross_pnl'] = float(getattr(_portfolio, 'daily_gross_pnl', 0.0) or 0.0)
+            summary_data['gross_pnl_today'] = float(getattr(_portfolio, 'gross_pnl_today', 0.0) or 0.0)
+            summary_data['fees_today'] = float(getattr(_portfolio, 'fees_today', 0.0) or 0.0)
             summary_data['completed_cycles'] = []
     except Exception as e_cycles:
         logger.warning(f"Error compiling completed cycles in get_spot_status: {e_cycles}")
         summary_data['total_realised_pnl'] = float(getattr(_portfolio, 'total_realised_pnl', 0.0) or 0.0)
         summary_data['daily_realised_pnl'] = float(getattr(_portfolio, 'daily_realised_pnl', 0.0) or 0.0)
+        summary_data['daily_gross_pnl'] = float(getattr(_portfolio, 'daily_gross_pnl', 0.0) or 0.0)
+        summary_data['gross_pnl_today'] = float(getattr(_portfolio, 'gross_pnl_today', 0.0) or 0.0)
+        summary_data['fees_today'] = float(getattr(_portfolio, 'fees_today', 0.0) or 0.0)
         summary_data['completed_cycles'] = getattr(_portfolio, 'completed_cycles', [])
+
 
 
     # If Live / Demo mode: fetch live exchange spot balances for holdings and total capital
@@ -860,12 +871,16 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
     total_cycles_val = int(summary_data.get('total_cycles', 0))
     
     summary_data['daily_realised_pnl'] = round(daily_val, 2)
+    summary_data['daily_gross_pnl'] = round(today_gross_val, 2)
     summary_data['gross_pnl_today'] = round(today_gross_val, 2)
     summary_data['total_realised_pnl'] = round(total_val, 2)
     summary_data['cycles_today'] = cycles_val
     _portfolio.daily_realised_pnl = daily_val
+    _portfolio.daily_gross_pnl = today_gross_val
+    _portfolio.gross_pnl_today = today_gross_val
     _portfolio.total_realised_pnl = total_val
     _portfolio.cycles_today = cycles_val
+
 
     # Live Real-Time Inventory Dip (Distance from current live price to resting take-profit sell targets)
     held_val_total = sum(float(h.get('value_usd', 0) or 0) for h in summary_data.get('holdings', {}).values())
