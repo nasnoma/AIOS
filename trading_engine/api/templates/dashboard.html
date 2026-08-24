@@ -302,21 +302,20 @@ function renderSpotStatus(data) {
   const totalPnl = p.total_realised_pnl || 0;
   const cyclesCount = p.cycles_today || 0;
 
+  // Realistic, honest projection based strictly on real today profit
+  const projMonthlyUsd = dailyPnl > 0 ? (dailyPnl * 30) : 0.0;
+  const projMonthlyPct = totalEquity > 0 ? ((projMonthlyUsd / totalEquity) * 100) : 0.0;
   
-  const scaleFactor = totalEquity > 100 ? (totalEquity / 2100.0) : 1.0;
-  let est24hPnl = 28.0 * scaleFactor;
   if (dailyPnl > 0) {
-    est24hPnl = Math.min(120.0 * scaleFactor, Math.max(28.0 * scaleFactor, dailyPnl * 2.5 * scaleFactor));
-  } else if (totalPnl > 0) {
-    est24hPnl = Math.min(90.0 * scaleFactor, Math.max(25.0 * scaleFactor, totalPnl * 2.0 * scaleFactor));
+    set('spot-monthly-return', '+' + projMonthlyPct.toFixed(1) + '%');
+    set('spot-monthly-usd', '+$' + projMonthlyUsd.toFixed(2) + '/mo (30-day pace)');
+  } else {
+    set('spot-monthly-return', '0.0%');
+    set('spot-monthly-usd', 'Awaiting closed fills');
   }
-  const projMonthlyUsd = est24hPnl * 30;
-  const dailyRate = totalEquity > 0 ? (est24hPnl / totalEquity) : 0.01;
-  const compMonthlyPct = Math.min(85.0, Math.max(25.0, (Math.pow(1 + dailyRate, 30) - 1) * 100)).toFixed(2);
-  set('spot-monthly-return', '+' + compMonthlyPct + '%');
-  set('spot-monthly-usd', '~$'+ projMonthlyUsd.toFixed(2) + '/mo \u00B7 Compounded Yield');
 
   set('spot-last-update', 'Updated ' + new Date().toLocaleTimeString());
+
 
   const unrEl = document.getElementById('spot-unrealised-pnl');
   if (unrEl) {

@@ -598,15 +598,25 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
 
     summary_data = _portfolio.summary()
 
-    # Collect completed cycles across all grid engines + portfolio DB history
+    # Collect completed cycles across SQLite DB + all grid engines
     try:
         completed_dict = {}
+        try:
+            from trading_engine.spot.trade_db import get_completed_cycles
+            db_cycles = get_completed_cycles(1000)
+            for c in db_cycles:
+                key = f"{c.get('symbol')}_{c.get('timestamp')}_{c.get('qty')}"
+                completed_dict[key] = c
+        except Exception as e_db:
+            logger.debug(f"SQLite cycle load: {e_db}")
+
         if hasattr(_portfolio, 'completed_cycles') and isinstance(_portfolio.completed_cycles, list):
             for c in _portfolio.completed_cycles:
                 if isinstance(c, dict):
                     c_item = dict(c)
                     key = f"{c_item.get('symbol')}_{c_item.get('timestamp')}_{c_item.get('qty')}"
                     completed_dict[key] = c_item
+
 
         for sym, eng in _grid_engines.items():
             if hasattr(eng, 'completed_cycles') and isinstance(eng.completed_cycles, list):

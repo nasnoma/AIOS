@@ -269,25 +269,26 @@ class SpotGridSettings(BaseSettings):
     regime_confirm_bars: int = 3      # consecutive bars to confirm regime flip
 
     # ── Grid Params: BULL ──────────────────────────────────────
-    bull_grid_spacing: float = 0.0020 # 0.20% micro-scalp spacing (rapid intraday cycle fills)
-    bull_buy_levels: int = 8
-    bull_sell_levels: int = 10
-    bull_capital_deployed: float = 0.995 # 99.5% capital active in Bull trend
-    bull_base_hold_pct: float = 0.30  # 30% base hold
+    bull_grid_spacing: float = 0.0080 # 0.80% spacing in clean Bull trend
+    bull_buy_levels: int = 4
+    bull_sell_levels: int = 6
+    bull_capital_deployed: float = 0.85
+    bull_base_hold_pct: float = 0.30
 
     # ── Grid Params: RANGE (default) ───────────────────────────
-    range_grid_spacing: float = 0.0020 # 0.20% micro-scalp spacing
-    range_buy_levels: int = 12         # 12 buy levels: maximum dip-catching
-    range_sell_levels: int = 10
-    range_capital_deployed: float = 0.995 # 99.5% capital active in Range
+    range_grid_spacing: float = 0.0120 # 1.20% fee-proof spacing (real cash profit per cycle)
+    range_buy_levels: int = 5          # 5 clean dip levels ($75 - $120 per order)
+    range_sell_levels: int = 5
+    range_capital_deployed: float = 0.75
     range_base_hold_pct: float = 0.20
 
     # ── Grid Params: BEAR ──────────────────────────────────────
-    bear_grid_spacing: float = 0.015  # 1.5% spacing
-    bear_buy_levels: int = 6
-    bear_sell_levels: int = 4
-    bear_capital_deployed: float = 0.40
+    bear_grid_spacing: float = 0.0250 # 2.50% wide spacing in downtrend (patient accumulation)
+    bear_buy_levels: int = 4
+    bear_sell_levels: int = 3
+    bear_capital_deployed: float = 0.35
     bear_base_hold_pct: float = 0.15
+
 
     # ── DCA (mean-reversion extra buys) ───────────────────────
     dca_bb_period: int = 20

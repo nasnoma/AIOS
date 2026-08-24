@@ -394,16 +394,26 @@ class GridEngine:
                     gross_pnl = (level.price - buy_orig_p) * level.qty
                     fee = (level.price * level.qty * self.fee_rate) + (buy_orig_p * level.qty * self.fee_rate)
                     net_pnl = gross_pnl - fee
-                    self.completed_cycles.append({
+                    cycle_record = {
+                        'symbol': self.symbol,
+                        'buy_order_id': getattr(level, 'linked_order_id', ''),
+                        'sell_order_id': level.order_id or '',
                         'buy_price': buy_orig_p,
                         'sell_price': level.price,
                         'qty': level.qty,
                         'gross_pnl': gross_pnl,
                         'fee': fee,
                         'net_pnl': net_pnl,
-                        'timestamp': level.filled_at
-                    })
-                    logger.info(f"SELL filled at {level.price}. Completed cycle. Net PnL: ${net_pnl:.2f}")
+                        'timestamp': level.filled_at or datetime.now(timezone.utc).isoformat()
+                    }
+                    self.completed_cycles.append(cycle_record)
+                    try:
+                        from trading_engine.spot.trade_db import record_completed_cycle
+                        record_completed_cycle(cycle_record)
+                    except Exception as e_db:
+                        logger.debug(f"Failed to record cycle to SQLite: {e_db}")
+                    logger.info(f"SELL filled at {level.price}. Completed cycle for {self.symbol}. Net PnL: ${net_pnl:.2f}")
+
                 
                     new_buy = GridLevel(
                         price=buy_orig_p,
