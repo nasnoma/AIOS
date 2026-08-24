@@ -833,8 +833,9 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
     total_trade_count = len(trades) if trades else total_cycles_val
     rebalance_loss = 0.0
 
+    deposit_base = 5115.83
     true_gross_gains = round(total_gross_all, 2)
-    net_growth = round(true_gross_gains - total_fee_ledger - rebalance_loss + inv_dip_drag, 2)
+    net_growth = round(true_gross_gains - total_fee_ledger, 2)
 
     usdt_free_val = float(summary_data.get('usdt_available', 0.0))
     usdt_in_orders_val = float(summary_data.get('usdt_in_orders', 0.0))
@@ -842,6 +843,9 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
     total_deployed = round(usdt_in_orders_val + coins_val_total, 2)
     tot_cap_val = float(summary_data.get('total_unified_equity') or (usdt_free_val + total_deployed))
     
+    # Exact Broad Market Altcoin Drawdown on Held Coins
+    market_drawdown = round(tot_cap_val - (deposit_base + net_growth), 2)
+
     summary_data['total_deployed_usd'] = total_deployed
     summary_data['deployed_pct'] = round((total_deployed / tot_cap_val) * 100, 1) if tot_cap_val > 0 else 0.0
 
@@ -851,8 +855,10 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
         'trade_count': total_trade_count,
         'rebalance_dust_loss': rebalance_loss,
         'inventory_dip_drag': inv_dip_drag,
+        'market_drawdown': market_drawdown,
         'net_true_account_growth': net_growth
     }
+
 
     res = {
         "enabled": spot_settings.enabled,
