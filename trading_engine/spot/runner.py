@@ -175,8 +175,12 @@ def init_spot_engine():
     if not spot_settings.paper_mode and exchange:
         try:
             bal = exchange.fetch_balance({'accountType': 'UNIFIED'})
+            info_list = bal.get('info', {}).get('result', {}).get('list', [])
+            tot_equity = float(info_list[0].get('totalEquity', 0)) if info_list else 0.0
             usdt_total = float(bal.get('total', {}).get('USDT', 0) or bal.get('USDT', {}).get('total', 0) or 0)
-            if usdt_total > 0:
+            if tot_equity > 0:
+                account_size = tot_equity
+            elif usdt_total > 0:
                 account_size = usdt_total
         except Exception as e:
             logger.debug(f"Could not fetch live balance in init_spot_engine: {e}")
