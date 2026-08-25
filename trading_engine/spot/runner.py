@@ -773,10 +773,12 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
             sell_p = float(c.get('sell_price') or 0.0)
             qty = float(c.get('qty') or 0.0)
             
-            # If the buy price was an uncalibrated fallback (> 0.985 of sell price) and we have the exact historical cost
-            if (buy_p <= 0.001 or buy_p >= sell_p * 0.985) and sym_k in historical_costs and historical_costs[sym_k] < sell_p:
-                buy_p = historical_costs[sym_k]
-                c['buy_price'] = buy_p
+            # If the buy price was an uncalibrated fallback (> 0.95 of sell price) and we have the exact historical cost
+            clean_sym = sym_k if '/' in sym_k else f"{sym_k}/USDT"
+            if clean_sym in historical_costs and historical_costs[clean_sym] < sell_p:
+                if buy_p <= 0.001 or buy_p >= sell_p * 0.95:
+                    buy_p = historical_costs[clean_sym]
+                    c['buy_price'] = buy_p
             elif buy_p <= 0.001 or buy_p >= sell_p:
                 buy_p = round(sell_p * 0.988, 4)
                 c['buy_price'] = buy_p
