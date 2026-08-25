@@ -357,6 +357,13 @@ class GridEngine:
                                 logger.debug(f"[{self.symbol}] Skipping sub-$5 sell order (${qty_val * price_val:.2f} < ${min_cost:.2f}) until consolidated.")
                                 continue
 
+                        if level.side == 'buy' and not self.paper_mode and exchange:
+                            res_floor = float(getattr(portfolio, 'usdt_reserved', 0.0) or 0.0)
+                            avail_usdt = float(getattr(portfolio, 'usdt_available', 0.0) or 0.0)
+                            req_cost = qty_val * price_val
+                            if res_floor > 0 and avail_usdt > 0 and (avail_usdt - req_cost) < res_floor:
+                                logger.debug(f"[{self.symbol}] Pausing buy order (${req_cost:.2f}) to maintain 20% mandatory cash reserve (${res_floor:,.2f} floor).")
+                                continue
 
                         params = {'category': 'spot', 'postOnly': True} if 'bybit' in str(type(exchange)).lower() else {}
                         try:

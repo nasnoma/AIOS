@@ -249,8 +249,8 @@ class SpotGridSettings(BaseSettings):
 
 
     # ── Capital ────────────────────────────────────────────────
-    total_capital_pct: float = 0.995  # 99.5% of account balance deployed ($9,950.00 active grid capital)
-    usdt_hard_reserve_pct: float = 0.005 # 0.5% hard reserve ($9,900.25 active order liquidity)
+    total_capital_pct: float = 0.80   # 80% of account balance deployed in active grid rotation (~$4,100 active capital)
+    usdt_hard_reserve_pct: float = 0.20 # 20% mandatory dry powder hard cash reserve (~$1,025 held permanently in pure USDT)
 
     # ── Asset Split (Performance-Weighted by 30-Day Volatility & Cycle Potential) ──────
     btc_allocation_pct: float = 0.00   # 0% → BTC (low volatility, reallocated to top alts)

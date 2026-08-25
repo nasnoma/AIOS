@@ -182,13 +182,12 @@ def init_spot_engine():
             logger.debug(f"Could not fetch live balance in init_spot_engine: {e}")
             
     spot_active_capital = account_size * spot_settings.total_capital_pct
-    expected_free = spot_active_capital * (1.0 - spot_settings.usdt_hard_reserve_pct)
-    expected_res = spot_active_capital * spot_settings.usdt_hard_reserve_pct
+    expected_free = spot_active_capital
+    expected_res = account_size * spot_settings.usdt_hard_reserve_pct
     
-    # Only set balances if not already loaded from DB (avoid overwriting restored state)
-    if _portfolio.usdt_available == 0.0 and _portfolio.usdt_reserved == 0.0:
+    _portfolio.usdt_reserved = expected_res
+    if _portfolio.usdt_available == 0.0:
         _portfolio.usdt_available = expected_free
-        _portfolio.usdt_reserved = expected_res
         _portfolio.save()
 
     allocations = _get_dynamic_hot_asset_allocations(spot_settings.asset_list, _regime_detectors)
