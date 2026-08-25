@@ -44,7 +44,8 @@ def init_db():
                 gross_pnl REAL NOT NULL,
                 fee REAL NOT NULL,
                 net_pnl REAL NOT NULL,
-                timestamp TEXT NOT NULL
+                timestamp TEXT NOT NULL,
+                UNIQUE(symbol, timestamp, qty)
             )
         """)
         cursor.execute("""
@@ -88,7 +89,7 @@ def record_completed_cycle(cycle: Dict[str, Any]):
         with sqlite3.connect(DB_PATH) as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO completed_cycles (symbol, buy_order_id, sell_order_id, buy_price, sell_price, qty, gross_pnl, fee, net_pnl, timestamp)
+                INSERT OR IGNORE INTO completed_cycles (symbol, buy_order_id, sell_order_id, buy_price, sell_price, qty, gross_pnl, fee, net_pnl, timestamp)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 str(cycle.get('symbol', '')),

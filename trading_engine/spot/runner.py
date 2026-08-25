@@ -817,6 +817,19 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
             c['net_pnl'] = round(gross - fee, 4)
 
 
+        # Persist completed cycles permanently to SQLite trade_db
+        try:
+            from trading_engine.spot.trade_db import record_completed_cycle
+            for c in completed_list:
+                s_id = str(c.get('sell_order_id', ''))
+                b_id = str(c.get('buy_order_id', ''))
+                ts = str(c.get('timestamp', ''))
+                if not spot_settings.paper_mode and (s_id.startswith('PAPER') or b_id.startswith('PAPER') or ('+' in ts and len(ts) > 28)):
+                    continue
+                record_completed_cycle(c)
+        except Exception as e_pers:
+            logger.debug(f"Persist completed cycles: {e_pers}")
+
         today_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         today_cycles = [c for c in completed_list if str(c.get('timestamp', '')).startswith(today_utc)]
         today_fees = round(sum(float(c.get('fee', 0.0) or 0.0) for c in today_cycles), 4)
