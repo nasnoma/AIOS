@@ -670,17 +670,38 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
             }
             fee_rate = getattr(spot_settings, 'fee_rate', 0.00075)
 
-            # Build FIFO buy queues with fractional remaining quantities
+            # Group partial fills of same order by order_id to get correct weighted-average price
+            grouped_buys = {}   # order_id -> {sym, price_total, qty_total}
+            grouped_sells = {}  # order_id -> {sym, price_total, qty_total, timestamp}
+            for t in recent_trades:
+                oid = t.get('order') or t.get('id') or t.get('timestamp')
+                sym_t = t.get('symbol', '')
+                side_t = (t.get('side') or '').lower()
+                p_t = float(t.get('price') or 0.0)
+                qty_t = float(t.get('qty') or t.get('amount') or 0.0)
+                ts_t = t.get('timestamp') or t.get('datetime') or ''
+                if qty_t <= 0 or p_t <= 0:
+                    continue
+                if side_t == 'buy':
+                    if oid not in grouped_buys:
+                        grouped_buys[oid] = {'sym': sym_t, 'cost': 0.0, 'qty': 0.0}
+                    grouped_buys[oid]['cost'] += p_t * qty_t
+                    grouped_buys[oid]['qty'] += qty_t
+                elif side_t == 'sell':
+                    if oid not in grouped_sells:
+                        grouped_sells[oid] = {'sym': sym_t, 'cost': 0.0, 'qty': 0.0, 'ts': ts_t}
+                    grouped_sells[oid]['cost'] += p_t * qty_t
+                    grouped_sells[oid]['qty'] += qty_t
+
+            # Build FIFO buy queues with grouped weighted-average prices
             buys_queue_by_sym = {}
-            for t in sorted(recent_trades, key=lambda x: str(x.get('timestamp') or '')):
-                sym = t.get('symbol', '')
-                side = (t.get('side') or '').lower()
-                p = float(t.get('price') or 0.0)
-                qty = float(t.get('qty') or t.get('amount') or 0.0)
-                if side == 'buy' and qty > 0 and p > 0:
-                    if sym not in buys_queue_by_sym:
-                        buys_queue_by_sym[sym] = []
-                    buys_queue_by_sym[sym].append({'price': p, 'remaining_qty': qty})
+            for oid, b in sorted(grouped_buys.items(), key=lambda x: str(x[0])):
+                sym_b = b['sym']
+                avg_buy_p = b['cost'] / b['qty'] if b['qty'] > 0 else 0.0
+                if sym_b not in buys_queue_by_sym:
+                    buys_queue_by_sym[sym_b] = []
+                buys_queue_by_sym[sym_b].append({'price': avg_buy_p, 'remaining_qty': b['qty']})
+
 
             # Process sells in chronological order against FIFO buy inventory
             for t in sorted(recent_trades, key=lambda x: str(x.get('timestamp') or '')):
@@ -693,7 +714,8 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
                 if side == 'sell' and qty > 0 and p > 0:
                     key = f"{sym}_{ts}_{qty}"
                     # If this cycle was already recorded by grid engine with exact linked buy price, keep it
-                    if key in completed_dict and completed_dict[key].get('net_pnl', 0) > 0.50:
+                    # Guard is > 0 (not > 0.50) so small but valid cycles are never overwritten
+                    if key in completed_dict and completed_dict[key].get('net_pnl', 0) > 0:
                         continue
 
                     matched_cost = 0.0
