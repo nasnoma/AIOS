@@ -635,16 +635,27 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
             for c in _portfolio.completed_cycles:
                 if isinstance(c, dict):
                     c_item = dict(c)
+                    s_id = str(c_item.get('sell_order_id', ''))
+                    b_id = str(c_item.get('buy_order_id', ''))
+                    ts = str(c_item.get('timestamp', ''))
+                    if not spot_settings.paper_mode and (s_id.startswith('PAPER') or b_id.startswith('PAPER') or ('+' in ts and len(ts) > 28)):
+                        continue
                     key = f"{c_item.get('symbol')}_{c_item.get('timestamp')}_{c_item.get('qty')}"
                     completed_dict[key] = c_item
 
-
         for sym, eng in _grid_engines.items():
+            if not spot_settings.paper_mode and getattr(eng, 'paper_mode', False):
+                continue
             if hasattr(eng, 'completed_cycles') and isinstance(eng.completed_cycles, list):
                 for c in eng.completed_cycles:
                     if isinstance(c, dict):
                         c_item = dict(c)
                         c_item['symbol'] = sym
+                        s_id = str(c_item.get('sell_order_id', ''))
+                        b_id = str(c_item.get('buy_order_id', ''))
+                        ts = str(c_item.get('timestamp', ''))
+                        if not spot_settings.paper_mode and (s_id.startswith('PAPER') or b_id.startswith('PAPER') or ('+' in ts and len(ts) > 28)):
+                            continue
                         key = f"{sym}_{c_item.get('timestamp')}_{c_item.get('qty')}"
                         completed_dict[key] = c_item
 
@@ -655,7 +666,6 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
                 s_id = str(c.get('sell_order_id', ''))
                 b_id = str(c.get('buy_order_id', ''))
                 ts = str(c.get('timestamp', ''))
-                # Exclude paper IDs, extreme gross outliers, and local Python microsecond timestamps (+00:00)
                 if s_id.startswith('PAPER') or b_id.startswith('PAPER'):
                     continue
                 if '+' in ts and len(ts) > 28:
@@ -671,7 +681,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
                 'RENDER/USDT': 1.4820, 'ARB/USDT': 0.0988, 'DOT/USDT': 3.9210, 'ALGO/USDT': 0.0888,
                 'UNI/USDT': 4.2730, 'INJ/USDT': 5.6010, 'AVAX/USDT': 7.5130, 'SOL/USDT': 142.50,
                 'ETH/USDT': 2600.0, 'BTC/USDT': 64000.0, 'XAUT/USDT': 4581.23, 'ARKM/USDT': 0.1120,
-                'ATOM/USDT': 1.6280
+                'ATOM/USDT': 1.6280, 'LINK/USDT': 10.450, 'SEI/USDT': 0.2750
             }
             fee_rate = getattr(spot_settings, 'fee_rate', 0.00075)
 

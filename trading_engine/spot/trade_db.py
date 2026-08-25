@@ -112,7 +112,13 @@ def get_completed_cycles(limit: int = 100) -> List[Dict[str, Any]]:
         with sqlite3.connect(DB_PATH) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM completed_cycles ORDER BY id DESC LIMIT ?", (limit,))
+            cursor.execute("""
+                SELECT * FROM completed_cycles 
+                WHERE (sell_order_id IS NULL OR NOT sell_order_id LIKE 'PAPER%')
+                  AND (buy_order_id IS NULL OR NOT buy_order_id LIKE 'PAPER%')
+                  AND NOT timestamp LIKE '%+00:00%'
+                ORDER BY id DESC LIMIT ?
+            """, (limit,))
             rows = cursor.fetchall()
             return [dict(r) for r in rows]
     except Exception as e:
