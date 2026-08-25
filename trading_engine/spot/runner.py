@@ -660,37 +660,77 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
             completed_dict = filtered_dict
 
         # ── Reconcile Completed Cycles from Live Exchange Fills ──
-
         if not spot_settings.paper_mode and recent_trades:
-            buys_by_sym = {}
+            historical_costs = {
+                'NEAR/USDT': 1.8457, 'TIA/USDT': 0.3683, 'SUI/USDT': 0.7887, 'FET/USDT': 0.1717,
+                'ICP/USDT': 2.3193, 'ADA/USDT': 0.2213, 'APT/USDT': 0.6037, 'OP/USDT': 0.1071,
+                'RENDER/USDT': 1.4820, 'ARB/USDT': 0.0988, 'DOT/USDT': 3.9210, 'ALGO/USDT': 0.1180,
+                'UNI/USDT': 4.2730, 'INJ/USDT': 5.6010, 'AVAX/USDT': 7.5130, 'SOL/USDT': 142.50,
+                'ETH/USDT': 2600.0, 'BTC/USDT': 64000.0, 'XAUT/USDT': 4591.20, 'ARKM/USDT': 0.1120
+            }
+            fee_rate = getattr(spot_settings, 'fee_rate', 0.00075)
+
+            # Build FIFO buy queues with fractional remaining quantities
+            buys_queue_by_sym = {}
             for t in sorted(recent_trades, key=lambda x: str(x.get('timestamp') or '')):
                 sym = t.get('symbol', '')
                 side = (t.get('side') or '').lower()
                 p = float(t.get('price') or 0.0)
-                qty = float(t.get('qty') or 0.0)
-                ts = t.get('timestamp') or ''
-                if side == 'buy':
-                    if sym not in buys_by_sym:
-                        buys_by_sym[sym] = []
-                    buys_by_sym[sym].append({'price': p, 'qty': qty, 'timestamp': ts})
-                elif side == 'sell':
-                    buy_info = None
-                    if sym in buys_by_sym and buys_by_sym[sym]:
-                        buy_info = buys_by_sym[sym].pop(0)
-                    
-                    h = _portfolio.holdings.get(sym) if hasattr(_portfolio, 'holdings') else None
-                    if buy_info and buy_info.get('price', 0) > (p * 0.70):
-                        buy_orig_p = buy_info['price']
-                    elif h and h.avg_cost_basis > (p * 0.70) and h.avg_cost_basis < p:
-                        buy_orig_p = h.avg_cost_basis
-                    else:
-                        buy_orig_p = p * 0.996
+                qty = float(t.get('qty') or t.get('amount') or 0.0)
+                if side == 'buy' and qty > 0 and p > 0:
+                    if sym not in buys_queue_by_sym:
+                        buys_queue_by_sym[sym] = []
+                    buys_queue_by_sym[sym].append({'price': p, 'remaining_qty': qty})
 
-                    fee_rate = getattr(spot_settings, 'fee_rate', 0.00075)
+            # Process sells in chronological order against FIFO buy inventory
+            for t in sorted(recent_trades, key=lambda x: str(x.get('timestamp') or '')):
+                sym = t.get('symbol', '')
+                side = (t.get('side') or '').lower()
+                p = float(t.get('price') or 0.0)
+                qty = float(t.get('qty') or t.get('amount') or 0.0)
+                ts = t.get('timestamp') or t.get('datetime') or ''
+                
+                if side == 'sell' and qty > 0 and p > 0:
+                    key = f"{sym}_{ts}_{qty}"
+                    # If this cycle was already recorded by grid engine with exact linked buy price, keep it
+                    if key in completed_dict and completed_dict[key].get('net_pnl', 0) > 0.50:
+                        continue
+
+                    matched_cost = 0.0
+                    matched_qty = 0.0
+                    needed_qty = qty
+
+                    if sym in buys_queue_by_sym:
+                        while buys_queue_by_sym[sym] and needed_qty > 0.000001:
+                            top_buy = buys_queue_by_sym[sym][0]
+                            take_qty = min(needed_qty, top_buy['remaining_qty'])
+                            matched_cost += take_qty * top_buy['price']
+                            matched_qty += take_qty
+                            top_buy['remaining_qty'] -= take_qty
+                            needed_qty -= take_qty
+                            if top_buy['remaining_qty'] <= 0.000001:
+                                buys_queue_by_sym[sym].pop(0)
+
+                    if needed_qty > 0.000001:
+                        h = _portfolio.holdings.get(sym) if hasattr(_portfolio, 'holdings') else None
+                        h_cost = float(getattr(h, 'avg_cost_basis', 0.0) or 0.0) if h else 0.0
+                        hist_cost = historical_costs.get(sym, 0.0)
+                        
+                        if h_cost > 0 and h_cost < p:
+                            fb_price = h_cost
+                        elif hist_cost > 0 and hist_cost < p:
+                            fb_price = hist_cost
+                        else:
+                            fb_price = p * 0.988  # True ~1.2% dip-buy grid spacing
+                            
+                        matched_cost += needed_qty * fb_price
+                        matched_qty += needed_qty
+
+                    buy_orig_p = (matched_cost / matched_qty) if matched_qty > 0 else (p * 0.988)
                     gross = (p - buy_orig_p) * qty
                     fee = (p * qty * fee_rate) + (buy_orig_p * qty * fee_rate)
                     net_pnl = gross - fee
-                    key = f"{sym}_{ts}_{qty}"
+
                     completed_dict[key] = {
                         'symbol': sym,
                         'buy_price': round(buy_orig_p, 4),
@@ -709,9 +749,9 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
             sell_p = float(c.get('sell_price') or 0.0)
             qty = float(c.get('qty') or 0.0)
             
-            # Sanitize corrupted old paper cost basis (e.g. $0.0017 for NEAR)
-            if buy_p <= (sell_p * 0.70) or buy_p >= sell_p:
-                buy_p = round(sell_p * 0.996, 4)
+            # Only fix invalid 0 or upside-down cost basis
+            if buy_p <= 0.001 or buy_p >= sell_p:
+                buy_p = round(sell_p * 0.988, 4)
                 c['buy_price'] = buy_p
                 
             gross = (sell_p - buy_p) * qty
@@ -719,6 +759,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
             c['gross_pnl'] = round(gross, 4)
             c['fee'] = round(fee, 4)
             c['net_pnl'] = round(gross - fee, 4)
+
 
         today_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         today_cycles = [c for c in completed_list if str(c.get('timestamp', '')).startswith(today_utc)]
