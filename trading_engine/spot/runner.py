@@ -15,6 +15,15 @@ from datetime import datetime, timezone
 from loguru import logger
 from typing import Dict, Any
 
+ALL_23_HISTORICAL_COSTS = {
+    'NEAR/USDT': 1.8457, 'TIA/USDT': 0.3683, 'SUI/USDT': 0.7887, 'FET/USDT': 0.1717,
+    'ICP/USDT': 2.2960, 'ADA/USDT': 0.2213, 'APT/USDT': 0.6037, 'OP/USDT': 0.1071,
+    'RENDER/USDT': 1.4820, 'ARB/USDT': 0.0988, 'DOT/USDT': 3.9210, 'ALGO/USDT': 0.0888,
+    'UNI/USDT': 4.2730, 'INJ/USDT': 5.6010, 'AVAX/USDT': 7.5130, 'SOL/USDT': 142.50,
+    'ETH/USDT': 2600.0, 'BTC/USDT': 64000.0, 'XAUT/USDT': 4581.23, 'ARKM/USDT': 0.1120,
+    'ATOM/USDT': 1.6280, 'LINK/USDT': 10.450, 'SEI/USDT': 0.2750
+}
+
 def _get_dynamic_hot_asset_allocations(asset_list: list[str], regime_detectors: dict = None) -> dict[str, float]:
     """
     Dynamic Top-8 Concentrated Volatility Allocation:
@@ -675,14 +684,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
 
         # ── Reconcile Completed Cycles from Live Exchange Fills ──
         if not spot_settings.paper_mode and recent_trades:
-            historical_costs = {
-                'NEAR/USDT': 1.8457, 'TIA/USDT': 0.3683, 'SUI/USDT': 0.7887, 'FET/USDT': 0.1717,
-                'ICP/USDT': 2.2960, 'ADA/USDT': 0.2213, 'APT/USDT': 0.6037, 'OP/USDT': 0.1071,
-                'RENDER/USDT': 1.4820, 'ARB/USDT': 0.0988, 'DOT/USDT': 3.9210, 'ALGO/USDT': 0.0888,
-                'UNI/USDT': 4.2730, 'INJ/USDT': 5.6010, 'AVAX/USDT': 7.5130, 'SOL/USDT': 142.50,
-                'ETH/USDT': 2600.0, 'BTC/USDT': 64000.0, 'XAUT/USDT': 4581.23, 'ARKM/USDT': 0.1120,
-                'ATOM/USDT': 1.6280, 'LINK/USDT': 10.450, 'SEI/USDT': 0.2750
-            }
+            historical_costs = ALL_23_HISTORICAL_COSTS
             fee_rate = getattr(spot_settings, 'fee_rate', 0.00075)
 
             # Group partial fills of same order by order_id to get correct weighted-average price
@@ -914,13 +916,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
                         if acc_q > 0:
                             avg_cost_basis = acc_c / acc_q
                         else:
-                            historical_costs = {
-                                'NEAR/USDT': 1.8457, 'TIA/USDT': 0.3683, 'SUI/USDT': 0.7887, 'FET/USDT': 0.1547,
-                                'ICP/USDT': 2.3193, 'ADA/USDT': 0.2227, 'APT/USDT': 0.6217, 'OP/USDT': 0.1071,
-                                'DOT/USDT': 0.8919, 'RENDER/USDT': 1.4095, 'ARKM/USDT': 0.1024, 'ETH/USDT': 2476.02,
-                                'AVAX/USDT': 8.0262, 'MNT/USDT': 0.5092
-                            }
-                            avg_cost_basis = historical_costs.get(symbol, cur_price * 1.012)
+                            avg_cost_basis = ALL_23_HISTORICAL_COSTS.get(symbol, cur_price * 1.012)
 
                     unrealised_pnl = (cur_price - avg_cost_basis) * units_val
                     total_cost = avg_cost_basis * units_val

@@ -353,6 +353,9 @@ class GridEngine:
                                     if isinstance(prec, (float, int)) and float(prec) > 0:
                                         decimals = max(0, -int(math.floor(math.log10(float(prec)))))
                                         qty_val = round(qty_val, decimals)
+                            elif price_val > 0 and (qty_val * price_val) < float(min_cost) and level.side == 'sell':
+                                logger.debug(f"[{self.symbol}] Skipping sub-$5 sell order (${qty_val * price_val:.2f} < ${min_cost:.2f}) until consolidated.")
+                                continue
 
 
                         params = {'category': 'spot', 'postOnly': True} if 'bybit' in str(type(exchange)).lower() else {}
