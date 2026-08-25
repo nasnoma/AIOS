@@ -287,7 +287,15 @@ def run_spot_grid_tick() -> Dict[str, Any]:
         # ── Live Exchange Portfolio Sync ──
         if not spot_settings.paper_mode and exchange:
             try:
-                bal = exchange.fetch_balance()
+                bal = exchange.fetch_balance({'accountType': 'UNIFIED'})
+                usdt_total = float(bal.get('total', {}).get('USDT', 0) or bal.get('USDT', {}).get('total', 0) or 0)
+                if usdt_total > 0:
+                    _portfolio.usdt_available = usdt_total
+                info_list = bal.get('info', {}).get('result', {}).get('list', [])
+                tot_equity = float(info_list[0].get('totalEquity', 0)) if info_list else 0.0
+                if tot_equity > 0:
+                    _portfolio.usdt_reserved = tot_equity * spot_settings.usdt_hard_reserve_pct
+
                 tot = bal.get('total', {})
                 active_symbols = set(spot_settings.asset_list)
                 for coin, units in tot.items():
