@@ -663,10 +663,11 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
         if not spot_settings.paper_mode and recent_trades:
             historical_costs = {
                 'NEAR/USDT': 1.8457, 'TIA/USDT': 0.3683, 'SUI/USDT': 0.7887, 'FET/USDT': 0.1717,
-                'ICP/USDT': 2.3193, 'ADA/USDT': 0.2213, 'APT/USDT': 0.6037, 'OP/USDT': 0.1071,
-                'RENDER/USDT': 1.4820, 'ARB/USDT': 0.0988, 'DOT/USDT': 3.9210, 'ALGO/USDT': 0.1180,
+                'ICP/USDT': 2.2960, 'ADA/USDT': 0.2213, 'APT/USDT': 0.6037, 'OP/USDT': 0.1071,
+                'RENDER/USDT': 1.4820, 'ARB/USDT': 0.0988, 'DOT/USDT': 3.9210, 'ALGO/USDT': 0.0888,
                 'UNI/USDT': 4.2730, 'INJ/USDT': 5.6010, 'AVAX/USDT': 7.5130, 'SOL/USDT': 142.50,
-                'ETH/USDT': 2600.0, 'BTC/USDT': 64000.0, 'XAUT/USDT': 4591.20, 'ARKM/USDT': 0.1120
+                'ETH/USDT': 2600.0, 'BTC/USDT': 64000.0, 'XAUT/USDT': 4581.23, 'ARKM/USDT': 0.1120,
+                'ATOM/USDT': 1.6280
             }
             fee_rate = getattr(spot_settings, 'fee_rate', 0.00075)
 
