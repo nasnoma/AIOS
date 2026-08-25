@@ -622,31 +622,29 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
 
         trades = list(_cached_raw_trades)
 
-            for t in trades:
-                f_cost = 0.0
-                if isinstance(t.get('fee'), dict):
-                    f_cost = float(t['fee'].get('cost', 0) or 0)
-                if f_cost == 0 and 'info' in t:
-                    f_cost = float(t['info'].get('execFee', 0) or 0)
-                real_exchange_fees_all += f_cost
-                
-            trades = sorted(trades, key=lambda x: str(x.get('timestamp') or ''))
+        for t in trades:
+            f_cost = 0.0
+            if isinstance(t.get('fee'), dict):
+                f_cost = float(t['fee'].get('cost', 0) or 0)
+            if f_cost == 0 and 'info' in t:
+                f_cost = float(t['info'].get('execFee', 0) or 0)
+            real_exchange_fees_all += f_cost
+            
+        trades = sorted(trades, key=lambda x: str(x.get('timestamp') or ''))
 
-            for t in reversed(trades):
-                raw_sym = t.get('symbol', '')
-                sym = raw_sym if '/' in raw_sym else (raw_sym.replace('USDT', '/USDT') if 'USDT' in raw_sym else raw_sym)
-                recent_trades.append({
-                    'id': t.get('id', ''),
-                    'symbol': sym,
-                    'side': (t.get('side') or '').upper(),
-                    'price': float(t.get('price') or 0),
-                    'qty': float(t.get('amount') or 0),
-                    'size_usd': float(t.get('cost') or 0) or (float(t.get('price') or 0) * float(t.get('amount') or 0)),
-                    'timestamp': t.get('datetime') or '',
-                    'status': 'FILLED'
-                })
-        except Exception as e_tr:
-            logger.debug(f"Fetch my trades in get_spot_status: {e_tr}")
+        for t in reversed(trades):
+            raw_sym = t.get('symbol', '')
+            sym = raw_sym if '/' in raw_sym else (raw_sym.replace('USDT', '/USDT') if 'USDT' in raw_sym else raw_sym)
+            recent_trades.append({
+                'id': t.get('id', ''),
+                'symbol': sym,
+                'side': (t.get('side') or '').upper(),
+                'price': float(t.get('price') or 0),
+                'qty': float(t.get('amount') or 0),
+                'size_usd': float(t.get('cost') or 0) or (float(t.get('price') or 0) * float(t.get('amount') or 0)),
+                'timestamp': t.get('datetime') or '',
+                'status': 'FILLED'
+            })
 
 
     if not recent_trades and hasattr(_portfolio, 'grid_orders'):
