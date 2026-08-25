@@ -581,12 +581,12 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
         try:
             for s_item in list(active_symbols):
                 try:
-                    s_trades = exchange.fetch_my_trades(s_item, limit=100)
+                    s_trades = exchange.fetch_my_trades(s_item, limit=200)
                     trades.extend(s_trades)
                 except Exception:
                     pass
             if not trades:
-                trades = exchange.fetch_my_trades(params={'category': 'spot'}, limit=100)
+                trades = exchange.fetch_my_trades(params={'category': 'spot'}, limit=500)
 
             for t in trades:
                 f_cost = 0.0
@@ -795,7 +795,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
             # If the buy price was an uncalibrated fallback (> 0.95 of sell price) and we have the exact historical cost
             clean_sym = sym_k if '/' in sym_k else f"{sym_k}/USDT"
             if clean_sym in historical_costs and historical_costs[clean_sym] < sell_p:
-                if buy_p <= 0.001 or buy_p >= sell_p * 0.95:
+                if buy_p <= 0.001 or buy_p >= sell_p * 0.985:
                     buy_p = historical_costs[clean_sym]
                     c['buy_price'] = buy_p
             elif buy_p <= 0.001 or buy_p >= sell_p:
