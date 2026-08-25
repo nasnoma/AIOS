@@ -768,12 +768,16 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
         completed_list = list(completed_dict.values())
         fee_rate = getattr(spot_settings, 'fee_rate', 0.00075)
         for c in completed_list:
+            sym_k = c.get('symbol', '')
             buy_p = float(c.get('buy_price') or 0.0)
             sell_p = float(c.get('sell_price') or 0.0)
             qty = float(c.get('qty') or 0.0)
             
-            # Only fix invalid 0 or upside-down cost basis
-            if buy_p <= 0.001 or buy_p >= sell_p:
+            # If the buy price was an uncalibrated fallback (> 0.985 of sell price) and we have the exact historical cost
+            if (buy_p <= 0.001 or buy_p >= sell_p * 0.985) and sym_k in historical_costs and historical_costs[sym_k] < sell_p:
+                buy_p = historical_costs[sym_k]
+                c['buy_price'] = buy_p
+            elif buy_p <= 0.001 or buy_p >= sell_p:
                 buy_p = round(sell_p * 0.988, 4)
                 c['buy_price'] = buy_p
                 
