@@ -654,9 +654,13 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
             for k, c in completed_dict.items():
                 s_id = str(c.get('sell_order_id', ''))
                 b_id = str(c.get('buy_order_id', ''))
-                gross = float(c.get('gross_pnl', 0.0) or 0.0)
-                if not s_id.startswith('PAPER') and not b_id.startswith('PAPER') and gross < 50.0:
-                    filtered_dict[k] = c
+                ts = str(c.get('timestamp', ''))
+                # Exclude paper IDs, extreme gross outliers, and local Python microsecond timestamps (+00:00)
+                if s_id.startswith('PAPER') or b_id.startswith('PAPER'):
+                    continue
+                if '+' in ts and len(ts) > 28:
+                    continue
+                filtered_dict[k] = c
             completed_dict = filtered_dict
 
         # ── Reconcile Completed Cycles from Live Exchange Fills ──
