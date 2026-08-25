@@ -384,6 +384,8 @@ class GridEngine:
 
                         level.status = 'open'
                         level.order_id = order['id']
+                        if level.side == 'buy' and hasattr(portfolio, 'usdt_available'):
+                            portfolio.usdt_available = max(0.0, float(getattr(portfolio, 'usdt_available', 0.0)) - req_cost)
                         logger.info(f"[LIVE] Placed {level.side} limit order for {self.symbol} at {price_val} (Qty: {qty_val}, ID: {order['id']})")
 
 
