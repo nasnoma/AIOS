@@ -24,6 +24,9 @@ ALL_23_HISTORICAL_COSTS = {
     'ATOM/USDT': 1.6280, 'LINK/USDT': 10.450, 'SEI/USDT': 0.2750
 }
 
+_last_trades_fetch_time: float = 0.0
+_cached_raw_trades: list = []
+
 def _get_dynamic_hot_asset_allocations(asset_list: list[str], regime_detectors: dict = None) -> dict[str, float]:
     """
     Dynamic Top-8 Concentrated Volatility Allocation:
@@ -582,19 +585,42 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
         
     # Fetch recent trade execution history from exchange or portfolio
 
+    global _last_trades_fetch_time, _cached_raw_trades
     recent_trades = []
     real_exchange_fees_all = 0.0
     trades = []
     if not spot_settings.paper_mode and exchange:
-        try:
-            for s_item in list(active_symbols):
+        now_ts = time.time()
+        if (now_ts - _last_trades_fetch_time > 15.0) or not _cached_raw_trades:
+            fetched = []
+            try:
+                today_start_ms = int(datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).timestamp() * 1000)
+                bulk = exchange.fetch_my_trades(limit=100, params={'category': 'spot', 'startTime': today_start_ms})
+                fetched.extend(bulk)
+            except Exception:
+                pass
+
+            top_symbols = ['INJ/USDT', 'FET/USDT', 'NEAR/USDT', 'APT/USDT', 'ADA/USDT', 'UNI/USDT', 'ALGO/USDT', 'OP/USDT', 'SUI/USDT', 'ICP/USDT', 'ARKM/USDT']
+            for s_sym in top_symbols:
                 try:
-                    s_trades = exchange.fetch_my_trades(s_item, limit=200)
-                    trades.extend(s_trades)
+                    time.sleep(0.02)
+                    s_tr = exchange.fetch_my_trades(s_sym, limit=100)
+                    fetched.extend(s_tr)
                 except Exception:
                     pass
-            if not trades:
-                trades = exchange.fetch_my_trades(params={'category': 'spot'}, limit=500)
+
+            if fetched:
+                seen_ids = set()
+                deduped = []
+                for t in fetched:
+                    tid = str(t.get('id') or f"{t.get('timestamp')}_{t.get('amount')}")
+                    if tid not in seen_ids:
+                        seen_ids.add(tid)
+                        deduped.append(t)
+                _cached_raw_trades = deduped
+                _last_trades_fetch_time = now_ts
+
+        trades = list(_cached_raw_trades)
 
             for t in trades:
                 f_cost = 0.0
