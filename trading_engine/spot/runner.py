@@ -1050,7 +1050,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
     # ── GROUND TRUTH: Real wallet growth = Bybit equity − total deposits ──
     # This is the ONLY number that cannot be distorted by trade buffer limits,
     # buy/sell pairing heuristics, or fee estimation errors.
-    deposit_base = 6415.83
+    deposit_base = 7015.83
     real_account_growth = round(tot_cap_val - deposit_base, 2)
 
     summary_data['total_deployed_usd'] = total_deployed
