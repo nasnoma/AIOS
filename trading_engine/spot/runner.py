@@ -463,7 +463,15 @@ def run_spot_dca_check():
                 streak_factor = _portfolio.get_streak_risk_factor()
                 raw_size = (engine.allocated_usd * 0.20) * mult * streak_factor if engine else 50.0
                 order_size = max(35.0, raw_size)  # Guaranteed minimum $35 USD size for DCA buys
-                logger.info(f"🎯 DCA Signal Triggered [{symbol}]: {signal.trigger_type} (RSI: {signal.rsi:.1f}, mult: {mult}x, streak_factor: {streak_factor:.2f}x) -> Buying ${order_size:.2f}")
+                res_floor = float(getattr(_portfolio, 'usdt_reserved', 0.0) or 0.0)
+                avail_usdt = float(getattr(_portfolio, 'usdt_available', 0.0) or 0.0)
+                open_buys_usd = float(getattr(_portfolio, 'total_open_buy_usd', 0.0) or 0.0)
+
+                # 🛑 AIRTIGHT 20% HARD CASH RESERVE GATE FOR DCA BUYS:
+                if res_floor > 0 and (avail_usdt - open_buys_usd - order_size) < res_floor:
+                    logger.info(f"🛑 [DCA PAUSED] Skipping DCA buy for {symbol} (${order_size:.2f}) - Would breach 20% hard cash reserve (${res_floor:,.2f} floor).")
+                    continue
+
                 # Execute DCA Buy
                 if engine and _portfolio.usdt_available >= order_size:
                     ticker = exchange.fetch_ticker(symbol)
