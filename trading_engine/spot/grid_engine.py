@@ -361,8 +361,12 @@ class GridEngine:
                             res_floor = float(getattr(portfolio, 'usdt_reserved', 0.0) or 0.0)
                             avail_usdt = float(getattr(portfolio, 'usdt_available', 0.0) or 0.0)
                             req_cost = qty_val * price_val
-                            if res_floor > 0 and avail_usdt > 0 and (avail_usdt - req_cost) < res_floor:
-                                logger.debug(f"[{self.symbol}] Pausing buy order (${req_cost:.2f}) to maintain 20% mandatory cash reserve (${res_floor:,.2f} floor).")
+                            open_buys_usd = float(getattr(portfolio, 'total_open_buy_usd', 0.0) or 0.0)
+
+                            # 🛑 AIRTIGHT HARD FLOOR RULE:
+                            # (Total USDT - All Open Buy Commitments - New Order Cost) MUST be >= 20% Reserve Floor
+                            if res_floor > 0 and (avail_usdt - open_buys_usd - req_cost) < res_floor:
+                                logger.debug(f"[{self.symbol}] Pausing buy order (${req_cost:.2f}) - Total open buy commitments (${open_buys_usd:.2f}) would breach 20% cash reserve (${res_floor:,.2f} floor).")
                                 continue
 
                         params = {'category': 'spot', 'postOnly': True} if 'bybit' in str(type(exchange)).lower() else {}
@@ -384,8 +388,8 @@ class GridEngine:
 
                         level.status = 'open'
                         level.order_id = order['id']
-                        if level.side == 'buy' and hasattr(portfolio, 'usdt_available'):
-                            portfolio.usdt_available = max(0.0, float(getattr(portfolio, 'usdt_available', 0.0)) - req_cost)
+                        if level.side == 'buy' and hasattr(portfolio, 'total_open_buy_usd'):
+                            portfolio.total_open_buy_usd = float(getattr(portfolio, 'total_open_buy_usd', 0.0)) + req_cost
                         logger.info(f"[LIVE] Placed {level.side} limit order for {self.symbol} at {price_val} (Qty: {qty_val}, ID: {order['id']})")
 
 

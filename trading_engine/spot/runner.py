@@ -355,12 +355,23 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                         except Exception:
                             ask_p = float(mnt_ticker.get('ask') or (mnt_p * 1.002))
                             exchange.create_limit_buy_order('MNT/USDT', buy_qty, ask_p, params={'category': 'spot'})
-                            logger.info(f"✅ Auto-refilled {buy_qty} MNT via limit order at ${ask_p:.4f}!")
             except Exception as e_mnt_refill:
                 logger.debug(f"MNT auto-refill check: {e_mnt_refill}")
 
+        # ── Calculate Global Open Buy Commitments Across All Assets ──
+        total_open_buy_usd = 0.0
+        if not spot_settings.paper_mode and exchange:
+            try:
+                open_orders_all = exchange.fetch_open_orders(params={'category': 'spot'})
+                for o in open_orders_all:
+                    if (o.get('side') or '').lower() == 'buy':
+                        p_val = float(o.get('price', 0) or 0)
+                        a_val = float(o.get('amount', 0) or 0)
+                        total_open_buy_usd += p_val * a_val
+            except Exception as e_open:
+                logger.debug(f"Fetch open orders for reserve check: {e_open}")
+        _portfolio.total_open_buy_usd = total_open_buy_usd
 
-        
         for symbol in asset_list:
             engine = _grid_engines.get(symbol)
             if not engine:
