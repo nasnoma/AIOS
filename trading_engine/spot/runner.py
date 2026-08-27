@@ -71,16 +71,16 @@ def _get_dynamic_hot_asset_allocations(asset_list: list[str], regime_detectors: 
 
     scored_pairs.sort(key=lambda x: x[1], reverse=True)
     
-    # Maximum Alpha Top-6 Turbo Concentration (100% total active deployment):
-    # Rank 1 & 2 (Top 2 Turbo Volatility Leaders): 25.0% each (50% total -> ~$1,250 each)
-    # Rank 3, 4, 5, 6 (Next 4 High-Velocity Movers): 12.5% each (50% total -> ~$625 each)
-    # Rank 7 to 23 (Slow/Sleeping Assets): 0.0% new buy allocation (100% focused on highest yielders)
+    # High-Velocity Top-12 Dynamic Concentration (100% total active deployment):
+    # Rank 1 to 4 (Top 4 Turbo Leaders): 15.0% each (60% total -> ~$950 each)
+    # Rank 5 to 12 (Next 8 Power Movers): 5.0% each (40% total -> ~$320 each)
+    # Rank 13+ (Inactive): 0.0% new buy allocation
     allocations = {}
     for rank, (sym, _) in enumerate(scored_pairs):
-        if rank < 2:
-            allocations[sym] = 0.25
-        elif rank < 6:
-            allocations[sym] = 0.125
+        if rank < 4:
+            allocations[sym] = 0.15
+        elif rank < 12:
+            allocations[sym] = 0.05
         else:
             allocations[sym] = 0.0
 

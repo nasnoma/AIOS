@@ -244,13 +244,13 @@ class SpotGridSettings(BaseSettings):
     enabled: bool = True
     paper_mode: bool = False          # False = Live Real-Money Trading with Bybit Spot Limit Orders
 
-    # 24 Screened High-Volatility Liquid & Commodity Halal Spot Assets on Bybit (includes XAUT/USDT Tether Gold)
-    assets: str = "NEAR/USDT,AVAX/USDT,SUI/USDT,FET/USDT,UNI/USDT,ARKM/USDT,ICP/USDT,ARB/USDT,RENDER/USDT,ADA/USDT,SOL/USDT,APT/USDT,LINK/USDT,INJ/USDT,DOT/USDT,ATOM/USDT,ALGO/USDT,OP/USDT,TIA/USDT,SEI/USDT,BTC/USDT,ETH/USDT,XAUT/USDT"
+    # Top 12 Screened High-Velocity Halal Spot Assets on Bybit
+    assets: str = "INJ/USDT,FET/USDT,NEAR/USDT,SUI/USDT,ARKM/USDT,TIA/USDT,ARB/USDT,OP/USDT,APT/USDT,AVAX/USDT,SEI/USDT,SOL/USDT"
 
 
     # ── Capital ────────────────────────────────────────────────
-    total_capital_pct: float = 0.80   # 80% of account balance deployed in active grid rotation (~$4,100 active capital)
-    usdt_hard_reserve_pct: float = 0.20 # 20% mandatory dry powder hard cash reserve (~$1,025 held permanently in pure USDT)
+    total_capital_pct: float = 0.95   # 95% active deployment (temporarily unlocking capital for high-velocity order staging)
+    usdt_hard_reserve_pct: float = 0.05 # 5% minimum operational fee cushion (~$350 kept for buffer)
 
     # ── Asset Split (Performance-Weighted by 30-Day Volatility & Cycle Potential) ──────
     btc_allocation_pct: float = 0.00   # 0% → BTC (low volatility, reallocated to top alts)
