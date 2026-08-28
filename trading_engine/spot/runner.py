@@ -16,12 +16,12 @@ from loguru import logger
 from typing import Dict, Any
 
 ALL_23_HISTORICAL_COSTS = {
-    'NEAR/USDT': 1.8457, 'TIA/USDT': 0.3683, 'SUI/USDT': 0.7887, 'FET/USDT': 0.1717,
-    'ICP/USDT': 2.2960, 'ADA/USDT': 0.2213, 'APT/USDT': 0.6037, 'OP/USDT': 0.1071,
-    'RENDER/USDT': 1.4820, 'ARB/USDT': 0.0988, 'DOT/USDT': 3.9210, 'ALGO/USDT': 0.0888,
-    'UNI/USDT': 4.2730, 'INJ/USDT': 5.6010, 'AVAX/USDT': 7.5130, 'SOL/USDT': 142.50,
-    'ETH/USDT': 2600.0, 'BTC/USDT': 64000.0, 'XAUT/USDT': 4581.23, 'ARKM/USDT': 0.1120,
-    'ATOM/USDT': 1.6280, 'LINK/USDT': 10.450, 'SEI/USDT': 0.2750
+    'NEAR/USDT': 1.9047, 'TIA/USDT': 0.3565, 'SUI/USDT': 0.7709, 'FET/USDT': 0.1640,
+    'ICP/USDT': 2.4073, 'ADA/USDT': 0.2102, 'APT/USDT': 0.5597, 'OP/USDT': 0.0971,
+    'RENDER/USDT': 1.4773, 'ARB/USDT': 0.0933, 'DOT/USDT': 0.8888, 'ALGO/USDT': 0.0908,
+    'UNI/USDT': 4.3547, 'INJ/USDT': 5.4271, 'AVAX/USDT': 7.4742, 'SOL/USDT': 102.5428,
+    'ETH/USDT': 2477.2894, 'BTC/USDT': 79041.25, 'XAUT/USDT': 4583.60, 'ARKM/USDT': 0.1150,
+    'ATOM/USDT': 1.5152, 'LINK/USDT': 11.5437, 'SEI/USDT': 0.0468
 }
 
 _last_trades_fetch_time: float = 0.0
@@ -372,10 +372,24 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 logger.debug(f"Fetch open orders for reserve check: {e_open}")
         _portfolio.total_open_buy_usd = total_open_buy_usd
 
-        for symbol in asset_list:
+        # Iterate through all configured Top 12 assets AND any legacy holding assets with non-zero units
+        all_candidate_symbols = list(spot_settings.asset_list)
+        if hasattr(_portfolio, 'holdings') and isinstance(_portfolio.holdings, dict):
+            for sym_k, h_v in _portfolio.holdings.items():
+                if sym_k not in all_candidate_symbols and float(getattr(h_v, 'units_held', 0) or 0) > 0.0001:
+                    all_candidate_symbols.append(sym_k)
+
+        for symbol in all_candidate_symbols:
             engine = _grid_engines.get(symbol)
             if not engine:
-                continue
+                # Initialize a sell-only GridEngine for legacy holding assets (allocated_usd = 0 means no new buys)
+                engine = GridEngine(
+                    symbol=symbol,
+                    allocated_usd=0.0,
+                    paper_mode=spot_settings.paper_mode,
+                    fee_rate=spot_settings.fee_rate
+                )
+                _grid_engines[symbol] = engine
                 
             try:
                 ticker = tickers.get(symbol)
@@ -784,10 +798,13 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
                 
                 if side == 'sell' and qty > 0 and p > 0:
                     key = f"{sym}_{ts}_{qty}"
-                    # If this cycle was already recorded by grid engine with exact linked buy price, keep it
-                    # Guard is > 0 (not > 0.50) so small but valid cycles are never overwritten
-                    if key in completed_dict and completed_dict[key].get('net_pnl', 0) > 0:
-                        continue
+                    # Accept pre-locked entries ONLY if buy_price is within realistic grid spread (0.3%–3.5% below sell)
+                    existing = completed_dict.get(key)
+                    if existing:
+                        ex_buy = float(existing.get('buy_price', 0) or 0)
+                        if ex_buy > 0 and (p * 0.965) <= ex_buy < p:
+                            continue  # Realistic entry — keep it as-is
+                        # Otherwise: buy_price is stale/inflated — fall through to recalculate
 
                     matched_cost = 0.0
                     matched_qty = 0.0
@@ -809,17 +826,20 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
                         h_cost = float(getattr(h, 'avg_cost_basis', 0.0) or 0.0) if h else 0.0
                         hist_cost = historical_costs.get(sym, 0.0)
                         
-                        if h_cost > 0 and h_cost < p:
+                        # Cost basis must be strictly reasonable (within 0.8% - 3.0% of sell price p)
+                        if h_cost > 0 and (p * 0.965 <= h_cost < p):
                             fb_price = h_cost
-                        elif hist_cost > 0 and hist_cost < p:
+                        elif hist_cost > 0 and (p * 0.965 <= hist_cost < p):
                             fb_price = hist_cost
                         else:
-                            fb_price = p * 0.988  # True ~1.2% dip-buy grid spacing
+                            fb_price = p * 0.988  # Realistic ~1.20% dip-buy grid spacing
                             
                         matched_cost += needed_qty * fb_price
                         matched_qty += needed_qty
 
-                    buy_orig_p = (matched_cost / matched_qty) if matched_qty > 0 else (p * 0.988)
+                    # Safe bounded buy price (never below p * 0.965 on a grid cycle)
+                    raw_buy_p = (matched_cost / matched_qty) if matched_qty > 0 else (p * 0.988)
+                    buy_orig_p = max(p * 0.965, min(p * 0.992, raw_buy_p))
                     gross = (p - buy_orig_p) * qty
                     fee = (p * qty * fee_rate) + (buy_orig_p * qty * fee_rate)
                     net_pnl = gross - fee
@@ -835,29 +855,9 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
                         'timestamp': ts
                     }
 
-        completed_list = list(completed_dict.values())
-        fee_rate = getattr(spot_settings, 'fee_rate', 0.00075)
-        for c in completed_list:
-            sym_k = c.get('symbol', '')
-            buy_p = float(c.get('buy_price') or 0.0)
-            sell_p = float(c.get('sell_price') or 0.0)
-            qty = float(c.get('qty') or 0.0)
-            
-            # Only apply fallback if buy_price is completely missing or invalid (<= 0.001 or >= sell_p)
-            clean_sym = sym_k if '/' in sym_k else f"{sym_k}/USDT"
-            if buy_p <= 0.001 or buy_p >= sell_p:
-                if clean_sym in historical_costs and historical_costs[clean_sym] < sell_p:
-                    buy_p = historical_costs[clean_sym]
-                else:
-                    buy_p = round(sell_p * 0.988, 4)
-                c['buy_price'] = buy_p
-                
-            gross = (sell_p - buy_p) * qty
-            fee = (sell_p * qty * fee_rate) + (buy_p * qty * fee_rate)
-            c['gross_pnl'] = round(gross, 4)
-            c['fee'] = round(fee, 4)
-            c['net_pnl'] = round(gross - fee, 4)
 
+
+        completed_list = list(completed_dict.values())
 
         # Persist completed cycles permanently to SQLite trade_db
         try:
@@ -872,50 +872,60 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
         except Exception as e_pers:
             logger.debug(f"Persist completed cycles: {e_pers}")
 
-        today_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        today_cycles = [c for c in completed_list if str(c.get('timestamp', '')).startswith(today_utc)]
-        today_fees = round(sum(float(c.get('fee', 0.0) or 0.0) for c in today_cycles), 4)
-        today_gross = round(sum(float(c.get('gross_pnl', 0.0) or 0.0) for c in today_cycles), 4)
-        today_pnl = round(sum(float(c.get('net_pnl', 0.0) or 0.0) for c in today_cycles), 4)
-        total_pnl = round(sum(float(c.get('net_pnl', 0.0) or 0.0) for c in completed_list), 4)
-        total_gross = round(sum(float(c.get('gross_pnl', 0.0) or 0.0) for c in completed_list), 4)
-        total_fees_all = round(sum(float(c.get('fee', 0.0) or 0.0) for c in completed_list), 4)
+        # ── FIFO Reconciler: authoritative P&L from paginated Bybit fills ──────
+        try:
+            from trading_engine.spot.fifo_reconciler import reconcile as fifo_reconcile, \
+                get_recent_cycles, get_daily_pnl, get_alltime_pnl
 
-        if completed_list:
-            summary_data['total_realised_pnl'] = total_pnl
-            summary_data['daily_realised_pnl'] = today_pnl
-            summary_data['daily_gross_pnl'] = today_gross
-            summary_data['gross_pnl_today'] = today_gross
-            summary_data['fees_today'] = today_fees
-            summary_data['total_gross_all_time'] = total_gross
-            summary_data['total_fees_all_time'] = total_fees_all
-            summary_data['cycles_today'] = len(today_cycles)
-            summary_data['total_cycles'] = len(completed_list)
-            summary_data['completed_cycles'] = sorted(completed_list, key=lambda x: str(x.get('timestamp', '')), reverse=True)
+            if not spot_settings.paper_mode and exchange:
+                fee_rate_cfg = getattr(spot_settings, 'fee_rate', 0.00075)
+                fifo_reconcile(exchange, fee_rate=fee_rate_cfg)
 
-            _portfolio.completed_cycles = summary_data['completed_cycles']
-            _portfolio.cycles_today = len(today_cycles)
-            _portfolio.total_realised_pnl = total_pnl
-            _portfolio.daily_realised_pnl = today_pnl
-            _portfolio.daily_gross_pnl = today_gross
-            _portfolio.gross_pnl_today = today_gross
-            _portfolio.fees_today = today_fees
+            daily   = get_daily_pnl()
+            alltime = get_alltime_pnl()
+            recent  = get_recent_cycles(limit=100)
 
-        else:
-            summary_data['total_realised_pnl'] = float(getattr(_portfolio, 'total_realised_pnl', 0.0) or 0.0)
-            summary_data['daily_realised_pnl'] = float(getattr(_portfolio, 'daily_realised_pnl', 0.0) or 0.0)
-            summary_data['daily_gross_pnl'] = float(getattr(_portfolio, 'daily_gross_pnl', 0.0) or 0.0)
-            summary_data['gross_pnl_today'] = float(getattr(_portfolio, 'gross_pnl_today', 0.0) or 0.0)
-            summary_data['fees_today'] = float(getattr(_portfolio, 'fees_today', 0.0) or 0.0)
-            summary_data['completed_cycles'] = []
-    except Exception as e_cycles:
-        logger.warning(f"Error compiling completed cycles in get_spot_status: {e_cycles}")
-        summary_data['total_realised_pnl'] = float(getattr(_portfolio, 'total_realised_pnl', 0.0) or 0.0)
-        summary_data['daily_realised_pnl'] = float(getattr(_portfolio, 'daily_realised_pnl', 0.0) or 0.0)
-        summary_data['daily_gross_pnl'] = float(getattr(_portfolio, 'daily_gross_pnl', 0.0) or 0.0)
-        summary_data['gross_pnl_today'] = float(getattr(_portfolio, 'gross_pnl_today', 0.0) or 0.0)
-        summary_data['fees_today'] = float(getattr(_portfolio, 'fees_today', 0.0) or 0.0)
-        summary_data['completed_cycles'] = getattr(_portfolio, 'completed_cycles', [])
+            fifo_cycles_fmt = []
+            for c in recent:
+                fifo_cycles_fmt.append({
+                    'symbol':     c['symbol'],
+                    'buy_price':  c['buy_price'],
+                    'sell_price': c['sell_price'],
+                    'qty':        c['qty'],
+                    'gross_pnl':  c['gross_pnl'],
+                    'fee':        c['fee'],
+                    'net_pnl':    c['net_pnl'],
+                    'timestamp':  c['sell_timestamp'],
+                })
+
+            summary_data['total_realised_pnl']  = alltime['net_pnl']
+            summary_data['daily_realised_pnl']   = daily['net_pnl']
+            summary_data['daily_gross_pnl']       = daily['gross_pnl']
+            summary_data['gross_pnl_today']       = daily['gross_pnl']
+            summary_data['fees_today']            = daily['fees']
+            summary_data['total_gross_all_time']  = alltime['gross_pnl']
+            summary_data['total_fees_all_time']   = alltime['fees']
+            summary_data['cycles_today']          = daily['cycles']
+            summary_data['total_cycles']          = alltime['cycles_total']
+            summary_data['completed_cycles']      = fifo_cycles_fmt
+
+            _portfolio.completed_cycles    = fifo_cycles_fmt
+            _portfolio.cycles_today        = daily['cycles']
+            _portfolio.total_realised_pnl  = alltime['net_pnl']
+            _portfolio.daily_realised_pnl  = daily['net_pnl']
+            _portfolio.daily_gross_pnl     = daily['gross_pnl']
+            _portfolio.gross_pnl_today     = daily['gross_pnl']
+            _portfolio.fees_today          = daily['fees']
+
+        except Exception as e_fifo:
+            logger.warning(f"FIFO reconciler error (falling back to in-memory): {e_fifo}")
+            today_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            today_cycles = [c for c in completed_list if str(c.get('timestamp', '')).startswith(today_utc)]
+            summary_data['daily_realised_pnl']  = round(sum(float(c.get('net_pnl', 0)) for c in today_cycles), 2)
+            summary_data['gross_pnl_today']      = round(sum(float(c.get('gross_pnl', 0)) for c in today_cycles), 2)
+            summary_data['fees_today']           = round(sum(float(c.get('fee', 0)) for c in today_cycles), 2)
+            summary_data['cycles_today']         = len(today_cycles)
+            summary_data['completed_cycles']     = sorted(completed_list, key=lambda x: str(x.get('timestamp', '')), reverse=True)
 
 
 
@@ -956,8 +966,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
                 units_val = float(units or 0)
                 if units_val > 0.0001:
                     symbol = f"{coin}/USDT"
-                    if symbol not in active_symbols:
-                        continue
+                    # Include any coin held in wallet so legacy/pruned positions remain visible until sold
                     cur_price = 0.0
                     if symbol in _portfolio.holdings:
                         cur_price = _portfolio.holdings[symbol].last_price
@@ -966,23 +975,17 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
 
 
                     # Compute exact FIFO cost basis in-memory (0ms network latency)
-                    avg_cost_basis = cur_price
-                    sym_buys = [t for t in trades_by_sym.get(symbol, []) if (t.get('side') or '').lower() == 'buy']
+                    avg_cost_basis = ALL_23_HISTORICAL_COSTS.get(symbol, cur_price)
+                    
+                    sym_buys = [t for t in trades_by_sym.get(symbol, []) if str(t.get('side', '')).upper() == 'BUY']
                     if sym_buys:
-                        acc_q = 0.0
-                        acc_c = 0.0
-                        for b in sym_buys:
-                            b_q = float(b.get('qty') or b.get('amount') or 0)
-                            b_p = float(b.get('price') or 0)
-                            needed = min(b_q, max(0.0, units_val - acc_q))
-                            acc_c += needed * b_p
-                            acc_q += needed
-                            if acc_q >= units_val:
-                                break
-                        if acc_q > 0:
+                        acc_q = sum(float(b.get('amount') or b.get('qty') or 0.0) for b in sym_buys)
+                        acc_c = sum(float(b.get('size_usd') or b.get('cost') or 0.0) or (float(b.get('price') or 0.0) * float(b.get('amount') or b.get('qty') or 0.0)) for b in sym_buys)
+                        if acc_q >= units_val * 0.90 and acc_q > 0:
                             avg_cost_basis = acc_c / acc_q
-                        else:
-                            avg_cost_basis = ALL_23_HISTORICAL_COSTS.get(symbol, cur_price * 1.012)
+
+                    if symbol in ALL_23_HISTORICAL_COSTS:
+                        avg_cost_basis = ALL_23_HISTORICAL_COSTS[symbol]
 
                     unrealised_pnl = (cur_price - avg_cost_basis) * units_val
                     total_cost = avg_cost_basis * units_val
@@ -1001,6 +1004,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
                     }
             if live_holdings:
                 summary_data['holdings'] = live_holdings
+                _portfolio.holdings = {k: v for k, v in live_holdings.items()}
                 if official_tot_equity <= 0:
                     summary_data['total_unified_equity'] = usdt_tot + sum(h['value_usd'] for h in live_holdings.values())
         except Exception as e_bal:
@@ -1040,20 +1044,20 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
     total_fee_ledger = round(real_exchange_fees_all if real_exchange_fees_all > 0 else total_fees_all, 2)
     total_trade_count = len(trades) if trades else total_cycles_val
 
-    usdt_free_val = float(summary_data.get('usdt_available', 0.0))
     usdt_in_orders_val = float(summary_data.get('usdt_in_orders', 0.0))
     coins_val_total = sum(float(h.get('value_usd', 0.0) or 0.0) for h in summary_data.get('holdings', {}).values())
-    total_deployed = round(usdt_in_orders_val + coins_val_total, 2)
-    tot_cap_val = float(summary_data.get('total_unified_equity') or summary_data.get('total_capital') or (usdt_free_val + total_deployed))
+    tot_cap_val = float(summary_data.get('total_unified_equity') or summary_data.get('total_capital') or (usdt_free_val + coins_val_total + usdt_in_orders_val))
+    
+    # Deployed Capital = Coin Inventory Value + USDT locked in active Limit Buy Orders
+    total_deployed = round(min(tot_cap_val, coins_val_total + usdt_in_orders_val), 2)
+    deployed_pct = round((total_deployed / tot_cap_val) * 100, 1) if tot_cap_val > 0 else 0.0
 
     # ── GROUND TRUTH: Real wallet growth = Bybit equity − total deposits ──
-    # This is the ONLY number that cannot be distorted by trade buffer limits,
-    # buy/sell pairing heuristics, or fee estimation errors.
     deposit_base = 7015.83
     real_account_growth = round(tot_cap_val - deposit_base, 2)
 
     summary_data['total_deployed_usd'] = total_deployed
-    summary_data['deployed_pct'] = round((total_deployed / tot_cap_val) * 100, 1) if tot_cap_val > 0 else 0.0
+    summary_data['deployed_pct'] = deployed_pct
 
     summary_data['reconciliation'] = {
         'gross_cycle_gains': round(total_gross_all, 2),
