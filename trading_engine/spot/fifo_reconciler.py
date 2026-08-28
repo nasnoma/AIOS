@@ -181,10 +181,11 @@ def sync_fills(exchange) -> int:
     raw_ts = int(row["last_ts_ms"]) if row else 0
 
     if raw_ts < 1_000_000_000_000:
-        # First run — start from 60 days ago (covers full grid bot history)
-        since_ms = int((datetime.now(timezone.utc).timestamp() - 60 * 86400) * 1000)
+        # First run — start from Aug 1, 2026 (covers all bot history from inception)
+        since_ms = 1785542400000
     else:
-        since_ms = max(0, raw_ts - 30_000)   # 30-second overlap
+        since_ms = max(1785542400000, raw_ts - 30_000)   # 30-second overlap
+
 
     WINDOW = 5 * 24 * 60 * 60 * 1000  # 5 days (Bybit rejects windows >= 7 days)
     max_ts  = since_ms
