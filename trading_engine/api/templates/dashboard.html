@@ -135,11 +135,12 @@
           <div class="stat-val" id="recon-coins-held" style="color:var(--teal);font-size:1.3rem">$0.00</div>
           <div class="stat-sub" id="recon-coins-sub">Coins held in Bybit awaiting take-profit sell orders</div>
         </div>
-        <div class="stat-card" style="background:rgba(0,229,176,0.06);border:1px solid rgba(0,229,176,0.3);padding:14px 18px;">
+        <div class="stat-card" id="recon-growth-card" style="background:rgba(255,255,255,0.03);padding:14px 18px;">
           <div class="stat-label">🏆 Real Account Growth</div>
-          <div class="stat-val" id="recon-net-growth" style="color:var(--teal);font-size:1.3rem">+$0.00</div>
-          <div class="stat-sub">Live Bybit equity minus $5,115.83 total deposited</div>
+          <div class="stat-val" id="recon-net-growth" style="font-size:1.3rem">$0.00</div>
+          <div class="stat-sub" id="recon-growth-sub">Live Bybit equity minus total capital deposited</div>
         </div>
+
       </div>
     </div>
 
@@ -295,7 +296,14 @@ function renderSpotStatus(data) {
   set('recon-coins-held', usd(totalAssetValue));
   set('recon-coins-sub', heldCoinsCount + ' assets awaiting take-profit');
 
-  set('recon-net-growth', (recNet >= 0 ? '+$' : '-$') + Math.abs(recNet).toFixed(2));
+  const netGrowthEl = document.getElementById('recon-net-growth');
+  if (netGrowthEl) {
+    netGrowthEl.textContent = (recNet >= 0 ? '+$' : '-$') + Math.abs(recNet).toFixed(2);
+    netGrowthEl.style.color = recNet >= 0 ? 'var(--green)' : 'var(--red)';
+  }
+  const depBase = rec.deposit_base ? Number(rec.deposit_base).toLocaleString('en-US',{minimumFractionDigits:2}) : '7,015.83';
+  set('recon-growth-sub', 'Live Bybit equity minus $' + depBase + ' total deposited');
+
 
 
 
