@@ -186,13 +186,14 @@ def sync_fills(exchange) -> int:
     else:
         since_ms = max(0, raw_ts - 30_000)   # 30-second overlap
 
-    WINDOW = 7 * 24 * 60 * 60 * 1000  # 7 days
+    WINDOW = 5 * 24 * 60 * 60 * 1000  # 5 days (Bybit rejects windows >= 7 days)
     max_ts  = since_ms
     total_new = 0
 
     start = since_ms
     while start < now_ms:
         end   = min(start + WINDOW, now_ms)
+
         batch = _fetch_fills_window(exchange, start, end)
 
         if batch:
