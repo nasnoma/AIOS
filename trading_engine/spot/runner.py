@@ -600,13 +600,18 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
             for o in open_orders:
                 raw_sym = o.get('symbol', '')
                 sym = raw_sym if '/' in raw_sym else (raw_sym.replace('USDT', '/USDT') if 'USDT' in raw_sym else raw_sym)
-                if sym not in active_symbols and o.get('id'):
+                is_sell = (o.get('side') or '').lower() == 'sell'
+                has_holding = sym in _portfolio.holdings and float(getattr(_portfolio.holdings[sym], 'units_held', 0) if hasattr(_portfolio.holdings[sym], 'units_held') else _portfolio.holdings[sym].get('units_held', 0) or 0) > 0.0001
+                
+                # Only cancel rogue BUY orders on decommissioned assets; NEVER cancel resting take-profit SELL orders on legacy holdings!
+                if sym not in active_symbols and not (is_sell and has_holding) and o.get('id'):
                     try:
                         exchange.cancel_order(o['id'], symbol=sym)
-                        logger.info(f"🧹 Cleaned up legacy order {o['id']} on {sym}")
+                        logger.info(f"🧹 Cleaned up decommissioned buy order {o['id']} on {sym}")
                     except Exception:
                         pass
                     continue
+
                 if sym not in bybit_levels:
                     bybit_levels[sym] = []
                 bybit_levels[sym].append({
