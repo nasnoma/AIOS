@@ -123,9 +123,10 @@ def get_spot_exchange() -> ccxt.Exchange:
     if _exchange is None:
         api_key = settings.bybit_api_key
         api_secret = settings.bybit_api_secret
-        if not api_key or api_key == "vU8Cg21arhQjUEWxvr":
-            api_key = "QU1VKkbGXqy9MU9Qge"
-            api_secret = "wqn69zgmQsj8ylBwUf7zdoyO278x9Lj4fD4S"
+        if not api_key or api_key in ("vU8Cg21arhQjUEWxvr", "QU1VKkbGXqy9MU9Qge"):
+            api_key = "NzSg7VszfTXPjy2VdS"
+            api_secret = "K9hHCNRooqs5Jik2Ez4Huis9XpxjCSkOAFcL"
+
 
         if not spot_settings.paper_mode and api_key and api_secret:
             # Live mode: use authenticated exchange
@@ -926,6 +927,9 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
             summary_data['fees_today']           = round(sum(float(c.get('fee', 0)) for c in today_cycles), 2)
             summary_data['cycles_today']         = len(today_cycles)
             summary_data['completed_cycles']     = sorted(completed_list, key=lambda x: str(x.get('timestamp', '')), reverse=True)
+    except Exception as e_cycles:
+        logger.warning(f"Error compiling completed cycles in get_spot_status: {e_cycles}")
+
 
 
 
@@ -970,8 +974,12 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
                     cur_price = 0.0
                     if symbol in _portfolio.holdings:
                         cur_price = _portfolio.holdings[symbol].last_price
-                    if cur_price <= 0 and symbol in tickers and isinstance(tickers.get(symbol), dict):
-                        cur_price = float(tickers[symbol].get('last') or 0.0)
+                    if cur_price <= 0 and exchange:
+                        try:
+                            t_info = exchange.fetch_ticker(symbol)
+                            cur_price = float(t_info.get('last') or 0.0)
+                        except Exception:
+                            cur_price = 0.0
 
 
                     # Compute exact FIFO cost basis in-memory (0ms network latency)
@@ -1014,6 +1022,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
     # ── Final sync: use whatever completed_list computed above ──
     daily_val = float(summary_data.get('daily_realised_pnl', 0.0))
     today_gross_val = float(summary_data.get('gross_pnl_today', 0.0))
+    today_fees_val = float(summary_data.get('fees_today', 0.0))
     total_val = float(summary_data.get('total_realised_pnl', 0.0))
     total_gross_all = float(summary_data.get('total_gross_all_time', 0.0))
     total_fees_all = float(summary_data.get('total_fees_all_time', 0.0))
@@ -1023,15 +1032,16 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
     summary_data['daily_realised_pnl'] = round(daily_val, 2)
     summary_data['daily_gross_pnl'] = round(today_gross_val, 2)
     summary_data['gross_pnl_today'] = round(today_gross_val, 2)
-    summary_data['fees_today'] = round(today_fees, 2)
+    summary_data['fees_today'] = round(today_fees_val, 2)
     summary_data['total_realised_pnl'] = round(total_val, 2)
     summary_data['cycles_today'] = cycles_val
     _portfolio.daily_realised_pnl = daily_val
     _portfolio.daily_gross_pnl = today_gross_val
     _portfolio.gross_pnl_today = today_gross_val
-    _portfolio.fees_today = today_fees
+    _portfolio.fees_today = today_fees_val
     _portfolio.total_realised_pnl = total_val
     _portfolio.cycles_today = cycles_val
+
 
 
 
