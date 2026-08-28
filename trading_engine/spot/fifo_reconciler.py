@@ -204,8 +204,8 @@ def sync_fills(exchange) -> int:
                 sym      = str(t.get("symbol") or "")
                 # Only store symbols we track
                 if sym not in ALL_SYMBOLS:
-                    start = end + 1
                     continue
+
                 try:
                     db.execute("""
                         INSERT OR IGNORE INTO fills
