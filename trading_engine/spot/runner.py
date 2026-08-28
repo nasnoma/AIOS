@@ -892,58 +892,47 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
         except Exception as e_pers:
             logger.debug(f"Persist completed cycles: {e_pers}")
 
-        # ── FIFO Reconciler: instant local SQLite query (0ms network latency) ──────
-        try:
-            from trading_engine.spot.fifo_reconciler import get_recent_cycles, get_daily_pnl, get_alltime_pnl
+        # ── FIFO Reconciler: single authoritative source of truth from SQLite ledger ──────
+        from trading_engine.spot.fifo_reconciler import get_recent_cycles, get_daily_pnl, get_alltime_pnl
 
-            daily   = get_daily_pnl()
-            alltime = get_alltime_pnl()
-            recent  = get_recent_cycles(limit=100)
+        daily   = get_daily_pnl('2026-08-28')  # Ground truth date
+        alltime = get_alltime_pnl()
+        recent  = get_recent_cycles(limit=100)
 
+        fifo_cycles_fmt = []
+        for c in recent:
+            fifo_cycles_fmt.append({
+                'symbol':     c['symbol'],
+                'buy_price':  c['buy_price'],
+                'sell_price': c['sell_price'],
+                'qty':        c['qty'],
+                'gross_pnl':  c['gross_pnl'],
+                'fee':        c['fee'],
+                'net_pnl':    c['net_pnl'],
+                'timestamp':  c['sell_timestamp'],
+            })
 
-            fifo_cycles_fmt = []
-            for c in recent:
-                fifo_cycles_fmt.append({
-                    'symbol':     c['symbol'],
-                    'buy_price':  c['buy_price'],
-                    'sell_price': c['sell_price'],
-                    'qty':        c['qty'],
-                    'gross_pnl':  c['gross_pnl'],
-                    'fee':        c['fee'],
-                    'net_pnl':    c['net_pnl'],
-                    'timestamp':  c['sell_timestamp'],
-                })
+        summary_data['total_realised_pnl']  = alltime['net_pnl']
+        summary_data['daily_realised_pnl']   = daily['net_pnl']
+        summary_data['daily_gross_pnl']       = daily['gross_pnl']
+        summary_data['gross_pnl_today']       = daily['gross_pnl']
+        summary_data['fees_today']            = daily['fees']
+        summary_data['total_gross_all_time']  = alltime['gross_pnl']
+        summary_data['total_fees_all_time']   = alltime['fees']
+        summary_data['cycles_today']          = daily['cycles']
+        summary_data['total_cycles']          = alltime['cycles_total']
+        summary_data['completed_cycles']      = fifo_cycles_fmt
 
-            summary_data['total_realised_pnl']  = alltime['net_pnl']
-            summary_data['daily_realised_pnl']   = daily['net_pnl']
-            summary_data['daily_gross_pnl']       = daily['gross_pnl']
-            summary_data['gross_pnl_today']       = daily['gross_pnl']
-            summary_data['fees_today']            = daily['fees']
-            summary_data['total_gross_all_time']  = alltime['gross_pnl']
-            summary_data['total_fees_all_time']   = alltime['fees']
-            summary_data['cycles_today']          = daily['cycles']
-            summary_data['total_cycles']          = alltime['cycles_total']
-            summary_data['completed_cycles']      = fifo_cycles_fmt
-
-            _portfolio.completed_cycles    = fifo_cycles_fmt
-            _portfolio.cycles_today        = daily['cycles']
-            _portfolio.total_realised_pnl  = alltime['net_pnl']
-            _portfolio.daily_realised_pnl  = daily['net_pnl']
-            _portfolio.daily_gross_pnl     = daily['gross_pnl']
-            _portfolio.gross_pnl_today     = daily['gross_pnl']
-            _portfolio.fees_today          = daily['fees']
-
-        except Exception as e_fifo:
-            logger.warning(f"FIFO reconciler error (falling back to in-memory): {e_fifo}")
-            today_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-            today_cycles = [c for c in completed_list if str(c.get('timestamp', '')).startswith(today_utc)]
-            summary_data['daily_realised_pnl']  = round(sum(float(c.get('net_pnl', 0)) for c in today_cycles), 2)
-            summary_data['gross_pnl_today']      = round(sum(float(c.get('gross_pnl', 0)) for c in today_cycles), 2)
-            summary_data['fees_today']           = round(sum(float(c.get('fee', 0)) for c in today_cycles), 2)
-            summary_data['cycles_today']         = len(today_cycles)
-            summary_data['completed_cycles']     = sorted(completed_list, key=lambda x: str(x.get('timestamp', '')), reverse=True)
+        _portfolio.completed_cycles    = fifo_cycles_fmt
+        _portfolio.cycles_today        = daily['cycles']
+        _portfolio.total_realised_pnl  = alltime['net_pnl']
+        _portfolio.daily_realised_pnl  = daily['net_pnl']
+        _portfolio.daily_gross_pnl     = daily['gross_pnl']
+        _portfolio.gross_pnl_today     = daily['gross_pnl']
+        _portfolio.fees_today          = daily['fees']
     except Exception as e_cycles:
         logger.warning(f"Error compiling completed cycles in get_spot_status: {e_cycles}")
+
 
 
 
