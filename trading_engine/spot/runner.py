@@ -460,7 +460,19 @@ def run_spot_grid_tick() -> Dict[str, Any]:
     finally:
         _tick_lock.release()
     _portfolio.save()
+
+    # Continuously keep FIFO SQLite database synced in the background without blocking ticks
+    if not spot_settings.paper_mode and exchange:
+        try:
+            import threading
+            from trading_engine.spot.fifo_reconciler import reconcile as bg_fifo_reconcile
+            fee_cfg = getattr(spot_settings, 'fee_rate', 0.00075)
+            threading.Thread(target=bg_fifo_reconcile, args=(exchange, fee_cfg), daemon=True).start()
+        except Exception:
+            pass
+
     return {"status": "ok", "fills": fill_events, "portfolio": _portfolio.summary()}
+
 
 
 
@@ -550,8 +562,10 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
     grids = {}
     for sym in spot_settings.asset_list:
         det = _regime_detectors.get(sym)
-        last_p = _portfolio.holdings[sym].last_price if (hasattr(_portfolio, 'holdings') and sym in _portfolio.holdings) else 0.0
+        h_obj = _portfolio.holdings.get(sym) if hasattr(_portfolio, 'holdings') else None
+        last_p = float(h_obj.get('last_price', 0.0) if isinstance(h_obj, dict) else getattr(h_obj, 'last_price', 0.0) or 0.0)
         if det and det._cached_state:
+
             regimes[sym] = {
                 "regime": det._cached_state.regime,
                 "adx": round(det._cached_state.adx, 1),
@@ -634,16 +648,8 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
             except Exception:
                 pass
 
-            top_symbols = ['INJ/USDT', 'FET/USDT', 'NEAR/USDT', 'APT/USDT', 'ADA/USDT', 'UNI/USDT', 'ALGO/USDT', 'OP/USDT', 'SUI/USDT', 'ICP/USDT', 'ARKM/USDT']
-            for s_sym in top_symbols:
-                try:
-                    time.sleep(0.02)
-                    s_tr = exchange.fetch_my_trades(s_sym, limit=100)
-                    fetched.extend(s_tr)
-                except Exception:
-                    pass
-
             if fetched:
+
                 seen_ids = set()
                 deduped = []
                 for t in fetched:
@@ -873,18 +879,14 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
         except Exception as e_pers:
             logger.debug(f"Persist completed cycles: {e_pers}")
 
-        # ── FIFO Reconciler: authoritative P&L from paginated Bybit fills ──────
+        # ── FIFO Reconciler: instant local SQLite query (0ms network latency) ──────
         try:
-            from trading_engine.spot.fifo_reconciler import reconcile as fifo_reconcile, \
-                get_recent_cycles, get_daily_pnl, get_alltime_pnl
-
-            if not spot_settings.paper_mode and exchange:
-                fee_rate_cfg = getattr(spot_settings, 'fee_rate', 0.00075)
-                fifo_reconcile(exchange, fee_rate=fee_rate_cfg)
+            from trading_engine.spot.fifo_reconciler import get_recent_cycles, get_daily_pnl, get_alltime_pnl
 
             daily   = get_daily_pnl()
             alltime = get_alltime_pnl()
             recent  = get_recent_cycles(limit=100)
+
 
             fifo_cycles_fmt = []
             for c in recent:
@@ -973,13 +975,15 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
                     # Include any coin held in wallet so legacy/pruned positions remain visible until sold
                     cur_price = 0.0
                     if symbol in _portfolio.holdings:
-                        cur_price = _portfolio.holdings[symbol].last_price
+                        h_val = _portfolio.holdings[symbol]
+                        cur_price = float(h_val.get('last_price', 0.0) if isinstance(h_val, dict) else getattr(h_val, 'last_price', 0.0) or 0.0)
                     if cur_price <= 0 and exchange:
                         try:
                             t_info = exchange.fetch_ticker(symbol)
                             cur_price = float(t_info.get('last') or 0.0)
                         except Exception:
                             cur_price = 0.0
+
 
 
                     # Compute exact FIFO cost basis in-memory (0ms network latency)
