@@ -415,9 +415,62 @@ def get_symbol_pnl_breakdown(date_utc: Optional[str] = None) -> List[Dict[str, A
     return [dict(r) for r in rows]
 
 
+def get_fifo_cost_basis(symbol: str) -> Dict[str, float]:
+    """
+    Query the real-time FIFO open buy inventory for a symbol from SQLite fills.
+    Returns:
+      {
+        'units_open': float,
+        'avg_cost': float,
+        'min_buy_price': float,
+        'max_buy_price': float (high-water mark of open lots)
+      }
+    """
+    db = _conn()
+    rows = db.execute(
+        "SELECT side, price, qty FROM fills WHERE symbol = ? ORDER BY ts_ms ASC, id ASC",
+        (symbol,)
+    ).fetchall()
+    db.close()
+
+    buy_lots = deque()
+    for r in rows:
+        side = r["side"]
+        price = float(r["price"])
+        qty = float(r["qty"])
+        if side == "buy":
+            buy_lots.append({"price": price, "rem": qty})
+        elif side == "sell":
+            needed = qty
+            while buy_lots and needed > 1e-8:
+                take = min(needed, buy_lots[0]["rem"])
+                needed -= take
+                buy_lots[0]["rem"] -= take
+                if buy_lots[0]["rem"] <= 1e-8:
+                    buy_lots.popleft()
+
+    active_lots = [b for b in buy_lots if b["rem"] > 1e-6]
+    if not active_lots:
+        return {'units_open': 0.0, 'avg_cost': 0.0, 'min_buy_price': 0.0, 'max_buy_price': 0.0}
+
+    tot_qty = sum(b["rem"] for b in active_lots)
+    tot_val = sum(b["rem"] * b["price"] for b in active_lots)
+    avg_cost = tot_val / tot_qty if tot_qty > 0 else 0.0
+    min_p = min(b["price"] for b in active_lots)
+    max_p = max(b["price"] for b in active_lots)
+
+    return {
+        'units_open': round(tot_qty, 6),
+        'avg_cost': round(avg_cost, 6),
+        'min_buy_price': round(min_p, 6),
+        'max_buy_price': round(max_p, 6),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Top-level entry point (called from scheduler)
 # ---------------------------------------------------------------------------
+
 
 def reconcile(exchange, fee_rate: float = 0.00075) -> Dict[str, Any]:
     """

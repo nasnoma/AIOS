@@ -246,6 +246,17 @@ class GridEngine:
         base_qty_held = float(_get_val(holding, 'units_held', 0.0) or 0.0)
         avg_cost = float(_get_val(holding, 'avg_cost_basis', 0.0) or 0.0)
 
+        # Query authoritative SQLite FIFO inventory to get the exact un-exited buy price
+        fifo_max_cost = 0.0
+        try:
+            from trading_engine.spot.fifo_reconciler import get_fifo_cost_basis
+            fifo_basis = get_fifo_cost_basis(self.symbol)
+            if fifo_basis.get('avg_cost', 0) > 0:
+                avg_cost = max(avg_cost, fifo_basis['avg_cost'])
+                fifo_max_cost = fifo_basis.get('max_buy_price', 0.0)
+        except Exception as e_fifo_cb:
+            logger.debug(f"FIFO cost basis lookup for {self.symbol}: {e_fifo_cb}")
+
         # Safety: If avg_cost is 0 or missing, ensure we never sell below current_price * 1.015
         if avg_cost <= 0:
             avg_cost = current_price
@@ -276,9 +287,9 @@ class GridEngine:
             for i in range(sell_levels_count):
                 min_net_usd = min_net_profit_tiers[i] if i < len(min_net_profit_tiers) else (0.60 + 0.50 * i)
                 
-                # Reference cost basis: Must protect BOTH the overall purchase cost AND the current market price
-                # so that sells during market rallies never sell for a micro-step that yields < $0.60 net profit!
-                cost_ref = max(avg_cost, current_price)
+                # Reference cost basis: Must strictly guard the actual FIFO purchase cost basis (and max purchase price),
+                # ensuring that sells during market dips NEVER sell below the real purchase cost!
+                cost_ref = max(avg_cost, fifo_max_cost, current_price * 1.008)
                 denom = qty_per_sell * (1.0 - fee_factor)
                 # Two-sided fee formula: Accounts for both 0.1% buy-side fee AND 0.1% sell-side fee
                 min_fee_proof_price = (cost_ref * qty_per_sell * (1.0 + fee_factor) + min_net_usd) / denom if denom > 0 else cost_ref * 1.015
