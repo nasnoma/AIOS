@@ -172,6 +172,14 @@ def init_spot_engine():
     if not _spot_initialized:
         _spot_initialized = True
         _portfolio.load()
+        if not spot_settings.paper_mode:
+            try:
+                import threading
+                from trading_engine.spot.fifo_reconciler import reconcile as bg_reconcile
+                threading.Thread(target=bg_reconcile, args=(get_spot_exchange(), getattr(spot_settings, 'fee_rate', 0.00075)), daemon=True).start()
+            except Exception:
+                pass
+
 
 
     exchange = get_spot_exchange()
