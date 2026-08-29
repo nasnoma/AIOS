@@ -779,14 +779,13 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
         # ── FIFO Reconciler: single authoritative source of truth from SQLite ledger ──────
         from trading_engine.spot.fifo_reconciler import get_recent_cycles, get_daily_pnl, get_alltime_pnl
 
-        # Default to today's UTC date, or latest trading day if 0
+        # Authoritative metrics for today's UTC calendar day
         today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         daily   = get_daily_pnl(today_str)
-        if daily.get('cycles', 0) == 0:
-            daily = get_daily_pnl('2026-08-28')
 
         alltime = get_alltime_pnl()
         recent  = get_recent_cycles(limit=100)
+
 
 
         fifo_cycles_fmt = []
