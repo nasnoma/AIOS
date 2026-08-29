@@ -338,6 +338,16 @@ class SpotPortfolio:
                 cost = float(v.get('avg_cost_basis') or 0.0)
                 price = float(v.get('last_price') or 0.0)
                 val = float(v.get('value_usd') or (u * price))
+                
+                # Import historical costs reference to prevent display anomalies
+                try:
+                    from trading_engine.spot.runner import ALL_23_HISTORICAL_COSTS
+                    ref_cost = ALL_23_HISTORICAL_COSTS.get(k, 0.0)
+                    if ref_cost > 0:
+                        cost = ref_cost
+                except Exception:
+                    pass
+
                 if cost <= 0.0 and u > 0 and val > 0:
                     cost = val / u
                 pnl = (price - cost) * u
@@ -347,6 +357,15 @@ class SpotPortfolio:
                 cost = float(getattr(v, 'avg_cost_basis', 0.0))
                 price = float(getattr(v, 'last_price', 0.0))
                 val = float(getattr(v, 'value_usd', u * price))
+                
+                try:
+                    from trading_engine.spot.runner import ALL_23_HISTORICAL_COSTS
+                    ref_cost = ALL_23_HISTORICAL_COSTS.get(k, 0.0)
+                    if ref_cost > 0:
+                        cost = ref_cost
+                except Exception:
+                    pass
+
                 if cost <= 0.0 and u > 0 and val > 0:
                     cost = val / u
                 pnl = (price - cost) * u
@@ -390,16 +409,38 @@ class SpotPortfolio:
             self.usdt_available = max(0.0, round(target_equity - total_holdings_val, 2))
             self.save()
 
+        # Authoritative metrics from SQLite FIFO reconciler
+        daily_pnl_val = 0.0
+        daily_gross_val = 0.0
+        fees_today_val = 0.0
+        cycles_today_val = 0
+        try:
+            from trading_engine.spot.fifo_reconciler import get_daily_pnl, get_alltime_pnl
+            today_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
+            d_pnl = get_daily_pnl(today_str)
+            daily_pnl_val = float(d_pnl.get('net_pnl', 0.0) or 0.0)
+            daily_gross_val = float(d_pnl.get('gross_pnl', 0.0) or 0.0)
+            fees_today_val = float(d_pnl.get('fees', 0.0) or 0.0)
+            cycles_today_val = int(d_pnl.get('cycles', 0) or 0)
+            all_pnl = get_alltime_pnl()
+            self.total_realised_pnl = float(all_pnl.get('net_pnl', 0.0) or 0.0)
+        except Exception:
+            daily_pnl_val = float(self.daily_realised_pnl or 0.0)
+            daily_gross_val = float(getattr(self, 'daily_gross_pnl', self.daily_realised_pnl) or 0.0)
+            fees_today_val = float(getattr(self, 'fees_today', 0.0) or 0.0)
+            cycles_today_val = self.cycles_today
+
         return {
             'usdt_available': float(max(0.0, self.usdt_available or 0.0)),
             'usdt_reserved': float(self.usdt_reserved or 0.0),
             'total_realised_pnl': float(self.total_realised_pnl or 0.0),
-            'daily_realised_pnl': float(self.daily_realised_pnl or 0.0),
-            'daily_gross_pnl': float(getattr(self, 'daily_gross_pnl', self.daily_realised_pnl) or 0.0),
-            'gross_pnl_today': float(getattr(self, 'daily_gross_pnl', self.daily_realised_pnl) or 0.0),
-            'fees_today': float(getattr(self, 'fees_today', 0.0) or 0.0),
-            'cycles_today': self.cycles_today,
+            'daily_realised_pnl': daily_pnl_val,
+            'daily_gross_pnl': daily_gross_val,
+            'gross_pnl_today': daily_gross_val,
+            'fees_today': fees_today_val,
+            'cycles_today': cycles_today_val,
             'completed_cycles': getattr(self, 'completed_cycles', [])[-20:],
             'holdings': formatted_holdings
         }
+
 
