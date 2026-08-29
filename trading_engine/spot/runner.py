@@ -972,7 +972,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
     deployed_pct = round((total_deployed / tot_cap_val) * 100, 1) if tot_cap_val > 0 else 0.0
 
     # ── GROUND TRUTH: Real wallet growth = Bybit equity − total deposits ──
-    deposit_base = 7015.83
+    deposit_base = 8015.83
     real_account_growth = round(tot_cap_val - deposit_base, 2)
 
     summary_data['total_deployed_usd'] = total_deployed
