@@ -83,9 +83,9 @@ class SpotPortfolio:
             'completed_cycles': getattr(self, 'completed_cycles', [])[-1000:],
             'last_daily_reset': self.last_daily_reset,
 
-            'holdings': {k: asdict(v) for k, v in self.holdings.items()},
-            'grid_orders': [asdict(o) for o in self.grid_orders],
-            'dca_orders': [asdict(o) for o in self.dca_orders]
+            'holdings': {k: (asdict(v) if hasattr(v, '__dataclass_fields__') else dict(v)) for k, v in self.holdings.items()},
+            'grid_orders': [(asdict(o) if hasattr(o, '__dataclass_fields__') else dict(o)) for o in self.grid_orders],
+            'dca_orders': [(asdict(o) if hasattr(o, '__dataclass_fields__') else dict(o)) for o in self.dca_orders]
         }
 
     def _apply_state_dict(self, data: dict):

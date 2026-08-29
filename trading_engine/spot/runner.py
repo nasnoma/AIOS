@@ -297,6 +297,7 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                     pass
 
         # ── Live Exchange Portfolio Sync ──
+        bal = {}  # safe default; prevents NameError in MNT refill block if fetch_balance raises early
         if not spot_settings.paper_mode and exchange:
             try:
                 bal = exchange.fetch_balance({'accountType': 'UNIFIED'})
@@ -391,7 +392,7 @@ def run_spot_grid_tick() -> Dict[str, Any]:
         all_candidate_symbols = list(spot_settings.asset_list)
         if hasattr(_portfolio, 'holdings') and isinstance(_portfolio.holdings, dict):
             for sym_k, h_v in _portfolio.holdings.items():
-                if sym_k not in all_candidate_symbols and float(getattr(h_v, 'units_held', 0) or 0) > 0.0001:
+                if sym_k not in all_candidate_symbols and float(getattr(h_v, 'units_held', 0) if hasattr(h_v, 'units_held') else (h_v or {}).get('units_held', 0) or 0) > 0.0001:
                     all_candidate_symbols.append(sym_k)
 
         for symbol in all_candidate_symbols:
@@ -608,34 +609,43 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
     # If Live / Demo mode: merge live open orders directly from Bybit
     if not spot_settings.paper_mode and exchange:
         try:
-            open_orders = exchange.fetch_open_orders(params={'category': 'spot'})
-            bybit_levels = {}
             active_symbols = set(spot_settings.asset_list)
-            for o in open_orders:
-                raw_sym = o.get('symbol', '')
-                sym = raw_sym if '/' in raw_sym else (raw_sym.replace('USDT', '/USDT') if 'USDT' in raw_sym else raw_sym)
-                is_sell = (o.get('side') or '').lower() == 'sell'
-                has_holding = sym in _portfolio.holdings and float(getattr(_portfolio.holdings[sym], 'units_held', 0) if hasattr(_portfolio.holdings[sym], 'units_held') else _portfolio.holdings[sym].get('units_held', 0) or 0) > 0.0001
-                
-                # Only cancel rogue BUY orders on decommissioned assets; NEVER cancel resting take-profit SELL orders on legacy holdings!
-                if sym not in active_symbols and not (is_sell and has_holding) and o.get('id'):
-                    try:
-                        exchange.cancel_order(o['id'], symbol=sym)
-                        logger.info(f"🧹 Cleaned up decommissioned buy order {o['id']} on {sym}")
-                    except Exception:
-                        pass
-                    continue
+            legacy_held_symbols = {
+                sym for sym, h in _portfolio.holdings.items()
+                if float(getattr(h, 'units_held', 0) if hasattr(h, 'units_held') else (h or {}).get('units_held', 0) or 0) > 0.0001
+            }
+            visible_symbols = active_symbols | legacy_held_symbols
 
-                if sym not in bybit_levels:
-                    bybit_levels[sym] = []
-                bybit_levels[sym].append({
-                    'price': float(o.get('price', 0)),
-                    'side': o.get('side', '').lower(),
-                    'qty': float(o.get('amount', 0)),
-                    'size_usd': float(o.get('price', 0)) * float(o.get('amount', 0)),
-                    'status': 'open',
-                    'order_id': o.get('id')
-                })
+            bybit_levels = {}
+            for sym in visible_symbols:
+                try:
+                    open_orders = exchange.fetch_open_orders(sym, params={'category': 'spot'})
+                    for o in open_orders:
+                        is_sell = (o.get('side') or '').lower() == 'sell'
+                        has_holding = sym in _portfolio.holdings and float(getattr(_portfolio.holdings[sym], 'units_held', 0) if hasattr(_portfolio.holdings[sym], 'units_held') else _portfolio.holdings[sym].get('units_held', 0) or 0) > 0.0001
+                        
+                        # Only cancel rogue BUY orders on decommissioned assets; NEVER cancel resting take-profit SELL orders on legacy holdings!
+                        if sym not in active_symbols and not (is_sell and has_holding) and o.get('id'):
+                            try:
+                                exchange.cancel_order(o['id'], symbol=sym)
+                                logger.info(f"🧹 Cleaned up decommissioned buy order {o['id']} on {sym}")
+                            except Exception:
+                                pass
+                            continue
+
+                        if sym not in bybit_levels:
+                            bybit_levels[sym] = []
+                        bybit_levels[sym].append({
+                            'price': float(o.get('price', 0)),
+                            'side': o.get('side', '').lower(),
+                            'qty': float(o.get('amount', 0)),
+                            'size_usd': float(o.get('price', 0)) * float(o.get('amount', 0)),
+                            'status': 'open',
+                            'order_id': o.get('id')
+                        })
+                except Exception:
+                    pass
+
             for sym, lvl_list in bybit_levels.items():
                 if sym not in grids:
                     grids[sym] = {'symbol': sym, 'levels': lvl_list, 'open_buys': 0, 'open_sells': 0}
@@ -646,9 +656,14 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
         except Exception as e_orders:
             logger.debug(f"Live open orders fetch in get_spot_status: {e_orders}")
 
-    # Ensure grids contains ONLY active symbols configured in spot_settings.asset_list
+    # Include active symbols PLUS any legacy symbol we still hold coins for (so resting TP sells remain visible on dashboard)
     active_symbols = set(spot_settings.asset_list)
-    grids = {sym: data for sym, data in grids.items() if sym in active_symbols}
+    legacy_held_symbols = {
+        sym for sym, h in _portfolio.holdings.items()
+        if float(getattr(h, 'units_held', 0) if hasattr(h, 'units_held') else (h or {}).get('units_held', 0) or 0) > 0.0001
+    }
+    visible_symbols = active_symbols | legacy_held_symbols
+    grids = {sym: data for sym, data in grids.items() if sym in visible_symbols}
         
     # Fetch recent trade execution history from exchange or portfolio
 
@@ -1006,12 +1021,21 @@ def run_spot_self_healing_and_optimize() -> Dict[str, Any]:
     if not spot_settings.paper_mode and exchange:
         try:
             open_orders = exchange.fetch_open_orders(params={'category': 'spot'})
-            # Step 1a: Cancel open orders on legacy/removed symbols (e.g. ETH, SOL) to free capital
+            # Step 1a: Cancel open BUY orders on legacy/removed symbols to free capital.
+            # NEVER cancel resting take-profit SELL orders on legacy holdings — they represent locked profit.
             active_symbols = set(spot_settings.asset_list)
             for o in open_orders:
                 raw_sym = o.get('symbol', '')
                 sym = raw_sym if '/' in raw_sym else (raw_sym.replace('USDT', '/USDT') if 'USDT' in raw_sym else raw_sym)
                 if sym not in active_symbols and o.get('id'):
+                    is_sell = (o.get('side') or '').lower() == 'sell'
+                    h_obj = _portfolio.holdings.get(sym)
+                    units_held = float(getattr(h_obj, 'units_held', 0) if hasattr(h_obj, 'units_held') else (h_obj or {}).get('units_held', 0) or 0)
+                    has_holding = units_held > 0.0001
+                    # Protect: never cancel a sell order on an asset we still hold
+                    if is_sell and has_holding:
+                        logger.debug(f"🛡️ Self-Healing: Preserving legacy TP sell {o.get('id')} on {sym} (still holding {units_held:.4f} units).")
+                        continue
                     try:
                         exchange.cancel_order(o.get('id'), symbol=sym)
                         logger.info(f"🧹 Self-Healing: Cancelled legacy open order {o.get('id')} on {sym} to free active liquidity.")
