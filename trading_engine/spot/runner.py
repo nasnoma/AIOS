@@ -676,8 +676,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
         if (now_ts - _last_trades_fetch_time > 15.0) or not _cached_raw_trades:
             fetched = []
             try:
-                today_start_ms = int(datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).timestamp() * 1000)
-                bulk = exchange.fetch_my_trades(limit=100, params={'category': 'spot', 'startTime': today_start_ms})
+                bulk = exchange.fetch_my_trades(limit=100, params={'category': 'spot'})
                 fetched.extend(bulk)
             except Exception:
                 pass
