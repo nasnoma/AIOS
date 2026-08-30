@@ -388,10 +388,12 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 logger.debug(f"Fetch open orders for reserve check: {e_open}")
         _portfolio.total_open_buy_usd = total_open_buy_usd
 
-        # Iterate through all configured Top 12 assets AND any legacy holding assets with non-zero units
+        # Iterate through all configured Top 12 assets AND any legacy holding assets with non-zero units (excluding MNT fee buffer)
         all_candidate_symbols = list(spot_settings.asset_list)
         if hasattr(_portfolio, 'holdings') and isinstance(_portfolio.holdings, dict):
             for sym_k, h_v in _portfolio.holdings.items():
+                if sym_k in ['MNT/USDT', 'MNT']:
+                    continue
                 if sym_k not in all_candidate_symbols and float(getattr(h_v, 'units_held', 0) if hasattr(h_v, 'units_held') else (h_v or {}).get('units_held', 0) or 0) > 0.0001:
                     all_candidate_symbols.append(sym_k)
 
