@@ -180,8 +180,9 @@ def sync_fills(exchange) -> int:
     row = db.execute("SELECT last_ts_ms FROM sync_state WHERE symbol = '_all'").fetchone()
     raw_ts = int(row["last_ts_ms"]) if row else 0
 
-    if raw_ts < 1_000_000_000_000:
-        # First run — start from Aug 1, 2026 (covers all bot history from inception)
+    total_fills = db.execute("SELECT COUNT(*) FROM fills").fetchone()[0]
+    if raw_ts < 1_000_000_000_000 or total_fills < 300:
+        # Guarantee full backfill from Aug 1, 2026 if DB is fresh or has incomplete fill history
         since_ms = 1785542400000
     else:
         since_ms = max(1785542400000, raw_ts - 30_000)   # 30-second overlap
