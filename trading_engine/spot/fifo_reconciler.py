@@ -176,16 +176,15 @@ def sync_fills(exchange) -> int:
     now_iso = datetime.now(timezone.utc).isoformat()
     now_ms  = int(datetime.now(timezone.utc).timestamp() * 1000)
 
-    # Single global watermark stored under symbol='_all'
-    row = db.execute("SELECT last_ts_ms FROM sync_state WHERE symbol = '_all'").fetchone()
-    raw_ts = int(row["last_ts_ms"]) if row else 0
+    # Find the actual latest fill timestamp in the SQLite database
+    max_fill_row = db.execute("SELECT MAX(ts_ms) FROM fills").fetchone()
+    max_fill_ts  = int(max_fill_row[0]) if (max_fill_row and max_fill_row[0]) else 0
 
-    total_fills = db.execute("SELECT COUNT(*) FROM fills").fetchone()[0]
-    if raw_ts < 1_000_000_000_000 or total_fills < 300:
-        # Guarantee full backfill from Aug 1, 2026 if DB is fresh or has incomplete fill history
+    if max_fill_ts < 1_000_000_000_000:
+        # First run — start from Aug 1, 2026 (covers all bot history from inception)
         since_ms = 1785542400000
     else:
-        since_ms = max(1785542400000, raw_ts - 30_000)   # 30-second overlap
+        since_ms = max(1785542400000, max_fill_ts - 300_000)   # 5-minute overlap before latest fill
 
 
     WINDOW = 5 * 24 * 60 * 60 * 1000  # 5 days (Bybit rejects windows >= 7 days)
