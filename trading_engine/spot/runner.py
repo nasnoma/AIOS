@@ -694,6 +694,13 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
                         deduped.append(t)
                 _cached_raw_trades = deduped
                 _last_trades_fetch_time = now_ts
+                try:
+                    import threading
+                    from trading_engine.spot.fifo_reconciler import reconcile as bg_fifo_reconcile
+                    fee_cfg = getattr(spot_settings, 'fee_rate', 0.00075)
+                    threading.Thread(target=bg_fifo_reconcile, args=(exchange, fee_cfg), daemon=True).start()
+                except Exception:
+                    pass
 
         trades = list(_cached_raw_trades)
 
