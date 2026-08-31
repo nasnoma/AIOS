@@ -21,7 +21,8 @@ trading_engine/backtest_results/
 trading_engine/live_state.json
 trading_engine/paper_state.json
 trading_engine/.env
-/data/
+/data/*
+!/data/spot_trades.db
 
 # Polymarket / Bybit bot ignores
 polymarket_bot/.env
