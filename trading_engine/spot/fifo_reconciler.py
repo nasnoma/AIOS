@@ -112,31 +112,33 @@ def _conn() -> sqlite3.Connection:
 
 def _fetch_fills_window(exchange, since_ms: int, until_ms: int) -> List[Dict]:
     """
-    Fetch all fills between since_ms and until_ms using forward pagination.
-    Bybit global fetch_my_trades (no symbol) supports startTime + limit=100.
+    Fetch all fills between since_ms and until_ms across all tracked symbols.
+    Querying per-symbol guarantees no symbols are dropped by Bybit's global 100-limit.
     """
     results = []
-    cursor  = since_ms
-    seen    = set()
-    while cursor < until_ms:
-        try:
-            batch = exchange.fetch_my_trades(
-                params={"category": "spot", "startTime": cursor,
-                        "endTime": until_ms, "limit": 100}
-            )
-        except Exception as e:
-            logger.warning(f"[FIFO] fetch window {cursor}-{until_ms}: {e}")
-            break
-        if not batch:
-            break
-        new = [t for t in batch if t["id"] not in seen]
-        if not new:
-            break
-        results.extend(new)
-        seen.update(t["id"] for t in new)
-        if len(batch) < 100:
-            break
-        cursor = batch[-1]["timestamp"] + 1
+    seen = set()
+    for sym in ALL_SYMBOLS:
+        cursor = since_ms
+        while cursor < until_ms:
+            try:
+                batch = exchange.fetch_my_trades(
+                    sym,
+                    params={"category": "spot", "startTime": cursor,
+                            "endTime": until_ms, "limit": 100}
+                )
+            except Exception as e:
+                logger.debug(f"[FIFO] fetch window {sym} {cursor}-{until_ms}: {e}")
+                break
+            if not batch:
+                break
+            new = [t for t in batch if t["id"] not in seen]
+            if not new:
+                break
+            results.extend(new)
+            seen.update(t["id"] for t in new)
+            if len(batch) < 100:
+                break
+            cursor = batch[-1]["timestamp"] + 1
     return results
 
 
