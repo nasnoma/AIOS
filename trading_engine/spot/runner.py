@@ -14,6 +14,7 @@ import ccxt
 from datetime import datetime, timezone
 from loguru import logger
 from typing import Dict, Any
+from trading_engine.spot.spot_portfolio import AssetHolding
 
 ALL_23_HISTORICAL_COSTS = {
     'NEAR/USDT': 1.9047, 'TIA/USDT': 0.3565, 'SUI/USDT': 0.7709, 'FET/USDT': 0.1640,
