@@ -83,9 +83,17 @@ class SpotPortfolio:
             'completed_cycles': getattr(self, 'completed_cycles', [])[-1000:],
             'last_daily_reset': self.last_daily_reset,
 
-            'holdings': {k: (asdict(v) if hasattr(v, '__dataclass_fields__') else dict(v)) for k, v in self.holdings.items()},
-            'grid_orders': [(asdict(o) if hasattr(o, '__dataclass_fields__') else dict(o)) for o in self.grid_orders],
-            'dca_orders': [(asdict(o) if hasattr(o, '__dataclass_fields__') else dict(o)) for o in self.dca_orders]
+            'holdings': {
+                k: {
+                    'symbol': getattr(v, 'symbol', k) if hasattr(v, 'symbol') else (v.get('symbol', k) if isinstance(v, dict) else k),
+                    'units_held': float(getattr(v, 'units_held', 0.0) if hasattr(v, 'units_held') else (v.get('units_held', 0.0) if isinstance(v, dict) else 0.0)),
+                    'avg_cost_basis': float(getattr(v, 'avg_cost_basis', 0.0) if hasattr(v, 'avg_cost_basis') else (v.get('avg_cost_basis', 0.0) if isinstance(v, dict) else 0.0)),
+                    'base_hold_units': float(getattr(v, 'base_hold_units', 0.0) if hasattr(v, 'base_hold_units') else (v.get('base_hold_units', 0.0) if isinstance(v, dict) else 0.0)),
+                    'last_price': float(getattr(v, 'last_price', 0.0) if hasattr(v, 'last_price') else (v.get('last_price', 0.0) if isinstance(v, dict) else 0.0))
+                } for k, v in self.holdings.items()
+            },
+            'grid_orders': [(asdict(o) if hasattr(o, '__dataclass_fields__') else (dict(o) if isinstance(o, dict) else {})) for o in self.grid_orders],
+            'dca_orders': [(asdict(o) if hasattr(o, '__dataclass_fields__') else (dict(o) if isinstance(o, dict) else {})) for o in self.dca_orders]
         }
 
     def _apply_state_dict(self, data: dict):
@@ -97,10 +105,21 @@ class SpotPortfolio:
         self.consecutive_wins = data.get('consecutive_wins', 0)
         self.consecutive_losses = data.get('consecutive_losses', 0)
         self.completed_cycles = data.get('completed_cycles', [])
-        self.last_daily_reset = data.get('last_daily_reset', datetime.datetime.now(datetime.timezone.utc).date().isoformat())
-        self.holdings = {k: AssetHolding(**v) for k, v in data.get('holdings', {}).items()}
-        self.grid_orders = [GridOrder(**o) for o in data.get('grid_orders', [])]
-        self.dca_orders = [GridOrder(**o) for o in data.get('dca_orders', [])]
+        clean_holdings = {}
+        for k, v in data.get('holdings', {}).items():
+            if isinstance(v, dict):
+                clean_holdings[k] = AssetHolding(
+                    symbol=v.get('symbol', k),
+                    units_held=float(v.get('units_held', 0.0) or 0.0),
+                    avg_cost_basis=float(v.get('avg_cost_basis', 0.0) or 0.0),
+                    base_hold_units=float(v.get('base_hold_units', 0.0) or 0.0),
+                    last_price=float(v.get('last_price', 0.0) or 0.0)
+                )
+            elif isinstance(v, AssetHolding):
+                clean_holdings[k] = v
+        self.holdings = clean_holdings
+        self.grid_orders = [GridOrder(**o) if isinstance(o, dict) else o for o in data.get('grid_orders', [])]
+        self.dca_orders = [GridOrder(**o) if isinstance(o, dict) else o for o in data.get('dca_orders', [])]
 
 
 
@@ -144,29 +163,44 @@ class SpotPortfolio:
     def get_position(self, symbol_or_base: str) -> float:
         """Return units held for a symbol (e.g. 'BTC/USDT') or base asset (e.g. 'BTC')."""
         with self._lock:
-            if symbol_or_base in self.holdings:
-                return float(self.holdings[symbol_or_base].units_held)
-            clean_base = symbol_or_base.split('/')[0]
-            for sym, h in self.holdings.items():
-                if sym.split('/')[0] == clean_base:
-                    return float(h.units_held)
+            h = self.holdings.get(symbol_or_base)
+            if h is None:
+                clean_base = symbol_or_base.split('/')[0]
+                for sym, val in self.holdings.items():
+                    if sym.split('/')[0] == clean_base:
+                        h = val
+                        break
+            if h is not None:
+                return float(getattr(h, 'units_held', 0) if hasattr(h, 'units_held') else (h.get('units_held', 0) if isinstance(h, dict) else 0) or 0)
         return 0.0
 
     def get_holding(self, symbol_or_base: str) -> Optional[AssetHolding]:
         """Return AssetHolding object for a symbol or base asset."""
         with self._lock:
-            if symbol_or_base in self.holdings:
-                return self.holdings[symbol_or_base]
-            clean_base = symbol_or_base.split('/')[0]
-            for sym, h in self.holdings.items():
-                if sym.split('/')[0] == clean_base:
-                    return h
-        return None
+            h = self.holdings.get(symbol_or_base)
+            if h is None:
+                clean_base = symbol_or_base.split('/')[0]
+                for sym, val in self.holdings.items():
+                    if sym.split('/')[0] == clean_base:
+                        h = val
+                        break
+            if h is not None and isinstance(h, dict):
+                return AssetHolding(
+                    symbol=h.get('symbol', symbol_or_base),
+                    units_held=float(h.get('units_held', 0.0) or 0.0),
+                    avg_cost_basis=float(h.get('avg_cost_basis', 0.0) or 0.0),
+                    base_hold_units=float(h.get('base_hold_units', 0.0) or 0.0),
+                    last_price=float(h.get('last_price', 0.0) or 0.0)
+                )
+            return h
 
     def update_price(self, symbol: str, price: float):
-
         if symbol in self.holdings:
-            self.holdings[symbol].last_price = price
+            h = self.holdings[symbol]
+            if hasattr(h, 'last_price'):
+                h.last_price = price
+            elif isinstance(h, dict):
+                h['last_price'] = price
             
     def record_buy(self, symbol: str, qty: float, price: float, size_usd: float, order_id: str = '', is_dca: bool = False):
         with self._lock:

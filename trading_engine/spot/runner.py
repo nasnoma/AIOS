@@ -252,7 +252,11 @@ def run_spot_regime_check():
     # Re-evaluate Hot-Asset Capital Rotation based on fresh regime scores
     try:
         allocations = _get_dynamic_hot_asset_allocations(spot_settings.asset_list, _regime_detectors)
-        total_eq = _portfolio.usdt_available + sum(h.units_held * h.last_price for h in _portfolio.holdings.values())
+        total_eq = _portfolio.usdt_available + sum(
+            (float(getattr(h, 'units_held', 0) if hasattr(h, 'units_held') else (h or {}).get('units_held', 0) or 0)) *
+            (float(getattr(h, 'last_price', 0) if hasattr(h, 'last_price') else (h or {}).get('last_price', 0) or 0))
+            for h in _portfolio.holdings.values()
+        )
         active_cap = total_eq * spot_settings.total_capital_pct
         for symbol, engine in _grid_engines.items():
             alloc_pct = allocations.get(symbol, 0.0833)
@@ -930,7 +934,16 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
                     }
             if live_holdings:
                 summary_data['holdings'] = live_holdings
-                _portfolio.holdings = {k: v for k, v in live_holdings.items()}
+                _portfolio.holdings = {
+                    k: AssetHolding(
+                        symbol=v.get('symbol', k),
+                        units_held=float(v.get('units_held', 0.0) or 0.0),
+                        avg_cost_basis=float(v.get('avg_cost_basis', 0.0) or 0.0),
+                        base_hold_units=float(v.get('base_hold_units', 0.0) or 0.0),
+                        last_price=float(v.get('last_price', 0.0) or 0.0)
+                    ) if isinstance(v, dict) else v
+                    for k, v in live_holdings.items()
+                }
                 if official_tot_equity <= 0:
                     summary_data['total_unified_equity'] = usdt_tot + sum(h['value_usd'] for h in live_holdings.values())
         except Exception as e_bal:
