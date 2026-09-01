@@ -204,6 +204,14 @@ class GridEngine:
             for i in range(buy_count):
                 dip_pct, level_boost = tier_configs[i]
                 
+                # If BTC is in defensive BEAR mode, widen altcoin dip tiers
+                try:
+                    from trading_engine.spot.btc_master_filter import btc_master_filter
+                    if self.symbol != 'BTC/USDT':
+                        dip_pct *= btc_master_filter.get_spacing_multiplier()
+                except Exception:
+                    pass
+
                 # If ATR is unusually elevated, scale Tier 2 & Tier 3 dynamically
                 if atr > 0 and current_price > 0 and i >= 2:
                     atr_factor = max(1.0, min(1.4, (atr / current_price) / 0.015))
