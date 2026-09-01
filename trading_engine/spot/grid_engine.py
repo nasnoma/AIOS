@@ -368,6 +368,16 @@ class GridEngine:
                                 logger.debug(f"[{self.symbol}] Skipping sub-$5 sell order (${qty_val * price_val:.2f} < ${min_cost:.2f}) until consolidated.")
                                 continue
 
+                        if level.side == 'buy':
+                            try:
+                                from trading_engine.spot.btc_master_filter import btc_master_filter
+                                is_btc_safe, btc_reason = btc_master_filter.is_safe_for_alt_buys(self.symbol)
+                                if not is_btc_safe:
+                                    logger.debug(f"[{self.symbol}] 🛑 [BTC GUARD] Pausing buy order: {btc_reason}")
+                                    continue
+                            except Exception as e_btc:
+                                logger.debug(f"BTC filter check error: {e_btc}")
+
                         if level.side == 'buy' and not self.paper_mode and exchange:
                             res_floor = float(getattr(portfolio, 'usdt_reserved', 0.0) or 0.0)
                             avail_usdt = float(getattr(portfolio, 'usdt_available', 0.0) or 0.0)

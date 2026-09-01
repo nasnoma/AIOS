@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from loguru import logger
 from typing import Dict, Any
 from trading_engine.spot.spot_portfolio import AssetHolding
+from trading_engine.spot.btc_master_filter import btc_master_filter
 
 ALL_23_HISTORICAL_COSTS = {
     'NEAR/USDT': 1.9047, 'TIA/USDT': 0.3565, 'SUI/USDT': 0.7709, 'FET/USDT': 0.1640,
@@ -234,6 +235,13 @@ def run_spot_regime_check():
     """Run regime detection for all symbols and dynamically rebalance capital to Top 2 Movers."""
     global _regime_detectors, _grid_engines
     exchange = get_spot_exchange()
+
+    # 1. Update BTC Macro Master Filter
+    try:
+        btc_master_filter.update(exchange)
+    except Exception as e_btc_r:
+        logger.debug(f"BTC master filter in regime check: {e_btc_r}")
+
     for symbol in spot_settings.asset_list:
         detector = _regime_detectors.get(symbol)
         if not detector:
@@ -290,6 +298,11 @@ def run_spot_grid_tick() -> Dict[str, Any]:
         
         # ── Bulk Ticker Fetch (Real-world Mainnet Prices) ──
         pub_exchange = get_public_exchange()
+        try:
+            btc_master_filter.update(pub_exchange)
+        except Exception as e_btc_t:
+            logger.debug(f"BTC master filter tick update: {e_btc_t}")
+
         tickers = {}
         try:
             tickers = pub_exchange.fetch_tickers(asset_list)
@@ -1019,6 +1032,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
         "portfolio": summary_data,
         "regimes": regimes,
         "grids": grids,
+        "btc_guard": btc_master_filter.summary(),
         "recent_trades": recent_trades[:50]
     }
 
