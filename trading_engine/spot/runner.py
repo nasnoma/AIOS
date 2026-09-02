@@ -450,8 +450,9 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 open_buys = [l for l in engine.grid_levels if l.status in ['open', 'pending'] and l.side == 'buy']
                 open_sells = [l for l in engine.grid_levels if l.status in ['open', 'pending'] and l.side == 'sell']
                 max_buy_p = max((l.price for l in open_buys), default=0.0)
-                has_no_buys = not open_buys and len(engine.grid_levels) > 0
-                is_stale = bool(has_no_buys or (max_buy_p > 0 and (max_buy_p > price * 1.015 or max_buy_p < price * 0.985)))
+                # A grid is only stale if it actually has active buy orders that have drifted >1.5% from current price.
+                # When buy orders are paused (e.g. cash reserve floor or sell-only holdings), it is NOT stale.
+                is_stale = bool(max_buy_p > 0 and (max_buy_p > price * 1.015 or max_buy_p < price * 0.985))
                 force_reset = getattr(engine, '_last_rebuild_time', 0) == 0
 
                 # Also check if we hold coins for this asset but have 0 open sell orders (critical for profit taking)
