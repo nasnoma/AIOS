@@ -250,7 +250,7 @@ class SpotGridSettings(BaseSettings):
 
     # ── Capital ────────────────────────────────────────────────
     total_capital_pct: float = 0.95   # 95% active deployment (temporarily unlocking capital for high-velocity order staging)
-    usdt_hard_reserve_pct: float = 0.05 # 5% minimum operational fee cushion (~$350 kept for buffer)
+    usdt_hard_reserve_pct: float = 0.001 # Minimal operational fee buffer (~$10 kept for gas/fees)
 
     # ── Asset Split (Performance-Weighted by 30-Day Volatility & Cycle Potential) ──────
     btc_allocation_pct: float = 0.00   # 0% → BTC (low volatility, reallocated to top alts)

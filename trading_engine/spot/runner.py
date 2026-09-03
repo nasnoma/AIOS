@@ -201,7 +201,7 @@ def init_spot_engine():
             
     spot_active_capital = account_size * spot_settings.total_capital_pct
     expected_free = spot_active_capital
-    expected_res = account_size * spot_settings.usdt_hard_reserve_pct
+    expected_res = min(10.0, max(2.0, account_size * spot_settings.usdt_hard_reserve_pct))
     
     _portfolio.usdt_reserved = expected_res
     if _portfolio.usdt_available == 0.0:
@@ -325,7 +325,7 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 info_list = bal.get('info', {}).get('result', {}).get('list', [])
                 tot_equity = float(info_list[0].get('totalEquity', 0)) if info_list else 0.0
                 if tot_equity > 0:
-                    _portfolio.usdt_reserved = tot_equity * spot_settings.usdt_hard_reserve_pct
+                    _portfolio.usdt_reserved = min(10.0, max(2.0, _portfolio.usdt_available * 0.02))
 
                 tot = bal.get('total', {})
                 active_symbols = set(spot_settings.asset_list)
