@@ -871,7 +871,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
     # If Live / Demo mode: fetch live exchange spot balances for holdings and total capital
     if not spot_settings.paper_mode and exchange:
         try:
-            bal = exchange.fetch_balance()
+            bal = exchange.fetch_balance({'accountType': 'UNIFIED'})
             tot = bal.get('total', {})
             usdt_tot = float(tot.get('USDT', 0) or 0)
             usdt_free_val = float(bal.get('free', {}).get('USDT', 0) or 0)
@@ -882,8 +882,8 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
             if info_list and isinstance(info_list, list) and len(info_list) > 0:
                 official_tot_equity = float(info_list[0].get('totalEquity', 0) or 0)
 
-            if usdt_tot > 0:
-                summary_data['usdt_available'] = usdt_tot
+            if usdt_tot > 0 or official_tot_equity > 0:
+                summary_data['usdt_available'] = usdt_tot if usdt_tot > 0 else _portfolio.usdt_available
                 summary_data['usdt_free'] = usdt_free_val
                 summary_data['usdt_in_orders'] = usdt_used_val
                 summary_data['total_capital'] = official_tot_equity if official_tot_equity > 0 else usdt_tot
