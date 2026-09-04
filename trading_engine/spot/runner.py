@@ -228,6 +228,13 @@ def init_spot_engine():
                 _grid_engines[symbol].allocated_usd = asset_usd
                 _grid_engines[symbol]._last_rebuild_time = 0.0  # Allocation changed, force rebuild
             
+    # Strictly zero-out buy allocations for legacy holding assets (Sell-Only Mode)
+    for sym_eng_k, eng_obj in _grid_engines.items():
+        if sym_eng_k not in spot_settings.asset_list:
+            eng_obj.allocated_usd = 0.0
+            if hasattr(eng_obj, 'params') and eng_obj.params:
+                eng_obj.params.buy_levels = 0
+
     logger.info(f"✅ Spot Engine Initialised ({len(active_symbols)} Assets, Paper Mode: {spot_settings.paper_mode}, Active Capital: ${spot_active_capital:,.2f})")
 
 
@@ -426,6 +433,12 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                     fee_rate=spot_settings.fee_rate
                 )
                 _grid_engines[symbol] = engine
+
+            # Strictly lock legacy holding assets outside the active 12-asset watchlist into Sell-Only Mode
+            if symbol not in spot_settings.asset_list:
+                engine.allocated_usd = 0.0
+                if hasattr(engine, 'params') and engine.params:
+                    engine.params.buy_levels = 0
                 
             try:
                 ticker = tickers.get(symbol)
