@@ -271,6 +271,9 @@ class GridEngine:
 
         if base_qty_held > 0.000001:
             total_held_usd = base_qty_held * current_price
+            if total_held_usd < 5.0:
+                # Sub-$5 dust cannot be placed as a Bybit limit order
+                return
             # Dynamic Tier Consolidation:
             # If total holding is < $60 USD, use 1 SINGLE order (e.g. all 287 ALGO in 1 order) to avoid tiny micro-orders
             # If total holding is $60 - $120 USD, use 2 orders (~$50 each)

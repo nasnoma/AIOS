@@ -439,6 +439,8 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 engine.allocated_usd = 0.0
                 if hasattr(engine, 'params') and engine.params:
                     engine.params.buy_levels = 0
+                if any(lvl.side == 'buy' for lvl in engine.grid_levels):
+                    engine.grid_levels = [lvl for lvl in engine.grid_levels if lvl.side == 'sell']
                 
             try:
                 ticker = tickers.get(symbol)
@@ -470,20 +472,35 @@ def run_spot_grid_tick() -> Dict[str, Any]:
 
                 # Also check if we hold coins for this asset but have 0 open sell orders (critical for profit taking)
                 holding_qty = _portfolio.get_position(symbol) if hasattr(_portfolio, 'get_position') else 0.0
-                missing_sells = bool(holding_qty > 0.000001 and len(open_sells) == 0)
+                holding_val_usd = holding_qty * price
+                # Only require sell orders if holding value is >= $5.00 (Bybit minimum limit order notional)
+                missing_sells = bool(holding_val_usd >= 5.0 and len(open_sells) == 0)
 
                 # Cost basis safety & high-velocity audit: detect if resting sells are below cost or excessively wide
                 h_obj = _portfolio.get_holding(symbol) if hasattr(_portfolio, 'get_holding') else None
                 h_cost = float(getattr(h_obj, 'avg_cost_basis', 0) or 0) if h_obj else 0.0
                 invalid_sells = False
                 if h_cost > 0 and open_sells:
-                    min_sell_p = min((l.price for l in open_sells), default=0.0)
-                    # Below cost check (loss protection) or excessively wide Tier 1 check (high-velocity optimization)
-                    if any(l.price < (h_cost * 1.008) for l in open_sells) or (min_sell_p > max(h_cost * 1.025, price * 1.025)):
+                    fee_factor = 0.0010
+                    # Loss protection: detect if any resting sell order would yield < $0.40 net profit after fees
+                    has_loss_sells = any(
+                        (l.price * l.qty * (1.0 - fee_factor)) - (h_cost * l.qty * (1.0 + fee_factor)) < 0.40
+                        for l in open_sells
+                    )
+                    if has_loss_sells:
                         invalid_sells = True
-                        logger.info(f"🛡️ Re-aligning sell orders for {symbol} to High-Velocity Rapid-Pulse geometry (Cost: ${h_cost:.4f}, Live: ${price:.4f})...")
-
-
+                        logger.info(f"🛡️ Re-aligning below-cost sell orders for {symbol} to guaranteed profit geometry (Cost: ${h_cost:.4f}, Live: ${price:.4f})...")
+                    elif symbol in spot_settings.asset_list and price > (h_cost * 1.02):
+                        # For active watchlist assets in profit: tighten if existing sells are excessively wide (>3% above market)
+                        min_sell_p = min((l.price for l in open_sells), default=0.0)
+                        if min_sell_p > (price * 1.03):
+                            # Verify that tightening to price * 1.008 still guarantees >= $0.50 net profit
+                            test_qty = open_sells[0].qty if open_sells else 0.0
+                            if test_qty > 0:
+                                net_tight = ((price * 1.008) * test_qty * (1.0 - fee_factor)) - (h_cost * test_qty * (1.0 + fee_factor))
+                                if net_tight >= 0.50:
+                                    invalid_sells = True
+                                    logger.info(f"⚡ Tightening wide take-profit targets for {symbol} (Live: ${price:.4f} > Cost: ${h_cost:.4f})...")
 
                 if not engine.grid_levels or is_stale or force_reset or missing_sells or invalid_sells:
                     if is_stale:
