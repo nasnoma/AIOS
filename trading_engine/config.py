@@ -244,8 +244,8 @@ class SpotGridSettings(BaseSettings):
     enabled: bool = True
     paper_mode: bool = False          # False = Live Real-Money Trading with Bybit Spot Limit Orders
 
-    # Top 12 Screened High-Velocity Halal Spot Assets on Bybit
-    assets: str = "INJ/USDT,FET/USDT,NEAR/USDT,SUI/USDT,ARKM/USDT,TIA/USDT,ARB/USDT,OP/USDT,APT/USDT,AVAX/USDT,SEI/USDT,SOL/USDT"
+    # Screened High-Velocity Halal Spot Assets on Bybit
+    assets: str = "FET/USDT,NEAR/USDT,SUI/USDT,ARKM/USDT,TIA/USDT,ARB/USDT,OP/USDT,APT/USDT,AVAX/USDT,SEI/USDT,SOL/USDT"
 
 
     # ── Capital ────────────────────────────────────────────────
