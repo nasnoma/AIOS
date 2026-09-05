@@ -479,6 +479,13 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 # Cost basis safety & high-velocity audit: detect if resting sells are below cost or excessively wide
                 h_obj = _portfolio.get_holding(symbol) if hasattr(_portfolio, 'get_holding') else None
                 h_cost = float(getattr(h_obj, 'avg_cost_basis', 0) or 0) if h_obj else 0.0
+                try:
+                    from trading_engine.spot.fifo_reconciler import get_fifo_cost_basis
+                    fb = get_fifo_cost_basis(symbol)
+                    if fb.get('avg_cost', 0) > 0:
+                        h_cost = max(h_cost, float(fb['avg_cost']))
+                except Exception:
+                    pass
                 invalid_sells = False
                 if h_cost > 0 and open_sells:
                     fee_factor = 0.0010
@@ -503,10 +510,10 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                                     logger.info(f"⚡ Tightening wide take-profit targets for {symbol} (Live: ${price:.4f} > Cost: ${h_cost:.4f})...")
                     elif symbol not in spot_settings.asset_list:
                         # For legacy holdings outside Top 12: re-align once to the new Quick-Exit geometry if existing orders
-                        # are wider than +1.0% above cost or live market price, so they exit rapidly to free capital.
+                        # are wider than +3.5% above FIFO cost or live market price, so they exit rapidly to free capital without churn.
                         min_sell_p = min((l.price for l in open_sells), default=0.0)
                         target_quick_exit = max(h_cost * 1.0035, price * 1.0035)
-                        if min_sell_p > (target_quick_exit * 1.010):
+                        if min_sell_p > (target_quick_exit * 1.035):
                             invalid_sells = True
                             logger.info(f"🚪 Re-aligning legacy holding {symbol} to Quick-Exit target (Current: ${min_sell_p:.4f} -> Target ~${target_quick_exit:.4f})...")
 
