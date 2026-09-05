@@ -401,10 +401,13 @@ def run_spot_grid_tick() -> Dict[str, Any]:
 
         # ── Calculate Global Open Buy Commitments Across All Assets ──
         total_open_buy_usd = 0.0
+        open_orders_by_id = {}
         if not spot_settings.paper_mode and exchange:
             try:
                 open_orders_all = exchange.fetch_open_orders(params={'category': 'spot'})
                 for o in open_orders_all:
+                    if o.get('id'):
+                        open_orders_by_id[str(o['id'])] = o
                     if (o.get('side') or '').lower() == 'buy':
                         p_val = float(o.get('price', 0) or 0)
                         a_val = float(o.get('amount', 0) or 0)
@@ -413,14 +416,25 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 logger.debug(f"Fetch open orders for reserve check: {e_open}")
         _portfolio.total_open_buy_usd = total_open_buy_usd
 
-        # Iterate through all configured Top 12 assets AND any legacy holding assets with non-zero units (excluding MNT fee buffer)
+        # Iterate through all configured Top 12 assets AND any legacy holding assets with tradable units (>= $5 Bybit min notional, excluding MNT fee buffer)
         all_candidate_symbols = list(spot_settings.asset_list)
         if hasattr(_portfolio, 'holdings') and isinstance(_portfolio.holdings, dict):
             for sym_k, h_v in _portfolio.holdings.items():
                 if sym_k in ['MNT/USDT', 'MNT']:
                     continue
-                if sym_k not in all_candidate_symbols and float(getattr(h_v, 'units_held', 0) if hasattr(h_v, 'units_held') else (h_v or {}).get('units_held', 0) or 0) > 0.0001:
-                    all_candidate_symbols.append(sym_k)
+                if sym_k not in all_candidate_symbols:
+                    u_held = float(getattr(h_v, 'units_held', 0) if hasattr(h_v, 'units_held') else (h_v or {}).get('units_held', 0) or 0)
+                    p_ref = float(getattr(h_v, 'last_price', 0) if hasattr(h_v, 'last_price') else (h_v or {}).get('last_price', 0) or 0)
+                    if p_ref <= 0 and sym_k in ALL_23_HISTORICAL_COSTS:
+                        p_ref = ALL_23_HISTORICAL_COSTS[sym_k]
+                    # Only manage legacy assets that have at least $5.00 notional (Bybit minimum limit order size)
+                    if (u_held * p_ref) >= 5.0:
+                        all_candidate_symbols.append(sym_k)
+
+        # Prune any in-memory engines for legacy symbols that are no longer candidates (e.g. sub-$5 dust)
+        for sym_eng in list(_grid_engines.keys()):
+            if sym_eng not in all_candidate_symbols:
+                del _grid_engines[sym_eng]
 
         for symbol in all_candidate_symbols:
             engine = _grid_engines.get(symbol)
@@ -557,7 +571,7 @@ def run_spot_grid_tick() -> Dict[str, Any]:
 
 
                 # Process tick (checks crossable fills & places replacement orders)
-                events = engine.tick(price, _portfolio, exchange=exchange)
+                events = engine.tick(price, _portfolio, exchange=exchange, open_orders_by_id=open_orders_by_id)
                 fill_events.extend(events)
                 
                 if events:
@@ -704,10 +718,17 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
     if not spot_settings.paper_mode and exchange:
         try:
             active_symbols = set(spot_settings.asset_list)
-            legacy_held_symbols = {
-                sym for sym, h in _portfolio.holdings.items()
-                if float(getattr(h, 'units_held', 0) if hasattr(h, 'units_held') else (h or {}).get('units_held', 0) or 0) > 0.0001
-            }
+            legacy_held_symbols = set()
+            for sym, h in _portfolio.holdings.items():
+                if sym in ['MNT/USDT', 'MNT']:
+                    continue
+                u_held = float(getattr(h, 'units_held', 0) if hasattr(h, 'units_held') else (h or {}).get('units_held', 0) or 0)
+                p_ref = float(getattr(h, 'last_price', 0) if hasattr(h, 'last_price') else (h or {}).get('last_price', 0) or 0)
+                if p_ref <= 0 and sym in ALL_23_HISTORICAL_COSTS:
+                    p_ref = ALL_23_HISTORICAL_COSTS[sym]
+                if (u_held * p_ref) >= 5.0:
+                    legacy_held_symbols.add(sym)
+
             visible_symbols = active_symbols | legacy_held_symbols
 
             bybit_levels = {}
@@ -716,7 +737,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
                     open_orders = exchange.fetch_open_orders(sym, params={'category': 'spot'})
                     for o in open_orders:
                         is_sell = (o.get('side') or '').lower() == 'sell'
-                        has_holding = sym in _portfolio.holdings and float(getattr(_portfolio.holdings[sym], 'units_held', 0) if hasattr(_portfolio.holdings[sym], 'units_held') else _portfolio.holdings[sym].get('units_held', 0) or 0) > 0.0001
+                        has_holding = sym in legacy_held_symbols
                         
                         # Only cancel rogue BUY orders on decommissioned assets; NEVER cancel resting take-profit SELL orders on legacy holdings!
                         if sym not in active_symbols and not (is_sell and has_holding) and o.get('id'):
@@ -1141,10 +1162,13 @@ def run_spot_self_healing_and_optimize() -> Dict[str, Any]:
                     is_sell = (o.get('side') or '').lower() == 'sell'
                     h_obj = _portfolio.holdings.get(sym)
                     units_held = float(getattr(h_obj, 'units_held', 0) if hasattr(h_obj, 'units_held') else (h_obj or {}).get('units_held', 0) or 0)
-                    has_holding = units_held > 0.0001
-                    # Protect: never cancel a sell order on an asset we still hold
+                    p_ref = float(getattr(h_obj, 'last_price', 0) if hasattr(h_obj, 'last_price') else (h_obj or {}).get('last_price', 0) or 0)
+                    if p_ref <= 0 and sym in ALL_23_HISTORICAL_COSTS:
+                        p_ref = ALL_23_HISTORICAL_COSTS[sym]
+                    has_holding = (units_held * p_ref) >= 5.0
+                    # Protect: never cancel a sell order on an asset we still hold with >= $5 notional
                     if is_sell and has_holding:
-                        logger.debug(f"🛡️ Self-Healing: Preserving legacy TP sell {o.get('id')} on {sym} (still holding {units_held:.4f} units).")
+                        logger.debug(f"🛡️ Self-Healing: Preserving legacy TP sell {o.get('id')} on {sym} (still holding {units_held:.4f} units, val=${units_held*p_ref:.2f}).")
                         continue
                     try:
                         exchange.cancel_order(o.get('id'), symbol=sym)

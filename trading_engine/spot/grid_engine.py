@@ -559,7 +559,7 @@ class GridEngine:
                         logger.error(f"Failed to place {level.side} order for {self.symbol}: {e}")
 
 
-    def tick(self, current_price: float, portfolio, exchange=None) -> List[Dict[str, Any]]:
+    def tick(self, current_price: float, portfolio, exchange=None, open_orders_by_id=None) -> List[Dict[str, Any]]:
         """Check grid levels against current price and simulate/process fills."""
         fills = []
         for level in list(self.grid_levels):
@@ -568,8 +568,12 @@ class GridEngine:
                 
             is_filled = False
             if not self.paper_mode and exchange and level.order_id and not level.order_id.startswith('PAPER_'):
+                # Fast bypass: if open orders were fetched from Bybit in bulk and this order is still on the book, it is not filled
+                if open_orders_by_id is not None and str(level.order_id) in open_orders_by_id:
+                    continue
+
                 try:
-                    order_info = exchange.fetch_order(level.order_id, self.symbol, {'category': 'spot'})
+                    order_info = exchange.fetch_order(level.order_id, self.symbol, {'category': 'spot', 'acknowledged': True})
                     st = (order_info.get('status') or '').lower()
                     if st in ['closed', 'filled']:
                         is_filled = True
