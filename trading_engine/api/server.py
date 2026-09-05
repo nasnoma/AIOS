@@ -40,10 +40,32 @@ async def startup_pre_warm():
     def _spot_background_loop():
         logger.info("🚀 Starting 24/7 Spot Grid Tick background daemon thread (30s interval)...")
         time.sleep(5)  # Initial delay
+        tick_count = 0
         while True:
             try:
-                from trading_engine.spot.runner import run_spot_grid_tick
+                from trading_engine.spot.runner import (
+                    run_spot_grid_tick,
+                    run_spot_dca_check,
+                    run_spot_regime_check,
+                    run_spot_self_healing_and_optimize
+                )
                 run_spot_grid_tick()
+                tick_count += 1
+                if tick_count % 10 == 0:  # Every 5 mins (10 * 30s)
+                    try:
+                        run_spot_dca_check()
+                    except Exception as e_dca:
+                        logger.debug(f"DCA check error in background daemon: {e_dca}")
+                if tick_count % 60 == 0:  # Every 30 mins (60 * 30s)
+                    try:
+                        run_spot_regime_check()
+                    except Exception as e_reg:
+                        logger.debug(f"Regime check error in background daemon: {e_reg}")
+                if tick_count % 720 == 0:  # Every 6 hours (720 * 30s)
+                    try:
+                        run_spot_self_healing_and_optimize()
+                    except Exception as e_opt:
+                        logger.debug(f"Self-healing & optimize error in background daemon: {e_opt}")
             except Exception as e:
                 logger.warning(f"Background spot grid tick error: {e}")
             time.sleep(30)

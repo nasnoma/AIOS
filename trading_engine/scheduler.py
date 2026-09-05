@@ -454,48 +454,9 @@ def main():
     )
 
     # ── Spot Grid & DCA Jobs ──────────────────────────
-    try:
-        from trading_engine.config import spot_settings
-        if spot_settings.enabled:
-            from trading_engine.spot.runner import init_spot_engine, run_spot_grid_tick, run_spot_regime_check, run_spot_dca_check
-            init_spot_engine()
-            logger.info("   ⚡ Spot Grid Engine enabled & initialised.")
-            
-            # Spot Grid Tick (every 5 mins)
-            scheduler.add_job(
-                run_spot_grid_tick,
-                trigger=IntervalTrigger(minutes=spot_settings.grid_tick_minutes),
-                id="spot_grid_tick",
-                name="Spot Grid Tick",
-                next_run_time=datetime.now(timezone.utc),
-            )
-            # Spot Regime Check (every 1 hour)
-            scheduler.add_job(
-                run_spot_regime_check,
-                trigger=IntervalTrigger(hours=spot_settings.regime_check_hours),
-                id="spot_regime_check",
-                name="Spot Regime Check",
-                next_run_time=datetime.now(timezone.utc),
-            )
-            # Spot DCA Check (every 1 hour, staggered by 2 minutes)
-            scheduler.add_job(
-                run_spot_dca_check,
-                trigger=IntervalTrigger(hours=1),
-                id="spot_dca_check",
-                name="Spot DCA Oversold Check",
-                next_run_time=datetime.now(timezone.utc) + timedelta(minutes=2),
-            )
-            # Spot Self-Healing & Automated Backtest Optimizer (every 6 hours)
-            from trading_engine.spot.runner import run_spot_self_healing_and_optimize
-            scheduler.add_job(
-                run_spot_self_healing_and_optimize,
-                trigger=IntervalTrigger(hours=6),
-                id="spot_self_healing_optimize",
-                name="Spot Self-Healing & Backtest Optimizer",
-                next_run_time=datetime.now(timezone.utc) + timedelta(minutes=5),
-            )
-    except Exception as e_spot:
-        logger.error(f"❌ Failed starting Spot Grid jobs: {e_spot}")
+    # Managed exclusively by the unified 24/7 background daemon in server.py
+    # to prevent multi-process memory desynchronization and order collisions.
+    logger.info("   ⚡ Spot Grid Engine active in unified server daemon thread.")
 
 
     scheduler.start()
