@@ -501,6 +501,14 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                                 if net_tight >= 0.50:
                                     invalid_sells = True
                                     logger.info(f"⚡ Tightening wide take-profit targets for {symbol} (Live: ${price:.4f} > Cost: ${h_cost:.4f})...")
+                    elif symbol not in spot_settings.asset_list:
+                        # For legacy holdings outside Top 12: re-align once to the new Quick-Exit geometry if existing orders
+                        # are wider than +1.0% above cost or live market price, so they exit rapidly to free capital.
+                        min_sell_p = min((l.price for l in open_sells), default=0.0)
+                        target_quick_exit = max(h_cost * 1.0035, price * 1.0035)
+                        if min_sell_p > (target_quick_exit * 1.010):
+                            invalid_sells = True
+                            logger.info(f"🚪 Re-aligning legacy holding {symbol} to Quick-Exit target (Current: ${min_sell_p:.4f} -> Target ~${target_quick_exit:.4f})...")
 
                 if not engine.grid_levels or is_stale or force_reset or missing_sells or invalid_sells:
                     if is_stale:
