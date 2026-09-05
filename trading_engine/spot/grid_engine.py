@@ -256,14 +256,16 @@ class GridEngine:
 
         # Query authoritative SQLite FIFO inventory to get the exact un-exited buy price
         fifo_max_cost = 0.0
+        fifo_basis = {}
         try:
             from trading_engine.spot.fifo_reconciler import get_fifo_cost_basis
-            fifo_basis = get_fifo_cost_basis(self.symbol)
+            fifo_basis = get_fifo_cost_basis(self.symbol) or {}
             if fifo_basis.get('avg_cost', 0) > 0:
                 avg_cost = max(avg_cost, fifo_basis['avg_cost'])
                 fifo_max_cost = fifo_basis.get('max_buy_price', 0.0)
         except Exception as e_fifo_cb:
             logger.debug(f"FIFO cost basis lookup for {self.symbol}: {e_fifo_cb}")
+            fifo_basis = {}
 
         # Safety: If avg_cost is 0 or missing, ensure we never sell below current_price * 1.015
         if avg_cost <= 0:
