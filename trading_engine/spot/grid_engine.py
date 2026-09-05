@@ -285,14 +285,22 @@ class GridEngine:
                 # > $0.50 net profit (+$0.75 target) and exit into liquid USDT cash immediately.
                 fee_factor = 0.0010
 
-                if self.symbol == 'INJ/USDT' and fifo_basis.get('units_open', 0) > 5.0 and base_qty_held > fifo_basis['units_open']:
+                if self.symbol == 'INJ/USDT':
                     # 🎯 Option B: Tiered Lot-Based Liquidation for INJ
                     # Tier 1 (Rapid Liquidation Lot): Sells recent lower-cost FIFO buy lots (~95.21 INJ) at ~$5.195 to exit at local resistance
                     # Tier 2 (High-Water Recovery Lot): Sells remaining older high-water lots (~182.57 INJ) at ~$5.465 for full cost recovery
                     from trading_engine.spot.runner import ALL_23_HISTORICAL_COSTS
-                    t1_qty = float(fifo_basis['units_open'])
+                    if fifo_basis.get('units_open', 0) > 5.0 and base_qty_held > fifo_basis['units_open']:
+                        t1_qty = float(fifo_basis['units_open'])
+                        t1_cost = float(fifo_basis.get('avg_cost', 5.1746))
+                    elif base_qty_held > 185.0:
+                        t1_qty = round(base_qty_held - 182.5769, 4)
+                        t1_cost = 5.1746
+                    else:
+                        t1_qty = 0.0
+                        t1_cost = 5.1746
+
                     t2_qty = max(0.0, base_qty_held - t1_qty)
-                    t1_cost = float(fifo_basis.get('avg_cost', 5.1746))
                     t2_cost = float(ALL_23_HISTORICAL_COSTS.get('INJ/USDT', 5.4271))
 
                     tier_specs = [

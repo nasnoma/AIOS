@@ -530,10 +530,15 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                         # are wider than +3.5% above FIFO cost or live market price, so they exit rapidly to free capital without churn.
                         min_sell_p = min((l.price for l in open_sells), default=0.0)
                         if symbol == 'INJ/USDT':
-                            # Tier 1 target is ~$5.195; if lowest open sell is > $5.25 or < $5.15, re-align
-                            if min_sell_p > 5.25 or min_sell_p < 5.15:
-                                invalid_sells = True
-                                logger.info(f"🚪 Re-aligning INJ to Option B Tiered Liquidation (Current: ${min_sell_p:.4f} -> Tier 1 @ $5.195, Tier 2 @ $5.465)...")
+                            # Tier 1 target is ~$5.195 (if holding > 185); once Tier 1 fills, Tier 2 target is ~$5.465
+                            if holding_qty > 185.0:
+                                if min_sell_p > 5.25 or min_sell_p < 5.15:
+                                    invalid_sells = True
+                                    logger.info(f"🚪 Re-aligning INJ to Option B Tiered Liquidation (Current: ${min_sell_p:.4f} -> Tier 1 @ $5.195, Tier 2 @ $5.465)...")
+                            else:
+                                if min_sell_p < 5.44 or min_sell_p > 5.50:
+                                    invalid_sells = True
+                                    logger.info(f"🚪 Re-aligning INJ Tier 2 to recovery target (Current: ${min_sell_p:.4f} -> Tier 2 @ $5.465)...")
                         else:
                             target_quick_exit = max(h_cost * 1.0035, price * 1.0035)
                             if min_sell_p > (target_quick_exit * 1.035):
