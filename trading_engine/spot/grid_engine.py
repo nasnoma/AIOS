@@ -474,6 +474,28 @@ class GridEngine:
                                     order = exchange.create_limit_buy_order(self.symbol, qty_val, price_val, fallback_params)
                                 else:
                                     order = exchange.create_limit_sell_order(self.symbol, qty_val, price_val, fallback_params)
+                            elif level.side == 'sell' and ('balance' in str(e_post).lower() or '170131' in str(e_post)):
+                                # Insufficient balance on sell: fetch exact available coin balance and retry
+                                try:
+                                    base_coin = self.symbol.split('/')[0]
+                                    c_bal = exchange.fetch_balance({'accountType': 'UNIFIED'})
+                                    free_coin = float(c_bal.get('free', {}).get(base_coin, 0.0) or 0.0)
+                                    if free_coin > 0:
+                                        new_qty = float(exchange.amount_to_precision(self.symbol, free_coin)) if hasattr(exchange, 'amount_to_precision') else free_coin
+                                        prec = exchange.market(self.symbol).get('precision', {}).get('amount') if hasattr(exchange, 'market') and self.symbol in exchange.markets else None
+                                        if isinstance(prec, (float, int)) and float(prec) > 0:
+                                            decimals = max(0, -int(math.floor(math.log10(float(prec)))))
+                                            new_qty = math.floor(new_qty * (10 ** decimals)) / (10 ** decimals)
+                                        if new_qty > 0 and (new_qty * price_val) >= float(min_cost if 'min_cost' in locals() else 5.0):
+                                            logger.info(f"[{self.symbol}] Adjusting sell qty from {qty_val} to exact exchange balance {new_qty}")
+                                            order = exchange.create_limit_sell_order(self.symbol, new_qty, price_val, {'category': 'spot'})
+                                            qty_val = new_qty
+                                        else:
+                                            raise e_post
+                                    else:
+                                        raise e_post
+                                except Exception:
+                                    raise e_post
                             else:
                                 raise e_post
 

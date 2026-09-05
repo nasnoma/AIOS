@@ -984,7 +984,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
                     value_usd = units_val * cur_price
                     live_holdings[symbol] = {
                         'symbol': symbol,
-                        'units_held': round(units_val, 4),
+                        'units_held': round(units_val, 8),
                         'avg_cost_basis': round(avg_cost_basis, 4),
                         'base_hold_units': 0.0,
                         'last_price': round(cur_price, 4),
