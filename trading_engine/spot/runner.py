@@ -490,10 +490,27 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 if h_cost > 0 and open_sells:
                     fee_factor = 0.0010
                     # Loss protection: detect if any resting sell order would yield < $0.40 net profit after fees
-                    has_loss_sells = any(
-                        (l.price * l.qty * (1.0 - fee_factor)) - (h_cost * l.qty * (1.0 + fee_factor)) < 0.40
-                        for l in open_sells
-                    )
+                    if symbol == 'INJ/USDT':
+                        # Option B tiered check: Tier 1 sells (~$5.195) check against FIFO cost ($5.1746), Tier 2 (~$5.465) check against high-water cost
+                        try:
+                            from trading_engine.spot.fifo_reconciler import get_fifo_cost_basis
+                            fb_inj = get_fifo_cost_basis('INJ/USDT')
+                            fifo_inj_cost = float(fb_inj.get('avg_cost', 5.1746)) if fb_inj.get('avg_cost', 0) > 0 else 5.1746
+                        except Exception:
+                            fifo_inj_cost = 5.1746
+                        
+                        def _get_inj_cost(l_px):
+                            return fifo_inj_cost if l_px < 5.30 else h_cost
+
+                        has_loss_sells = any(
+                            (l.price * l.qty * (1.0 - fee_factor)) - (_get_inj_cost(l.price) * l.qty * (1.0 + fee_factor)) < 0.40
+                            for l in open_sells
+                        )
+                    else:
+                        has_loss_sells = any(
+                            (l.price * l.qty * (1.0 - fee_factor)) - (h_cost * l.qty * (1.0 + fee_factor)) < 0.40
+                            for l in open_sells
+                        )
                     if has_loss_sells:
                         invalid_sells = True
                         logger.info(f"🛡️ Re-aligning below-cost sell orders for {symbol} to guaranteed profit geometry (Cost: ${h_cost:.4f}, Live: ${price:.4f})...")
@@ -512,10 +529,16 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                         # For legacy holdings outside Top 12: re-align once to the new Quick-Exit geometry if existing orders
                         # are wider than +3.5% above FIFO cost or live market price, so they exit rapidly to free capital without churn.
                         min_sell_p = min((l.price for l in open_sells), default=0.0)
-                        target_quick_exit = max(h_cost * 1.0035, price * 1.0035)
-                        if min_sell_p > (target_quick_exit * 1.035):
-                            invalid_sells = True
-                            logger.info(f"🚪 Re-aligning legacy holding {symbol} to Quick-Exit target (Current: ${min_sell_p:.4f} -> Target ~${target_quick_exit:.4f})...")
+                        if symbol == 'INJ/USDT':
+                            # Tier 1 target is ~$5.195; if lowest open sell is > $5.25 or < $5.15, re-align
+                            if min_sell_p > 5.25 or min_sell_p < 5.15:
+                                invalid_sells = True
+                                logger.info(f"🚪 Re-aligning INJ to Option B Tiered Liquidation (Current: ${min_sell_p:.4f} -> Tier 1 @ $5.195, Tier 2 @ $5.465)...")
+                        else:
+                            target_quick_exit = max(h_cost * 1.0035, price * 1.0035)
+                            if min_sell_p > (target_quick_exit * 1.035):
+                                invalid_sells = True
+                                logger.info(f"🚪 Re-aligning legacy holding {symbol} to Quick-Exit target (Current: ${min_sell_p:.4f} -> Target ~${target_quick_exit:.4f})...")
 
                 if not engine.grid_levels or is_stale or force_reset or missing_sells or invalid_sells:
                     if is_stale:

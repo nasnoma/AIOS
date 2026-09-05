@@ -281,42 +281,81 @@ class GridEngine:
                 # 🚪 Quick-Exit Mode for Legacy Holdings Outside Top 12:
                 # Consolidate holding into 1 order (or 2 if > $150) with tight target price to guarantee
                 # > $0.50 net profit (+$0.75 target) and exit into liquid USDT cash immediately.
-                sell_levels_count = 1 if total_held_usd < 150.0 else 2
-                qty_per_sell = base_qty_held / sell_levels_count
                 fee_factor = 0.0010
-                min_net_usd = 0.75  # Target guaranteed > $0.50 net profit
 
-                for i in range(sell_levels_count):
-                    cost_ref = avg_cost if avg_cost > 0 else current_price
-                    denom = qty_per_sell * (1.0 - fee_factor)
-                    min_fee_proof_price = (cost_ref * qty_per_sell * (1.0 + fee_factor) + min_net_usd) / denom if denom > 0 else cost_ref * 1.005
+                if self.symbol == 'INJ/USDT' and fifo_basis.get('units_open', 0) > 5.0 and base_qty_held > fifo_basis['units_open']:
+                    # 🎯 Option B: Tiered Lot-Based Liquidation for INJ
+                    # Tier 1 (Rapid Liquidation Lot): Sells recent lower-cost FIFO buy lots (~95.21 INJ) at ~$5.195 to exit at local resistance
+                    # Tier 2 (High-Water Recovery Lot): Sells remaining older high-water lots (~182.57 INJ) at ~$5.465 for full cost recovery
+                    from trading_engine.spot.runner import ALL_23_HISTORICAL_COSTS
+                    t1_qty = float(fifo_basis['units_open'])
+                    t2_qty = max(0.0, base_qty_held - t1_qty)
+                    t1_cost = float(fifo_basis.get('avg_cost', 5.1746))
+                    t2_cost = float(ALL_23_HISTORICAL_COSTS.get('INJ/USDT', 5.4271))
 
-                    if current_price > cost_ref:
-                        # Already in profit: place slightly above market for instant execution (+0.35% + 0.20%*i)
-                        target_p = max(min_fee_proof_price, current_price * (1.0035 + 0.0020 * i))
-                    else:
-                        # Underwater: place at the exact minimum price to break even + $0.75 profit
-                        target_p = max(min_fee_proof_price, min_fee_proof_price * (1.0 + 0.0030 * i))
+                    tier_specs = [
+                        (t1_qty, t1_cost, 0.75, 5.195, "Tier 1 Rapid Liquidation"),
+                        (t2_qty, t2_cost, 1.50, 5.465, "Tier 2 High-Water Recovery")
+                    ]
 
-                    # Post-only safety: target_p must be strictly above current_price
-                    if target_p <= current_price:
-                        target_p = current_price * 1.0035
+                    for q_tier, c_tier, min_usd, min_floor_p, desc in tier_specs:
+                        if q_tier < 0.001:
+                            continue
+                        denom = q_tier * (1.0 - fee_factor)
+                        min_fee_p = (c_tier * q_tier * (1.0 + fee_factor) + min_usd) / denom if denom > 0 else c_tier * 1.005
+                        target_p = max(min_fee_p, min_floor_p)
+                        if current_price > c_tier:
+                            target_p = max(target_p, current_price * 1.0035)
+                        if target_p <= current_price:
+                            target_p = current_price * 1.0035
 
-                    actual_net_pnl = (target_p * qty_per_sell * (1.0 - fee_factor)) - (cost_ref * qty_per_sell * (1.0 + fee_factor))
-                    if actual_net_pnl < 0.60:
-                        target_p = (cost_ref * qty_per_sell * (1.0 + fee_factor) + 0.60) / denom if denom > 0 else target_p
+                        actual_net_pnl = (target_p * q_tier * (1.0 - fee_factor)) - (c_tier * q_tier * (1.0 + fee_factor))
+                        logger.info(f"🚪 [{self.symbol}] {desc}: Target=${target_p:.4f} "
+                                    f"(CostRef: ${c_tier:.4f}, Qty: {q_tier:.4f}, Net Profit: +${actual_net_pnl:.2f} USD)")
+
+                        self.grid_levels.append(GridLevel(
+                            price=target_p,
+                            side='sell',
+                            qty=q_tier,
+                            size_usd=q_tier * target_p,
+                            linked_buy_price=c_tier
+                        ))
+                else:
+                    sell_levels_count = 1 if total_held_usd < 150.0 else 2
+                    qty_per_sell = base_qty_held / sell_levels_count
+                    min_net_usd = 0.75  # Target guaranteed > $0.50 net profit
+
+                    for i in range(sell_levels_count):
+                        cost_ref = avg_cost if avg_cost > 0 else current_price
+                        denom = qty_per_sell * (1.0 - fee_factor)
+                        min_fee_proof_price = (cost_ref * qty_per_sell * (1.0 + fee_factor) + min_net_usd) / denom if denom > 0 else cost_ref * 1.005
+
+                        if current_price > cost_ref:
+                            # Already in profit: place slightly above market for instant execution (+0.35% + 0.20%*i)
+                            target_p = max(min_fee_proof_price, current_price * (1.0035 + 0.0020 * i))
+                        else:
+                            # Underwater: place at the exact minimum price to break even + $0.75 profit
+                            target_p = max(min_fee_proof_price, min_fee_proof_price * (1.0 + 0.0030 * i))
+
+                        # Post-only safety: target_p must be strictly above current_price
+                        if target_p <= current_price:
+                            target_p = current_price * 1.0035
+
                         actual_net_pnl = (target_p * qty_per_sell * (1.0 - fee_factor)) - (cost_ref * qty_per_sell * (1.0 + fee_factor))
+                        if actual_net_pnl < 0.60:
+                            target_p = (cost_ref * qty_per_sell * (1.0 + fee_factor) + 0.60) / denom if denom > 0 else target_p
+                            actual_net_pnl = (target_p * qty_per_sell * (1.0 - fee_factor)) - (cost_ref * qty_per_sell * (1.0 + fee_factor))
 
-                    logger.info(f"🚪 [{self.symbol}] Quick-Exit Sell Level {i+1}/{sell_levels_count}: Target=${target_p:.4f} "
-                                f"(CostRef: ${cost_ref:.4f}, Live: ${current_price:.4f}, Net Profit: +${actual_net_pnl:.2f} USD)")
+                        logger.info(f"🚪 [{self.symbol}] Quick-Exit Sell Level {i+1}/{sell_levels_count}: Target=${target_p:.4f} "
+                                    f"(CostRef: ${cost_ref:.4f}, Live: ${current_price:.4f}, Net Profit: +${actual_net_pnl:.2f} USD)")
 
-                    self.grid_levels.append(GridLevel(
-                        price=target_p,
-                        side='sell',
-                        qty=qty_per_sell,
-                        size_usd=qty_per_sell * target_p,
-                        linked_buy_price=cost_ref
-                    ))
+                        self.grid_levels.append(GridLevel(
+                            price=target_p,
+                            side='sell',
+                            qty=qty_per_sell,
+                            size_usd=qty_per_sell * target_p,
+                            linked_buy_price=cost_ref
+                        ))
             else:
                 # Dynamic Tier Consolidation:
                 # If total holding is < $60 USD, use 1 SINGLE order (e.g. all 287 ALGO in 1 order) to avoid tiny micro-orders
