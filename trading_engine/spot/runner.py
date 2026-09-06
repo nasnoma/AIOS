@@ -550,9 +550,9 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                                     invalid_sells = True
                                     logger.info(f"🚪 Re-aligning INJ to Option B Tiered Liquidation (Current: ${min_sell_p:.4f} -> Tier 1 @ $5.195, Tier 2 @ $5.465)...")
                             else:
-                                if min_sell_p < 5.44 or min_sell_p > 5.50:
+                                if min_sell_p < 5.30 or min_sell_p > 5.40:
                                     invalid_sells = True
-                                    logger.info(f"🚪 Re-aligning INJ Tier 2 to recovery target (Current: ${min_sell_p:.4f} -> Tier 2 @ $5.465)...")
+                                    logger.info(f"🚪 Re-aligning INJ Tier 2 to recovery target (Current: ${min_sell_p:.4f} -> Tier 2 @ $5.350)...")
                         else:
                             target_quick_exit = max(h_cost * 1.0035, price * 1.0035)
                             if min_sell_p > (target_quick_exit * 1.035):

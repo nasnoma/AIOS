@@ -305,7 +305,7 @@ class GridEngine:
 
                     tier_specs = [
                         (t1_qty, t1_cost, 0.75, 5.195, "Tier 1 Rapid Liquidation"),
-                        (t2_qty, t2_cost, 1.50, 5.465, "Tier 2 High-Water Recovery")
+                        (t2_qty, t2_cost, 1.50, 5.350, "Tier 2 High-Water Recovery")
                     ]
 
                     for q_tier, c_tier, min_usd, min_floor_p, desc in tier_specs:
