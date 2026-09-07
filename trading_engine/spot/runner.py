@@ -20,7 +20,7 @@ from trading_engine.spot.btc_master_filter import btc_master_filter
 ALL_23_HISTORICAL_COSTS = {
     'NEAR/USDT': 1.9047, 'TIA/USDT': 0.3565, 'SUI/USDT': 0.7709, 'FET/USDT': 0.1640,
     'ICP/USDT': 2.4073, 'ADA/USDT': 0.2102, 'APT/USDT': 0.5597, 'OP/USDT': 0.0971,
-    'RENDER/USDT': 1.4773, 'ARB/USDT': 0.0933, 'DOT/USDT': 0.8888, 'ALGO/USDT': 0.0908,
+    'RENDER/USDT': 1.4773, 'ARB/USDT': 0.1852, 'DOT/USDT': 0.8888, 'ALGO/USDT': 0.0908,
     'UNI/USDT': 4.3547, 'INJ/USDT': 4.9751, 'AVAX/USDT': 7.4742, 'SOL/USDT': 102.5428,
     'ETH/USDT': 2477.2894, 'BTC/USDT': 79041.25, 'XAUT/USDT': 4583.60, 'ARKM/USDT': 0.1150,
     'ATOM/USDT': 1.5152, 'LINK/USDT': 11.5437, 'SEI/USDT': 0.0468
@@ -520,6 +520,15 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                             (l.price * l.qty * (1.0 - fee_factor)) - (_get_inj_cost(l.price) * l.qty * (1.0 + fee_factor)) < 0.40
                             for l in open_sells
                         )
+                    elif symbol == 'ARB/USDT':
+                        # Tiered check: Tier 1 sells (< $0.180) check against Tier 1 cost basis ($0.1652)
+                        def _get_arb_cost(l_px):
+                            return 0.1652 if l_px < 0.180 else 0.1918
+
+                        has_loss_sells = any(
+                            (l.price * l.qty * (1.0 - fee_factor)) - (_get_arb_cost(l.price) * l.qty * (1.0 + fee_factor)) < 0.40
+                            for l in open_sells
+                        )
                     else:
                         has_loss_sells = any(
                             (l.price * l.qty * (1.0 - fee_factor)) - (h_cost * l.qty * (1.0 + fee_factor)) < 0.40
@@ -558,6 +567,11 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                             if min_sell_p < 0.1120 or min_sell_p > 0.1180:
                                 invalid_sells = True
                                 logger.info(f"🚪 Re-aligning ARKM to Quick-Exit Tiered Liquidation (Current: ${min_sell_p:.4f} -> Tier 1 @ $0.1130, Tier 2 @ $0.1155)...")
+                        elif symbol == 'ARB/USDT':
+                            # Tier 1 target is ~$0.1730; Tier 2 is ~$0.1945
+                            if min_sell_p > 0.180 or min_sell_p < 0.170:
+                                invalid_sells = True
+                                logger.info(f"🚪 Re-aligning ARB to Quick-Exit Tiered Liquidation (Current: ${min_sell_p:.4f} -> Tier 1 @ $0.1730, Tier 2 @ $0.1945)...")
                         else:
                             target_quick_exit = max(h_cost * 1.0035, price * 1.0035)
                             if min_sell_p > (target_quick_exit * 1.035):

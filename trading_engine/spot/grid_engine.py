@@ -366,6 +366,43 @@ class GridEngine:
                             size_usd=q_tier * target_p,
                             linked_buy_price=c_tier
                         ))
+                elif self.symbol == 'ARB/USDT':
+                    # 🎯 Tiered Quick-Exit Liquidation for ARB:
+                    # Tier 1 (Rapid Liquidation): Dip lots (< $0.175, ~3,624.8 ARB @ avg $0.1652) target ~$0.1730 (+1.6% above market)
+                    # to free +$625+ USDT cash into liquid buffer immediately.
+                    # Tier 2 (Full Cost Recovery): Upper lots (>= $0.175, ~10,567.8 ARB @ avg $0.1918) target ~$0.1945 for full recovery.
+                    t1_qty = min(3624.80, round(base_qty_held * 0.30, 2)) if base_qty_held > 5000.0 else 0.0
+                    t1_cost = 0.1652
+                    t2_qty = round(max(0.0, base_qty_held - t1_qty), 2)
+                    t2_cost = 0.1918
+
+                    tier_specs = [
+                        (t1_qty, t1_cost, 2.00, 0.1730, "Tier 1 Rapid Liquidation"),
+                        (t2_qty, t2_cost, 2.00, 0.1945, "Tier 2 Full Cost Recovery")
+                    ]
+
+                    for q_tier, c_tier, min_usd, min_floor_p, desc in tier_specs:
+                        if q_tier < 0.001:
+                            continue
+                        denom = q_tier * (1.0 - fee_factor)
+                        min_fee_p = (c_tier * q_tier * (1.0 + fee_factor) + min_usd) / denom if denom > 0 else c_tier * 1.005
+                        target_p = max(min_fee_p, min_floor_p)
+                        if current_price > c_tier:
+                            target_p = max(target_p, current_price * 1.0035)
+                        if target_p <= current_price:
+                            target_p = current_price * 1.0035
+
+                        actual_net_pnl = (target_p * q_tier * (1.0 - fee_factor)) - (c_tier * q_tier * (1.0 + fee_factor))
+                        logger.info(f"🚪 [{self.symbol}] {desc}: Target=${target_p:.4f} "
+                                    f"(CostRef: ${c_tier:.4f}, Qty: {q_tier:.4f}, Net Profit: +${actual_net_pnl:.2f} USD)")
+
+                        self.grid_levels.append(GridLevel(
+                            price=target_p,
+                            side='sell',
+                            qty=q_tier,
+                            size_usd=q_tier * target_p,
+                            linked_buy_price=c_tier
+                        ))
                 else:
                     sell_levels_count = 1 if total_held_usd < 150.0 else 2
                     qty_per_sell = base_qty_held / sell_levels_count
