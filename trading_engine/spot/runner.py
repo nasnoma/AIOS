@@ -553,6 +553,11 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                                 if min_sell_p < 5.30 or min_sell_p > 5.40:
                                     invalid_sells = True
                                     logger.info(f"🚪 Re-aligning INJ Tier 2 to recovery target (Current: ${min_sell_p:.4f} -> Tier 2 @ $5.350)...")
+                        elif symbol == 'ARKM/USDT':
+                            # Tier 1 target is ~$0.1130; Tier 2 is ~$0.1155
+                            if min_sell_p < 0.1120 or min_sell_p > 0.1180:
+                                invalid_sells = True
+                                logger.info(f"🚪 Re-aligning ARKM to Quick-Exit Tiered Liquidation (Current: ${min_sell_p:.4f} -> Tier 1 @ $0.1130, Tier 2 @ $0.1155)...")
                         else:
                             target_quick_exit = max(h_cost * 1.0035, price * 1.0035)
                             if min_sell_p > (target_quick_exit * 1.035):
