@@ -26,29 +26,55 @@ ALL_23_HISTORICAL_COSTS = {
     'ATOM/USDT': 1.5152, 'LINK/USDT': 11.5437, 'SEI/USDT': 0.0468
 }
 
+ALL_23_HALAL_UNIVERSE = [
+    'FET/USDT', 'NEAR/USDT', 'SUI/USDT', 'TIA/USDT', 'ARB/USDT', 'OP/USDT',
+    'APT/USDT', 'AVAX/USDT', 'SEI/USDT', 'SOL/USDT', 'INJ/USDT', 'ARKM/USDT',
+    'UNI/USDT', 'RENDER/USDT', 'ADA/USDT', 'ICP/USDT', 'LINK/USDT', 'ETH/USDT',
+    'ATOM/USDT', 'DOT/USDT', 'ALGO/USDT', 'BTC/USDT', 'XAUT/USDT'
+]
+
 _last_trades_fetch_time: float = 0.0
 _cached_raw_trades: list = []
+_active_roster: set[str] = set()
 
-def _get_dynamic_hot_asset_allocations(asset_list: list[str], regime_detectors: dict = None) -> dict[str, float]:
+def _get_dynamic_hot_asset_allocations(
+    universe: list[str] = None,
+    regime_detectors: dict = None,
+    portfolio = None,
+    total_equity: float = 0.0
+) -> dict[str, float]:
     """
-    Dynamic Top-8 Concentrated Volatility Allocation:
-    Ranks all 23 Halal assets by 60% 24h Real-Time Range + 40% ADX Trend Strength.
-    Concentrates 100% of active capital into the Top 8 highest-yielding movers:
-      - Rank 1 & 2 (Top 2 Primary Leaders): 20.0% each (~$420 each)
-      - Rank 3 to 8 (Next 6 Power Movers): 10.0% each (~$210 each)
-      - Rank 9 to 23: 0.0% new buy allocation (freed capital rotates to Top 8)
+    Dynamic 23-Asset Scanner & Concentrated Top-8 Volatility Rotator:
+    1. Evaluates all 23 Halal spot assets on Bybit using 60% 24h Price Range + 40% ADX Momentum.
+    2. Enforces strict Capital Trap Prevention (15% Max Position Exposure Gate):
+       - If any asset's current holding value >= 15% of total portfolio equity, it is disqualified
+         from new buy allocations (locked at 0.0%) to prevent over-accumulation.
+    3. Concentrates 100% of active capital across the Top 8 eligible leaders:
+       - Rank 1 to 4 (Primary Turbo Leaders): 15.0% each (60% total)
+       - Rank 5 to 8 (Secondary Power Movers): 10.0% each (40% total)
+       - Rank 9 to 23 & Demoted/Disqualified: 0.0% buy allocation (rotated to profit-taking Sell-Only Mode)
     """
+    scan_list = universe or ALL_23_HALAL_UNIVERSE
     scored_pairs = []
     pub_ex = None
     tickers = {}
     try:
         pub_ex = get_public_exchange()
         if pub_ex:
-            tickers = pub_ex.fetch_tickers(asset_list)
+            try:
+                tickers = pub_ex.fetch_tickers(scan_list)
+            except Exception as e_bulk:
+                logger.debug(f"Bulk ticker fetch for 23 assets failed ({e_bulk}), falling back to individual fetches")
+                for sym in scan_list:
+                    try:
+                        tickers[sym] = pub_ex.fetch_ticker(sym)
+                    except Exception:
+                        pass
     except Exception:
         pass
 
-    for sym in asset_list:
+    # Evaluate each asset in the 23-asset universe
+    for sym in scan_list:
         adx_score = 0.0
         if regime_detectors and sym in regime_detectors:
             det = regime_detectors[sym]
@@ -57,33 +83,58 @@ def _get_dynamic_hot_asset_allocations(asset_list: list[str], regime_detectors: 
                 adx_score = float(getattr(st, 'adx', 0.0)) + float(abs(getattr(st, 'plus_di', 0.0) - getattr(st, 'minus_di', 0.0)))
         
         range_24h_pct = 0.0
+        last_price = 0.0
         if tickers and sym in tickers:
             t = tickers[sym]
             high = float(t.get('high', 0) or 0)
             low = float(t.get('low', 1) or 1)
+            last_price = float(t.get('last', 0) or 0)
             if low > 0:
                 range_24h_pct = ((high - low) / low) * 100.0
 
-        # Multi-Timeframe Optimal Score: 60% 24h Real-Time Range + 40% Multi-Day ADX
         vol_score = (0.60 * range_24h_pct * 10.0) + (0.40 * adx_score)
         if vol_score <= 0.0:
-            default_scores = {'TIA/USDT': 98.0, 'FET/USDT': 96.0, 'ARB/USDT': 95.0, 'ICP/USDT': 92.0, 'AVAX/USDT': 88.0, 'NEAR/USDT': 85.0, 'RENDER/USDT': 80.0, 'SOL/USDT': 78.0, 'DOT/USDT': 75.0, 'INJ/USDT': 74.0}
+            default_scores = {
+                'TIA/USDT': 98.0, 'FET/USDT': 96.0, 'ARB/USDT': 95.0, 'ICP/USDT': 92.0,
+                'AVAX/USDT': 88.0, 'NEAR/USDT': 85.0, 'RENDER/USDT': 80.0, 'SOL/USDT': 78.0,
+                'DOT/USDT': 75.0, 'INJ/USDT': 74.0, 'SUI/USDT': 73.0, 'ARKM/USDT': 72.0
+            }
             vol_score = default_scores.get(sym, 50.0)
-        scored_pairs.append((sym, vol_score))
 
+        # 🛑 15% Max Position Exposure Gate (Capital Trap Prevention)
+        is_capped = False
+        if portfolio and total_equity > 0 and hasattr(portfolio, 'holdings') and isinstance(portfolio.holdings, dict):
+            h_obj = portfolio.holdings.get(sym)
+            if h_obj:
+                u_held = float(getattr(h_obj, 'units_held', 0) if hasattr(h_obj, 'units_held') else (h_obj or {}).get('units_held', 0) or 0)
+                px_ref = last_price if last_price > 0 else float(getattr(h_obj, 'last_price', 0) if hasattr(h_obj, 'last_price') else (h_obj or {}).get('last_price', 0) or 0)
+                if px_ref <= 0 and sym in ALL_23_HISTORICAL_COSTS:
+                    px_ref = ALL_23_HISTORICAL_COSTS[sym]
+                holding_val = u_held * px_ref
+                exposure_pct = holding_val / total_equity
+                if exposure_pct >= 0.15:
+                    is_capped = True
+                    logger.info(f"🛑 [CAP REACHED] {sym} exposure (${holding_val:,.2f}, {exposure_pct*100:.1f}%) >= 15% equity ceiling. Disqualified from active buy allocation to prevent trapped capital.")
+
+        scored_pairs.append((sym, vol_score, is_capped))
+
+    # Rank assets by volatility score
     scored_pairs.sort(key=lambda x: x[1], reverse=True)
     
-    # High-Velocity Top-12 Dynamic Concentration (100% total active deployment):
-    # Rank 1 to 4 (Top 4 Turbo Leaders): 15.0% each (60% total -> ~$950 each)
-    # Rank 5 to 12 (Next 8 Power Movers): 5.0% each (40% total -> ~$320 each)
-    # Rank 13+ (Inactive): 0.0% new buy allocation
+    # Select Top 8 eligible (non-capped) leaders
+    eligible_pairs = [p for p in scored_pairs if not p[2]]
+    top_8_selected = [p[0] for p in eligible_pairs[:8]]
+
     allocations = {}
-    for rank, (sym, _) in enumerate(scored_pairs):
+    for rank, sym in enumerate(top_8_selected):
         if rank < 4:
-            allocations[sym] = 0.15
-        elif rank < 12:
-            allocations[sym] = 0.05
+            allocations[sym] = 0.15  # 4 * 15% = 60%
         else:
+            allocations[sym] = 0.10  # 4 * 10% = 40%
+
+    # Any asset in scan_list not in top_8_selected gets 0.0% buy allocation
+    for sym in scan_list:
+        if sym not in allocations:
             allocations[sym] = 0.0
 
     return allocations
@@ -161,15 +212,11 @@ def get_spot_exchange() -> ccxt.Exchange:
 
 
 def init_spot_engine():
-    """Initialise portfolio and grid engines for all configured spot assets."""
-    global _spot_initialized, _grid_engines, _regime_detectors
+    """Initialise portfolio and grid engines for all configured spot assets and Top 8 movers."""
+    global _spot_initialized, _grid_engines, _regime_detectors, _active_roster
     
-    if _spot_initialized and len(_grid_engines) >= len(spot_settings.asset_list):
+    if _spot_initialized and len(_grid_engines) >= len(spot_settings.asset_list) and _active_roster:
         return
-
-    active_symbols = set(spot_settings.asset_list)
-    _grid_engines = {k: v for k, v in _grid_engines.items() if k in active_symbols}
-    _regime_detectors = {k: v for k, v in _regime_detectors.items() if k in active_symbols}
 
     if not _spot_initialized:
         _spot_initialized = True
@@ -181,8 +228,6 @@ def init_spot_engine():
                 threading.Thread(target=bg_reconcile, args=(get_spot_exchange(), getattr(spot_settings, 'fee_rate', 0.00075)), daemon=True).start()
             except Exception:
                 pass
-
-
 
     exchange = get_spot_exchange()
     account_size = settings.account_size
@@ -208,12 +253,26 @@ def init_spot_engine():
         _portfolio.usdt_available = expected_free
         _portfolio.save()
 
-    allocations = _get_dynamic_hot_asset_allocations(spot_settings.asset_list, _regime_detectors)
-    for symbol in spot_settings.asset_list:
+    # Pre-populate regime detectors for all 23 assets in the Halal universe
+    for symbol in ALL_23_HALAL_UNIVERSE:
         if symbol not in _regime_detectors:
             _regime_detectors[symbol] = RegimeDetector(symbol=symbol, timeframe=spot_settings.regime_timeframe)
-        
-        alloc_pct = allocations.get(symbol, 1.0 / len(active_symbols))
+
+    allocations = _get_dynamic_hot_asset_allocations(
+        universe=ALL_23_HALAL_UNIVERSE,
+        regime_detectors=_regime_detectors,
+        portfolio=_portfolio,
+        total_equity=account_size
+    )
+
+    top_8_active = [sym for sym, alloc in allocations.items() if alloc > 0.0]
+    if not top_8_active:
+        top_8_active = list(spot_settings.asset_list[:8])
+    _active_roster = set(top_8_active)
+
+    # Instantiate or update GridEngines for the Top 8 active leaders
+    for symbol in _active_roster:
+        alloc_pct = allocations.get(symbol, 1.0 / len(_active_roster))
         asset_usd = spot_active_capital * alloc_pct
         
         if symbol not in _grid_engines:
@@ -228,19 +287,19 @@ def init_spot_engine():
                 _grid_engines[symbol].allocated_usd = asset_usd
                 _grid_engines[symbol]._last_rebuild_time = 0.0  # Allocation changed, force rebuild
             
-    # Strictly zero-out buy allocations for legacy holding assets (Sell-Only Mode)
+    # Strictly zero-out buy allocations for legacy holding assets outside active roster (Sell-Only Mode)
     for sym_eng_k, eng_obj in _grid_engines.items():
-        if sym_eng_k not in spot_settings.asset_list:
+        if sym_eng_k not in _active_roster:
             eng_obj.allocated_usd = 0.0
             if hasattr(eng_obj, 'params') and eng_obj.params:
                 eng_obj.params.buy_levels = 0
 
-    logger.info(f"✅ Spot Engine Initialised ({len(active_symbols)} Assets, Paper Mode: {spot_settings.paper_mode}, Active Capital: ${spot_active_capital:,.2f})")
+    logger.info(f"✅ Spot Engine Initialised (Top {len(_active_roster)} Active Movers: {sorted(list(_active_roster))}, Active Capital: ${spot_active_capital:,.2f})")
 
 
 def run_spot_regime_check():
-    """Run regime detection for all symbols and dynamically rebalance capital to Top 2 Movers."""
-    global _regime_detectors, _grid_engines
+    """Run 23-asset regime detection and dynamic Top 8 capital rotation."""
+    global _regime_detectors, _grid_engines, _active_roster
     exchange = get_spot_exchange()
 
     # 1. Update BTC Macro Master Filter
@@ -249,7 +308,9 @@ def run_spot_regime_check():
     except Exception as e_btc_r:
         logger.debug(f"BTC master filter in regime check: {e_btc_r}")
 
-    for symbol in spot_settings.asset_list:
+    # 2. Run regime detection on active roster and candidate symbols
+    symbols_to_check = set(spot_settings.asset_list) | _active_roster
+    for symbol in symbols_to_check:
         detector = _regime_detectors.get(symbol)
         if not detector:
             detector = RegimeDetector(symbol=symbol)
@@ -265,24 +326,71 @@ def run_spot_regime_check():
         except Exception as e:
             logger.warning(f"Failed regime check for {symbol}: {e}")
 
-    # Re-evaluate Hot-Asset Capital Rotation based on fresh regime scores
+    # 3. Dynamic 23-Asset Scanner & Capital Rotation with 15% Exposure Ceiling
     try:
-        allocations = _get_dynamic_hot_asset_allocations(spot_settings.asset_list, _regime_detectors)
         total_eq = _portfolio.usdt_available + sum(
             (float(getattr(h, 'units_held', 0) if hasattr(h, 'units_held') else (h or {}).get('units_held', 0) or 0)) *
             (float(getattr(h, 'last_price', 0) if hasattr(h, 'last_price') else (h or {}).get('last_price', 0) or 0))
             for h in _portfolio.holdings.values()
         )
+        if total_eq <= 0:
+            total_eq = settings.account_size
+
+        allocations = _get_dynamic_hot_asset_allocations(
+            universe=ALL_23_HALAL_UNIVERSE,
+            regime_detectors=_regime_detectors,
+            portfolio=_portfolio,
+            total_equity=total_eq
+        )
+        new_top_8 = {sym for sym, alloc in allocations.items() if alloc > 0.0}
+        if not new_top_8:
+            new_top_8 = set(spot_settings.asset_list[:8])
+
+        # Detect promotions and demotions
+        promoted = new_top_8 - _active_roster
+        demoted = _active_roster - new_top_8
+
+        if promoted or demoted:
+            logger.info(f"🔄 [ROSTER ROTATION] Promoted to Top 8: {list(promoted)} | Demoted to Sell-Only: {list(demoted)}")
+
+        # For demoted assets: zero out buy allocation and cleanly cancel BUY orders only (keep profit sells intact!)
+        for sym_dem in demoted:
+            eng = _grid_engines.get(sym_dem)
+            if eng:
+                eng.allocated_usd = 0.0
+                if hasattr(eng, 'params') and eng.params:
+                    eng.params.buy_levels = 0
+                eng.cancel_buys_only(exchange)
+                logger.info(f"🛡️ [DEMOTION SAFEGUARD] {sym_dem} rotated out of buying. Open buys cancelled; resting profit-taking limit sells left intact.")
+
+        # Update active roster
+        _active_roster = new_top_8
+
+        # Allocate active capital to new Top 8 leaders
         active_cap = total_eq * spot_settings.total_capital_pct
-        for symbol, engine in _grid_engines.items():
-            alloc_pct = allocations.get(symbol, 0.0833)
+        for symbol in _active_roster:
+            alloc_pct = allocations.get(symbol, 0.125)
             new_asset_usd = active_cap * alloc_pct
-            if abs(engine.allocated_usd - new_asset_usd) > 5.0:
-                engine.allocated_usd = new_asset_usd
-                engine._last_rebuild_time = 0.0  # Force grid rebuild for new Top Mover
-                logger.info(f"🔄 Rotated Capital Allocation for {symbol}: ${new_asset_usd:,.2f} ({alloc_pct*100:.1f}%)")
+
+            engine = _grid_engines.get(symbol)
+            if not engine:
+                engine = GridEngine(
+                    symbol=symbol,
+                    allocated_usd=new_asset_usd,
+                    paper_mode=spot_settings.paper_mode,
+                    fee_rate=spot_settings.fee_rate
+                )
+                _grid_engines[symbol] = engine
+                engine._last_rebuild_time = 0.0  # Force fresh build for newly promoted asset
+                logger.info(f"🌟 [PROMOTED] Created new GridEngine for {symbol} with ${new_asset_usd:,.2f} ({alloc_pct*100:.1f}%)")
+            else:
+                if abs(engine.allocated_usd - new_asset_usd) > 5.0:
+                    engine.allocated_usd = new_asset_usd
+                    engine._last_rebuild_time = 0.0  # Force grid rebuild for new Top Mover
+                    logger.info(f"🔄 Rotated Capital Allocation for {symbol}: ${new_asset_usd:,.2f} ({alloc_pct*100:.1f}%)")
     except Exception as e_rot:
         logger.debug(f"Capital rotation rebalance: {e_rot}")
+
 
 
 _tick_lock = threading.Lock()
@@ -416,8 +524,8 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 logger.debug(f"Fetch open orders for reserve check: {e_open}")
         _portfolio.total_open_buy_usd = total_open_buy_usd
 
-        # Iterate through all configured Top 12 assets AND any legacy holding assets with tradable units (>= $5 Bybit min notional, excluding MNT fee buffer)
-        all_candidate_symbols = list(spot_settings.asset_list)
+        # Iterate through all configured spot assets, Top 8 active roster movers, AND any legacy holding assets with tradable units (>= $5 Bybit min notional, excluding MNT fee buffer)
+        all_candidate_symbols = list(set(spot_settings.asset_list) | _active_roster)
         if hasattr(_portfolio, 'holdings') and isinstance(_portfolio.holdings, dict):
             for sym_k, h_v in _portfolio.holdings.items():
                 if sym_k in ['MNT/USDT', 'MNT']:
@@ -448,8 +556,8 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 )
                 _grid_engines[symbol] = engine
 
-            # Strictly lock legacy holding assets outside the active 12-asset watchlist into Sell-Only Mode
-            if symbol not in spot_settings.asset_list:
+            # Strictly lock legacy holding assets outside the active Top 8 roster into Sell-Only Mode
+            if symbol not in _active_roster and symbol not in spot_settings.asset_list:
                 engine.allocated_usd = 0.0
                 if hasattr(engine, 'params') and engine.params:
                     engine.params.buy_levels = 0
@@ -621,7 +729,8 @@ def run_spot_grid_tick() -> Dict[str, Any]:
 def run_spot_dca_check():
     """Check for oversold DCA signals for extra buys."""
     exchange = get_spot_exchange()
-    for symbol in spot_settings.asset_list:
+    target_symbols = list(_active_roster) if _active_roster else spot_settings.asset_list
+    for symbol in target_symbols:
         engine = _grid_engines.get(symbol)
         regime = engine.current_regime if engine else "RANGE"
         
@@ -702,7 +811,8 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
 
     regimes = {}
     grids = {}
-    for sym in spot_settings.asset_list:
+    display_regime_symbols = set(spot_settings.asset_list) | _active_roster
+    for sym in display_regime_symbols:
         det = _regime_detectors.get(sym)
         h_obj = _portfolio.holdings.get(sym) if hasattr(_portfolio, 'holdings') else None
         last_p = float(h_obj.get('last_price', 0.0) if isinstance(h_obj, dict) else getattr(h_obj, 'last_price', 0.0) or 0.0)
@@ -736,7 +846,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
     # If Live / Demo mode: merge live open orders directly from Bybit
     if not spot_settings.paper_mode and exchange:
         try:
-            active_symbols = set(spot_settings.asset_list)
+            active_symbols = set(spot_settings.asset_list) | _active_roster
             legacy_held_symbols = set()
             for sym, h in _portfolio.holdings.items():
                 if sym in ['MNT/USDT', 'MNT']:
@@ -1173,7 +1283,7 @@ def run_spot_self_healing_and_optimize() -> Dict[str, Any]:
             open_orders = exchange.fetch_open_orders(params={'category': 'spot'})
             # Step 1a: Cancel open BUY orders on legacy/removed symbols to free capital.
             # NEVER cancel resting take-profit SELL orders on legacy holdings — they represent locked profit.
-            active_symbols = set(spot_settings.asset_list)
+            active_symbols = set(spot_settings.asset_list) | _active_roster
             for o in open_orders:
                 raw_sym = o.get('symbol', '')
                 sym = raw_sym if '/' in raw_sym else (raw_sym.replace('USDT', '/USDT') if 'USDT' in raw_sym else raw_sym)
@@ -1217,7 +1327,8 @@ def run_spot_self_healing_and_optimize() -> Dict[str, Any]:
 
     # Step 2: Automated Event-Driven Backtesting
     from .backtest import run_backtest
-    for sym in spot_settings.asset_list:
+    target_bt_symbols = list(_active_roster) if _active_roster else spot_settings.asset_list
+    for sym in target_bt_symbols:
         eng = _grid_engines.get(sym)
         current_regime = eng.current_regime if eng else "RANGE"
         try:

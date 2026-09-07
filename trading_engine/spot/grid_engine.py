@@ -806,6 +806,29 @@ class GridEngine:
                         except Exception:
                             pass
 
+    def cancel_buys_only(self, exchange: Optional[ccxt.Exchange] = None):
+        """
+        Cancel ONLY open buy orders on this asset to free active capital,
+        leaving all resting take-profit SELL limit orders completely intact!
+        """
+        exch = exchange or self.exchange
+        for level in self.grid_levels:
+            if level.status in ['open', 'pending'] and level.side == 'buy':
+                if self.paper_mode:
+                    level.status = 'cancelled'
+                    logger.info(f"[PAPER] Cancelled buy order {level.order_id} on {self.symbol}")
+                else:
+                    level.status = 'cancelled'
+                    if exch and level.order_id:
+                        try:
+                            exch.cancel_order(level.order_id, self.symbol)
+                            logger.info(f"[LIVE] Cancelled demoted buy order {level.order_id} on {self.symbol}")
+                        except Exception as e_c:
+                            logger.debug(f"Could not cancel buy order {level.order_id} on {self.symbol}: {e_c}")
+        # Retain only sell levels in memory
+        self.grid_levels = [lvl for lvl in self.grid_levels if lvl.side == 'sell']
+
+
 
     def summary(self) -> Dict[str, Any]:
         open_buys = sum(1 for l in self.grid_levels if l.status == 'open' and l.side == 'buy')
