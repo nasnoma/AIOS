@@ -215,7 +215,7 @@ def init_spot_engine():
     """Initialise portfolio and grid engines for all configured spot assets and Top 8 movers."""
     global _spot_initialized, _grid_engines, _regime_detectors, _active_roster
     
-    if _spot_initialized and len(_grid_engines) >= len(spot_settings.asset_list) and _active_roster:
+    if _spot_initialized and len(_active_roster) >= 8 and all(s in _grid_engines for s in _active_roster):
         return
 
     if not _spot_initialized:
@@ -409,7 +409,7 @@ def run_spot_grid_tick() -> Dict[str, Any]:
         _portfolio.reset_daily_if_needed()
         
         fill_events = []
-        asset_list = spot_settings.asset_list
+        asset_list = list(set(spot_settings.asset_list) | _active_roster)
         
         # ── Bulk Ticker Fetch (Real-world Mainnet Prices) ──
         pub_exchange = get_public_exchange()
@@ -443,7 +443,7 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                     _portfolio.usdt_reserved = min(10.0, max(2.0, _portfolio.usdt_available * 0.02))
 
                 tot = bal.get('total', {})
-                active_symbols = set(spot_settings.asset_list)
+                active_symbols = set(spot_settings.asset_list) | _active_roster
                 for coin, units in tot.items():
                     if coin in ['USDT', 'USDC', 'MNT']:
                         continue
@@ -645,7 +645,7 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                     if has_loss_sells:
                         invalid_sells = True
                         logger.info(f"🛡️ Re-aligning below-cost sell orders for {symbol} to guaranteed profit geometry (Cost: ${h_cost:.4f}, Live: ${price:.4f})...")
-                    elif symbol in spot_settings.asset_list and price > (h_cost * 1.02):
+                    elif symbol in (set(spot_settings.asset_list) | _active_roster) and price > (h_cost * 1.02):
                         # For active watchlist assets in profit: tighten if existing sells are excessively wide (>3% above market)
                         min_sell_p = min((l.price for l in open_sells), default=0.0)
                         if min_sell_p > (price * 1.03):
@@ -656,7 +656,7 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                                 if net_tight >= 0.50:
                                     invalid_sells = True
                                     logger.info(f"⚡ Tightening wide take-profit targets for {symbol} (Live: ${price:.4f} > Cost: ${h_cost:.4f})...")
-                    elif symbol not in spot_settings.asset_list:
+                    elif symbol not in (set(spot_settings.asset_list) | _active_roster):
                         # For legacy holdings outside Top 12: re-align once to the new Quick-Exit geometry if existing orders
                         # are wider than +3.5% above FIFO cost or live market price, so they exit rapidly to free capital without churn.
                         min_sell_p = min((l.price for l in open_sells), default=0.0)
@@ -901,7 +901,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
             logger.debug(f"Live open orders fetch in get_spot_status: {e_orders}")
 
     # Include active symbols PLUS any legacy symbol we still hold coins for (so resting TP sells remain visible on dashboard)
-    active_symbols = set(spot_settings.asset_list)
+    active_symbols = set(spot_settings.asset_list) | _active_roster
     legacy_held_symbols = {
         sym for sym, h in _portfolio.holdings.items()
         if float(getattr(h, 'units_held', 0) if hasattr(h, 'units_held') else (h or {}).get('units_held', 0) or 0) > 0.0001
@@ -1121,7 +1121,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
                 trades_by_sym[s_name].append(t)
 
             live_holdings = {}
-            active_symbols = set(spot_settings.asset_list)
+            active_symbols = set(spot_settings.asset_list) | _active_roster
             for coin, units in tot.items():
                 if coin in ['USDT', 'USDC']:
                     continue
