@@ -629,12 +629,10 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                             for l in open_sells
                         )
                     elif symbol == 'ARB/USDT':
-                        # Tiered check: Tier 1 sells (< $0.180) check against Tier 1 cost basis ($0.1652)
-                        def _get_arb_cost(l_px):
-                            return 0.1652 if l_px < 0.180 else 0.1918
-
+                        # 🛡️ STRICT RULE: ARB must NEVER sell at a loss.
+                        # Use actual FIFO average cost from portfolio — no fabricated cost floors.
                         has_loss_sells = any(
-                            (l.price * l.qty * (1.0 - fee_factor)) - (_get_arb_cost(l.price) * l.qty * (1.0 + fee_factor)) < 0.40
+                            (l.price * l.qty * (1.0 - fee_factor)) - (h_cost * l.qty * (1.0 + fee_factor)) < 0.10
                             for l in open_sells
                         )
                     else:
@@ -676,10 +674,12 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                                 invalid_sells = True
                                 logger.info(f"🚪 Re-aligning ARKM to Quick-Exit Tiered Liquidation (Current: ${min_sell_p:.4f} -> Tier 1 @ $0.1130, Tier 2 @ $0.1155)...")
                         elif symbol == 'ARB/USDT':
-                            # Tier 1 target is ~$0.1730; Tier 2 is ~$0.1945
-                            if min_sell_p > 0.180 or min_sell_p < 0.170:
+                            # 🛡️ ARB must NEVER have a resting sell below cost+fees.
+                            # Minimum acceptable sell = h_cost * 1.003 (covers 0.2% round-trip fee + small profit margin).
+                            min_profit_sell = h_cost * 1.003
+                            if any(l.price < min_profit_sell for l in open_sells):
                                 invalid_sells = True
-                                logger.info(f"🚪 Re-aligning ARB to Quick-Exit Tiered Liquidation (Current: ${min_sell_p:.4f} -> Tier 1 @ $0.1730, Tier 2 @ $0.1945)...")
+                                logger.info(f"🛡️ ARB sell orders below cost+fees detected (Cost: ${h_cost:.4f}, Min safe sell: ${min_profit_sell:.4f}). Cancelling and re-placing above cost...")
                         else:
                             target_quick_exit = max(h_cost * 1.0035, price * 1.0035)
                             if min_sell_p > (target_quick_exit * 1.035):
