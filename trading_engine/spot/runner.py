@@ -36,6 +36,8 @@ ALL_23_HALAL_UNIVERSE = [
 _last_trades_fetch_time: float = 0.0
 _cached_raw_trades: list = []
 _active_roster: set[str] = set()
+_last_blended_score_ts: float = 0.0
+_cached_blended_scores: dict[str, float] = {}
 
 def _get_dynamic_hot_asset_allocations(
     universe: list[str] = None,
@@ -45,7 +47,10 @@ def _get_dynamic_hot_asset_allocations(
 ) -> dict[str, float]:
     """
     Dynamic 23-Asset Scanner & Concentrated Top-8 Volatility Rotator:
-    1. Evaluates all 23 Halal spot assets on Bybit using 60% 24h Price Range + 40% ADX Momentum.
+    1. Evaluates all 23 Halal spot assets on Bybit using a Blended Quantitative Score:
+       - 60% 48-Hour Volatility Range: ((High_48h - Low_48h) / Low_48h) over last 2 daily candles
+       - 40% 7-Day Average True Range (ATR%): Sustained structural volatility over 7 days
+       This prevents 1-day hype pump bag traps while keeping high-velocity oscillation leaders.
     2. Enforces strict Capital Trap Prevention (15% Max Position Exposure Gate):
        - If any asset's current holding value >= 15% of total portfolio equity, it is disqualified
          from new buy allocations (locked at 0.0%) to prevent over-accumulation.
@@ -54,6 +59,7 @@ def _get_dynamic_hot_asset_allocations(
        - Rank 5 to 8 (Secondary Power Movers): 10.0% each (40% total)
        - Rank 9 to 23 & Demoted/Disqualified: 0.0% buy allocation (rotated to profit-taking Sell-Only Mode)
     """
+    global _last_blended_score_ts, _cached_blended_scores
     scan_list = universe or ALL_23_HALAL_UNIVERSE
     scored_pairs = []
     pub_ex = None
@@ -73,33 +79,87 @@ def _get_dynamic_hot_asset_allocations(
     except Exception:
         pass
 
+    # ── Blended 60% 48h Volatility + 40% 7d ATR Calculation (Cached for 30 min) ──
+    now_ts = time.time()
+    if (now_ts - _last_blended_score_ts < 1800) and _cached_blended_scores:
+        blended_scores = dict(_cached_blended_scores)
+    else:
+        blended_scores = {}
+        if pub_ex:
+            try:
+                from concurrent.futures import ThreadPoolExecutor
+                def _fetch_one_ohlcv(s):
+                    try:
+                        return s, pub_ex.fetch_ohlcv(s, timeframe='1d', limit=8)
+                    except Exception:
+                        return s, []
+
+                with ThreadPoolExecutor(max_workers=8) as pool:
+                    candles_by_sym = dict(pool.map(_fetch_one_ohlcv, scan_list))
+
+                for sym in scan_list:
+                    candles = candles_by_sym.get(sym, [])
+                    if len(candles) >= 3:
+                        # 48h range across last 2 daily candles
+                        c_48h = candles[-2:]
+                        h_48 = max(c[2] for c in c_48h)
+                        l_48 = min(c[3] for c in c_48h)
+                        r_48 = ((h_48 - l_48) / l_48) * 100.0 if l_48 > 0 else 0.0
+
+                        # 7-day ATR %
+                        c_7d = candles[-7:]
+                        tr_list = []
+                        for i in range(1, len(c_7d)):
+                            h, l, prev_c = c_7d[i][2], c_7d[i][3], c_7d[i-1][4]
+                            tr = max(h - l, abs(h - prev_c), abs(l - prev_c))
+                            if c_7d[i][4] > 0:
+                                tr_list.append(tr / c_7d[i][4])
+                        atr_7d_pct = (sum(tr_list) / len(tr_list)) * 100.0 if tr_list else 0.0
+
+                        # Blended score: 60% 48h range + 40% 7d ATR (scaled to comparable magnitude)
+                        blended_scores[sym] = round((0.60 * r_48) + (0.40 * atr_7d_pct * 2.5), 2)
+                    else:
+                        blended_scores[sym] = 0.0
+
+                if any(v > 0 for v in blended_scores.values()):
+                    _cached_blended_scores = dict(blended_scores)
+                    _last_blended_score_ts = now_ts
+                    logger.info("⚡ Dynamic Blended Scanner updated (60% 48h Volatility + 40% 7d ATR).")
+            except Exception as e_score:
+                logger.debug(f"Blended score calculation error: {e_score}")
+
     # Evaluate each asset in the 23-asset universe
     for sym in scan_list:
-        adx_score = 0.0
-        if regime_detectors and sym in regime_detectors:
-            det = regime_detectors[sym]
-            if det and getattr(det, '_cached_state', None):
-                st = det._cached_state
-                adx_score = float(getattr(st, 'adx', 0.0)) + float(abs(getattr(st, 'plus_di', 0.0) - getattr(st, 'minus_di', 0.0)))
-        
-        range_24h_pct = 0.0
         last_price = 0.0
         if tickers and sym in tickers:
             t = tickers[sym]
-            high = float(t.get('high', 0) or 0)
-            low = float(t.get('low', 1) or 1)
             last_price = float(t.get('last', 0) or 0)
-            if low > 0:
-                range_24h_pct = ((high - low) / low) * 100.0
 
-        vol_score = (0.60 * range_24h_pct * 10.0) + (0.40 * adx_score)
+        vol_score = blended_scores.get(sym, 0.0)
         if vol_score <= 0.0:
-            default_scores = {
-                'TIA/USDT': 98.0, 'FET/USDT': 96.0, 'ARB/USDT': 95.0, 'ICP/USDT': 92.0,
-                'AVAX/USDT': 88.0, 'NEAR/USDT': 85.0, 'RENDER/USDT': 80.0, 'SOL/USDT': 78.0,
-                'DOT/USDT': 75.0, 'INJ/USDT': 74.0, 'SUI/USDT': 73.0, 'ARKM/USDT': 72.0
-            }
-            vol_score = default_scores.get(sym, 50.0)
+            # Fallback to 24h ticker range + ADX if candle fetch was unavailable
+            adx_score = 0.0
+            if regime_detectors and sym in regime_detectors:
+                det = regime_detectors[sym]
+                if det and getattr(det, '_cached_state', None):
+                    st = det._cached_state
+                    adx_score = float(getattr(st, 'adx', 0.0)) + float(abs(getattr(st, 'plus_di', 0.0) - getattr(st, 'minus_di', 0.0)))
+            range_24h_pct = 0.0
+            if tickers and sym in tickers:
+                t = tickers[sym]
+                high = float(t.get('high', 0) or 0)
+                low = float(t.get('low', 1) or 1)
+                if low > 0:
+                    range_24h_pct = ((high - low) / low) * 100.0
+            vol_score = (0.60 * range_24h_pct * 10.0) + (0.40 * adx_score)
+
+            if vol_score <= 0.0:
+                default_scores = {
+                    'INJ/USDT': 25.0, 'ARB/USDT': 28.0, 'TIA/USDT': 18.0, 'ICP/USDT': 17.0,
+                    'DOT/USDT': 16.0, 'UNI/USDT': 15.0, 'FET/USDT': 14.0, 'NEAR/USDT': 13.0,
+                    'LINK/USDT': 12.0, 'OP/USDT': 11.0, 'SUI/USDT': 10.0, 'APT/USDT': 10.0
+                }
+                vol_score = default_scores.get(sym, 8.0)
 
         # 🛑 15% Max Position Exposure Gate (Capital Trap Prevention)
         is_capped = False
