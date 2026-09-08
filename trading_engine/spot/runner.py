@@ -605,7 +605,7 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                     from trading_engine.spot.fifo_reconciler import get_fifo_cost_basis
                     fb = get_fifo_cost_basis(symbol)
                     if fb.get('avg_cost', 0) > 0:
-                        h_cost = max(h_cost, float(fb['avg_cost']))
+                        h_cost = max(h_cost, float(fb['avg_cost']), float(fb.get('max_buy_price', 0) or 0))
                 except Exception:
                     pass
                 invalid_sells = False

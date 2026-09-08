@@ -261,8 +261,10 @@ class GridEngine:
             from trading_engine.spot.fifo_reconciler import get_fifo_cost_basis
             fifo_basis = get_fifo_cost_basis(self.symbol) or {}
             if fifo_basis.get('avg_cost', 0) > 0:
-                avg_cost = max(avg_cost, fifo_basis['avg_cost'])
-                fifo_max_cost = fifo_basis.get('max_buy_price', 0.0)
+                fifo_max_cost = float(fifo_basis.get('max_buy_price', 0.0) or 0.0)
+                # 🛡️ FIFO LOT-SAFETY RULE: cost basis must cover the HIGHEST-cost open buy lot in FIFO queue
+                # so that when the oldest lots match first under FIFO, NO SINGLE LOT IS EVER SOLD AT A LOSS!
+                avg_cost = max(avg_cost, float(fifo_basis['avg_cost']), fifo_max_cost)
         except Exception as e_fifo_cb:
             logger.debug(f"FIFO cost basis lookup for {self.symbol}: {e_fifo_cb}")
             fifo_basis = {}
