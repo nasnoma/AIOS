@@ -291,7 +291,12 @@ class GridEngine:
                 min_net_usd = 0.75  # Target guaranteed > $0.50 net profit
 
                 for i in range(sell_levels_count):
-                    cost_ref = avg_cost if avg_cost > 0 else current_price
+                    cost_ref = max(avg_cost, fifo_max_cost)
+                    if cost_ref <= 0:
+                        from trading_engine.spot.runner import ALL_23_HISTORICAL_COSTS
+                        cost_ref = float(ALL_23_HISTORICAL_COSTS.get(self.symbol, 0.0) or 0.0)
+                    if cost_ref <= 0:
+                        cost_ref = current_price
                     denom = qty_per_sell * (1.0 - fee_factor)
                     min_fee_proof_price = (cost_ref * qty_per_sell * (1.0 + fee_factor) + min_net_usd) / denom if denom > 0 else cost_ref * 1.005
 
@@ -344,8 +349,10 @@ class GridEngine:
                     # Hard floor: Net profit must NEVER be less than $0.50 USD
                     min_net_usd = max(0.50, min_net_usd)
                     
-                    # Reference cost basis: Guard the actual FIFO purchase cost basis
                     cost_ref = max(avg_cost, fifo_max_cost)
+                    if cost_ref <= 0.0:
+                        from trading_engine.spot.runner import ALL_23_HISTORICAL_COSTS
+                        cost_ref = float(ALL_23_HISTORICAL_COSTS.get(self.symbol, 0.0) or 0.0)
                     if cost_ref <= 0.0:
                         cost_ref = current_price
 
