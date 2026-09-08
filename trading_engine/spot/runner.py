@@ -630,14 +630,14 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                         )
                     elif symbol == 'ARB/USDT':
                         # 🛡️ STRICT RULE: ARB must NEVER sell at a loss.
-                        # Use actual FIFO average cost from portfolio — no fabricated cost floors.
+                        # Every sell order must guarantee at least $0.50 net profit after fees.
                         has_loss_sells = any(
-                            (l.price * l.qty * (1.0 - fee_factor)) - (h_cost * l.qty * (1.0 + fee_factor)) < 0.10
+                            (l.price * l.qty * (1.0 - fee_factor)) - (h_cost * l.qty * (1.0 + fee_factor)) < 0.50
                             for l in open_sells
                         )
                     else:
                         has_loss_sells = any(
-                            (l.price * l.qty * (1.0 - fee_factor)) - (h_cost * l.qty * (1.0 + fee_factor)) < 0.40
+                            (l.price * l.qty * (1.0 - fee_factor)) - (h_cost * l.qty * (1.0 + fee_factor)) < 0.50
                             for l in open_sells
                         )
                     if has_loss_sells:
@@ -675,11 +675,14 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                                 logger.info(f"🚪 Re-aligning ARKM to Quick-Exit Tiered Liquidation (Current: ${min_sell_p:.4f} -> Tier 1 @ $0.1130, Tier 2 @ $0.1155)...")
                         elif symbol == 'ARB/USDT':
                             # 🛡️ ARB must NEVER have a resting sell below cost+fees.
-                            # Minimum acceptable sell = h_cost * 1.003 (covers 0.2% round-trip fee + small profit margin).
-                            min_profit_sell = h_cost * 1.003
-                            if any(l.price < min_profit_sell for l in open_sells):
+                            # Every sell order must guarantee >= $0.50 net profit after all exchange fees.
+                            has_sub_profit_sells = any(
+                                (l.price * l.qty * (1.0 - fee_factor)) - (h_cost * l.qty * (1.0 + fee_factor)) < 0.50
+                                for l in open_sells
+                            )
+                            if has_sub_profit_sells:
                                 invalid_sells = True
-                                logger.info(f"🛡️ ARB sell orders below cost+fees detected (Cost: ${h_cost:.4f}, Min safe sell: ${min_profit_sell:.4f}). Cancelling and re-placing above cost...")
+                                logger.info(f"🛡️ ARB sell orders with < $0.50 net profit detected (Cost: ${h_cost:.4f}). Cancelling and re-placing at guaranteed profit prices...")
                         else:
                             target_quick_exit = max(h_cost * 1.0035, price * 1.0035)
                             if min_sell_p > (target_quick_exit * 1.035):
