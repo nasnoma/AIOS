@@ -320,7 +320,7 @@ def init_spot_engine():
             
     spot_active_capital = account_size * spot_settings.total_capital_pct
     expected_free = spot_active_capital
-    expected_res = min(10.0, max(2.0, account_size * spot_settings.usdt_hard_reserve_pct))
+    expected_res = account_size * spot_settings.usdt_hard_reserve_pct
     
     _portfolio.usdt_reserved = expected_res
     if _portfolio.usdt_available == 0.0:
@@ -504,7 +504,9 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 info_list = bal.get('info', {}).get('result', {}).get('list', [])
                 tot_equity = float(info_list[0].get('totalEquity', 0)) if info_list else 0.0
                 if tot_equity > 0:
-                    _portfolio.usdt_reserved = min(10.0, max(2.0, _portfolio.usdt_available * 0.02))
+                    _portfolio.usdt_reserved = tot_equity * spot_settings.usdt_hard_reserve_pct
+                elif _portfolio.usdt_available > 0:
+                    _portfolio.usdt_reserved = _portfolio.usdt_available * spot_settings.usdt_hard_reserve_pct
 
                 tot = bal.get('total', {})
                 active_symbols = set(spot_settings.asset_list) | _active_roster
@@ -635,6 +637,15 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                     engine.params.buy_levels = 0
                 if any(lvl.side == 'buy' for lvl in engine.grid_levels):
                     engine.cancel_buys_only(exchange)
+
+            # 🛡️ Dynamic 20% Hard Cash Reserve Shield:
+            # If total available USDT is below the dynamic reserve floor, cancel resting buys to free cash
+            res_floor = float(getattr(_portfolio, 'usdt_reserved', 0.0) or 0.0)
+            avail_usdt = float(getattr(_portfolio, 'usdt_available', 0.0) or 0.0)
+            if res_floor > 0 and avail_usdt < res_floor:
+                if any(lvl.side == 'buy' for lvl in engine.grid_levels):
+                    logger.info(f"[{symbol}] 🛡️ [RESERVE SHIELD] Freeing capital - cancelling resting buys to protect 20% cash reserve (${res_floor:,.2f} floor).")
+                    engine.cancel_buys_only(exchange)
                 
             try:
                 ticker = tickers.get(symbol)
@@ -656,8 +667,8 @@ def run_spot_grid_tick() -> Dict[str, Any]:
 
 
                 # Initial grid build if empty, forced reset, or auto-recenter if open buy orders are stale (>1.5% away in either direction)
-                open_buys = [l for l in engine.grid_levels if l.status in ['open', 'pending'] and l.side == 'buy']
-                open_sells = [l for l in engine.grid_levels if l.status in ['open', 'pending'] and l.side == 'sell']
+                open_buys = [l for l in engine.grid_levels if l.status == 'open' and l.side == 'buy']
+                open_sells = [l for l in engine.grid_levels if l.status == 'open' and l.side == 'sell']
                 max_buy_p = max((l.price for l in open_buys), default=0.0)
                 # A grid is only stale if it actually has active buy orders that have drifted >1.5% from current price.
                 # When buy orders are paused (e.g. cash reserve floor or sell-only holdings), it is NOT stale.
@@ -1153,6 +1164,11 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
                 summary_data['usdt_in_orders'] = usdt_used_val
                 summary_data['total_capital'] = official_tot_equity if official_tot_equity > 0 else usdt_tot
                 summary_data['total_unified_equity'] = official_tot_equity if official_tot_equity > 0 else usdt_tot
+                if official_tot_equity > 0:
+                    _portfolio.usdt_reserved = official_tot_equity * spot_settings.usdt_hard_reserve_pct
+                elif usdt_tot > 0:
+                    _portfolio.usdt_reserved = usdt_tot * spot_settings.usdt_hard_reserve_pct
+                summary_data['usdt_reserved'] = _portfolio.usdt_reserved
 
             # Group recent trades in memory to eliminate 15+ sequential network roundtrips to Bybit
             trades_by_sym = {}
@@ -1295,6 +1311,8 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
         "paper_mode": spot_settings.paper_mode,
         "total_capital": tot_cap_val,
         "total_capital_pct": spot_settings.total_capital_pct,
+        "usdt_hard_reserve_pct": spot_settings.usdt_hard_reserve_pct,
+        "usdt_reserved": float(getattr(_portfolio, 'usdt_reserved', 0.0) or 0.0),
         "portfolio": summary_data,
         "regimes": regimes,
         "grids": grids,

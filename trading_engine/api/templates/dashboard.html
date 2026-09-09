@@ -107,7 +107,7 @@
   <div class="stat-row">
     <div class="stat-card"><div class="stat-label">&#128176; Portfolio Capital</div><div class="stat-val" id="spot-capital">--</div><div class="stat-sub">Total equity</div></div>
     <div class="stat-card"><div class="stat-label">&#9889; Deployed Capital</div><div class="stat-val" id="spot-active-cap" style="color:var(--teal)">--</div><div class="stat-sub" id="spot-active-sub">99.5% deployed</div></div>
-    <div class="stat-card"><div class="stat-label">&#128181; Free Cash</div><div class="stat-val" id="spot-usdt-free">--</div><div class="stat-sub">Grid liquidity</div></div>
+    <div class="stat-card"><div class="stat-label">&#128181; Free Cash</div><div class="stat-val" id="spot-usdt-free">--</div><div class="stat-sub" id="spot-usdt-sub">Grid liquidity</div></div>
     <div class="stat-card"><div class="stat-label">&#128176; Gross Profit Today</div><div class="stat-val" id="spot-gross-today">--</div><div class="stat-sub">Before fees</div></div>
     <div class="stat-card"><div class="stat-label">&#128202; Realised P&amp;L Today</div><div class="stat-val" id="spot-pnl-today">--</div><div class="stat-sub">Net after fees</div></div>
     <div class="stat-card"><div class="stat-label">&#127919; Grid Cycles Today</div><div class="stat-val" id="spot-cycles-today" style="color:var(--teal)">--</div><div class="stat-sub">Buy&#8594;sell rounds</div></div>
@@ -260,6 +260,12 @@ function renderSpotStatus(data) {
   set('spot-active-cap', usd(deployedCap));
   set('spot-active-sub', deployedPct.toFixed(1) + '% deployed');
   set('spot-usdt-free', usd(usdtFree));
+  const resShield = Number(p.usdt_reserved || data.usdt_reserved || 0);
+  if (resShield > 0) {
+    set('spot-usdt-sub', '🛡️ Shield: ' + usd(resShield) + ' (20%)');
+  } else {
+    set('spot-usdt-sub', 'Grid liquidity');
+  }
 
   const cyclesTodayCount = Number(p.cycles_today || 0);
 

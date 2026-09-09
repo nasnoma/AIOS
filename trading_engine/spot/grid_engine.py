@@ -503,6 +503,7 @@ class GridEngine:
                             # (Total USDT - All Open Buy Commitments - New Order Cost) MUST be >= 20% Reserve Floor
                             if res_floor > 0 and (avail_usdt - open_buys_usd - req_cost) < res_floor:
                                 logger.debug(f"[{self.symbol}] Pausing buy order (${req_cost:.2f}) - Total open buy commitments (${open_buys_usd:.2f}) would breach 20% cash reserve (${res_floor:,.2f} floor).")
+                                level.status = 'cancelled'
                                 continue
 
                         params = {'category': 'spot', 'postOnly': True} if 'bybit' in str(type(exchange)).lower() else {}
