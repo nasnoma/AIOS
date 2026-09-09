@@ -30,6 +30,9 @@ class DCAManager:
         self.adx_period = adx_period
 
     def check(self, symbol: str, exchange: ccxt.Exchange, regime: str) -> Optional[DCASignal]:
+        # 🛑 Anti-Falling-Knife Guard: completely suppress DCA buys during confirmed BEAR downtrends
+        if regime == "BEAR":
+            return None
         try:
             # Fetch 15m candles for fast day-trading responsiveness
             ohlcv = exchange.fetch_ohlcv(symbol, timeframe='15m', limit=100)

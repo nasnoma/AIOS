@@ -36,9 +36,9 @@ REGIME_PARAMS: Dict[str, RegimeParams] = {
     ),
     'BEAR': RegimeParams(
         grid_spacing=0.030,
-        buy_levels=4,
+        buy_levels=0,
         sell_levels=3,
-        capital_pct=0.30,
+        capital_pct=0.0,
         base_hold_pct=0.20
     )
 }
@@ -133,6 +133,10 @@ class GridEngine:
         self.current_regime = regime
         self.params = REGIME_PARAMS[regime]
         
+        if regime == 'BEAR':
+            self.cancel_buys_only(self.exchange)
+            logger.info(f"🛑 [{self.symbol}] Switched to BEAR regime (Price < SMA50, -DI dominant). Cancelled open buys to prevent catching falling knives.")
+
         if old_params and old_params.grid_spacing > 0:
             spacing_diff = abs(old_params.grid_spacing - self.params.grid_spacing) / old_params.grid_spacing
         else:
@@ -188,9 +192,14 @@ class GridEngine:
         raw_order_size = (self.allocated_usd * self.params.capital_pct) / total_levels if total_levels > 0 else 0
         base_order_size = max(35.0, raw_order_size) if raw_order_size > 0 else 0
 
+        # 🛑 Anti-Falling-Knife Guard: strictly suppress buys in confirmed BEAR regimes or when buy_levels is 0
+        if self.current_regime == 'BEAR' or self.params.buy_levels <= 0 or self.allocated_usd <= 0:
+            base_order_size = 0.0
+            if self.current_regime == 'BEAR':
+                logger.info(f"🛑 [{self.symbol}] BEAR trend active (Price < SMA50, -DI dominant). Buying paused to prevent catching falling knives.")
 
-        # Build BUY ladder (only if capital is allocated to this asset)
-        if base_order_size > 0:
+        # Build BUY ladder (only if capital is allocated to this asset and not in BEAR regime)
+        if base_order_size > 0 and self.current_regime != 'BEAR' and self.params.buy_levels > 0:
             # 🌊 Dip-Quality Buy Level Sizing:
             # When an intraday dip signal is detected (dip_boost > 1.05),
             # Level 1 is trimmed to 0.80x to conserve dry powder,
@@ -685,7 +694,10 @@ class GridEngine:
 
                 
                     from trading_engine.config import spot_settings
-                    if self.symbol in spot_settings.asset_list and getattr(self, 'allocated_usd', 0.0) > 0:
+                    if (self.symbol in spot_settings.asset_list and 
+                        getattr(self, 'allocated_usd', 0.0) > 0 and 
+                        self.current_regime != 'BEAR' and 
+                        getattr(self.params, 'buy_levels', 0) > 0):
                         new_buy = GridLevel(
                             price=buy_orig_p,
                             side='buy',
@@ -697,7 +709,7 @@ class GridEngine:
                             new_buy.status = 'open'
                             new_buy.order_id = f'PAPER_{uuid4().hex[:8]}'
                     else:
-                        logger.info(f"🎉 [{self.symbol}] Sell-Only position exited into liquid USDT cash. No replacement buy placed.")
+                        logger.info(f"🎉 [{self.symbol}] Sell-Only/BEAR position exited into liquid USDT cash. No replacement buy placed.")
                         
                     fills.append({'side': 'sell', 'price': level.price, 'qty': level.qty})
                     

@@ -176,12 +176,25 @@ def _get_dynamic_hot_asset_allocations(
                     is_capped = True
                     logger.info(f"🛑 [CAP REACHED] {sym} exposure (${holding_val:,.2f}, {exposure_pct*100:.1f}%) >= 15% equity ceiling. Disqualified from active buy allocation to prevent trapped capital.")
 
-        scored_pairs.append((sym, vol_score, is_capped))
+        # 🛑 Individual BEAR Trend Filter (Anti-Falling-Knife Guard)
+        is_bear = False
+        if regime_detectors and sym in regime_detectors:
+            det = regime_detectors[sym]
+            if det and getattr(det, '_cached_state', None):
+                st = det._cached_state
+                reg = getattr(st, 'regime', None)
+                reg_str = reg.name if hasattr(reg, 'name') else str(reg)
+                if reg_str == 'BEAR':
+                    is_bear = True
+                    logger.info(f"🛑 [BEAR FILTER] {sym} confirmed BEAR regime (Price < SMA50, -DI dominant). Disqualified from active buy allocation to prevent catching falling knives.")
+
+        is_disqualified = is_capped or is_bear
+        scored_pairs.append((sym, vol_score, is_disqualified))
 
     # Rank assets by volatility score
     scored_pairs.sort(key=lambda x: x[1], reverse=True)
     
-    # Select Top 8 eligible (non-capped) leaders
+    # Select Top 8 eligible (non-capped, non-BEAR) leaders
     eligible_pairs = [p for p in scored_pairs if not p[2]]
     top_8_selected = [p[0] for p in eligible_pairs[:8]]
 
@@ -369,23 +382,31 @@ def run_spot_regime_check():
     except Exception as e_btc_r:
         logger.debug(f"BTC master filter in regime check: {e_btc_r}")
 
-    # 2. Run regime detection on active roster and candidate symbols
-    symbols_to_check = set(spot_settings.asset_list) | _active_roster
-    for symbol in symbols_to_check:
-        detector = _regime_detectors.get(symbol)
-        if not detector:
-            detector = RegimeDetector(symbol=symbol)
-            _regime_detectors[symbol] = detector
-            
+    # 2. Run regime detection on active roster, candidate symbols, and all 23 universe assets in parallel
+    symbols_to_check = list(set(ALL_23_HALAL_UNIVERSE) | set(spot_settings.asset_list) | _active_roster)
+
+    def _run_single_regime(sym):
+        det = _regime_detectors.get(sym)
+        if not det:
+            det = RegimeDetector(symbol=sym)
+            _regime_detectors[sym] = det
         try:
-            state = detector.detect(exchange)
-            engine = _grid_engines.get(symbol)
-            regime_name = state.regime.name if hasattr(state.regime, 'name') else str(state.regime)
-            if engine:
-                engine.set_regime(regime_name)
-            logger.info(f"📊 Regime [{symbol}]: {regime_name} (ADX: {state.adx:.1f}, +DI: {state.plus_di:.1f}, -DI: {state.minus_di:.1f})")
-        except Exception as e:
-            logger.warning(f"Failed regime check for {symbol}: {e}")
+            st = det.detect(exchange)
+            eng = _grid_engines.get(sym)
+            reg_name = st.regime.name if hasattr(st.regime, 'name') else str(st.regime)
+            if eng:
+                eng.set_regime(reg_name)
+            return sym, reg_name, st
+        except Exception as e_reg:
+            logger.warning(f"Failed regime check for {sym}: {e_reg}")
+            return sym, None, None
+
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        reg_results = list(pool.map(_run_single_regime, symbols_to_check))
+        for sym, reg_name, st in reg_results:
+            if reg_name and st:
+                logger.info(f"📊 Regime [{sym}]: {reg_name} (ADX: {st.adx:.1f}, +DI: {st.plus_di:.1f}, -DI: {st.minus_di:.1f})")
 
     # 3. Dynamic 23-Asset Scanner & Capital Rotation with 15% Exposure Ceiling
     try:
@@ -624,6 +645,14 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                     engine.params.buy_levels = 0
                 if any(lvl.side == 'buy' for lvl in engine.grid_levels):
                     engine.grid_levels = [lvl for lvl in engine.grid_levels if lvl.side == 'sell']
+
+            # 🛑 Anti-Falling-Knife Guard: strictly suppress buys if asset is in confirmed BEAR regime
+            if getattr(engine, 'current_regime', 'RANGE') == 'BEAR':
+                engine.allocated_usd = 0.0
+                if hasattr(engine, 'params') and engine.params:
+                    engine.params.buy_levels = 0
+                if any(lvl.side == 'buy' for lvl in engine.grid_levels):
+                    engine.cancel_buys_only(exchange)
                 
             try:
                 ticker = tickers.get(symbol)
@@ -749,6 +778,8 @@ def run_spot_dca_check():
     for symbol in target_symbols:
         engine = _grid_engines.get(symbol)
         regime = engine.current_regime if engine else "RANGE"
+        if regime == "BEAR":
+            continue
         
         try:
             signal = _dca_manager.check(symbol, exchange, regime)
