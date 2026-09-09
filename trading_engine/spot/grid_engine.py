@@ -360,17 +360,17 @@ class GridEngine:
                 qty_per_sell = base_qty_held / sell_levels_count
 
                 # Tiered net profit guarantee:
-                min_net_profit_tiers = [0.50, 0.80, 1.20, 2.00]
+                min_net_profit_tiers = [0.60, 0.90, 1.30, 2.00]
                 fee_factor = 0.0010  # 0.10% Bybit taker fee safety buffer
 
                 for i in range(sell_levels_count):
-                    min_net_usd = min_net_profit_tiers[i] if i < len(min_net_profit_tiers) else (0.50 + 0.40 * i)
+                    min_net_usd = min_net_profit_tiers[i] if i < len(min_net_profit_tiers) else (0.60 + 0.40 * i)
                     if is_aged_position:
                         # ⚡ Age-Weighted Target Compression: For holdings > 24h old,
-                        # collapse target to minimum fee-proof profit ($0.50) across all tiers to recycle capital rapidly
-                        min_net_usd = 0.50
+                        # collapse target to fee-proof profit ($0.60) across all tiers to recycle capital rapidly
+                        min_net_usd = 0.60
                     else:
-                        min_net_usd = max(0.50, min_net_usd)
+                        min_net_usd = max(0.60, min_net_usd)
                     
                     cost_ref = max(avg_cost, fifo_max_cost)
                     if cost_ref <= 0.0:
@@ -400,10 +400,10 @@ class GridEngine:
                     if target_p <= current_price:
                         target_p = current_price * 1.0040
                     
-                    # Double check net profit calculation to guarantee >= $0.50 USD
+                    # Double check net profit calculation to guarantee >= $0.55 USD
                     actual_net_pnl = (target_p * qty_per_sell * (1.0 - fee_factor)) - (cost_ref * qty_per_sell * (1.0 + fee_factor))
-                    if actual_net_pnl < 0.50:
-                        target_p = (cost_ref * qty_per_sell * (1.0 + fee_factor) + 0.50) / denom if denom > 0 else target_p
+                    if actual_net_pnl < 0.55:
+                        target_p = (cost_ref * qty_per_sell * (1.0 + fee_factor) + 0.60) / denom if denom > 0 else target_p
                         actual_net_pnl = (target_p * qty_per_sell * (1.0 - fee_factor)) - (cost_ref * qty_per_sell * (1.0 + fee_factor))
 
                     tier_label = "Compressed Aged" if is_aged_position else "High-Velocity"
@@ -591,27 +591,34 @@ class GridEngine:
                     # Guaranteed Profit Floor: Replacement sell order MUST yield at least +$0.60 NET cash after fees
                     min_net_usd = 0.60
                     fee_factor = 0.0010
+                    cost_ref = level.price
+                    try:
+                        from trading_engine.spot.fifo_reconciler import get_fifo_cost_basis
+                        fb = get_fifo_cost_basis(self.symbol)
+                        if fb.get('max_buy_price', 0) > 0:
+                            cost_ref = max(cost_ref, float(fb['max_buy_price']), float(fb.get('avg_cost', 0)))
+                    except Exception:
+                        pass
                     denom = level.qty * (1.0 - fee_factor)
                     if denom > 0:
-                        min_fee_proof_sell = (level.price * level.qty * (1.0 + fee_factor) + min_net_usd) / denom
-                        sell_price = max(min_fee_proof_sell, level.price * 1.0090)
+                        min_fee_proof_sell = (cost_ref * level.qty * (1.0 + fee_factor) + min_net_usd) / denom
+                        sell_price = max(min_fee_proof_sell, cost_ref * 1.0090)
                     else:
-                        sell_price = level.price * 1.0150
-
+                        sell_price = cost_ref * 1.0150
 
                     new_sell = GridLevel(
                         price=sell_price,
                         side='sell',
                         qty=level.qty,
                         size_usd=sell_price * level.qty,
-                        linked_buy_price=level.price
+                        linked_buy_price=cost_ref
                     )
                     self.grid_levels.append(new_sell)
                     if self.paper_mode:
                         new_sell.status = 'open'
                         new_sell.order_id = f'PAPER_{uuid4().hex[:8]}'
                     fills.append({'side': 'buy', 'price': level.price, 'qty': level.qty})
-                    logger.info(f"BUY filled at {level.price}. Created new SELL level at {sell_price:.4f} (Guaranteed Net: +${min_net_usd:.2f})")
+                    logger.info(f"BUY filled at {level.price}. Created new SELL level at {sell_price:.4f} (CostRef: ${cost_ref:.4f}, Guaranteed Net: +${min_net_usd:.2f})")
 
                     
                 elif level.side == 'sell':
@@ -627,7 +634,7 @@ class GridEngine:
                         # Recalculate and replace this sell order with one that guarantees >= $0.50 net
                         fee_factor = self.fee_rate
                         denom = level.qty * (1.0 - fee_factor)
-                        min_sell_price = (buy_orig_p * level.qty + MIN_NET_PROFIT_USD) / denom if denom > 0 else buy_orig_p * 1.015
+                        min_sell_price = (buy_orig_p * level.qty * (1.0 + fee_factor) + MIN_NET_PROFIT_USD) / denom if denom > 0 else buy_orig_p * 1.015
                         logger.warning(
                             f"⛔ [{self.symbol}] BLOCKED sub-$0.50 sell fill: would have netted ${net_pnl:.4f} "
                             f"(Sell @ ${level.price:.4f}, Cost @ ${buy_orig_p:.4f}, Qty: {level.qty:.2f}). "
