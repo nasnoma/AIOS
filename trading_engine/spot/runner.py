@@ -332,41 +332,12 @@ def init_spot_engine():
         if symbol not in _regime_detectors:
             _regime_detectors[symbol] = RegimeDetector(symbol=symbol, timeframe=spot_settings.regime_timeframe)
 
-    allocations = _get_dynamic_hot_asset_allocations(
-        universe=ALL_23_HALAL_UNIVERSE,
-        regime_detectors=_regime_detectors,
-        portfolio=_portfolio,
-        total_equity=account_size
-    )
-
-    top_8_active = [sym for sym, alloc in allocations.items() if alloc > 0.0]
-    if not top_8_active:
-        top_8_active = list(spot_settings.asset_list[:8])
-    _active_roster = set(top_8_active)
-
-    # Instantiate or update GridEngines for the Top 8 active leaders
-    for symbol in _active_roster:
-        alloc_pct = allocations.get(symbol, 1.0 / len(_active_roster))
-        asset_usd = spot_active_capital * alloc_pct
-        
-        if symbol not in _grid_engines:
-            _grid_engines[symbol] = GridEngine(
-                symbol=symbol,
-                allocated_usd=asset_usd,
-                paper_mode=spot_settings.paper_mode,
-                fee_rate=spot_settings.fee_rate
-            )
-        else:
-            if abs(_grid_engines[symbol].allocated_usd - asset_usd) > 1.0:
-                _grid_engines[symbol].allocated_usd = asset_usd
-                _grid_engines[symbol]._last_rebuild_time = 0.0  # Allocation changed, force rebuild
-            
-    # Strictly zero-out buy allocations for legacy holding assets outside active roster (Sell-Only Mode)
-    for sym_eng_k, eng_obj in _grid_engines.items():
-        if sym_eng_k not in _active_roster:
-            eng_obj.allocated_usd = 0.0
-            if hasattr(eng_obj, 'params') and eng_obj.params:
-                eng_obj.params.buy_levels = 0
+    # Run initial regime detection so confirmed regimes are cached
+    # and dynamic Top 8 allocations are properly filtered from the very first second!
+    try:
+        run_spot_regime_check()
+    except Exception as e_init_reg:
+        logger.warning(f"Failed to run initial regime check in init_spot_engine: {e_init_reg}")
 
     logger.info(f"✅ Spot Engine Initialised (Top {len(_active_roster)} Active Movers: {sorted(list(_active_roster))}, Active Capital: ${spot_active_capital:,.2f})")
 
@@ -395,7 +366,7 @@ def run_spot_regime_check():
             eng = _grid_engines.get(sym)
             reg_name = st.regime.name if hasattr(st.regime, 'name') else str(st.regime)
             if eng:
-                eng.set_regime(reg_name)
+                eng.set_regime(reg_name, exchange=exchange)
             return sym, reg_name, st
         except Exception as e_reg:
             logger.warning(f"Failed regime check for {sym}: {e_reg}")
@@ -426,7 +397,16 @@ def run_spot_regime_check():
         )
         new_top_8 = {sym for sym, alloc in allocations.items() if alloc > 0.0}
         if not new_top_8:
-            new_top_8 = set(spot_settings.asset_list[:8])
+            # Safe fallback: select from asset_list strictly excluding any confirmed BEAR or capped assets
+            safe_candidates = []
+            for s in spot_settings.asset_list:
+                det = _regime_detectors.get(s)
+                st = getattr(det, '_cached_state', None) if det else None
+                reg = getattr(st, 'regime', None) if st else None
+                reg_str = reg.name if hasattr(reg, 'name') else str(reg)
+                if reg_str != 'BEAR':
+                    safe_candidates.append(s)
+            new_top_8 = set(safe_candidates[:8])
 
         # Detect promotions and demotions
         promoted = new_top_8 - _active_roster
@@ -451,7 +431,9 @@ def run_spot_regime_check():
         # Allocate active capital to new Top 8 leaders
         active_cap = total_eq * spot_settings.total_capital_pct
         for symbol in _active_roster:
-            alloc_pct = allocations.get(symbol, 0.125)
+            alloc_pct = allocations.get(symbol, 0.0)
+            if alloc_pct <= 0.0 and len(_active_roster) > 0:
+                alloc_pct = 1.0 / len(_active_roster)
             new_asset_usd = active_cap * alloc_pct
 
             engine = _grid_engines.get(symbol)
@@ -867,21 +849,24 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
 
     regimes = {}
     grids = {}
-    display_regime_symbols = set(spot_settings.asset_list) | _active_roster
+    display_regime_symbols = set(spot_settings.asset_list) | _active_roster | set(_portfolio.holdings.keys() if hasattr(_portfolio, 'holdings') and isinstance(_portfolio.holdings, dict) else [])
     for sym in display_regime_symbols:
+        if sym in ['MNT/USDT', 'MNT']:
+            continue
         det = _regime_detectors.get(sym)
-        h_obj = _portfolio.holdings.get(sym) if hasattr(_portfolio, 'holdings') else None
+        h_obj = _portfolio.holdings.get(sym) if hasattr(_portfolio, 'holdings') and isinstance(_portfolio.holdings, dict) else None
         last_p = float(h_obj.get('last_price', 0.0) if isinstance(h_obj, dict) else getattr(h_obj, 'last_price', 0.0) or 0.0)
         if det and det._cached_state:
-
+            st = det._cached_state
+            reg_name = st.regime.name if hasattr(st.regime, 'name') else str(st.regime)
             regimes[sym] = {
-                "regime": det._cached_state.regime,
-                "adx": round(det._cached_state.adx, 1),
-                "plus_di": round(det._cached_state.plus_di, 1),
-                "minus_di": round(det._cached_state.minus_di, 1),
-                "sma_50": round(det._cached_state.sma_50, 4),
-                "sma_200": round(det._cached_state.sma_200, 4),
-                "price": round(det._cached_state.price or last_p, 4),
+                "regime": reg_name,
+                "adx": round(float(st.adx), 1),
+                "plus_di": round(float(st.plus_di), 1),
+                "minus_di": round(float(st.minus_di), 1),
+                "sma_50": round(float(st.sma_50), 4),
+                "sma_200": round(float(st.sma_200), 4),
+                "price": round(float(st.price or last_p), 4),
             }
         else:
             regimes[sym] = {

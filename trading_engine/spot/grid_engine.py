@@ -124,7 +124,7 @@ class GridEngine:
         except Exception as e:
             logger.debug(f"Could not load best_params for {self.symbol}: {e}")
 
-    def set_regime(self, regime: str):
+    def set_regime(self, regime: str, exchange: Optional[ccxt.Exchange] = None):
         if regime not in REGIME_PARAMS:
             logger.error(f"Invalid regime {regime}")
             return
@@ -134,7 +134,7 @@ class GridEngine:
         self.params = REGIME_PARAMS[regime]
         
         if regime == 'BEAR':
-            self.cancel_buys_only(self.exchange)
+            self.cancel_buys_only(exchange or self.exchange)
             logger.info(f"🛑 [{self.symbol}] Switched to BEAR regime (Price < SMA50, -DI dominant). Cancelled open buys to prevent catching falling knives.")
 
         if old_params and old_params.grid_spacing > 0:

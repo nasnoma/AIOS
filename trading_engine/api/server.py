@@ -40,6 +40,13 @@ async def startup_pre_warm():
     def _spot_background_loop():
         logger.info("🚀 Starting 24/7 Spot Grid Tick background daemon thread (30s interval)...")
         time.sleep(5)  # Initial delay
+        try:
+            from trading_engine.spot.runner import run_spot_regime_check
+            logger.info("📊 Running initial spot regime check on daemon startup...")
+            run_spot_regime_check()
+        except Exception as e_reg_init:
+            logger.warning(f"Initial spot regime check error: {e_reg_init}")
+
         tick_count = 0
         while True:
             try:
