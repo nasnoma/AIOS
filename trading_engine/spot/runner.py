@@ -210,6 +210,7 @@ _portfolio = SpotPortfolio()
 _regime_detectors: Dict[str, RegimeDetector] = {}
 _grid_engines: Dict[str, GridEngine] = {}
 _dca_manager = DCAManager()
+_active_dca_signals: Dict[str, float] = {}
 _exchange: ccxt.Exchange | None = None
 _public_exchange: ccxt.Exchange | None = None
 _spot_initialized: bool = False
@@ -705,8 +706,9 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                         logger.info(f"🔄 Grid stale for {symbol} (Live: ${price:.4f}, Highest Buy Order: ${max_buy_p:.4f}). Re-centering grid around current price...")
                     elif missing_sells:
                         logger.info(f"🎯 Creating profit-taking sell orders for {symbol} (Holding: {holding_qty:.4f})...")
+                    dip_boost = 1.25 if (time.time() - _active_dca_signals.get(symbol, 0.0) < 1800) else 1.0
                     engine.cancel_all(exchange)
-                    engine.build_grid(price, _portfolio, atr=atr_val, force=True)
+                    engine.build_grid(price, _portfolio, atr=atr_val, force=True, dip_boost=dip_boost)
                     engine.place_grid_orders(_portfolio, exchange)
 
 
@@ -751,6 +753,7 @@ def run_spot_dca_check():
         try:
             signal = _dca_manager.check(symbol, exchange, regime)
             if signal:
+                _active_dca_signals[symbol] = time.time()
                 mult = _dca_manager.extra_buy_multiplier(regime, signal.trigger_type)
                 streak_factor = _portfolio.get_streak_risk_factor()
                 raw_size = (engine.allocated_usd * 0.20) * mult * streak_factor if engine else 50.0
@@ -783,17 +786,25 @@ def run_spot_dca_check():
                     _portfolio.record_buy(symbol, qty, price, order_size, order_id_str, is_dca=True)
                     _portfolio.save()
 
-                    # ── DCA Exit Target: place limit sell guaranteeing >= +$0.60 NET profit ──
+                    # ── DCA Exit Target: place limit sell guaranteeing >= +$0.60 NET profit strictly above FIFO cost ──
                     fee_factor = spot_settings.fee_rate
+                    cost_ref = price
+                    try:
+                        from trading_engine.spot.fifo_reconciler import get_fifo_cost_basis
+                        fb = get_fifo_cost_basis(symbol)
+                        if fb.get('max_buy_price', 0) > 0:
+                            cost_ref = max(cost_ref, float(fb['max_buy_price']), float(fb.get('avg_cost', 0)))
+                    except Exception:
+                        pass
                     denom = qty * (1.0 - fee_factor)
-                    min_fee_proof_exit = (price * qty + 0.60) / denom if denom > 0 else price * 1.015
-                    exit_price = round(max(price * 1.015, min_fee_proof_exit), 6)
+                    min_fee_proof_exit = (cost_ref * qty * (1.0 + fee_factor) + 0.60) / denom if denom > 0 else cost_ref * 1.015
+                    exit_price = round(max(cost_ref * 1.015, min_fee_proof_exit), 6)
                     try:
                         if not spot_settings.paper_mode and exchange:
                             exchange.create_limit_sell_order(symbol, qty, exit_price)
-                            logger.info(f"📤 DCA Exit Limit Sell placed [{symbol}]: qty={qty:.6f} @ ${exit_price:.4f} (Guaranteed Net: >= +$0.60 USD)")
+                            logger.info(f"📤 DCA Exit Limit Sell placed [{symbol}]: qty={qty:.6f} @ ${exit_price:.4f} (CostRef: ${cost_ref:.4f}, Guaranteed Net: >= +$0.60 USD)")
                         else:
-                            logger.info(f"📤 [PAPER] DCA Exit Limit Sell [{symbol}]: qty={qty:.6f} @ ${exit_price:.4f} (Guaranteed Net: >= +$0.60 USD)")
+                            logger.info(f"📤 [PAPER] DCA Exit Limit Sell [{symbol}]: qty={qty:.6f} @ ${exit_price:.4f} (CostRef: ${cost_ref:.4f}, Guaranteed Net: >= +$0.60 USD)")
                     except Exception as sell_err:
                         logger.warning(f"DCA exit sell placement failed [{symbol}]: {sell_err}")
 
@@ -855,6 +866,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
     for sym, eng in _grid_engines.items():
         summary_dict = eng.summary()
         summary_dict['allocated_usd'] = float(getattr(eng, 'allocated_usd', 0.0))
+        summary_dict['vol_score'] = float(_cached_blended_scores.get(sym, 0.0))
         grids[sym] = summary_dict
 
     # If Live / Demo mode: merge live open orders directly from Bybit

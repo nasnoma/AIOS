@@ -376,10 +376,10 @@ function renderSpotStatus(data) {
         const capB = (grids[b] && grids[b].allocated_usd) || 0;
         if (capB !== capA) return capB - capA;
 
-        // Next sort by ADX volatility score
-        const adxA = (regimes[a] && regimes[a].adx) || 0;
-        const adxB = (regimes[b] && regimes[b].adx) || 0;
-        return adxB - adxA;
+        // Next sort by blended quantitative volatility score
+        const scoreA = (grids[a] && grids[a].vol_score) || (regimes[a] && regimes[a].adx) || 0;
+        const scoreB = (grids[b] && grids[b].vol_score) || (regimes[b] && regimes[b].adx) || 0;
+        return scoreB - scoreA;
       });
     if (!allAssets.length) {
       gridEl.innerHTML = '<div class="empty" style="grid-column:1/-1">Loading asset prices &amp; regimes&hellip;</div>';

@@ -141,8 +141,8 @@ class GridEngine:
             logger.info(f"Regime changed to {regime}. Spacing/levels changed > 30%. Forcing grid rebuild.")
             self._last_rebuild_time = 0.0
 
-    def build_grid(self, current_price: float, portfolio=None, atr: float = 0.0, force: bool = False):
-        """Build grid levels. If ATR provided, use it for dynamic spacing."""
+    def build_grid(self, current_price: float, portfolio=None, atr: float = 0.0, force: bool = False, dip_boost: float = 1.0):
+        """Build grid levels. If ATR provided, use it for dynamic spacing. dip_boost scales deeper tiers."""
         if current_price <= 0:
             logger.warning(f"[{self.symbol}] Invalid current_price {current_price} in build_grid, skipping.")
             return
@@ -191,14 +191,29 @@ class GridEngine:
 
         # Build BUY ladder (only if capital is allocated to this asset)
         if base_order_size > 0:
-            tier_configs = [
-                # (dip_pct, size_multiplier)
-                (0.0078, 1.00),  # Level 1: Rapid 0.78% dip -> targets +0.90% bounce (+$0.75 net / $100 fill)
-                (0.0145, 1.25),  # Level 2: 1.45% pullback -> targets +1.55% bounce (+$1.40 net / $100 fill)
-                (0.0240, 1.60),  # Level 3: 2.40% wave dip -> targets +2.50% bounce (+$2.35 net / $100 fill)
-                (0.0380, 2.00),  # Level 4: 3.80% flush dip -> targets +3.90% bounce (+$3.75 net / $100 fill)
-                (0.0580, 2.50),  # Level 5: 5.80% deep floor -> targets +5.90% bounce (+$5.75 net / $100 fill)
-            ]
+            # 🌊 Dip-Quality Buy Level Sizing:
+            # When an intraday dip signal is detected (dip_boost > 1.05),
+            # Level 1 is trimmed to 0.80x to conserve dry powder,
+            # while deeper flush tiers (Levels 2-5) receive heavier conviction sizing
+            # to accumulate heavier on exhaustion wicks and pull the cost basis down.
+            if dip_boost > 1.05:
+                boost_cap = min(1.35, dip_boost)
+                tier_configs = [
+                    (0.0078, 0.80),
+                    (0.0145, 1.35 * boost_cap),
+                    (0.0240, 1.75 * boost_cap),
+                    (0.0380, 2.20 * boost_cap),
+                    (0.0580, 2.70 * boost_cap),
+                ]
+            else:
+                tier_configs = [
+                    # (dip_pct, size_multiplier)
+                    (0.0078, 1.00),  # Level 1: Rapid 0.78% dip -> targets +0.90% bounce (+$0.75 net / $100 fill)
+                    (0.0145, 1.25),  # Level 2: 1.45% pullback -> targets +1.55% bounce (+$1.40 net / $100 fill)
+                    (0.0240, 1.60),  # Level 3: 2.40% wave dip -> targets +2.50% bounce (+$2.35 net / $100 fill)
+                    (0.0380, 2.00),  # Level 4: 3.80% flush dip -> targets +3.90% bounce (+$3.75 net / $100 fill)
+                    (0.0580, 2.50),  # Level 5: 5.80% deep floor -> targets +5.90% bounce (+$5.75 net / $100 fill)
+                ]
 
             buy_count = min(self.params.buy_levels, len(tier_configs))
             for i in range(buy_count):
@@ -257,6 +272,7 @@ class GridEngine:
         # Query authoritative SQLite FIFO inventory to get the exact un-exited buy price
         fifo_max_cost = 0.0
         fifo_basis = {}
+        oldest_lot_age_hours = 0.0
         try:
             from trading_engine.spot.fifo_reconciler import get_fifo_cost_basis
             fifo_basis = get_fifo_cost_basis(self.symbol) or {}
@@ -265,9 +281,12 @@ class GridEngine:
                 # 🛡️ FIFO LOT-SAFETY RULE: cost basis must cover the HIGHEST-cost open buy lot in FIFO queue
                 # so that when the oldest lots match first under FIFO, NO SINGLE LOT IS EVER SOLD AT A LOSS!
                 avg_cost = max(avg_cost, float(fifo_basis['avg_cost']), fifo_max_cost)
+            oldest_lot_age_hours = float(fifo_basis.get('oldest_buy_age_hours', 0.0) or 0.0)
         except Exception as e_fifo_cb:
             logger.debug(f"FIFO cost basis lookup for {self.symbol}: {e_fifo_cb}")
             fifo_basis = {}
+
+        is_aged_position = (oldest_lot_age_hours >= 24.0)
 
         # Safety: If avg_cost is 0 or missing, ensure we never sell below current_price * 1.015
         if avg_cost <= 0:
@@ -346,8 +365,12 @@ class GridEngine:
 
                 for i in range(sell_levels_count):
                     min_net_usd = min_net_profit_tiers[i] if i < len(min_net_profit_tiers) else (0.50 + 0.40 * i)
-                    # Hard floor: Net profit must NEVER be less than $0.50 USD
-                    min_net_usd = max(0.50, min_net_usd)
+                    if is_aged_position:
+                        # ⚡ Age-Weighted Target Compression: For holdings > 24h old,
+                        # collapse target to minimum fee-proof profit ($0.50) across all tiers to recycle capital rapidly
+                        min_net_usd = 0.50
+                    else:
+                        min_net_usd = max(0.50, min_net_usd)
                     
                     cost_ref = max(avg_cost, fifo_max_cost)
                     if cost_ref <= 0.0:
@@ -360,10 +383,11 @@ class GridEngine:
                     # Minimum price needed to guarantee at least min_net_usd profit after 2-sided fees:
                     min_fee_proof_price = (cost_ref * qty_per_sell * (1.0 + fee_factor) + min_net_usd) / denom if denom > 0 else cost_ref * 1.015
 
-                    # High-Velocity Quick Cash Release:
-                    # If current_price is already above cost_ref, place Tier 1 tightly (+0.50% to +0.80%) above market
-                    # to bank profits into USDT cash before weekend pullbacks, while guaranteeing >= $0.50 net profit.
-                    if current_price > cost_ref:
+                    if is_aged_position:
+                        # Stagnant position (>24h): tightest possible fee-proof profit exit (+0.0%, +0.1%, +0.2% stagger)
+                        stagger_step = 0.0010 * i
+                        target_p = max(min_fee_proof_price, min_fee_proof_price * (1.0 + stagger_step))
+                    elif current_price > cost_ref:
                         tight_spread = 0.0050 + (0.0035 * i)  # Tier 1: +0.50%, Tier 2: +0.85%, Tier 3: +1.20%, Tier 4: +1.55%
                         tight_market_target = current_price * (1.0 + tight_spread)
                         target_p = max(min_fee_proof_price, tight_market_target)
@@ -382,8 +406,9 @@ class GridEngine:
                         target_p = (cost_ref * qty_per_sell * (1.0 + fee_factor) + 0.50) / denom if denom > 0 else target_p
                         actual_net_pnl = (target_p * qty_per_sell * (1.0 - fee_factor)) - (cost_ref * qty_per_sell * (1.0 + fee_factor))
 
-                    logger.info(f"🎯 [{self.symbol}] High-Velocity Sell Level {i+1}/{sell_levels_count}: Target=${target_p:.4f} "
-                                f"(CostRef: ${cost_ref:.4f}, Live: ${current_price:.4f}, Net Profit: +${actual_net_pnl:.2f} USD)")
+                    tier_label = "Compressed Aged" if is_aged_position else "High-Velocity"
+                    logger.info(f"🎯 [{self.symbol}] {tier_label} Sell Level {i+1}/{sell_levels_count}: Target=${target_p:.4f} "
+                                f"(CostRef: ${cost_ref:.4f}, Live: ${current_price:.4f}, Age: {oldest_lot_age_hours:.1f}h, Net Profit: +${actual_net_pnl:.2f} USD)")
 
                     self.grid_levels.append(GridLevel(
                         price=target_p,

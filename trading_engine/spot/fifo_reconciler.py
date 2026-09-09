@@ -427,12 +427,14 @@ def get_fifo_cost_basis(symbol: str) -> Dict[str, float]:
         'units_open': float,
         'avg_cost': float,
         'min_buy_price': float,
-        'max_buy_price': float (high-water mark of open lots)
+        'max_buy_price': float (high-water mark of open lots),
+        'oldest_buy_age_hours': float,
+        'newest_buy_age_hours': float
       }
     """
     db = _conn()
     rows = db.execute(
-        "SELECT side, price, qty FROM fills WHERE symbol = ? ORDER BY ts_ms ASC, id ASC",
+        "SELECT side, price, qty, ts_ms FROM fills WHERE symbol = ? ORDER BY ts_ms ASC, id ASC",
         (symbol,)
     ).fetchall()
     db.close()
@@ -442,8 +444,9 @@ def get_fifo_cost_basis(symbol: str) -> Dict[str, float]:
         side = r["side"]
         price = float(r["price"])
         qty = float(r["qty"])
+        ts_ms = int(r["ts_ms"]) if "ts_ms" in r.keys() and r["ts_ms"] else 0
         if side == "buy":
-            buy_lots.append({"price": price, "rem": qty})
+            buy_lots.append({"price": price, "rem": qty, "ts_ms": ts_ms})
         elif side == "sell":
             needed = qty
             while buy_lots and needed > 1e-8:
@@ -455,7 +458,14 @@ def get_fifo_cost_basis(symbol: str) -> Dict[str, float]:
 
     active_lots = [b for b in buy_lots if b["rem"] > 1e-6]
     if not active_lots:
-        return {'units_open': 0.0, 'avg_cost': 0.0, 'min_buy_price': 0.0, 'max_buy_price': 0.0}
+        return {
+            'units_open': 0.0,
+            'avg_cost': 0.0,
+            'min_buy_price': 0.0,
+            'max_buy_price': 0.0,
+            'oldest_buy_age_hours': 0.0,
+            'newest_buy_age_hours': 0.0,
+        }
 
     tot_qty = sum(b["rem"] for b in active_lots)
     tot_val = sum(b["rem"] * b["price"] for b in active_lots)
@@ -463,11 +473,19 @@ def get_fifo_cost_basis(symbol: str) -> Dict[str, float]:
     min_p = min(b["price"] for b in active_lots)
     max_p = max(b["price"] for b in active_lots)
 
+    import time
+    now_ms = time.time() * 1000.0
+    valid_ts = [b["ts_ms"] for b in active_lots if b.get("ts_ms") and b["ts_ms"] > 0]
+    oldest_age_h = round(max(0.0, (now_ms - min(valid_ts)) / 3600000.0), 1) if valid_ts else 0.0
+    newest_age_h = round(max(0.0, (now_ms - max(valid_ts)) / 3600000.0), 1) if valid_ts else 0.0
+
     return {
         'units_open': round(tot_qty, 6),
         'avg_cost': round(avg_cost, 6),
         'min_buy_price': round(min_p, 6),
         'max_buy_price': round(max_p, 6),
+        'oldest_buy_age_hours': oldest_age_h,
+        'newest_buy_age_hours': newest_age_h,
     }
 
 
