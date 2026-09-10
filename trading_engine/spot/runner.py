@@ -186,9 +186,12 @@ def _get_dynamic_hot_asset_allocations(
                 reg_str = reg.name if hasattr(reg, 'name') else str(reg)
                 if reg_str == 'BEAR':
                     is_bear = True
-                    logger.info(f"🛑 [BEAR FILTER] {sym} confirmed BEAR regime (Price < SMA50, -DI dominant). Disqualified from active buy allocation to prevent catching falling knives.")
+        # 🛑 Exclude Gold (XAUT) and Macro Store of Value (BTC, ETH) from active grid buy allocations
+        is_blacklisted = sym in ['XAUT/USDT', 'XAUT', 'BTC/USDT', 'ETH/USDT']
+        if is_blacklisted:
+            logger.debug(f"🛑 [LOW VOLATILITY EXCLUSION] {sym} excluded from active buy allocations.")
 
-        is_disqualified = is_capped or is_bear
+        is_disqualified = is_capped or is_bear or is_blacklisted
         scored_pairs.append((sym, vol_score, is_disqualified))
 
     # Rank assets by volatility score
@@ -629,6 +632,14 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                     engine.params.buy_levels = 0
                 if any(lvl.side == 'buy' for lvl in engine.grid_levels):
                     engine.grid_levels = [lvl for lvl in engine.grid_levels if lvl.side == 'sell']
+
+            # 🛑 Exclude Gold (XAUT) from any buy orders (Sell-Only / Profit-Taking only)
+            if symbol in ['XAUT/USDT', 'XAUT']:
+                engine.allocated_usd = 0.0
+                if hasattr(engine, 'params') and engine.params:
+                    engine.params.buy_levels = 0
+                if any(lvl.side == 'buy' for lvl in engine.grid_levels):
+                    engine.cancel_buys_only(exchange)
 
             # 🛑 Anti-Falling-Knife Guard: strictly suppress buys if asset is in confirmed BEAR regime
             if getattr(engine, 'current_regime', 'RANGE') == 'BEAR':
