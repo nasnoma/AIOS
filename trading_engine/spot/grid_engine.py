@@ -632,7 +632,7 @@ class GridEngine:
                     cost_ref = level.price
                     try:
                         from trading_engine.spot.fifo_reconciler import get_fifo_cost_basis
-                        fb = get_fifo_cost_basis(self.symbol)
+                        fb = get_fifo_cost_basis(self.symbol, units_held=level.qty if level.qty > 0 else None)
                         if fb.get('max_buy_price', 0) > 0:
                             cost_ref = max(cost_ref, float(fb['max_buy_price']), float(fb.get('avg_cost', 0)))
                     except Exception:

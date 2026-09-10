@@ -719,7 +719,7 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 h_cost = float(getattr(h_obj, 'avg_cost_basis', 0) or 0) if h_obj else 0.0
                 try:
                     from trading_engine.spot.fifo_reconciler import get_fifo_cost_basis
-                    fb = get_fifo_cost_basis(symbol)
+                    fb = get_fifo_cost_basis(symbol, units_held=holding_qty if holding_qty > 0 else None)
                     if fb.get('avg_cost', 0) > 0:
                         h_cost = max(h_cost, float(fb['avg_cost']), float(fb.get('max_buy_price', 0) or 0))
                 except Exception:
@@ -1427,7 +1427,7 @@ def run_spot_self_healing_and_optimize() -> Dict[str, Any]:
                             if not buy_cost or buy_cost <= 0.0:
                                 try:
                                     from trading_engine.spot.fifo_reconciler import get_fifo_cost_basis
-                                    f_res = get_fifo_cost_basis(sym) or {}
+                                    f_res = get_fifo_cost_basis(sym, units_held=lvl.qty if lvl.qty > 0 else None) or {}
                                     buy_cost = float(f_res.get('avg_cost', 0.0) or 0.0)
                                 except Exception:
                                     pass
