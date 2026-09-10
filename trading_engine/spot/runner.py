@@ -679,6 +679,26 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 if any(lvl.side == 'buy' for lvl in engine.grid_levels):
                     logger.info(f"[{symbol}] 🛡️ [RESERVE SHIELD] Freeing capital - cancelling resting buys to protect 20% cash reserve (${res_floor:,.2f} floor).")
                     engine.cancel_buys_only(exchange)
+
+            # 🛑 15% Max Position Exposure Hard Ceiling:
+            # If current holding value is >= 14% of total equity, strictly lock into Sell-Only Mode
+            tot_eq_val = float(getattr(_portfolio, 'total_unified_equity', 0.0) or getattr(_portfolio, 'total_capital', 0.0) or 0.0)
+            if tot_eq_val > 0:
+                h_qty = _portfolio.get_position(symbol) if hasattr(_portfolio, 'get_position') else 0.0
+                h_obj = _portfolio.get_holding(symbol) if hasattr(_portfolio, 'get_holding') else None
+                ref_p = float(getattr(h_obj, 'last_price', 0.0) or 0.0) if h_obj else 0.0
+                if ref_p <= 0.0:
+                    ref_p = float(tickers.get(symbol, {}).get('last', 0.0) or 0.0)
+                if ref_p <= 0.0 and symbol in ALL_23_HISTORICAL_COSTS:
+                    ref_p = float(ALL_23_HISTORICAL_COSTS[symbol])
+                h_val = h_qty * ref_p
+                if (h_val / tot_eq_val) >= 0.14:
+                    engine.allocated_usd = 0.0
+                    if hasattr(engine, 'params') and engine.params:
+                        engine.params.buy_levels = 0
+                    if any(lvl.side == 'buy' for lvl in engine.grid_levels):
+                        engine.cancel_buys_only(exchange)
+                        logger.info(f"🛑 [{symbol}] [15% CEILING ENFORCED] Holding value (${h_val:,.2f}, {(h_val/tot_eq_val)*100:.1f}%) near/at 15% equity limit. Strictly locked in Sell-Only Mode.")
                 
             try:
                 ticker = tickers.get(symbol)
