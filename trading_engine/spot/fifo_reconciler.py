@@ -419,9 +419,11 @@ def get_symbol_pnl_breakdown(date_utc: Optional[str] = None) -> List[Dict[str, A
     return [dict(r) for r in rows]
 
 
-def get_fifo_cost_basis(symbol: str) -> Dict[str, float]:
+def get_fifo_cost_basis(symbol: str, units_held: Optional[float] = None) -> Dict[str, float]:
     """
     Query the real-time FIFO open buy inventory for a symbol from SQLite fills.
+    If units_held is provided, it matches the exact quantity currently in the wallet
+    taking the most recent active buy lots (protecting against missing historical fills/ghost lots).
     Returns:
       {
         'units_open': float,
@@ -467,11 +469,24 @@ def get_fifo_cost_basis(symbol: str) -> Dict[str, float]:
             'newest_buy_age_hours': 0.0,
         }
 
+    # If actual units_held is known and smaller than ghost lots remaining in SQLite,
+    # take the most recent lots corresponding to units_held (reverse chronological)
+    if units_held is not None and units_held > 1e-6:
+        needed_h = units_held
+        wallet_lots = []
+        for b in reversed(active_lots):
+            take_q = min(needed_h, b["rem"])
+            wallet_lots.append({"price": b["price"], "rem": take_q, "ts_ms": b["ts_ms"]})
+            needed_h -= take_q
+            if needed_h <= 1e-6:
+                break
+        active_lots = wallet_lots
+
     tot_qty = sum(b["rem"] for b in active_lots)
     tot_val = sum(b["rem"] * b["price"] for b in active_lots)
     avg_cost = tot_val / tot_qty if tot_qty > 0 else 0.0
-    min_p = min(b["price"] for b in active_lots)
-    max_p = max(b["price"] for b in active_lots)
+    min_p = min(b["price"] for b in active_lots) if active_lots else 0.0
+    max_p = max(b["price"] for b in active_lots) if active_lots else 0.0
 
     import time
     now_ms = time.time() * 1000.0

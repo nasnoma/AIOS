@@ -546,7 +546,7 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                             fifo_c = 0.0
                             try:
                                 from trading_engine.spot.fifo_reconciler import get_fifo_cost_basis
-                                f_res = get_fifo_cost_basis(sym) or {}
+                                f_res = get_fifo_cost_basis(sym, units_held=u_val) or {}
                                 fifo_c = float(f_res.get('avg_cost', 0.0) or 0.0)
                             except Exception:
                                 pass

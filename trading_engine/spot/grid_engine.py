@@ -284,7 +284,7 @@ class GridEngine:
         oldest_lot_age_hours = 0.0
         try:
             from trading_engine.spot.fifo_reconciler import get_fifo_cost_basis
-            fifo_basis = get_fifo_cost_basis(self.symbol) or {}
+            fifo_basis = get_fifo_cost_basis(self.symbol, units_held=base_qty_held if base_qty_held > 0 else None) or {}
             if fifo_basis.get('avg_cost', 0) > 0:
                 fifo_max_cost = float(fifo_basis.get('max_buy_price', 0.0) or 0.0)
                 # 🛡️ FIFO LOT-SAFETY RULE: cost basis must cover the HIGHEST-cost open buy lot in FIFO queue
