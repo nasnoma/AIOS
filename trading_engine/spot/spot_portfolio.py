@@ -57,6 +57,7 @@ class SpotPortfolio:
         self.holdings: Dict[str, AssetHolding] = {}
         self.usdt_available: float = 0.0
         self.usdt_reserved: float = 0.0
+        self.total_unified_equity: float = 0.0
         self.grid_orders: List[GridOrder] = []
         self.dca_orders: List[GridOrder] = []
         self.total_realised_pnl: float = 0.0

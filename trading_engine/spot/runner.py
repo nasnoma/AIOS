@@ -438,6 +438,18 @@ def run_spot_regime_check():
             if alloc_pct <= 0.0 and len(_active_roster) > 0:
                 alloc_pct = 1.0 / len(_active_roster)
             new_asset_usd = active_cap * alloc_pct
+            # 🛑 15% Max Position Exposure Clamp: ensure holding + new allocation never exceeds 15% equity
+            h_obj = _portfolio.holdings.get(symbol) if hasattr(_portfolio, 'holdings') and isinstance(_portfolio.holdings, dict) else None
+            h_val = 0.0
+            if h_obj:
+                u_held = float(getattr(h_obj, 'units_held', 0) if hasattr(h_obj, 'units_held') else (h_obj or {}).get('units_held', 0) or 0)
+                p_ref = float(getattr(h_obj, 'last_price', 0) if hasattr(h_obj, 'last_price') else (h_obj or {}).get('last_price', 0) or 0)
+                if p_ref <= 0 and symbol in ALL_23_HISTORICAL_COSTS:
+                    p_ref = ALL_23_HISTORICAL_COSTS[symbol]
+                h_val = u_held * p_ref
+            
+            max_headroom_usd = max(0.0, (total_eq * 0.15) - h_val)
+            new_asset_usd = min(new_asset_usd, max_headroom_usd)
 
             engine = _grid_engines.get(symbol)
             if not engine:
@@ -507,6 +519,7 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 info_list = bal.get('info', {}).get('result', {}).get('list', [])
                 tot_equity = float(info_list[0].get('totalEquity', 0)) if info_list else 0.0
                 if tot_equity > 0:
+                    _portfolio.total_unified_equity = tot_equity
                     _portfolio.usdt_reserved = tot_equity * spot_settings.usdt_hard_reserve_pct
                 elif _portfolio.usdt_available > 0:
                     _portfolio.usdt_reserved = _portfolio.usdt_available * spot_settings.usdt_hard_reserve_pct
@@ -797,10 +810,22 @@ def run_spot_dca_check():
                 avail_usdt = float(getattr(_portfolio, 'usdt_available', 0.0) or 0.0)
                 open_buys_usd = float(getattr(_portfolio, 'total_open_buy_usd', 0.0) or 0.0)
 
-                # 🛑 AIRTIGHT 20% HARD CASH RESERVE GATE FOR DCA BUYS:
+                # 🛑 AIRTIGHT HARD CASH RESERVE GATE FOR DCA BUYS:
                 if res_floor > 0 and (avail_usdt - open_buys_usd - order_size) < res_floor:
-                    logger.info(f"🛑 [DCA PAUSED] Skipping DCA buy for {symbol} (${order_size:.2f}) - Would breach 20% hard cash reserve (${res_floor:,.2f} floor).")
+                    logger.info(f"🛑 [DCA PAUSED] Skipping DCA buy for {symbol} (${order_size:.2f}) - Would breach hard cash reserve (${res_floor:,.2f} floor).")
                     continue
+
+                # 🛑 15% MAXIMUM ASSET EXPOSURE CEILING FOR DCA BUYS:
+                tot_eq_val = float(getattr(_portfolio, 'total_unified_equity', 0.0) or getattr(_portfolio, 'total_capital', 0.0) or 0.0)
+                if tot_eq_val > 0:
+                    cap_15 = tot_eq_val * 0.15
+                    h_qty = _portfolio.get_position(symbol) if hasattr(_portfolio, 'get_position') else 0.0
+                    ticker_dca = exchange.fetch_ticker(symbol)
+                    p_dca = float(ticker_dca.get('last', 0) or 0)
+                    h_val = h_qty * p_dca
+                    if (h_val + order_size) > cap_15:
+                        logger.info(f"🛑 [DCA 15% CAP] Skipping DCA buy for {symbol} - Total exposure (${(h_val + order_size):.2f}) would exceed 15% equity cap (${cap_15:.2f}).")
+                        continue
 
                 # Execute DCA Buy
                 if engine and _portfolio.usdt_available >= order_size:

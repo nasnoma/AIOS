@@ -500,11 +500,24 @@ class GridEngine:
                             open_buys_usd = float(getattr(portfolio, 'total_open_buy_usd', 0.0) or 0.0)
 
                             # 🛑 AIRTIGHT HARD FLOOR RULE:
-                            # (Total USDT - All Open Buy Commitments - New Order Cost) MUST be >= 20% Reserve Floor
+                            # (Total USDT - All Open Buy Commitments - New Order Cost) MUST be >= Reserve Floor
                             if res_floor > 0 and (avail_usdt - open_buys_usd - req_cost) < res_floor:
-                                logger.debug(f"[{self.symbol}] Pausing buy order (${req_cost:.2f}) - Total open buy commitments (${open_buys_usd:.2f}) would breach 20% cash reserve (${res_floor:,.2f} floor).")
+                                logger.debug(f"[{self.symbol}] Pausing buy order (${req_cost:.2f}) - Total open buy commitments (${open_buys_usd:.2f}) would breach cash reserve (${res_floor:,.2f} floor).")
                                 level.status = 'cancelled'
                                 continue
+
+                            # 🛑 STRICT 15% MAXIMUM ASSET EXPOSURE CEILING:
+                            # (Current Holding Value + Existing Open Buys + New Buy Order) MUST NOT exceed 15% of Total Unified Equity
+                            tot_eq_val = float(getattr(portfolio, 'total_unified_equity', 0.0) or getattr(portfolio, 'total_capital', 0.0) or 0.0)
+                            if tot_eq_val > 0:
+                                cap_15 = tot_eq_val * 0.15
+                                h_qty = portfolio.get_position(self.symbol) if hasattr(portfolio, 'get_position') else 0.0
+                                h_val = h_qty * price_val
+                                existing_open_buys = sum(float(getattr(l, 'qty', 0) or 0) * float(getattr(l, 'price', 0) or 0) for l in self.grid_levels if getattr(l, 'status', '') == 'open' and getattr(l, 'side', '') == 'buy')
+                                if (h_val + existing_open_buys + req_cost) > cap_15:
+                                    logger.info(f"[{self.symbol}] 🛑 [15% CEILING] Skipping buy order (${req_cost:.2f}) - Total exposure (${(h_val + existing_open_buys + req_cost):.2f}) would exceed 15% equity cap (${cap_15:.2f}).")
+                                    level.status = 'cancelled'
+                                    continue
 
                         params = {'category': 'spot', 'postOnly': True} if 'bybit' in str(type(exchange)).lower() else {}
                         try:
