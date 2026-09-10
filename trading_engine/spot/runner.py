@@ -18,12 +18,12 @@ from trading_engine.spot.spot_portfolio import AssetHolding
 from trading_engine.spot.btc_master_filter import btc_master_filter
 
 ALL_23_HISTORICAL_COSTS = {
-    'NEAR/USDT': 1.9047, 'TIA/USDT': 0.3565, 'SUI/USDT': 0.7709, 'FET/USDT': 0.1640,
-    'ICP/USDT': 2.4073, 'ADA/USDT': 0.2102, 'APT/USDT': 0.5597, 'OP/USDT': 0.0971,
-    'RENDER/USDT': 1.4773, 'ARB/USDT': 0.1852, 'DOT/USDT': 0.8888, 'ALGO/USDT': 0.0908,
-    'UNI/USDT': 4.3547, 'INJ/USDT': 4.9751, 'AVAX/USDT': 7.4742, 'SOL/USDT': 102.5428,
-    'ETH/USDT': 2477.2894, 'BTC/USDT': 79041.25, 'XAUT/USDT': 4583.60, 'ARKM/USDT': 0.1150,
-    'ATOM/USDT': 1.5152, 'LINK/USDT': 11.5437, 'SEI/USDT': 0.0468
+    'NEAR/USDT': 2.3953, 'TIA/USDT': 0.4474, 'SUI/USDT': 0.8297, 'FET/USDT': 0.1791,
+    'ICP/USDT': 2.8460, 'ADA/USDT': 0.2102, 'APT/USDT': 0.6153, 'OP/USDT': 0.1086,
+    'RENDER/USDT': 1.4773, 'ARB/USDT': 0.1852, 'DOT/USDT': 1.1759, 'ALGO/USDT': 0.0908,
+    'UNI/USDT': 6.6739, 'INJ/USDT': 6.3400, 'AVAX/USDT': 8.1317, 'SOL/USDT': 103.0504,
+    'ETH/USDT': 2477.2894, 'BTC/USDT': 80295.00, 'XAUT/USDT': 4583.60, 'ARKM/USDT': 0.1125,
+    'ATOM/USDT': 1.8158, 'LINK/USDT': 12.7713, 'SEI/USDT': 0.0468
 }
 
 ALL_23_HALAL_UNIVERSE = [
@@ -542,10 +542,19 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                                 pass
                         if sym not in _portfolio.holdings:
                             from trading_engine.spot.spot_portfolio import AssetHolding
+                            hist_cost = float(ALL_23_HISTORICAL_COSTS.get(sym, 0.0) or 0.0)
+                            fifo_c = 0.0
+                            try:
+                                from trading_engine.spot.fifo_reconciler import get_fifo_cost_basis
+                                f_res = get_fifo_cost_basis(sym) or {}
+                                fifo_c = float(f_res.get('avg_cost', 0.0) or 0.0)
+                            except Exception:
+                                pass
+                            init_cost = max(hist_cost, fifo_c, cur_p)
                             _portfolio.holdings[sym] = AssetHolding(
                                 symbol=sym,
                                 units_held=u_val,
-                                avg_cost_basis=cur_p,
+                                avg_cost_basis=init_cost,
                                 base_hold_units=0.0,
                                 last_price=cur_p
                             )
@@ -1414,7 +1423,18 @@ def run_spot_self_healing_and_optimize() -> Dict[str, Any]:
                         if lvl.side == 'buy':
                             _portfolio.record_buy(sym, lvl.qty, lvl.price, lvl.size_usd, order_id=lvl.order_id or '')
                         elif lvl.side == 'sell':
-                            buy_cost = getattr(lvl, 'linked_buy_price', 0.0) or (lvl.price / (1.0 + getattr(eng, 'current_spacing', 0.01)))
+                            buy_cost = getattr(lvl, 'linked_buy_price', 0.0)
+                            if not buy_cost or buy_cost <= 0.0:
+                                try:
+                                    from trading_engine.spot.fifo_reconciler import get_fifo_cost_basis
+                                    f_res = get_fifo_cost_basis(sym) or {}
+                                    buy_cost = float(f_res.get('avg_cost', 0.0) or 0.0)
+                                except Exception:
+                                    pass
+                            if not buy_cost or buy_cost <= 0.0:
+                                buy_cost = float(ALL_23_HISTORICAL_COSTS.get(sym, 0.0) or 0.0)
+                            if not buy_cost or buy_cost <= 0.0:
+                                buy_cost = (lvl.price / (1.0 + getattr(eng, 'current_spacing', 0.01)))
                             _portfolio.record_sell(sym, lvl.qty, lvl.price, lvl.size_usd, lvl.order_id or '', buy_cost)
 
             _portfolio.save()

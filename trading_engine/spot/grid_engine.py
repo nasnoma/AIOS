@@ -319,10 +319,9 @@ class GridEngine:
                 min_net_usd = 0.75  # Target guaranteed > $0.50 net profit
 
                 for i in range(sell_levels_count):
-                    cost_ref = max(avg_cost, fifo_max_cost)
-                    if cost_ref <= 0:
-                        from trading_engine.spot.runner import ALL_23_HISTORICAL_COSTS
-                        cost_ref = float(ALL_23_HISTORICAL_COSTS.get(self.symbol, 0.0) or 0.0)
+                    from trading_engine.spot.runner import ALL_23_HISTORICAL_COSTS
+                    hist_cost = float(ALL_23_HISTORICAL_COSTS.get(self.symbol, 0.0) or 0.0)
+                    cost_ref = max(avg_cost, fifo_max_cost, hist_cost)
                     if cost_ref <= 0:
                         cost_ref = current_price
                     denom = qty_per_sell * (1.0 - fee_factor)
@@ -335,14 +334,23 @@ class GridEngine:
                         # Underwater: place at the exact minimum price to break even + $0.75 profit
                         target_p = max(min_fee_proof_price, min_fee_proof_price * (1.0 + 0.0030 * i))
 
-                    # Post-only safety: target_p must be strictly above current_price
+                    # Absolute Hard Safety Gate: target_p MUST be strictly >= min_fee_proof_price
+                    target_p = max(target_p, min_fee_proof_price)
+
+                    # Post-only safety: if target_p <= current_price, current price is so high that target_p would cross spread,
+                    # so place slightly above current_price while still strictly preserving profit
                     if target_p <= current_price:
-                        target_p = current_price * 1.0035
+                        target_p = max(min_fee_proof_price, current_price * 1.0035)
 
                     actual_net_pnl = (target_p * qty_per_sell * (1.0 - fee_factor)) - (cost_ref * qty_per_sell * (1.0 + fee_factor))
                     if actual_net_pnl < 0.60:
                         target_p = (cost_ref * qty_per_sell * (1.0 + fee_factor) + 0.60) / denom if denom > 0 else target_p
                         actual_net_pnl = (target_p * qty_per_sell * (1.0 - fee_factor)) - (cost_ref * qty_per_sell * (1.0 + fee_factor))
+
+                    # Final failsafe: if for any floating-point reason target_p is still below cost_ref, abort level!
+                    if target_p < cost_ref:
+                        logger.critical(f"🚨 [{self.symbol}] FATAL: target_p (${target_p:.4f}) < cost_ref (${cost_ref:.4f})! Aborting sell level to prevent loss!")
+                        continue
 
                     logger.info(f"🚪 [{self.symbol}] Quick-Exit Sell Level {i+1}/{sell_levels_count}: Target=${target_p:.4f} "
                                 f"(CostRef: ${cost_ref:.4f}, Live: ${current_price:.4f}, Net Profit: +${actual_net_pnl:.2f} USD)")
@@ -381,10 +389,9 @@ class GridEngine:
                     else:
                         min_net_usd = max(0.60, min_net_usd)
                     
-                    cost_ref = max(avg_cost, fifo_max_cost)
-                    if cost_ref <= 0.0:
-                        from trading_engine.spot.runner import ALL_23_HISTORICAL_COSTS
-                        cost_ref = float(ALL_23_HISTORICAL_COSTS.get(self.symbol, 0.0) or 0.0)
+                    from trading_engine.spot.runner import ALL_23_HISTORICAL_COSTS
+                    hist_cost = float(ALL_23_HISTORICAL_COSTS.get(self.symbol, 0.0) or 0.0)
+                    cost_ref = max(avg_cost, fifo_max_cost, hist_cost)
                     if cost_ref <= 0.0:
                         cost_ref = current_price
 
@@ -405,15 +412,23 @@ class GridEngine:
                         stagger_step = 0.0040 * i
                         target_p = max(min_fee_proof_price, min_fee_proof_price * (1.0 + stagger_step))
 
+                    # Absolute Hard Safety Gate: target_p MUST be strictly >= min_fee_proof_price
+                    target_p = max(target_p, min_fee_proof_price)
+
                     # Ensure post-only safety: target_p must be strictly above current_price
                     if target_p <= current_price:
-                        target_p = current_price * 1.0040
+                        target_p = max(min_fee_proof_price, current_price * 1.0040)
                     
                     # Double check net profit calculation to guarantee >= $0.55 USD
                     actual_net_pnl = (target_p * qty_per_sell * (1.0 - fee_factor)) - (cost_ref * qty_per_sell * (1.0 + fee_factor))
                     if actual_net_pnl < 0.55:
                         target_p = (cost_ref * qty_per_sell * (1.0 + fee_factor) + 0.60) / denom if denom > 0 else target_p
                         actual_net_pnl = (target_p * qty_per_sell * (1.0 - fee_factor)) - (cost_ref * qty_per_sell * (1.0 + fee_factor))
+
+                    # Final failsafe: if target_p < cost_ref, abort level!
+                    if target_p < cost_ref:
+                        logger.critical(f"🚨 [{self.symbol}] FATAL: target_p (${target_p:.4f}) < cost_ref (${cost_ref:.4f})! Aborting sell level to prevent loss!")
+                        continue
 
                     tier_label = "Compressed Aged" if is_aged_position else "High-Velocity"
                     logger.info(f"🎯 [{self.symbol}] {tier_label} Sell Level {i+1}/{sell_levels_count}: Target=${target_p:.4f} "
