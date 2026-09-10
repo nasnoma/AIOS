@@ -249,8 +249,8 @@ class SpotGridSettings(BaseSettings):
 
 
     # ── Capital ────────────────────────────────────────────────
-    total_capital_pct: float = 0.80   # 80% active deployment across active assets
-    usdt_hard_reserve_pct: float = 0.20 # Dynamic 20% Hard Cash Reserve Shield (scaled to total unified equity)
+    total_capital_pct: float = 0.95   # 95% active deployment across active assets
+    usdt_hard_reserve_pct: float = 0.001 # Minimal operational fee buffer (~$10) - 20% reserve disabled for full active reinvestment
 
     # ── Asset Split (Performance-Weighted by 30-Day Volatility & Cycle Potential) ──────
     btc_allocation_pct: float = 0.00   # 0% → BTC (low volatility, reallocated to top alts)
