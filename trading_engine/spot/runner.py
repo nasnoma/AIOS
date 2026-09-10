@@ -172,9 +172,9 @@ def _get_dynamic_hot_asset_allocations(
                     px_ref = ALL_23_HISTORICAL_COSTS[sym]
                 holding_val = u_held * px_ref
                 exposure_pct = holding_val / total_equity
-                if exposure_pct >= 0.15:
+                if exposure_pct >= 0.14:
                     is_capped = True
-                    logger.info(f"🛑 [CAP REACHED] {sym} exposure (${holding_val:,.2f}, {exposure_pct*100:.1f}%) >= 15% equity ceiling. Disqualified from active buy allocation to prevent trapped capital.")
+                    logger.info(f"🛑 [CAP REACHED] {sym} exposure (${holding_val:,.2f}, {exposure_pct*100:.1f}%) >= 14% equity ceiling. Disqualified from active buy allocation to prevent trapped capital.")
 
         # 🛑 Individual BEAR Trend Filter (Anti-Falling-Knife Guard)
         is_bear = False
@@ -448,7 +448,7 @@ def run_spot_regime_check():
                     p_ref = ALL_23_HISTORICAL_COSTS[symbol]
                 h_val = u_held * p_ref
             
-            max_headroom_usd = max(0.0, (total_eq * 0.15) - h_val)
+            max_headroom_usd = max(0.0, (total_eq * 0.14) - h_val)
             new_asset_usd = min(new_asset_usd, max_headroom_usd)
 
             engine = _grid_engines.get(symbol)
@@ -696,9 +696,20 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                     engine.allocated_usd = 0.0
                     if hasattr(engine, 'params') and engine.params:
                         engine.params.buy_levels = 0
-                    if any(lvl.side == 'buy' for lvl in engine.grid_levels):
-                        engine.cancel_buys_only(exchange)
-                        logger.info(f"🛑 [{symbol}] [15% CEILING ENFORCED] Holding value (${h_val:,.2f}, {(h_val/tot_eq_val)*100:.1f}%) near/at 15% equity limit. Strictly locked in Sell-Only Mode.")
+                    engine.cancel_buys_only(exchange)
+                    if not spot_settings.paper_mode and exchange:
+                        try:
+                            live_orders = exchange.fetch_open_orders(symbol, params={'category': 'spot'})
+                            for o in live_orders:
+                                if (o.get('side') or '').lower() == 'buy' and o.get('id'):
+                                    try:
+                                        exchange.cancel_order(o['id'], symbol=symbol)
+                                        logger.info(f"🛑 [{symbol}] [14% CEILING ENFORCED] Cancelled live Bybit BUY order {o['id']}.")
+                                    except Exception:
+                                        pass
+                        except Exception:
+                            pass
+                    logger.info(f"🛑 [{symbol}] [14% CEILING ENFORCED] Holding value (${h_val:,.2f}, {(h_val/tot_eq_val)*100:.1f}%) >= 14% equity limit. Strictly locked in Sell-Only Mode.")
                 
             try:
                 ticker = tickers.get(symbol)
@@ -844,16 +855,16 @@ def run_spot_dca_check():
                     logger.info(f"🛑 [DCA PAUSED] Skipping DCA buy for {symbol} (${order_size:.2f}) - Would breach hard cash reserve (${res_floor:,.2f} floor).")
                     continue
 
-                # 🛑 15% MAXIMUM ASSET EXPOSURE CEILING FOR DCA BUYS:
+                # 🛑 14% MAXIMUM ASSET EXPOSURE CEILING FOR DCA BUYS:
                 tot_eq_val = float(getattr(_portfolio, 'total_unified_equity', 0.0) or getattr(_portfolio, 'total_capital', 0.0) or 0.0)
                 if tot_eq_val > 0:
-                    cap_15 = tot_eq_val * 0.15
+                    cap_14 = tot_eq_val * 0.14
                     h_qty = _portfolio.get_position(symbol) if hasattr(_portfolio, 'get_position') else 0.0
                     ticker_dca = exchange.fetch_ticker(symbol)
                     p_dca = float(ticker_dca.get('last', 0) or 0)
                     h_val = h_qty * p_dca
-                    if (h_val + order_size) > cap_15:
-                        logger.info(f"🛑 [DCA 15% CAP] Skipping DCA buy for {symbol} - Total exposure (${(h_val + order_size):.2f}) would exceed 15% equity cap (${cap_15:.2f}).")
+                    if (h_val + order_size) > cap_14:
+                        logger.info(f"🛑 [DCA 14% CAP] Skipping DCA buy for {symbol} - Total exposure (${(h_val + order_size):.2f}) would exceed 14% equity cap (${cap_14:.2f}).")
                         continue
 
                 # Execute DCA Buy
@@ -982,15 +993,23 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
             for sym in visible_symbols:
                 try:
                     open_orders = exchange.fetch_open_orders(sym, params={'category': 'spot'})
+                    h_sym_obj = _portfolio.holdings.get(sym)
+                    u_sym = float(getattr(h_sym_obj, 'units_held', 0) if hasattr(h_sym_obj, 'units_held') else (h_sym_obj or {}).get('units_held', 0) or 0)
+                    p_sym = float(getattr(h_sym_obj, 'last_price', 0) if hasattr(h_sym_obj, 'last_price') else (h_sym_obj or {}).get('last_price', 0) or 0)
+                    if p_sym <= 0 and sym in ALL_23_HISTORICAL_COSTS:
+                        p_sym = ALL_23_HISTORICAL_COSTS[sym]
+                    tot_eq_chk = float(summary_data.get('total_unified_equity') or summary_data.get('total_capital') or 0.0)
+                    is_capped_sym = (tot_eq_chk > 0 and ((u_sym * p_sym) / tot_eq_chk) >= 0.14)
+
                     for o in open_orders:
                         is_sell = (o.get('side') or '').lower() == 'sell'
                         has_holding = sym in legacy_held_symbols
                         
-                        # Only cancel rogue BUY orders on decommissioned assets; NEVER cancel resting take-profit SELL orders on legacy holdings!
-                        if sym not in active_symbols and not (is_sell and has_holding) and o.get('id'):
+                        # Only cancel rogue BUY orders on decommissioned or capped assets; NEVER cancel resting take-profit SELL orders on legacy holdings!
+                        if not is_sell and (sym not in active_symbols or is_capped_sym) and o.get('id'):
                             try:
                                 exchange.cancel_order(o['id'], symbol=sym)
-                                logger.info(f"🧹 Cleaned up decommissioned buy order {o['id']} on {sym}")
+                                logger.info(f"🧹 Cleaned up {'capped' if is_capped_sym else 'decommissioned'} buy order {o['id']} on {sym}")
                             except Exception:
                                 pass
                             continue
@@ -1409,27 +1428,32 @@ def run_spot_self_healing_and_optimize() -> Dict[str, Any]:
             # Step 1a: Cancel open BUY orders on legacy/removed symbols to free capital.
             # NEVER cancel resting take-profit SELL orders on legacy holdings — they represent locked profit.
             active_symbols = set(spot_settings.asset_list) | _active_roster
+            tot_eq_self = float(getattr(_portfolio, 'total_unified_equity', 0.0) or getattr(_portfolio, 'total_capital', 0.0) or 0.0)
             for o in open_orders:
                 raw_sym = o.get('symbol', '')
                 sym = raw_sym if '/' in raw_sym else (raw_sym.replace('USDT', '/USDT') if 'USDT' in raw_sym else raw_sym)
-                if sym not in active_symbols and o.get('id'):
-                    is_sell = (o.get('side') or '').lower() == 'sell'
-                    h_obj = _portfolio.holdings.get(sym)
-                    units_held = float(getattr(h_obj, 'units_held', 0) if hasattr(h_obj, 'units_held') else (h_obj or {}).get('units_held', 0) or 0)
-                    p_ref = float(getattr(h_obj, 'last_price', 0) if hasattr(h_obj, 'last_price') else (h_obj or {}).get('last_price', 0) or 0)
-                    if p_ref <= 0 and sym in ALL_23_HISTORICAL_COSTS:
-                        p_ref = ALL_23_HISTORICAL_COSTS[sym]
-                    has_holding = (units_held * p_ref) >= 5.0
-                    # Protect: never cancel a sell order on an asset we still hold with >= $5 notional
-                    if is_sell and has_holding:
-                        logger.debug(f"🛡️ Self-Healing: Preserving legacy TP sell {o.get('id')} on {sym} (still holding {units_held:.4f} units, val=${units_held*p_ref:.2f}).")
-                        continue
+                is_sell = (o.get('side') or '').lower() == 'sell'
+                h_obj = _portfolio.holdings.get(sym)
+                units_held = float(getattr(h_obj, 'units_held', 0) if hasattr(h_obj, 'units_held') else (h_obj or {}).get('units_held', 0) or 0)
+                p_ref = float(getattr(h_obj, 'last_price', 0) if hasattr(h_obj, 'last_price') else (h_obj or {}).get('last_price', 0) or 0)
+                if p_ref <= 0 and sym in ALL_23_HISTORICAL_COSTS:
+                    p_ref = ALL_23_HISTORICAL_COSTS[sym]
+                has_holding = (units_held * p_ref) >= 5.0
+                is_capped_sym = (tot_eq_self > 0 and ((units_held * p_ref) / tot_eq_self) >= 0.14)
+
+                # Protect: never cancel a sell order on an asset we still hold with >= $5 notional
+                if is_sell and has_holding:
+                    logger.debug(f"🛡️ Self-Healing: Preserving legacy TP sell {o.get('id')} on {sym} (still holding {units_held:.4f} units, val=${units_held*p_ref:.2f}).")
+                    continue
+                
+                # Cancel rogue BUY orders on decommissioned or capped assets:
+                if not is_sell and (sym not in active_symbols or is_capped_sym) and o.get('id'):
                     try:
                         exchange.cancel_order(o.get('id'), symbol=sym)
-                        logger.info(f"🧹 Self-Healing: Cancelled legacy open order {o.get('id')} on {sym} to free active liquidity.")
+                        logger.info(f"🧹 Self-Healing: Cancelled {'capped' if is_capped_sym else 'legacy'} buy order {o.get('id')} on {sym} to protect capital.")
                         healed_count += 1
                     except Exception as e_canc:
-                        logger.debug(f"Could not cancel legacy order {o.get('id')} on {sym}: {e_canc}")
+                        logger.debug(f"Could not cancel order {o.get('id')} on {sym}: {e_canc}")
 
             bybit_order_ids = {o.get('id') for o in open_orders if o.get('id')}
             

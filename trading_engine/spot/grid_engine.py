@@ -190,10 +190,22 @@ class GridEngine:
         # Base unit sizing per level for BUY orders (minimum $35.00 floor ensures each bounce yields >= +$0.50-$1.00 net)
         total_levels = self.params.buy_levels + self.params.sell_levels
         raw_order_size = (self.allocated_usd * self.params.capital_pct) / total_levels if total_levels > 0 else 0
-        base_order_size = max(35.0, raw_order_size) if raw_order_size > 0 else 0
+        base_order_size = max(35.0, raw_order_size) if (raw_order_size > 0 and self.allocated_usd >= 35.0) else 0.0
+
+        # 🛑 Position Exposure Hard Ceiling Guard inside build_grid
+        if portfolio:
+            tot_eq_val = float(getattr(portfolio, 'total_unified_equity', 0.0) or getattr(portfolio, 'total_capital', 0.0) or 0.0)
+            if tot_eq_val > 0:
+                h_pos = portfolio.get_position(self.symbol) if hasattr(portfolio, 'get_position') else 0.0
+                h_val = h_pos * current_price
+                if (h_val / tot_eq_val) >= 0.14:
+                    base_order_size = 0.0
+                    self.params.buy_levels = 0
+                    self.allocated_usd = 0.0
+                    logger.info(f"🛑 [{self.symbol}] Holding value (${h_val:,.2f}, {(h_val/tot_eq_val)*100:.1f}%) >= 14% equity limit. Suppressing all grid buy levels.")
 
         # 🛑 Anti-Falling-Knife Guard: strictly suppress buys in confirmed BEAR regimes or when buy_levels is 0
-        if self.current_regime == 'BEAR' or self.params.buy_levels <= 0 or self.allocated_usd <= 0:
+        if self.current_regime == 'BEAR' or self.params.buy_levels <= 0 or self.allocated_usd < 35.0:
             base_order_size = 0.0
             if self.current_regime == 'BEAR':
                 logger.info(f"🛑 [{self.symbol}] BEAR trend active (Price < SMA50, -DI dominant). Buying paused to prevent catching falling knives.")
@@ -521,16 +533,16 @@ class GridEngine:
                                 level.status = 'cancelled'
                                 continue
 
-                            # 🛑 STRICT 15% MAXIMUM ASSET EXPOSURE CEILING:
-                            # (Current Holding Value + Existing Open Buys + New Buy Order) MUST NOT exceed 15% of Total Unified Equity
+                            # 🛑 STRICT 14% MAXIMUM ASSET EXPOSURE CEILING:
+                            # (Current Holding Value + Existing Open Buys + New Buy Order) MUST NOT exceed 14% of Total Unified Equity
                             tot_eq_val = float(getattr(portfolio, 'total_unified_equity', 0.0) or getattr(portfolio, 'total_capital', 0.0) or 0.0)
                             if tot_eq_val > 0:
-                                cap_15 = tot_eq_val * 0.15
+                                cap_14 = tot_eq_val * 0.14
                                 h_qty = portfolio.get_position(self.symbol) if hasattr(portfolio, 'get_position') else 0.0
                                 h_val = h_qty * price_val
                                 existing_open_buys = sum(float(getattr(l, 'qty', 0) or 0) * float(getattr(l, 'price', 0) or 0) for l in self.grid_levels if getattr(l, 'status', '') == 'open' and getattr(l, 'side', '') == 'buy')
-                                if (h_val + existing_open_buys + req_cost) > cap_15:
-                                    logger.info(f"[{self.symbol}] 🛑 [15% CEILING] Skipping buy order (${req_cost:.2f}) - Total exposure (${(h_val + existing_open_buys + req_cost):.2f}) would exceed 15% equity cap (${cap_15:.2f}).")
+                                if (h_val + existing_open_buys + req_cost) > cap_14:
+                                    logger.info(f"[{self.symbol}] 🛑 [14% CEILING] Skipping buy order (${req_cost:.2f}) - Total exposure (${(h_val + existing_open_buys + req_cost):.2f}) would exceed 14% equity cap (${cap_14:.2f}).")
                                     level.status = 'cancelled'
                                     continue
 
