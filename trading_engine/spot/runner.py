@@ -51,12 +51,11 @@ def _get_dynamic_hot_asset_allocations(
        - 60% 48-Hour Volatility Range: ((High_48h - Low_48h) / Low_48h) over last 2 daily candles
        - 40% 7-Day Average True Range (ATR%): Sustained structural volatility over 7 days
        This prevents 1-day hype pump bag traps while keeping high-velocity oscillation leaders.
-    2. Enforces strict Capital Trap Prevention (15% Max Position Exposure Gate):
-       - If any asset's current holding value >= 15% of total portfolio equity, it is disqualified
+    2. Enforces strict Capital Trap Prevention (10% Max Position Exposure Gate):
+       - If any asset's current holding value >= 10% of total portfolio equity, it is disqualified
          from new buy allocations (locked at 0.0%) to prevent over-accumulation.
     3. Concentrates 100% of active capital across the Top 8 eligible leaders:
-       - Rank 1 to 4 (Primary Turbo Leaders): 15.0% each (60% total)
-       - Rank 5 to 8 (Secondary Power Movers): 10.0% each (40% total)
+       - 10.0% max allocation per asset across Top 8 leaders (80% deployed, 20% liquid cash reserve)
        - Rank 9 to 23 & Demoted/Disqualified: 0.0% buy allocation (rotated to profit-taking Sell-Only Mode)
     """
     global _last_blended_score_ts, _cached_blended_scores
@@ -161,7 +160,7 @@ def _get_dynamic_hot_asset_allocations(
                 }
                 vol_score = default_scores.get(sym, 8.0)
 
-        # 🛑 15% Max Position Exposure Gate (Capital Trap Prevention)
+        # 🛑 10% Max Position Exposure Gate (Capital Trap Prevention)
         is_capped = False
         if portfolio and total_equity > 0 and hasattr(portfolio, 'holdings') and isinstance(portfolio.holdings, dict):
             h_obj = portfolio.holdings.get(sym)
@@ -172,9 +171,9 @@ def _get_dynamic_hot_asset_allocations(
                     px_ref = ALL_23_HISTORICAL_COSTS[sym]
                 holding_val = u_held * px_ref
                 exposure_pct = holding_val / total_equity
-                if exposure_pct >= 0.14:
+                if exposure_pct >= 0.10:
                     is_capped = True
-                    logger.info(f"🛑 [CAP REACHED] {sym} exposure (${holding_val:,.2f}, {exposure_pct*100:.1f}%) >= 14% equity ceiling. Disqualified from active buy allocation to prevent trapped capital.")
+                    logger.info(f"🛑 [CAP REACHED] {sym} exposure (${holding_val:,.2f}, {exposure_pct*100:.1f}%) >= 10% equity ceiling. Disqualified from active buy allocation to prevent trapped capital.")
 
         # 🛑 Individual BEAR Trend Filter (Anti-Falling-Knife Guard)
         is_bear = False
@@ -203,10 +202,7 @@ def _get_dynamic_hot_asset_allocations(
 
     allocations = {}
     for rank, sym in enumerate(top_8_selected):
-        if rank < 4:
-            allocations[sym] = 0.15  # 4 * 15% = 60%
-        else:
-            allocations[sym] = 0.10  # 4 * 10% = 40%
+        allocations[sym] = 0.10  # 10.0% max allocation per asset across Top 8 leaders
 
     # Any asset in scan_list not in top_8_selected gets 0.0% buy allocation
     for sym in scan_list:
@@ -382,7 +378,7 @@ def run_spot_regime_check():
             if reg_name and st:
                 logger.info(f"📊 Regime [{sym}]: {reg_name} (ADX: {st.adx:.1f}, +DI: {st.plus_di:.1f}, -DI: {st.minus_di:.1f})")
 
-    # 3. Dynamic 23-Asset Scanner & Capital Rotation with 15% Exposure Ceiling
+    # 3. Dynamic 23-Asset Scanner & Capital Rotation with 10% Exposure Ceiling
     try:
         total_eq = _portfolio.usdt_available + sum(
             (float(getattr(h, 'units_held', 0) if hasattr(h, 'units_held') else (h or {}).get('units_held', 0) or 0)) *
@@ -438,7 +434,7 @@ def run_spot_regime_check():
             if alloc_pct <= 0.0 and len(_active_roster) > 0:
                 alloc_pct = 1.0 / len(_active_roster)
             new_asset_usd = active_cap * alloc_pct
-            # 🛑 15% Max Position Exposure Clamp: ensure holding + new allocation never exceeds 15% equity
+            # 🛑 10% Max Position Exposure Clamp: ensure holding + new allocation never exceeds 10% equity
             h_obj = _portfolio.holdings.get(symbol) if hasattr(_portfolio, 'holdings') and isinstance(_portfolio.holdings, dict) else None
             h_val = 0.0
             if h_obj:
@@ -448,7 +444,7 @@ def run_spot_regime_check():
                     p_ref = ALL_23_HISTORICAL_COSTS[symbol]
                 h_val = u_held * p_ref
             
-            max_headroom_usd = max(0.0, (total_eq * 0.14) - h_val)
+            max_headroom_usd = max(0.0, (total_eq * 0.10) - h_val)
             new_asset_usd = min(new_asset_usd, max_headroom_usd)
 
             engine = _grid_engines.get(symbol)
@@ -680,8 +676,8 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                     logger.info(f"[{symbol}] 🛡️ [RESERVE SHIELD] Freeing capital - cancelling resting buys to protect 20% cash reserve (${res_floor:,.2f} floor).")
                     engine.cancel_buys_only(exchange)
 
-            # 🛑 15% Max Position Exposure Hard Ceiling:
-            # If current holding value is >= 14% of total equity, strictly lock into Sell-Only Mode
+            # 🛑 10% Max Position Exposure Hard Ceiling:
+            # If current holding value is >= 10% of total equity, strictly lock into Sell-Only Mode
             tot_eq_val = float(getattr(_portfolio, 'total_unified_equity', 0.0) or getattr(_portfolio, 'total_capital', 0.0) or 0.0)
             if tot_eq_val > 0:
                 h_qty = _portfolio.get_position(symbol) if hasattr(_portfolio, 'get_position') else 0.0
@@ -692,7 +688,7 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 if ref_p <= 0.0 and symbol in ALL_23_HISTORICAL_COSTS:
                     ref_p = float(ALL_23_HISTORICAL_COSTS[symbol])
                 h_val = h_qty * ref_p
-                if (h_val / tot_eq_val) >= 0.14:
+                if (h_val / tot_eq_val) >= 0.10:
                     engine.allocated_usd = 0.0
                     if hasattr(engine, 'params') and engine.params:
                         engine.params.buy_levels = 0
@@ -704,12 +700,12 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                                 if (o.get('side') or '').lower() == 'buy' and o.get('id'):
                                     try:
                                         exchange.cancel_order(o['id'], symbol=symbol)
-                                        logger.info(f"🛑 [{symbol}] [14% CEILING ENFORCED] Cancelled live Bybit BUY order {o['id']}.")
+                                        logger.info(f"🛑 [{symbol}] [10% CEILING ENFORCED] Cancelled live Bybit BUY order {o['id']}.")
                                     except Exception:
                                         pass
                         except Exception:
                             pass
-                    logger.info(f"🛑 [{symbol}] [14% CEILING ENFORCED] Holding value (${h_val:,.2f}, {(h_val/tot_eq_val)*100:.1f}%) >= 14% equity limit. Strictly locked in Sell-Only Mode.")
+                    logger.info(f"🛑 [{symbol}] [10% CEILING ENFORCED] Holding value (${h_val:,.2f}, {(h_val/tot_eq_val)*100:.1f}%) >= 10% equity limit. Strictly locked in Sell-Only Mode.")
                 
             try:
                 ticker = tickers.get(symbol)
@@ -855,16 +851,16 @@ def run_spot_dca_check():
                     logger.info(f"🛑 [DCA PAUSED] Skipping DCA buy for {symbol} (${order_size:.2f}) - Would breach hard cash reserve (${res_floor:,.2f} floor).")
                     continue
 
-                # 🛑 14% MAXIMUM ASSET EXPOSURE CEILING FOR DCA BUYS:
+                # 🛑 10% MAXIMUM ASSET EXPOSURE CEILING FOR DCA BUYS:
                 tot_eq_val = float(getattr(_portfolio, 'total_unified_equity', 0.0) or getattr(_portfolio, 'total_capital', 0.0) or 0.0)
                 if tot_eq_val > 0:
-                    cap_14 = tot_eq_val * 0.14
+                    cap_10 = tot_eq_val * 0.10
                     h_qty = _portfolio.get_position(symbol) if hasattr(_portfolio, 'get_position') else 0.0
                     ticker_dca = exchange.fetch_ticker(symbol)
                     p_dca = float(ticker_dca.get('last', 0) or 0)
                     h_val = h_qty * p_dca
-                    if (h_val + order_size) > cap_14:
-                        logger.info(f"🛑 [DCA 14% CAP] Skipping DCA buy for {symbol} - Total exposure (${(h_val + order_size):.2f}) would exceed 14% equity cap (${cap_14:.2f}).")
+                    if (h_val + order_size) > cap_10:
+                        logger.info(f"🛑 [DCA 10% CAP] Skipping DCA buy for {symbol} - Total exposure (${(h_val + order_size):.2f}) would exceed 10% equity cap (${cap_10:.2f}).")
                         continue
 
                 # Execute DCA Buy
@@ -999,7 +995,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
                     if p_sym <= 0 and sym in ALL_23_HISTORICAL_COSTS:
                         p_sym = ALL_23_HISTORICAL_COSTS[sym]
                     tot_eq_chk = float(summary_data.get('total_unified_equity') or summary_data.get('total_capital') or 0.0)
-                    is_capped_sym = (tot_eq_chk > 0 and ((u_sym * p_sym) / tot_eq_chk) >= 0.14)
+                    is_capped_sym = (tot_eq_chk > 0 and ((u_sym * p_sym) / tot_eq_chk) >= 0.10)
 
                     for o in open_orders:
                         is_sell = (o.get('side') or '').lower() == 'sell'
@@ -1439,7 +1435,7 @@ def run_spot_self_healing_and_optimize() -> Dict[str, Any]:
                 if p_ref <= 0 and sym in ALL_23_HISTORICAL_COSTS:
                     p_ref = ALL_23_HISTORICAL_COSTS[sym]
                 has_holding = (units_held * p_ref) >= 5.0
-                is_capped_sym = (tot_eq_self > 0 and ((units_held * p_ref) / tot_eq_self) >= 0.14)
+                is_capped_sym = (tot_eq_self > 0 and ((units_held * p_ref) / tot_eq_self) >= 0.10)
 
                 # Protect: never cancel a sell order on an asset we still hold with >= $5 notional
                 if is_sell and has_holding:
