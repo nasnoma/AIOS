@@ -11,6 +11,15 @@ from uuid import uuid4
 # Path where auto_optimizer.py writes winning params
 _BEST_PARAMS_FILE = Path(__file__).parent / 'best_params.json'
 
+# 🛑 User Pause on ARB: strictly prevent buying ARB until after September 16, 2026 UTC (resumes Sept 17 00:00 UTC)
+ARB_PAUSE_UNTIL_UTC = datetime(2026, 9, 17, 0, 0, 0, tzinfo=timezone.utc)
+
+def is_arb_buy_paused(symbol: str) -> bool:
+    """Returns True if buying ARB is paused (until after September 16, 2026 UTC)."""
+    if symbol in ('ARB/USDT', 'ARB'):
+        return datetime.now(timezone.utc) < ARB_PAUSE_UNTIL_UTC
+    return False
+
 @dataclass
 class RegimeParams:
     grid_spacing: float
@@ -203,6 +212,13 @@ class GridEngine:
                     self.params.buy_levels = 0
                     self.allocated_usd = 0.0
                     logger.info(f"🛑 [{self.symbol}] Holding value (${h_val:,.2f}, {(h_val/tot_eq_val)*100:.1f}%) >= 10% equity limit. Suppressing all grid buy levels.")
+
+        # 🛑 User Pause on ARB (Until After September 16, 2026 UTC):
+        if is_arb_buy_paused(self.symbol):
+            base_order_size = 0.0
+            self.params.buy_levels = 0
+            self.allocated_usd = 0.0
+            logger.info(f"🛑 [{self.symbol}] User pause active until after September 16, 2026. Suppressing all grid buy levels.")
 
         # 🛑 Anti-Falling-Knife Guard: strictly suppress buys in confirmed BEAR regimes or when buy_levels is 0
         if self.current_regime == 'BEAR' or self.params.buy_levels <= 0 or self.allocated_usd < 35.0:
@@ -546,6 +562,12 @@ class GridEngine:
                                     level.status = 'cancelled'
                                     continue
 
+                            # 🛑 Temporary User Pause on ARB (Until After September 16, 2026 UTC):
+                            if is_arb_buy_paused(self.symbol):
+                                logger.info(f"[{self.symbol}] 🛑 [PAUSE TILL SEPT 17] Skipping buy order (${req_cost:.2f}) - paused until after September 16, 2026.")
+                                level.status = 'cancelled'
+                                continue
+
                         params = {'category': 'spot', 'postOnly': True} if 'bybit' in str(type(exchange)).lower() else {}
                         try:
                             if level.side == 'buy':
@@ -738,7 +760,8 @@ class GridEngine:
                     if (self.symbol in spot_settings.asset_list and 
                         getattr(self, 'allocated_usd', 0.0) > 0 and 
                         self.current_regime != 'BEAR' and 
-                        getattr(self.params, 'buy_levels', 0) > 0):
+                        getattr(self.params, 'buy_levels', 0) > 0 and
+                        not is_arb_buy_paused(self.symbol)):
                         new_buy = GridLevel(
                             price=buy_orig_p,
                             side='buy',

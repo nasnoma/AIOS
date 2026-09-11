@@ -39,6 +39,15 @@ _active_roster: set[str] = set()
 _last_blended_score_ts: float = 0.0
 _cached_blended_scores: dict[str, float] = {}
 
+# 🛑 User Pause on ARB: strictly prevent buying ARB until after September 16, 2026 UTC (resumes Sept 17 00:00 UTC)
+ARB_PAUSE_UNTIL_UTC = datetime(2026, 9, 17, 0, 0, 0, tzinfo=timezone.utc)
+
+def is_arb_buy_paused(symbol: str) -> bool:
+    """Returns True if buying ARB is paused (until after September 16, 2026 UTC)."""
+    if symbol in ('ARB/USDT', 'ARB'):
+        return datetime.now(timezone.utc) < ARB_PAUSE_UNTIL_UTC
+    return False
+
 def _get_dynamic_hot_asset_allocations(
     universe: list[str] = None,
     regime_detectors: dict = None,
@@ -185,10 +194,12 @@ def _get_dynamic_hot_asset_allocations(
                 reg_str = reg.name if hasattr(reg, 'name') else str(reg)
                 if reg_str == 'BEAR':
                     is_bear = True
-        # 🛑 Exclude Gold (XAUT) and Macro Store of Value (BTC, ETH) from active grid buy allocations
-        is_blacklisted = sym in ['XAUT/USDT', 'XAUT', 'BTC/USDT', 'ETH/USDT']
+        # 🛑 Exclude Gold (XAUT), Macro Store of Value (BTC, ETH), and ARB (paused until after Sept 16, 2026 UTC)
+        arb_paused = is_arb_buy_paused(sym)
+        is_blacklisted = sym in ['XAUT/USDT', 'XAUT', 'BTC/USDT', 'ETH/USDT'] or arb_paused
         if is_blacklisted:
-            logger.debug(f"🛑 [LOW VOLATILITY EXCLUSION] {sym} excluded from active buy allocations.")
+            reason = "USER PAUSE TILL SEPT 17" if arb_paused else "LOW VOLATILITY EXCLUSION"
+            logger.info(f"🛑 [{reason}] {sym} excluded from active buy allocations.")
 
         is_disqualified = is_capped or is_bear or is_blacklisted
         scored_pairs.append((sym, vol_score, is_disqualified))
@@ -706,6 +717,26 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                         except Exception:
                             pass
                     logger.info(f"🛑 [{symbol}] [10% CEILING ENFORCED] Holding value (${h_val:,.2f}, {(h_val/tot_eq_val)*100:.1f}%) >= 10% equity limit. Strictly locked in Sell-Only Mode.")
+
+            # 🛑 Temporary User Pause on ARB (Until After September 16, 2026 UTC):
+            if is_arb_buy_paused(symbol):
+                engine.allocated_usd = 0.0
+                if hasattr(engine, 'params') and engine.params:
+                    engine.params.buy_levels = 0
+                engine.cancel_buys_only(exchange)
+                if not spot_settings.paper_mode and exchange:
+                    try:
+                        live_orders = exchange.fetch_open_orders(symbol, params={'category': 'spot'})
+                        for o in live_orders:
+                            if (o.get('side') or '').lower() == 'buy' and o.get('id'):
+                                try:
+                                    exchange.cancel_order(o['id'], symbol=symbol)
+                                    logger.info(f"🛑 [{symbol}] [PAUSE TILL SEPT 17] Cancelled live Bybit BUY order {o['id']}.")
+                                except Exception:
+                                    pass
+                    except Exception:
+                        pass
+                logger.info(f"🛑 [{symbol}] User Pause active until after September 16, 2026. Strictly locked in Sell-Only Mode.")
                 
             try:
                 ticker = tickers.get(symbol)
@@ -831,7 +862,7 @@ def run_spot_dca_check():
     for symbol in target_symbols:
         engine = _grid_engines.get(symbol)
         regime = engine.current_regime if engine else "RANGE"
-        if regime == "BEAR":
+        if regime == "BEAR" or is_arb_buy_paused(symbol):
             continue
         
         try:
@@ -1001,11 +1032,12 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
                         is_sell = (o.get('side') or '').lower() == 'sell'
                         has_holding = sym in legacy_held_symbols
                         
-                        # Only cancel rogue BUY orders on decommissioned or capped assets; NEVER cancel resting take-profit SELL orders on legacy holdings!
-                        if not is_sell and (sym not in active_symbols or is_capped_sym) and o.get('id'):
+                        # Only cancel rogue BUY orders on decommissioned, capped, or paused assets; NEVER cancel resting take-profit SELL orders on legacy holdings!
+                        arb_paused = is_arb_buy_paused(sym)
+                        if not is_sell and (sym not in active_symbols or is_capped_sym or arb_paused) and o.get('id'):
                             try:
                                 exchange.cancel_order(o['id'], symbol=sym)
-                                logger.info(f"🧹 Cleaned up {'capped' if is_capped_sym else 'decommissioned'} buy order {o['id']} on {sym}")
+                                logger.info(f"🧹 Cleaned up {'paused' if arb_paused else ('capped' if is_capped_sym else 'decommissioned')} buy order {o['id']} on {sym}")
                             except Exception:
                                 pass
                             continue
@@ -1442,11 +1474,12 @@ def run_spot_self_healing_and_optimize() -> Dict[str, Any]:
                     logger.debug(f"🛡️ Self-Healing: Preserving legacy TP sell {o.get('id')} on {sym} (still holding {units_held:.4f} units, val=${units_held*p_ref:.2f}).")
                     continue
                 
-                # Cancel rogue BUY orders on decommissioned or capped assets:
-                if not is_sell and (sym not in active_symbols or is_capped_sym) and o.get('id'):
+                # Cancel rogue BUY orders on decommissioned, capped, or paused assets:
+                arb_paused = is_arb_buy_paused(sym)
+                if not is_sell and (sym not in active_symbols or is_capped_sym or arb_paused) and o.get('id'):
                     try:
                         exchange.cancel_order(o.get('id'), symbol=sym)
-                        logger.info(f"🧹 Self-Healing: Cancelled {'capped' if is_capped_sym else 'legacy'} buy order {o.get('id')} on {sym} to protect capital.")
+                        logger.info(f"🧹 Self-Healing: Cancelled {'paused' if arb_paused else ('capped' if is_capped_sym else 'legacy')} buy order {o.get('id')} on {sym} to protect capital.")
                         healed_count += 1
                     except Exception as e_canc:
                         logger.debug(f"Could not cancel order {o.get('id')} on {sym}: {e_canc}")
