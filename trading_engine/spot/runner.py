@@ -237,7 +237,7 @@ def _get_dynamic_hot_asset_allocations(
     if pub_ex is not None:
         for sym in shortlist:
             try:
-                gate = entry_buys_allowed(sym, pub_ex, arm_dump=True)
+                gate = entry_buys_allowed(sym, pub_ex, arm_dump=True, portfolio=portfolio, equity=float(total_equity or 0))
                 if not gate.allow_buys:
                     heavy_blocked.add(sym)
                     logger.info(f"🛑 [ENTRY GATE] {sym} excluded from buy allocations — {gate.reason}")
@@ -943,7 +943,8 @@ def run_spot_dca_check():
                     
                     if not spot_settings.paper_mode and exchange:
                         try:
-                            gate = entry_buys_allowed(symbol, exchange)
+                            _eq = float(getattr(_portfolio, 'total_unified_equity', 0) or getattr(_portfolio, 'total_capital', 0) or 0)
+                            gate = entry_buys_allowed(symbol, exchange, portfolio=_portfolio, equity=_eq)
                             if not gate.allow_buys:
                                 logger.info(f"🛑 DCA skipped [{symbol}] — {gate.reason}")
                                 continue

@@ -267,7 +267,8 @@ class GridEngine:
         _buys_ok = base_order_size > 0 and self.current_regime != 'BEAR' and self.params.buy_levels > 0
         if _buys_ok and getattr(self, 'exchange', None) is not None:
             try:
-                gate = entry_buys_allowed(self.symbol, self.exchange)
+                _eq = float(getattr(portfolio, 'total_unified_equity', 0) or getattr(portfolio, 'total_capital', 0) or 0) if portfolio else 0.0
+                gate = entry_buys_allowed(self.symbol, self.exchange, portfolio=portfolio, equity=_eq)
                 if not gate.allow_buys:
                     logger.info(f"🛑 [{self.symbol}] Buy grid skipped — {gate.reason}")
                     _buys_ok = False
@@ -609,7 +610,8 @@ class GridEngine:
                     continue
                 if level.side == 'buy' and getattr(self, 'exchange', None) is not None:
                     try:
-                        gate = entry_buys_allowed(self.symbol, self.exchange)
+                        _eq = float(getattr(portfolio, 'total_unified_equity', 0) or getattr(portfolio, 'total_capital', 0) or 0) if portfolio else 0.0
+                        gate = entry_buys_allowed(self.symbol, self.exchange, portfolio=portfolio, equity=_eq)
                         if not gate.allow_buys:
                             logger.info(f"🛑 [{self.symbol}] Buy place blocked — {gate.reason}")
                             level.status = 'cancelled'

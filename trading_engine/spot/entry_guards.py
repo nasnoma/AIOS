@@ -276,12 +276,49 @@ def check_exitability_at_buy(
         return EntryGate(True, "")
 
 
-def entry_buys_allowed(symbol: str, exchange, *, arm_dump: bool = True) -> EntryGate:
+
+EXPOSURE_CAP_PCT = 0.10  # match engine 10% ceiling — no average-down into traps
+
+
+def is_exposure_capped(symbol: str, portfolio=None, equity: float = 0.0, price: float = 0.0) -> tuple[bool, str]:
+    """True if this symbol already holds >= 10% of equity (OP-style capital trap)."""
+    try:
+        if portfolio is None:
+            return False, ""
+        eq = float(equity or 0.0)
+        if eq <= 0:
+            eq = float(getattr(portfolio, "total_unified_equity", 0) or getattr(portfolio, "total_capital", 0) or 0)
+        if eq <= 0:
+            return False, ""
+        holdings = getattr(portfolio, "holdings", None) or {}
+        h = holdings.get(symbol) or holdings.get(symbol.replace("/USDT", ""))
+        if h is None:
+            return False, ""
+        units = float(getattr(h, "units_held", 0) or (h.get("units_held") if isinstance(h, dict) else 0) or 0)
+        px = float(price or 0.0)
+        if px <= 0:
+            px = float(getattr(h, "last_price", 0) or (h.get("last_price") if isinstance(h, dict) else 0) or 0)
+        val = units * px if px > 0 else float(getattr(h, "value_usd", 0) or (h.get("value_usd") if isinstance(h, dict) else 0) or 0)
+        if val <= 0:
+            return False, ""
+        pct = val / eq
+        if pct >= EXPOSURE_CAP_PCT:
+            return True, f"exposure cap {pct*100:.1f}% >= {EXPOSURE_CAP_PCT*100:.0f}% equity (sell-only, no average-down)"
+        return False, ""
+    except Exception as e:
+        logger.debug(f"exposure cap check [{symbol}]: {e}")
+        return False, ""
+
+
+def entry_buys_allowed(symbol: str, exchange, *, arm_dump: bool = True, portfolio=None, equity: float = 0.0) -> EntryGate:
     """Combined gate used before placing/building new buys."""
     from trading_engine.spot.asset_guards import is_fee_buffer_asset, is_never_buy_symbol
 
     if is_fee_buffer_asset(symbol) or is_never_buy_symbol(symbol):
         return EntryGate(False, "fee-buffer hold-only")
+    capped, cap_reason = is_exposure_capped(symbol, portfolio=portfolio, equity=equity)
+    if capped:
+        return EntryGate(False, cap_reason)
     dump = check_dump_brake(symbol, exchange, arm=arm_dump)
     if not dump.allow_buys:
         return EntryGate(False, dump.reason)
