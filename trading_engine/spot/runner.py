@@ -791,7 +791,8 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                     pass
                 invalid_sells = False
                 if h_cost > 0 and open_sells:
-                    fee_factor = 0.0010
+                    from trading_engine.spot.sell_guard import get_fee_factor
+                    fee_factor = get_fee_factor()
                     # 🛡️ STRICT ZERO-LOSS RULE ACROSS ALL ASSETS:
                     # Every sell order must strictly guarantee at least +$0.50 net profit above actual FIFO cost basis.
                     has_loss_sells = any(
