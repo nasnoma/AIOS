@@ -1,20 +1,52 @@
 """
-Central never-sell-below-buy helpers for the Spot Trading Engine.
+Central never-sell-below-buy + Bybit fee-proof helpers for the Spot Trading Engine.
 
 Rules:
-- A sell price must never be below the relevant buy / cost basis for the lots being sold.
+- A sell must never be below the relevant buy / cost basis.
+- A completed cycle must remain net-positive after Bybit fees on BOTH sides
+  (buy fee + sell fee). Fees must not turn a trade into a loss.
 - Live FIFO (and the linked buy fill) beat stale historical cost constants.
-- Historical costs are fallback only when live cost is unknown — they must not
-  inflate the floor above live FIFO (that pins sells too high and kills cycles).
 """
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from loguru import logger
 
 
-DEFAULT_FEE_FACTOR = 0.0010  # conservative Bybit fee buffer (each side)
+# Conservative default if config is unavailable (Bybit spot ~0.10% / side)
+DEFAULT_FEE_FACTOR = 0.0010
+# Extra buffer on top of configured fee_rate for VIP changes / rounding
+FEE_SAFETY_MULT = 1.10
+DEFAULT_MIN_NET_USD = 0.60
+
+
+def get_fee_factor() -> float:
+    """Per-side fee factor used for floors (config fee_rate with safety buffer)."""
+    try:
+        from trading_engine.config import spot_settings
+        base = float(getattr(spot_settings, "fee_rate", DEFAULT_FEE_FACTOR) or DEFAULT_FEE_FACTOR)
+    except Exception:
+        base = DEFAULT_FEE_FACTOR
+    base = max(base, DEFAULT_FEE_FACTOR)
+    return base * FEE_SAFETY_MULT
+
+
+def estimated_net_pnl(
+    sell_price: float,
+    cost_ref: float,
+    qty: float,
+    *,
+    fee_factor: Optional[float] = None,
+) -> float:
+    """Net USD after buy+sell fees: sell*(1-f)*qty - cost*(1+f)*qty."""
+    f = float(fee_factor if fee_factor is not None else get_fee_factor())
+    sp = float(sell_price or 0.0)
+    cp = float(cost_ref or 0.0)
+    q = float(qty or 0.0)
+    if q <= 0 or sp <= 0 or cp <= 0:
+        return 0.0
+    return (sp * q * (1.0 - f)) - (cp * q * (1.0 + f))
 
 
 def resolve_sell_cost_ref(
@@ -30,12 +62,7 @@ def resolve_sell_cost_ref(
     """
     Resolve the minimum cost basis a sell must clear.
 
-    Preference order:
-    1) linked_buy_price (exact buy for this cycle), when > 0
-    2) FIFO lot cost for the qty being sold (oldest lots first), when available
-    3) portfolio avg_cost
-    4) hist_cost only if live cost is still unknown
-    5) current_price as last-resort floor (never invent a free sell)
+    Preference: linked buy -> FIFO lot cost for qty -> portfolio avg -> hist -> price.
     """
     linked = float(linked_buy_price or 0.0)
     if linked > 0:
@@ -54,8 +81,6 @@ def resolve_sell_cost_ref(
         if fifo_avg <= 0:
             fb = get_fifo_cost_basis(symbol, units_held=units_held if units_held and units_held > 0 else None) or {}
             fifo_avg = float(fb.get("avg_cost", 0.0) or 0.0)
-            # For full-position exits, use max open lot so no single lot sells at a loss
-            # under non-FIFO exchange matching. For partial qty we already used lot helper.
             if qty <= 1e-12:
                 fifo_max = float(fb.get("max_buy_price", 0.0) or 0.0)
     except Exception as e:
@@ -76,27 +101,48 @@ def min_fee_proof_sell_price(
     cost_ref: float,
     qty: float,
     *,
-    fee_factor: float = DEFAULT_FEE_FACTOR,
-    min_net_usd: float = 0.60,
+    fee_factor: Optional[float] = None,
+    min_net_usd: float = DEFAULT_MIN_NET_USD,
 ) -> float:
-    """Minimum limit sell price that clears cost_ref + fees + min_net_usd."""
+    """Minimum limit sell price that clears cost_ref + both-side fees + min_net_usd."""
+    f = float(fee_factor if fee_factor is not None else get_fee_factor())
     cost_ref = float(cost_ref or 0.0)
     qty = float(qty or 0.0)
+    min_net_usd = float(min_net_usd)
     if cost_ref <= 0:
         return 0.0
     if qty <= 1e-12:
-        return cost_ref * (1.0 + fee_factor * 2 + 0.009)
-    denom = qty * (1.0 - fee_factor)
+        # percent-only floor when qty unknown: 2*fee + small edge
+        return cost_ref * (1.0 + (2.0 * f) + 0.003)
+    denom = qty * (1.0 - f)
     if denom <= 0:
-        return cost_ref * 1.015
-    return (cost_ref * qty * (1.0 + fee_factor) + float(min_net_usd)) / denom
+        return cost_ref * (1.0 + (2.0 * f) + 0.005)
+    return (cost_ref * qty * (1.0 + f) + min_net_usd) / denom
 
 
 def sell_clears_buy(sell_price: float, cost_ref: float, eps: float = 1e-12) -> bool:
-    """True iff sell_price is not below cost_ref (never sell below buy)."""
+    """True iff sell_price is not below cost_ref (gross, before fees)."""
     if float(cost_ref or 0.0) <= 0:
         return True
     return float(sell_price) + eps >= float(cost_ref)
+
+
+def sell_is_fee_proof(
+    sell_price: float,
+    cost_ref: float,
+    qty: float,
+    *,
+    fee_factor: Optional[float] = None,
+    min_net_usd: float = DEFAULT_MIN_NET_USD,
+) -> bool:
+    """True iff sell is >= buy AND estimated net after Bybit fees >= min_net_usd."""
+    if not sell_clears_buy(sell_price, cost_ref):
+        return False
+    if float(qty or 0.0) <= 0 or float(cost_ref or 0.0) <= 0:
+        # Without qty, require at least 2*fee + tiny edge above cost
+        f = float(fee_factor if fee_factor is not None else get_fee_factor())
+        return float(sell_price) >= float(cost_ref) * (1.0 + (2.0 * f) + 0.001)
+    return estimated_net_pnl(sell_price, cost_ref, qty, fee_factor=fee_factor) + 1e-9 >= float(min_net_usd)
 
 
 def enforce_sell_floor(
@@ -104,17 +150,15 @@ def enforce_sell_floor(
     cost_ref: float,
     qty: float = 0.0,
     *,
-    fee_factor: float = DEFAULT_FEE_FACTOR,
-    min_net_usd: float = 0.60,
+    fee_factor: Optional[float] = None,
+    min_net_usd: float = DEFAULT_MIN_NET_USD,
 ) -> float:
-    """
-    Raise sell_price to the never-sell-below-buy / fee-proof floor when needed.
-    Returns the safe sell price (may equal input).
-    """
+    """Raise sell_price to the fee-proof floor (never below buy; never net-negative after fees)."""
+    f = float(fee_factor if fee_factor is not None else get_fee_factor())
     floor = max(
         float(cost_ref or 0.0),
-        min_fee_proof_sell_price(cost_ref, qty, fee_factor=fee_factor, min_net_usd=min_net_usd)
-        if cost_ref and qty > 0
-        else float(cost_ref or 0.0),
+        min_fee_proof_sell_price(cost_ref, qty, fee_factor=f, min_net_usd=min_net_usd)
+        if cost_ref
+        else 0.0,
     )
     return max(float(sell_price or 0.0), floor)

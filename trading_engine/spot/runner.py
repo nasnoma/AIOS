@@ -921,8 +921,8 @@ def run_spot_dca_check():
                     _portfolio.save()
 
                     # ── DCA Exit Target: place limit sell guaranteeing >= +$0.60 NET profit strictly above FIFO cost ──
-                    fee_factor = spot_settings.fee_rate
-                    from trading_engine.spot.sell_guard import resolve_sell_cost_ref, enforce_sell_floor, sell_clears_buy
+                    from trading_engine.spot.sell_guard import resolve_sell_cost_ref, enforce_sell_floor, sell_clears_buy, sell_is_fee_proof, get_fee_factor
+                    fee_factor = get_fee_factor()
                     # DCA exit: use FIFO cost of the qty exiting; never inflate with stale hist / unrelated max lots
                     cost_ref = resolve_sell_cost_ref(
                         symbol,

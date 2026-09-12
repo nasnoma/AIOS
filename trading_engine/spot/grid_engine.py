@@ -18,7 +18,10 @@ from trading_engine.spot.sell_guard import (
     resolve_sell_cost_ref,
     min_fee_proof_sell_price,
     sell_clears_buy,
+    sell_is_fee_proof,
     enforce_sell_floor,
+    get_fee_factor,
+    estimated_net_pnl,
 )
 
 def is_arb_buy_paused(symbol: str) -> bool:
@@ -361,7 +364,7 @@ class GridEngine:
                 # 🚪 Quick-Exit Mode for Legacy Holdings Outside Top 12:
                 # Consolidate holding into 1 order (or 2 if > $150) with tight target price to guarantee
                 # > $0.50 net profit (+$0.75 target) and exit into liquid USDT cash immediately.
-                fee_factor = 0.0010
+                fee_factor = get_fee_factor()
                 sell_levels_count = 1 if total_held_usd < 150.0 else 2
                 qty_per_sell = base_qty_held / sell_levels_count
                 min_net_usd = 0.75  # Target guaranteed > $0.50 net profit
@@ -407,6 +410,12 @@ class GridEngine:
                     if target_p < cost_ref:
                         logger.critical(f"🚨 [{self.symbol}] FATAL: target_p (${target_p:.4f}) < cost_ref (${cost_ref:.4f})! Aborting sell level to prevent loss!")
                         continue
+                    if not sell_is_fee_proof(target_p, cost_ref, qty_per_sell, fee_factor=fee_factor, min_net_usd=0.55):
+                        target_p = enforce_sell_floor(target_p, cost_ref, qty_per_sell, fee_factor=fee_factor, min_net_usd=0.60)
+                        actual_net_pnl = estimated_net_pnl(target_p, cost_ref, qty_per_sell, fee_factor=fee_factor)
+                        if not sell_is_fee_proof(target_p, cost_ref, qty_per_sell, fee_factor=fee_factor, min_net_usd=0.55):
+                            logger.critical(f"🚨 [{self.symbol}] FATAL: cannot build fee-proof sell (target ${target_p:.4f}, cost ${cost_ref:.4f}). Aborting level!")
+                            continue
 
                     logger.info(f"🚪 [{self.symbol}] Quick-Exit Sell Level {i+1}/{sell_levels_count}: Target=${target_p:.4f} "
                                 f"(CostRef: ${cost_ref:.4f}, Live: ${current_price:.4f}, Net Profit: +${actual_net_pnl:.2f} USD)")
@@ -434,7 +443,7 @@ class GridEngine:
 
                 # Tiered net profit guarantee:
                 min_net_profit_tiers = [0.60, 0.90, 1.30, 2.00]
-                fee_factor = 0.0010  # 0.10% Bybit taker fee safety buffer
+                fee_factor = get_fee_factor()  # Bybit per-side fee + safety buffer
 
                 for i in range(sell_levels_count):
                     min_net_usd = min_net_profit_tiers[i] if i < len(min_net_profit_tiers) else (0.60 + 0.40 * i)
@@ -493,6 +502,12 @@ class GridEngine:
                     if target_p < cost_ref:
                         logger.critical(f"🚨 [{self.symbol}] FATAL: target_p (${target_p:.4f}) < cost_ref (${cost_ref:.4f})! Aborting sell level to prevent loss!")
                         continue
+                    if not sell_is_fee_proof(target_p, cost_ref, qty_per_sell, fee_factor=fee_factor, min_net_usd=0.55):
+                        target_p = enforce_sell_floor(target_p, cost_ref, qty_per_sell, fee_factor=fee_factor, min_net_usd=0.60)
+                        actual_net_pnl = estimated_net_pnl(target_p, cost_ref, qty_per_sell, fee_factor=fee_factor)
+                        if not sell_is_fee_proof(target_p, cost_ref, qty_per_sell, fee_factor=fee_factor, min_net_usd=0.55):
+                            logger.critical(f"🚨 [{self.symbol}] FATAL: cannot build fee-proof sell (target ${target_p:.4f}, cost ${cost_ref:.4f}). Aborting level!")
+                            continue
 
                     tier_label = "Compressed Aged" if is_aged_position else "High-Velocity"
                     logger.info(f"🎯 [{self.symbol}] {tier_label} Sell Level {i+1}/{sell_levels_count}: Target=${target_p:.4f} "
@@ -617,7 +632,7 @@ class GridEngine:
                                 except Exception:
                                     cost_floor = 0.0
                             if cost_floor > 0 and not sell_clears_buy(price_val, cost_floor):
-                                safe_p = enforce_sell_floor(price_val, cost_floor, qty_val, min_net_usd=0.60)
+                                safe_p = enforce_sell_floor(price_val, cost_floor, qty_val, fee_factor=get_fee_factor(), min_net_usd=0.60)
                                 logger.warning(
                                     f"🛡️ [{self.symbol}] Bumping sell before place: "
                                     f"${price_val:.6f} -> ${safe_p:.6f} (cost floor ${cost_floor:.6f})"
@@ -726,7 +741,7 @@ class GridEngine:
                 if level.side == 'buy':
                     # Guaranteed Profit Floor: Replacement sell order MUST yield at least +$0.60 NET cash after fees
                     min_net_usd = 0.60
-                    fee_factor = 0.0010
+                    fee_factor = get_fee_factor()
                     # Linked to THIS buy fill — never inflate with unrelated higher lots
                     cost_ref = resolve_sell_cost_ref(
                         self.symbol,
@@ -797,19 +812,24 @@ class GridEngine:
                                 logger.error(f"Failed to replace below-buy sell for {self.symbol}: {e_rep}")
                         continue
 
+                    fee_factor = get_fee_factor()
                     gross_pnl = (level.price - buy_orig_p) * level.qty
-                    fee = (level.price * level.qty * self.fee_rate) + (buy_orig_p * level.qty * self.fee_rate)
-                    net_pnl = gross_pnl - fee
+                    fee = (level.price * level.qty * fee_factor) + (buy_orig_p * level.qty * fee_factor)
+                    net_pnl = estimated_net_pnl(level.price, buy_orig_p, level.qty, fee_factor=fee_factor)
 
-                    if net_pnl < MIN_NET_PROFIT_USD and level.qty > 0 and buy_orig_p > 0:
-                        # Recalculate and replace this sell order with one that guarantees >= $0.50 net
-                        fee_factor = self.fee_rate
-                        denom = level.qty * (1.0 - fee_factor)
-                        min_sell_price = (buy_orig_p * level.qty * (1.0 + fee_factor) + MIN_NET_PROFIT_USD) / denom if denom > 0 else buy_orig_p * 1.015
+                    if (net_pnl < MIN_NET_PROFIT_USD or not sell_is_fee_proof(level.price, buy_orig_p, level.qty, fee_factor=fee_factor, min_net_usd=MIN_NET_PROFIT_USD)) and level.qty > 0 and buy_orig_p > 0:
+                        # Bybit fees must not eat the edge into a loss — bump to fee-proof floor
+                        min_sell_price = enforce_sell_floor(
+                            level.price,
+                            buy_orig_p,
+                            level.qty,
+                            fee_factor=fee_factor,
+                            min_net_usd=MIN_NET_PROFIT_USD,
+                        )
                         logger.warning(
-                            f"⛔ [{self.symbol}] BLOCKED sub-$0.50 sell fill: would have netted ${net_pnl:.4f} "
-                            f"(Sell @ ${level.price:.4f}, Cost @ ${buy_orig_p:.4f}, Qty: {level.qty:.2f}). "
-                            f"Replacing with min-profit sell @ ${min_sell_price:.4f}"
+                            f"⛔ [{self.symbol}] BLOCKED fee-unsafe sell fill: would have netted ${net_pnl:.4f} after Bybit fees "
+                            f"(Sell @ ${level.price:.4f}, Cost @ ${buy_orig_p:.4f}, Qty: {level.qty:.6f}). "
+                            f"Replacing with fee-proof sell @ ${min_sell_price:.4f}"
                         )
                         level.status = 'open'  # Revert status so it doesn't get counted as filled
                         if exchange and level.order_id and not str(level.order_id).startswith('PAPER'):
