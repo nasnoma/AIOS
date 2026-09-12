@@ -35,29 +35,41 @@ class RegimeParams:
     capital_pct: float
     base_hold_pct: float
 
-REGIME_PARAMS: Dict[str, RegimeParams] = {
-    'BULL': RegimeParams(
-        grid_spacing=0.008,
-        buy_levels=4,
-        sell_levels=8,
-        capital_pct=0.80,
-        base_hold_pct=0.40
-    ),
-    'RANGE': RegimeParams(
-        grid_spacing=0.015,
-        buy_levels=6,
-        sell_levels=6,
-        capital_pct=0.65,
-        base_hold_pct=0.30
-    ),
-    'BEAR': RegimeParams(
-        grid_spacing=0.030,
-        buy_levels=0,
-        sell_levels=3,
-        capital_pct=0.0,
-        base_hold_pct=0.20
-    )
-}
+def _load_regime_params() -> Dict[str, RegimeParams]:
+    """Prefer SpotGridSettings (Railway/env) over hardcoded defaults so live knobs stay in sync."""
+    try:
+        from trading_engine.config import spot_settings as ss
+        return {
+            'BULL': RegimeParams(
+                grid_spacing=float(ss.bull_grid_spacing),
+                buy_levels=int(ss.bull_buy_levels),
+                sell_levels=int(ss.bull_sell_levels),
+                capital_pct=float(ss.bull_capital_deployed),
+                base_hold_pct=float(ss.bull_base_hold_pct),
+            ),
+            'RANGE': RegimeParams(
+                grid_spacing=float(ss.range_grid_spacing),
+                buy_levels=int(ss.range_buy_levels),
+                sell_levels=int(ss.range_sell_levels),
+                capital_pct=float(ss.range_capital_deployed),
+                base_hold_pct=float(ss.range_base_hold_pct),
+            ),
+            'BEAR': RegimeParams(
+                grid_spacing=float(ss.bear_grid_spacing),
+                buy_levels=0,  # hard: no new buys in BEAR regardless of config
+                sell_levels=int(ss.bear_sell_levels),
+                capital_pct=0.0,
+                base_hold_pct=float(ss.bear_base_hold_pct),
+            ),
+        }
+    except Exception:
+        return {
+            'BULL': RegimeParams(grid_spacing=0.008, buy_levels=4, sell_levels=6, capital_pct=0.85, base_hold_pct=0.30),
+            'RANGE': RegimeParams(grid_spacing=0.012, buy_levels=5, sell_levels=5, capital_pct=0.75, base_hold_pct=0.20),
+            'BEAR': RegimeParams(grid_spacing=0.025, buy_levels=0, sell_levels=3, capital_pct=0.0, base_hold_pct=0.15),
+        }
+
+REGIME_PARAMS: Dict[str, RegimeParams] = _load_regime_params()
 
 @dataclass
 class GridLevel:
@@ -331,7 +343,7 @@ class GridEngine:
             logger.debug(f"FIFO cost basis lookup for {self.symbol}: {e_fifo_cb}")
             fifo_basis = {}
 
-        is_aged_position = (oldest_lot_age_hours >= 24.0)
+        is_aged_position = (oldest_lot_age_hours >= 12.0)  # recycle capital sooner while still fee-proof
 
         # Safety: If avg_cost is 0 or missing, ensure we never sell below current_price * 1.015
         if avg_cost <= 0:
@@ -456,7 +468,7 @@ class GridEngine:
                         stagger_step = 0.0010 * i
                         target_p = max(min_fee_proof_price, min_fee_proof_price * (1.0 + stagger_step))
                     elif current_price > cost_ref:
-                        tight_spread = 0.0050 + (0.0035 * i)  # Tier 1: +0.50%, Tier 2: +0.85%, Tier 3: +1.20%, Tier 4: +1.55%
+                        tight_spread = 0.0035 + (0.0025 * i)  # Tier 1: +0.35%, Tier 2: +0.60%, Tier 3: +0.85%, Tier 4: +1.10%
                         tight_market_target = current_price * (1.0 + tight_spread)
                         target_p = max(min_fee_proof_price, tight_market_target)
                     else:
@@ -849,11 +861,14 @@ class GridEngine:
                         self.current_regime != 'BEAR' and 
                         getattr(self.params, 'buy_levels', 0) > 0 and
                         not is_arb_buy_paused(self.symbol)):
+                        # Re-enter at the completed cycle's buy price (grid dip), same qty — keeps cycle velocity high
+                        reentry_price = buy_orig_p if buy_orig_p > 0 else level.price
+                        reentry_qty = level.qty if level.qty > 0 else (level.size_usd / reentry_price if reentry_price > 0 else 0.0)
                         new_buy = GridLevel(
-                            price=buy_orig_p,
+                            price=reentry_price,
                             side='buy',
-                            qty=level.size_usd / buy_orig_p if buy_orig_p > 0 else level.qty,
-                            size_usd=level.size_usd
+                            qty=reentry_qty,
+                            size_usd=reentry_price * reentry_qty
                         )
                         self.grid_levels.append(new_buy)
                         if self.paper_mode:
