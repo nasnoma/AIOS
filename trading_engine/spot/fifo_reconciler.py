@@ -509,6 +509,78 @@ def get_fifo_cost_basis(symbol: str, units_held: Optional[float] = None) -> Dict
 # ---------------------------------------------------------------------------
 
 
+
+def get_fifo_lot_cost_for_qty(symbol: str, qty: float) -> Dict[str, float]:
+    """
+    Cost basis for selling `qty` under strict FIFO (oldest open lots first).
+
+    This is the correct floor for a partial sell: never below the buy prices of
+    the lots that FIFO would actually consume — without inflating to the max
+    lot across the entire book (which stalls cycles when one expensive lot exists).
+    """
+    qty = float(qty or 0.0)
+    if qty <= 1e-12:
+        return {
+            'units': 0.0,
+            'avg_cost': 0.0,
+            'min_buy_price': 0.0,
+            'max_buy_price': 0.0,
+        }
+
+    db = _conn()
+    rows = db.execute(
+        "SELECT side, price, qty, ts_ms FROM fills WHERE symbol = ? ORDER BY ts_ms ASC, id ASC",
+        (symbol,)
+    ).fetchall()
+    db.close()
+
+    buy_lots = deque()
+    for r in rows:
+        side = r["side"]
+        price = float(r["price"])
+        q = float(r["qty"])
+        ts_ms = int(r["ts_ms"]) if "ts_ms" in r.keys() and r["ts_ms"] else 0
+        if side == "buy":
+            buy_lots.append({"price": price, "rem": q, "ts_ms": ts_ms})
+        elif side == "sell":
+            needed = q
+            while buy_lots and needed > 1e-8:
+                take = min(needed, buy_lots[0]["rem"])
+                needed -= take
+                buy_lots[0]["rem"] -= take
+                if buy_lots[0]["rem"] <= 1e-8:
+                    buy_lots.popleft()
+
+    needed = qty
+    taken = []
+    for b in buy_lots:
+        if needed <= 1e-8:
+            break
+        if b["rem"] <= 1e-8:
+            continue
+        take = min(needed, b["rem"])
+        taken.append({"price": b["price"], "qty": take})
+        needed -= take
+
+    if not taken:
+        return {
+            'units': 0.0,
+            'avg_cost': 0.0,
+            'min_buy_price': 0.0,
+            'max_buy_price': 0.0,
+        }
+
+    tot_qty = sum(t["qty"] for t in taken)
+    tot_val = sum(t["qty"] * t["price"] for t in taken)
+    avg_cost = tot_val / tot_qty if tot_qty > 0 else 0.0
+    return {
+        'units': round(tot_qty, 6),
+        'avg_cost': round(avg_cost, 6),
+        'min_buy_price': round(min(t["price"] for t in taken), 6),
+        'max_buy_price': round(max(t["price"] for t in taken), 6),
+    }
+
+
 def reconcile(exchange, fee_rate: float = 0.00075) -> Dict[str, Any]:
     """
     Sync new fills from Bybit, run FIFO match, return today's and all-time P&L.

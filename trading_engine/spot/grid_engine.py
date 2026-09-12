@@ -14,6 +14,13 @@ _BEST_PARAMS_FILE = Path(__file__).parent / 'best_params.json'
 # 🛑 User Pause on ARB: strictly prevent buying ARB until after September 16, 2026 UTC (resumes Sept 17 00:00 UTC)
 ARB_PAUSE_UNTIL_UTC = datetime(2026, 9, 17, 0, 0, 0, tzinfo=timezone.utc)
 
+from trading_engine.spot.sell_guard import (
+    resolve_sell_cost_ref,
+    min_fee_proof_sell_price,
+    sell_clears_buy,
+    enforce_sell_floor,
+)
+
 def is_arb_buy_paused(symbol: str) -> bool:
     """Returns True if buying ARB is paused (until after September 16, 2026 UTC)."""
     if symbol in ('ARB/USDT', 'ARB'):
@@ -315,9 +322,10 @@ class GridEngine:
             fifo_basis = get_fifo_cost_basis(self.symbol, units_held=base_qty_held if base_qty_held > 0 else None) or {}
             if fifo_basis.get('avg_cost', 0) > 0:
                 fifo_max_cost = float(fifo_basis.get('max_buy_price', 0.0) or 0.0)
-                # 🛡️ FIFO LOT-SAFETY RULE: cost basis must cover the HIGHEST-cost open buy lot in FIFO queue
-                # so that when the oldest lots match first under FIFO, NO SINGLE LOT IS EVER SOLD AT A LOSS!
-                avg_cost = max(avg_cost, float(fifo_basis['avg_cost']), fifo_max_cost)
+                # Use live FIFO average as portfolio floor. Per-sell floors use
+                # get_fifo_lot_cost_for_qty (oldest lots first) via resolve_sell_cost_ref,
+                # so one expensive lot no longer pins every sell above the whole book.
+                avg_cost = max(avg_cost, float(fifo_basis['avg_cost']))
             oldest_lot_age_hours = float(fifo_basis.get('oldest_buy_age_hours', 0.0) or 0.0)
         except Exception as e_fifo_cb:
             logger.debug(f"FIFO cost basis lookup for {self.symbol}: {e_fifo_cb}")
@@ -349,7 +357,15 @@ class GridEngine:
                 for i in range(sell_levels_count):
                     from trading_engine.spot.runner import ALL_23_HISTORICAL_COSTS
                     hist_cost = float(ALL_23_HISTORICAL_COSTS.get(self.symbol, 0.0) or 0.0)
-                    cost_ref = max(avg_cost, fifo_max_cost, hist_cost)
+                    # Live FIFO / portfolio cost first; hist only if live unknown (avoids stale floors stalling cycles)
+                    cost_ref = resolve_sell_cost_ref(
+                        self.symbol,
+                        portfolio_avg_cost=avg_cost,
+                        units_held=base_qty_held,
+                        sell_qty=qty_per_sell,
+                        hist_cost=hist_cost,
+                        current_price=current_price,
+                    )
                     if cost_ref <= 0:
                         cost_ref = current_price
                     denom = qty_per_sell * (1.0 - fee_factor)
@@ -419,7 +435,15 @@ class GridEngine:
                     
                     from trading_engine.spot.runner import ALL_23_HISTORICAL_COSTS
                     hist_cost = float(ALL_23_HISTORICAL_COSTS.get(self.symbol, 0.0) or 0.0)
-                    cost_ref = max(avg_cost, fifo_max_cost, hist_cost)
+                    # Live FIFO / portfolio cost first; hist only if live unknown (avoids stale floors stalling cycles)
+                    cost_ref = resolve_sell_cost_ref(
+                        self.symbol,
+                        portfolio_avg_cost=avg_cost,
+                        units_held=base_qty_held,
+                        sell_qty=qty_per_sell,
+                        hist_cost=hist_cost,
+                        current_price=current_price,
+                    )
                     if cost_ref <= 0.0:
                         cost_ref = current_price
 
@@ -568,6 +592,34 @@ class GridEngine:
                                 level.status = 'cancelled'
                                 continue
 
+                        # Placement-time never-sell-below-buy gate (after exchange precision rounding)
+                        if level.side == 'sell':
+                            cost_floor = float(getattr(level, 'linked_buy_price', 0.0) or 0.0)
+                            if cost_floor <= 0:
+                                try:
+                                    cost_floor = resolve_sell_cost_ref(
+                                        self.symbol,
+                                        sell_qty=qty_val,
+                                        current_price=price_val,
+                                    )
+                                except Exception:
+                                    cost_floor = 0.0
+                            if cost_floor > 0 and not sell_clears_buy(price_val, cost_floor):
+                                safe_p = enforce_sell_floor(price_val, cost_floor, qty_val, min_net_usd=0.60)
+                                logger.warning(
+                                    f"🛡️ [{self.symbol}] Bumping sell before place: "
+                                    f"${price_val:.6f} -> ${safe_p:.6f} (cost floor ${cost_floor:.6f})"
+                                )
+                                price_val = float(exchange.price_to_precision(self.symbol, safe_p)) if hasattr(exchange, 'price_to_precision') else safe_p
+                                if not sell_clears_buy(price_val, cost_floor):
+                                    logger.critical(
+                                        f"🚨 [{self.symbol}] Aborting sell place: rounded ${price_val:.6f} still < cost ${cost_floor:.6f}"
+                                    )
+                                    level.status = 'cancelled'
+                                    continue
+                                level.price = price_val
+                                level.linked_buy_price = cost_floor
+
                         params = {'category': 'spot', 'postOnly': True} if 'bybit' in str(type(exchange)).lower() else {}
                         try:
                             if level.side == 'buy':
@@ -663,20 +715,22 @@ class GridEngine:
                     # Guaranteed Profit Floor: Replacement sell order MUST yield at least +$0.60 NET cash after fees
                     min_net_usd = 0.60
                     fee_factor = 0.0010
-                    cost_ref = level.price
-                    try:
-                        from trading_engine.spot.fifo_reconciler import get_fifo_cost_basis
-                        fb = get_fifo_cost_basis(self.symbol, units_held=level.qty if level.qty > 0 else None)
-                        if fb.get('max_buy_price', 0) > 0:
-                            cost_ref = max(cost_ref, float(fb['max_buy_price']), float(fb.get('avg_cost', 0)))
-                    except Exception:
-                        pass
-                    denom = level.qty * (1.0 - fee_factor)
-                    if denom > 0:
-                        min_fee_proof_sell = (cost_ref * level.qty * (1.0 + fee_factor) + min_net_usd) / denom
-                        sell_price = max(min_fee_proof_sell, cost_ref * 1.0090)
-                    else:
-                        sell_price = cost_ref * 1.0150
+                    # Linked to THIS buy fill — never inflate with unrelated higher lots
+                    cost_ref = resolve_sell_cost_ref(
+                        self.symbol,
+                        linked_buy_price=level.price,
+                        sell_qty=level.qty,
+                        current_price=level.price,
+                    )
+                    if cost_ref <= 0:
+                        cost_ref = level.price
+                    sell_price = enforce_sell_floor(
+                        max(cost_ref * 1.0090, level.price * 1.0090),
+                        cost_ref,
+                        level.qty,
+                        fee_factor=fee_factor,
+                        min_net_usd=min_net_usd,
+                    )
 
                     new_sell = GridLevel(
                         price=sell_price,
@@ -696,8 +750,41 @@ class GridEngine:
                 elif level.side == 'sell':
                     buy_orig_p = level.linked_buy_price or (level.price / (1 + getattr(self, 'current_spacing', self.params.grid_spacing)))
 
-                    # ── HARD GATE: Block any fill that yields < $0.50 net profit after all fees ──
+                    # ── HARD GATE: never sell below buy, and require >= $0.50 net after fees ──
                     MIN_NET_PROFIT_USD = 0.50
+                    if buy_orig_p > 0 and not sell_clears_buy(level.price, buy_orig_p):
+                        fee_factor = self.fee_rate
+                        denom = level.qty * (1.0 - fee_factor) if level.qty > 0 else 0.0
+                        min_sell_price = enforce_sell_floor(
+                            buy_orig_p * 1.0090,
+                            buy_orig_p,
+                            level.qty,
+                            fee_factor=fee_factor,
+                            min_net_usd=MIN_NET_PROFIT_USD,
+                        )
+                        logger.warning(
+                            f"⛔ [{self.symbol}] BLOCKED sell below buy: "
+                            f"Sell @ ${level.price:.4f} < Cost @ ${buy_orig_p:.4f}. "
+                            f"Replacing with floor sell @ ${min_sell_price:.4f}"
+                        )
+                        level.status = 'open'
+                        if exchange and level.order_id and not str(level.order_id).startswith('PAPER'):
+                            try:
+                                exchange.cancel_order(level.order_id, self.symbol, {'category': 'spot'})
+                                new_params = {'category': 'spot', 'postOnly': True}
+                                qty_val = float(exchange.amount_to_precision(self.symbol, level.qty)) if hasattr(exchange, 'amount_to_precision') else level.qty
+                                p_val = float(exchange.price_to_precision(self.symbol, min_sell_price)) if hasattr(exchange, 'price_to_precision') else min_sell_price
+                                if not sell_clears_buy(p_val, buy_orig_p):
+                                    p_val = float(exchange.price_to_precision(self.symbol, buy_orig_p * 1.01)) if hasattr(exchange, 'price_to_precision') else (buy_orig_p * 1.01)
+                                new_order = exchange.create_limit_sell_order(self.symbol, qty_val, p_val, new_params)
+                                level.price = float(p_val)
+                                level.linked_buy_price = buy_orig_p
+                                level.order_id = new_order['id']
+                                logger.info(f"✅ [{self.symbol}] Replaced below-buy sell @ ${level.price:.4f}")
+                            except Exception as e_rep:
+                                logger.error(f"Failed to replace below-buy sell for {self.symbol}: {e_rep}")
+                        continue
+
                     gross_pnl = (level.price - buy_orig_p) * level.qty
                     fee = (level.price * level.qty * self.fee_rate) + (buy_orig_p * level.qty * self.fee_rate)
                     net_pnl = gross_pnl - fee

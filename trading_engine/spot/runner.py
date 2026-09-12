@@ -776,10 +776,17 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 h_obj = _portfolio.get_holding(symbol) if hasattr(_portfolio, 'get_holding') else None
                 h_cost = float(getattr(h_obj, 'avg_cost_basis', 0) or 0) if h_obj else 0.0
                 try:
-                    from trading_engine.spot.fifo_reconciler import get_fifo_cost_basis
-                    fb = get_fifo_cost_basis(symbol, units_held=holding_qty if holding_qty > 0 else None)
-                    if fb.get('avg_cost', 0) > 0:
-                        h_cost = max(h_cost, float(fb['avg_cost']), float(fb.get('max_buy_price', 0) or 0))
+                    from trading_engine.spot.sell_guard import resolve_sell_cost_ref
+                    # Prefer live FIFO avg / lot cost — do not pin to whole-book max_buy (stalls cycles)
+                    h_cost = max(
+                        h_cost,
+                        resolve_sell_cost_ref(
+                            symbol,
+                            portfolio_avg_cost=h_cost,
+                            units_held=holding_qty if holding_qty > 0 else None,
+                            sell_qty=holding_qty if holding_qty > 0 else None,
+                        ),
+                    )
                 except Exception:
                     pass
                 invalid_sells = False
@@ -915,25 +922,31 @@ def run_spot_dca_check():
 
                     # ── DCA Exit Target: place limit sell guaranteeing >= +$0.60 NET profit strictly above FIFO cost ──
                     fee_factor = spot_settings.fee_rate
-                    cost_ref = price
-                    try:
-                        from trading_engine.spot.fifo_reconciler import get_fifo_cost_basis
-                        fb = get_fifo_cost_basis(symbol)
-                        if fb.get('max_buy_price', 0) > 0:
-                            cost_ref = max(cost_ref, float(fb['max_buy_price']), float(fb.get('avg_cost', 0)))
-                    except Exception:
-                        pass
-                    denom = qty * (1.0 - fee_factor)
-                    min_fee_proof_exit = (cost_ref * qty * (1.0 + fee_factor) + 0.60) / denom if denom > 0 else cost_ref * 1.015
-                    exit_price = round(max(cost_ref * 1.015, min_fee_proof_exit), 6)
-                    try:
-                        if not spot_settings.paper_mode and exchange:
-                            exchange.create_limit_sell_order(symbol, qty, exit_price)
-                            logger.info(f"📤 DCA Exit Limit Sell placed [{symbol}]: qty={qty:.6f} @ ${exit_price:.4f} (CostRef: ${cost_ref:.4f}, Guaranteed Net: >= +$0.60 USD)")
-                        else:
-                            logger.info(f"📤 [PAPER] DCA Exit Limit Sell [{symbol}]: qty={qty:.6f} @ ${exit_price:.4f} (CostRef: ${cost_ref:.4f}, Guaranteed Net: >= +$0.60 USD)")
-                    except Exception as sell_err:
-                        logger.warning(f"DCA exit sell placement failed [{symbol}]: {sell_err}")
+                    from trading_engine.spot.sell_guard import resolve_sell_cost_ref, enforce_sell_floor, sell_clears_buy
+                    # DCA exit: use FIFO cost of the qty exiting; never inflate with stale hist / unrelated max lots
+                    cost_ref = resolve_sell_cost_ref(
+                        symbol,
+                        sell_qty=qty,
+                        current_price=price,
+                    )
+                    if cost_ref <= 0:
+                        cost_ref = price
+                    exit_price = round(
+                        enforce_sell_floor(max(cost_ref * 1.015, price * 1.0035), cost_ref, qty, fee_factor=fee_factor, min_net_usd=0.60),
+                        6,
+                    )
+                    if not sell_clears_buy(exit_price, cost_ref):
+                        logger.critical(f"🚨 DCA exit aborted [{symbol}]: exit ${exit_price:.4f} < cost ${cost_ref:.4f}")
+                        exit_price = 0.0
+                    if exit_price > 0:
+                        try:
+                            if not spot_settings.paper_mode and exchange:
+                                exchange.create_limit_sell_order(symbol, qty, exit_price)
+                                logger.info(f"📤 DCA Exit Limit Sell placed [{symbol}]: qty={qty:.6f} @ ${exit_price:.4f} (CostRef: ${cost_ref:.4f}, Guaranteed Net: >= +$0.60 USD)")
+                            else:
+                                logger.info(f"📤 [PAPER] DCA Exit Limit Sell [{symbol}]: qty={qty:.6f} @ ${exit_price:.4f} (CostRef: ${cost_ref:.4f}, Guaranteed Net: >= +$0.60 USD)")
+                        except Exception as sell_err:
+                            logger.warning(f"DCA exit sell placement failed [{symbol}]: {sell_err}")
 
         except Exception as e:
             logger.warning(f"DCA check failed for {symbol}: {e}")
