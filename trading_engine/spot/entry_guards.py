@@ -5,27 +5,41 @@ Goals: fewer falling knives and capital traps, without killing RANGE cycle veloc
 - Higher-TF (4h) trend veto: pause new buys when the slower trend is bearish
   even if 1h still says RANGE.
 - Soft dump brake: pause buys after a fast downside impulse (price + volume).
+- Buy-time exitability: skip entries that cannot recycle fee-proof soon.
+
+API hygiene: shared OHLCV cache + longer gate TTLs so hourly Top-8 scans do not
+hammer Bybit. Heavy gates still run before any real buy place/build.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from loguru import logger
 
 # In-memory dump-brake state (per process / Railway instance)
 _DUMP_PAUSE_UNTIL: Dict[str, datetime] = {}
-_TREND_CACHE = {}  # symbol -> (epoch_ts, EntryGate)
-TREND_CACHE_SEC = 1800
-_EXIT_CACHE = {}  # symbol -> (epoch_ts, EntryGate)
-EXIT_CACHE_SEC = 900
+_TREND_CACHE: Dict[str, Tuple[float, "EntryGate"]] = {}
+_EXIT_CACHE: Dict[str, Tuple[float, "EntryGate"]] = {}
+_OHLCV_CACHE: Dict[str, Tuple[float, List]] = {}  # key -> (epoch, candles)
 
+# Gate result TTLs (seconds) — 4h structure is slow-moving
+TREND_CACHE_SEC = 7200       # 2h
+EXIT_CACHE_SEC = 1800        # 30m
+# Raw candle cache: reuse across dump / exitability / 4h in the same scan
+OHLCV_CACHE_SEC_1H = 600     # 10m
+OHLCV_CACHE_SEC_4H = 1800    # 30m
 
-DUMP_LOOKBACK_BARS = 6          # ~6h on 1h candles
-DUMP_DROP_PCT = 0.045           # -4.5% over lookback
-DUMP_VOL_MULT = 1.6             # vs median volume
+DUMP_LOOKBACK_BARS = 6
+DUMP_DROP_PCT = 0.045
+DUMP_VOL_MULT = 1.6
 DUMP_PAUSE_HOURS = 6.0
+
+EXIT_NEED_PCT_CAP = 0.018
+EXIT_ATR_MULT = 0.55
+EXIT_LOOKBACK_HOURS = 36
+EXIT_MIN_BUY_USD = 75.0
 
 
 @dataclass
@@ -36,6 +50,36 @@ class EntryGate:
 
 def _norm(symbol: str) -> str:
     return (symbol or "").strip().upper()
+
+
+def fetch_ohlcv_cached(
+    exchange,
+    symbol: str,
+    timeframe: str,
+    limit: int = 100,
+) -> List:
+    """Shared OHLCV fetch — one Bybit call per symbol/timeframe within TTL."""
+    import time
+
+    if exchange is None:
+        return []
+    sym = _norm(symbol)
+    tf = (timeframe or "").strip().lower()
+    key = f"{sym}|{tf}|{int(limit)}"
+    ttl = OHLCV_CACHE_SEC_4H if tf in ("4h", "240") else OHLCV_CACHE_SEC_1H
+    now = time.time()
+    hit = _OHLCV_CACHE.get(key)
+    if hit and (now - hit[0]) < ttl and hit[1]:
+        return hit[1]
+    try:
+        rows = exchange.fetch_ohlcv(symbol, timeframe, limit=limit) or []
+        _OHLCV_CACHE[key] = (now, rows)
+        return rows
+    except Exception as e:
+        logger.debug(f"ohlcv cache fetch [{symbol} {tf}]: {e}")
+        if hit and hit[1]:
+            return hit[1]  # stale better than empty on blip
+        return []
 
 
 def is_dump_buy_paused(symbol: str, now: Optional[datetime] = None) -> Tuple[bool, str]:
@@ -58,11 +102,9 @@ def arm_dump_brake(symbol: str, hours: float = DUMP_PAUSE_HOURS, reason: str = "
 
 
 def check_4h_trend_veto(symbol: str, exchange) -> EntryGate:
-    """
-    Bearish 4h structure => block new buys (sells/TPs untouched).
-    Uses SMA50/SMA200 + ADX/DI on 4h — same language as 1h regime, slower clock.
-    """
+    """Bearish 4h structure => block new buys (sells/TPs untouched)."""
     import time
+
     sym = _norm(symbol)
     now_ts = time.time()
     cached = _TREND_CACHE.get(sym)
@@ -72,7 +114,7 @@ def check_4h_trend_veto(symbol: str, exchange) -> EntryGate:
         import pandas as pd
         import pandas_ta as ta
 
-        ohlcv = exchange.fetch_ohlcv(symbol, "4h", limit=220)
+        ohlcv = fetch_ohlcv_cached(exchange, symbol, "4h", limit=220)
         if not ohlcv or len(ohlcv) < 210:
             return EntryGate(True, "")
         df = pd.DataFrame(ohlcv, columns=["timestamp", "open", "high", "low", "close", "volume"])
@@ -88,13 +130,11 @@ def check_4h_trend_veto(symbol: str, exchange) -> EntryGate:
         minus_di = float(latest.get("DMN_14") or 0)
         if sma50 <= 0 or price <= 0:
             return EntryGate(True, "")
-        # Soft bear: below SMA50, -DI dominant, ADX showing trend
         if price < sma50 and minus_di > plus_di and adx >= 22:
-            # Stronger if also below SMA200
             strength = "hard" if (sma200 > 0 and price < sma200) else "soft"
             gate = EntryGate(
                 False,
-                f"4h {strength} trend veto (px<{('SMA200' if strength=='hard' else 'SMA50')}, -DI>+DI, ADX={adx:.1f})",
+                f"4h {strength} trend veto (px<{('SMA200' if strength == 'hard' else 'SMA50')}, -DI>+DI, ADX={adx:.1f})",
             )
             _TREND_CACHE[sym] = (now_ts, gate)
             return gate
@@ -106,13 +146,17 @@ def check_4h_trend_veto(symbol: str, exchange) -> EntryGate:
         return EntryGate(True, "")
 
 
-def check_dump_brake(symbol: str, exchange) -> EntryGate:
-    """Arm / honor soft dump brake from recent 1h impulse."""
+def check_dump_brake(symbol: str, exchange, *, arm: bool = True) -> EntryGate:
+    """
+    Soft dump brake from recent 1h impulse.
+    arm=False: read-only (roster pre-rank) — honors existing pause but does not arm new ones.
+    arm=True: used before real buys / final Top-8 eligibility.
+    """
     paused, reason = is_dump_buy_paused(symbol)
     if paused:
         return EntryGate(False, reason)
     try:
-        ohlcv = exchange.fetch_ohlcv(symbol, "1h", limit=max(40, DUMP_LOOKBACK_BARS + 5))
+        ohlcv = fetch_ohlcv_cached(exchange, symbol, "1h", limit=max(40, DUMP_LOOKBACK_BARS + 5))
         if not ohlcv or len(ohlcv) < DUMP_LOOKBACK_BARS + 2:
             return EntryGate(True, "")
         window = ohlcv[-DUMP_LOOKBACK_BARS:]
@@ -124,26 +168,21 @@ def check_dump_brake(symbol: str, exchange) -> EntryGate:
         if peak <= 0 or last <= 0:
             return EntryGate(True, "")
         drop = (peak - last) / peak
-        # median volume of prior bars (exclude last)
         prior = vols[:-1] or vols
         prior_sorted = sorted(v for v in prior if v > 0) or [0.0]
         med = prior_sorted[len(prior_sorted) // 2]
         vol_ok = med <= 0 or vols[-1] >= med * DUMP_VOL_MULT
         if drop >= DUMP_DROP_PCT and vol_ok:
-            arm_dump_brake(symbol, DUMP_PAUSE_HOURS, reason=f"−{drop*100:.1f}% / {DUMP_LOOKBACK_BARS}h w/ volume")
-            return EntryGate(False, f"dump-brake armed (−{drop*100:.1f}% impulse)")
+            if arm:
+                arm_dump_brake(
+                    symbol, DUMP_PAUSE_HOURS, reason=f"−{drop*100:.1f}% / {DUMP_LOOKBACK_BARS}h w/ volume"
+                )
+                return EntryGate(False, f"dump-brake armed (−{drop*100:.1f}% impulse)")
+            return EntryGate(False, f"dump-brake signal (−{drop*100:.1f}% impulse, not armed)")
         return EntryGate(True, "")
     except Exception as e:
         logger.debug(f"dump brake skipped [{symbol}]: {e}")
         return EntryGate(True, "")
-
-
-
-# Buy-time exitability: don't open a bag we can't reasonably recycle
-EXIT_NEED_PCT_CAP = 0.018          # hard cap: fee-proof TP must be <= 1.8% above buy
-EXIT_ATR_MULT = 0.55               # or <= 0.55 * ATR%
-EXIT_LOOKBACK_HOURS = 36           # recent high must have tagged TP zone
-EXIT_MIN_BUY_USD = 75.0            # typical grid slice for min-net math
 
 
 def check_exitability_at_buy(
@@ -152,29 +191,29 @@ def check_exitability_at_buy(
     buy_price: float = 0.0,
     buy_usd: float = EXIT_MIN_BUY_USD,
 ) -> EntryGate:
-    """
-    Allow a new buy only if a fee-proof take-profit looks reachable soon:
-    - premium to fee-proof floor is small vs ATR / capped at ~1.8%, AND
-    - recent highs have already traded up through that floor (mean-reversion tape),
-      OR the required premium is tiny (<= 0.6%).
-    """
+    """Allow buy only if fee-proof TP looks reachable soon (ATR / recent highs)."""
     import time
+
     sym = _norm(symbol)
-    # Cache only the no-override price path (roster scans)
     if float(buy_price or 0.0) <= 0:
         now_ts = time.time()
         cached = _EXIT_CACHE.get(sym)
         if cached and (now_ts - cached[0]) < EXIT_CACHE_SEC:
             return cached[1]
     try:
-        from trading_engine.spot.sell_guard import min_fee_proof_sell_price, get_fee_factor
+        from trading_engine.spot.sell_guard import get_fee_factor, min_fee_proof_sell_price
 
         px = float(buy_price or 0.0)
         if px <= 0 and exchange is not None:
-            t = exchange.fetch_ticker(symbol)
-            px = float(t.get("last") or t.get("bid") or 0.0)
+            # Prefer last candle close from cached 1h to avoid extra ticker call
+            ohlcv_px = fetch_ohlcv_cached(exchange, symbol, "1h", limit=max(48, EXIT_LOOKBACK_HOURS + 2))
+            if ohlcv_px:
+                px = float(ohlcv_px[-1][4] or 0.0)
+            if px <= 0:
+                t = exchange.fetch_ticker(symbol)
+                px = float(t.get("last") or t.get("bid") or 0.0)
         if px <= 0:
-            return EntryGate(True, "")  # fail-open if no price
+            return EntryGate(True, "")
 
         notional = max(float(buy_usd or EXIT_MIN_BUY_USD), EXIT_MIN_BUY_USD)
         qty = notional / px
@@ -182,19 +221,21 @@ def check_exitability_at_buy(
             min_fee_proof_sell_price(px, qty, fee_factor=get_fee_factor(), min_net_usd=0.60)
         )
         if floor <= px:
-            return EntryGate(True, "exitability ok (floor <= buy)")
+            gate = EntryGate(True, "exitability ok (floor <= buy)")
+            if float(buy_price or 0.0) <= 0:
+                _EXIT_CACHE[sym] = (time.time(), gate)
+            return gate
 
         need_pct = (floor - px) / px
-
         atr_pct = 0.0
         recent_high = 0.0
         try:
-            ohlcv = exchange.fetch_ohlcv(symbol, "1h", limit=max(48, EXIT_LOOKBACK_HOURS + 2))
+            ohlcv = fetch_ohlcv_cached(
+                exchange, symbol, "1h", limit=max(48, EXIT_LOOKBACK_HOURS + 2)
+            )
             if ohlcv and len(ohlcv) >= 20:
-                # simple ATR% proxy: mean true range / price over last 14
                 trs = []
-                # Last 14 completed bars (consecutive), not a reverse-index mix-up
-                tail = ohlcv[-(15):]
+                tail = ohlcv[-15:]
                 for i in range(1, len(tail)):
                     h, l, c_prev = float(tail[i][2]), float(tail[i][3]), float(tail[i - 1][4])
                     trs.append(max(h - l, abs(h - c_prev), abs(l - c_prev)))
@@ -205,9 +246,10 @@ def check_exitability_at_buy(
         except Exception as e_atr:
             logger.debug(f"exitability ATR/high [{symbol}]: {e_atr}")
 
-        # Recent range already reached our TP → recyclable mean-reversion name
         tagged = recent_high >= floor * 0.998 if recent_high > 0 else False
-        atr_ok = (need_pct <= EXIT_NEED_PCT_CAP) or (atr_pct > 0 and need_pct <= (EXIT_ATR_MULT * atr_pct))
+        atr_ok = (need_pct <= EXIT_NEED_PCT_CAP) or (
+            atr_pct > 0 and need_pct <= (EXIT_ATR_MULT * atr_pct)
+        )
         tiny = need_pct <= 0.006
 
         if tiny or (tagged and (atr_ok or need_pct <= EXIT_NEED_PCT_CAP)):
@@ -234,13 +276,13 @@ def check_exitability_at_buy(
         return EntryGate(True, "")
 
 
-def entry_buys_allowed(symbol: str, exchange) -> EntryGate:
+def entry_buys_allowed(symbol: str, exchange, *, arm_dump: bool = True) -> EntryGate:
     """Combined gate used before placing/building new buys."""
     from trading_engine.spot.asset_guards import is_fee_buffer_asset, is_never_buy_symbol
 
     if is_fee_buffer_asset(symbol) or is_never_buy_symbol(symbol):
         return EntryGate(False, "fee-buffer hold-only")
-    dump = check_dump_brake(symbol, exchange)
+    dump = check_dump_brake(symbol, exchange, arm=arm_dump)
     if not dump.allow_buys:
         return EntryGate(False, dump.reason)
     trend = check_4h_trend_veto(symbol, exchange)
@@ -252,36 +294,41 @@ def entry_buys_allowed(symbol: str, exchange) -> EntryGate:
     return EntryGate(True, "")
 
 
-def exitability_score(symbol: str, exchange=None, portfolio=None) -> float:
+def exitability_score(symbol: str, exchange=None, portfolio=None, last_price: float = 0.0) -> float:
     """
     Higher = easier to recycle capital via fee-proof limit sells.
-    Uses FIFO open-lot age/spread vs last price when available; else neutral 0.
+    Prefer last_price from caller (bulk tickers) to avoid per-symbol ticker fetches.
     """
     try:
         from trading_engine.spot.fifo_reconciler import get_fifo_cost_basis
 
         units = None
-        last = 0.0
+        last = float(last_price or 0.0)
         if portfolio is not None and hasattr(portfolio, "holdings"):
             h = (portfolio.holdings or {}).get(symbol)
             if h is not None:
-                units = float(getattr(h, "units_held", 0) or (h.get("units_held") if isinstance(h, dict) else 0) or 0)
-                last = float(getattr(h, "last_price", 0) or (h.get("last_price") if isinstance(h, dict) else 0) or 0)
+                units = float(
+                    getattr(h, "units_held", 0)
+                    or (h.get("units_held") if isinstance(h, dict) else 0)
+                    or 0
+                )
+                if last <= 0:
+                    last = float(
+                        getattr(h, "last_price", 0)
+                        or (h.get("last_price") if isinstance(h, dict) else 0)
+                        or 0
+                    )
         if exchange is not None and last <= 0:
-            try:
-                t = exchange.fetch_ticker(symbol)
-                last = float(t.get("last") or 0)
-            except Exception:
-                pass
+            ohlcv = fetch_ohlcv_cached(exchange, symbol, "1h", limit=3)
+            if ohlcv:
+                last = float(ohlcv[-1][4] or 0)
         fb = get_fifo_cost_basis(symbol, units_held=units if units and units > 0 else None) or {}
         avg = float(fb.get("avg_cost") or 0)
         age_h = float(fb.get("oldest_buy_age_hours") or 0)
         open_u = float(fb.get("units_open") or 0)
         if avg <= 0 or last <= 0:
-            # No inventory drag — mildly positive (fresh capital)
             return 5.0
-        edge = (last - avg) / avg  # positive if above cost
-        # Prefer above-cost, recently cycling names; penalize aged underwater bags
+        edge = (last - avg) / avg
         score = 10.0 * edge
         if edge >= 0.005:
             score += 8.0

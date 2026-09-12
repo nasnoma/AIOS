@@ -17,7 +17,7 @@ from typing import Dict, Any
 from trading_engine.spot.spot_portfolio import AssetHolding
 from trading_engine.spot.btc_master_filter import btc_master_filter
 from trading_engine.spot.asset_guards import is_never_sell_symbol, is_fee_buffer_asset
-from trading_engine.spot.entry_guards import entry_buys_allowed, exitability_score, is_dump_buy_paused, check_4h_trend_veto
+from trading_engine.spot.entry_guards import entry_buys_allowed, exitability_score
 
 ALL_23_HISTORICAL_COSTS = {
     'NEAR/USDT': 2.3953, 'TIA/USDT': 0.4474, 'SUI/USDT': 0.8297, 'FET/USDT': 0.1791,
@@ -205,19 +205,15 @@ def _get_dynamic_hot_asset_allocations(
                 reg_str = reg.name if hasattr(reg, 'name') else str(reg)
                 if reg_str == 'BEAR':
                     is_bear = True
-        # Full entry gate (dump / 4h veto / buy-time exitability) — sells untouched
-        is_entry_blocked = False
-        if pub_ex is not None and not is_bear:
-            try:
-                gate = entry_buys_allowed(sym, pub_ex)
-                if not gate.allow_buys:
-                    is_entry_blocked = True
-                    logger.info(f"🛑 [ENTRY GATE] {sym} excluded from buy allocations — {gate.reason}")
-            except Exception as e_ent:
-                logger.debug(f"entry veto score [{sym}]: {e_ent}")
-        # Exitability blend: prefer names that can recycle fee-proof (cycles > raw ATR hype)
+        # Cheap pass only here — heavy Bybit gates (4h/dump/exitability) run later
+        # on the shortlist so we do not hammer the API for every universe name.
+        last_px = 0.0
         try:
-            ex_sc = exitability_score(sym, exchange=pub_ex, portfolio=portfolio)
+            last_px = float((tickers.get(sym) or {}).get('last') or 0.0)
+        except Exception:
+            last_px = 0.0
+        try:
+            ex_sc = exitability_score(sym, exchange=None, portfolio=portfolio, last_price=last_px)
             vol_score = float(vol_score) + 0.35 * float(ex_sc)
         except Exception:
             pass
@@ -228,14 +224,28 @@ def _get_dynamic_hot_asset_allocations(
             reason = "USER PAUSE TILL SEPT 24" if arb_paused else "LOW VOLATILITY EXCLUSION"
             logger.info(f"🛑 [{reason}] {sym} excluded from active buy allocations.")
 
-        is_disqualified = is_capped or is_bear or is_blacklisted or is_entry_blocked
+        is_disqualified = is_capped or is_bear or is_blacklisted
         scored_pairs.append((sym, vol_score, is_disqualified))
 
-    # Rank assets by volatility + exitability blend
+    # Rank by vol + FIFO exitability (no heavy API yet)
     scored_pairs.sort(key=lambda x: x[1], reverse=True)
-    
-    # Select Top 8 eligible (non-capped, non-BEAR) leaders
-    eligible_pairs = [p for p in scored_pairs if not p[2]]
+
+    # Heavy entry gates only on a shortlist (~12) that could make Top-8
+    cheap_eligible = [p for p in scored_pairs if not p[2]]
+    shortlist = [p[0] for p in cheap_eligible[:12]]
+    heavy_blocked = set()
+    if pub_ex is not None:
+        for sym in shortlist:
+            try:
+                gate = entry_buys_allowed(sym, pub_ex, arm_dump=True)
+                if not gate.allow_buys:
+                    heavy_blocked.add(sym)
+                    logger.info(f"🛑 [ENTRY GATE] {sym} excluded from buy allocations — {gate.reason}")
+            except Exception as e_ent:
+                logger.debug(f"entry veto score [{sym}]: {e_ent}")
+
+    # Select Top 8 among cheap-eligible that also pass heavy gates
+    eligible_pairs = [p for p in cheap_eligible if p[0] not in heavy_blocked]
     top_8_selected = [p[0] for p in eligible_pairs[:8]]
 
     allocations = {}
