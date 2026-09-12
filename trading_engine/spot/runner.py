@@ -205,24 +205,14 @@ def _get_dynamic_hot_asset_allocations(
                 reg_str = reg.name if hasattr(reg, 'name') else str(reg)
                 if reg_str == 'BEAR':
                     is_bear = True
-        # 4h trend veto + soft dump brake (protection — sells untouched)
+        # Full entry gate (dump / 4h veto / buy-time exitability) — sells untouched
         is_entry_blocked = False
         if pub_ex is not None and not is_bear:
             try:
-                dump_paused, _ = is_dump_buy_paused(sym)
-                if dump_paused:
+                gate = entry_buys_allowed(sym, pub_ex)
+                if not gate.allow_buys:
                     is_entry_blocked = True
-                else:
-                    gate4 = check_4h_trend_veto(sym, pub_ex)
-                    if not gate4.allow_buys:
-                        is_entry_blocked = True
-                        logger.info(f"🛑 [4H VETO] {sym} excluded from buy allocations — {gate4.reason}")
-                    else:
-                        from trading_engine.spot.entry_guards import check_dump_brake
-                        dg = check_dump_brake(sym, pub_ex)
-                        if not dg.allow_buys:
-                            is_entry_blocked = True
-                            logger.info(f"🛑 [DUMP BRAKE] {sym} excluded from buy allocations — {dg.reason}")
+                    logger.info(f"🛑 [ENTRY GATE] {sym} excluded from buy allocations — {gate.reason}")
             except Exception as e_ent:
                 logger.debug(f"entry veto score [{sym}]: {e_ent}")
         # Exitability blend: prefer names that can recycle fee-proof (cycles > raw ATR hype)

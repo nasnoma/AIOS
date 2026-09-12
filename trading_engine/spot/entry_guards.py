@@ -18,6 +18,8 @@ from loguru import logger
 _DUMP_PAUSE_UNTIL: Dict[str, datetime] = {}
 _TREND_CACHE = {}  # symbol -> (epoch_ts, EntryGate)
 TREND_CACHE_SEC = 1800
+_EXIT_CACHE = {}  # symbol -> (epoch_ts, EntryGate)
+EXIT_CACHE_SEC = 900
 
 
 DUMP_LOOKBACK_BARS = 6          # ~6h on 1h candles
@@ -136,6 +138,100 @@ def check_dump_brake(symbol: str, exchange) -> EntryGate:
         return EntryGate(True, "")
 
 
+
+# Buy-time exitability: don't open a bag we can't reasonably recycle
+EXIT_NEED_PCT_CAP = 0.018          # hard cap: fee-proof TP must be <= 1.8% above buy
+EXIT_ATR_MULT = 0.55               # or <= 0.55 * ATR%
+EXIT_LOOKBACK_HOURS = 36           # recent high must have tagged TP zone
+EXIT_MIN_BUY_USD = 75.0            # typical grid slice for min-net math
+
+
+def check_exitability_at_buy(
+    symbol: str,
+    exchange,
+    buy_price: float = 0.0,
+    buy_usd: float = EXIT_MIN_BUY_USD,
+) -> EntryGate:
+    """
+    Allow a new buy only if a fee-proof take-profit looks reachable soon:
+    - premium to fee-proof floor is small vs ATR / capped at ~1.8%, AND
+    - recent highs have already traded up through that floor (mean-reversion tape),
+      OR the required premium is tiny (<= 0.6%).
+    """
+    import time
+    sym = _norm(symbol)
+    # Cache only the no-override price path (roster scans)
+    if float(buy_price or 0.0) <= 0:
+        now_ts = time.time()
+        cached = _EXIT_CACHE.get(sym)
+        if cached and (now_ts - cached[0]) < EXIT_CACHE_SEC:
+            return cached[1]
+    try:
+        from trading_engine.spot.sell_guard import min_fee_proof_sell_price, get_fee_factor
+
+        px = float(buy_price or 0.0)
+        if px <= 0 and exchange is not None:
+            t = exchange.fetch_ticker(symbol)
+            px = float(t.get("last") or t.get("bid") or 0.0)
+        if px <= 0:
+            return EntryGate(True, "")  # fail-open if no price
+
+        notional = max(float(buy_usd or EXIT_MIN_BUY_USD), EXIT_MIN_BUY_USD)
+        qty = notional / px
+        floor = float(
+            min_fee_proof_sell_price(px, qty, fee_factor=get_fee_factor(), min_net_usd=0.60)
+        )
+        if floor <= px:
+            return EntryGate(True, "exitability ok (floor <= buy)")
+
+        need_pct = (floor - px) / px
+
+        atr_pct = 0.0
+        recent_high = 0.0
+        try:
+            ohlcv = exchange.fetch_ohlcv(symbol, "1h", limit=max(48, EXIT_LOOKBACK_HOURS + 2))
+            if ohlcv and len(ohlcv) >= 20:
+                # simple ATR% proxy: mean true range / price over last 14
+                trs = []
+                for i in range(1, min(15, len(ohlcv))):
+                    h, l, c_prev = float(ohlcv[-i][2]), float(ohlcv[-i][3]), float(ohlcv[-i - 1][4])
+                    trs.append(max(h - l, abs(h - c_prev), abs(l - c_prev)))
+                if trs:
+                    atr_pct = (sum(trs) / len(trs)) / px
+                window = ohlcv[-EXIT_LOOKBACK_HOURS:]
+                recent_high = max(float(c[2]) for c in window)
+        except Exception as e_atr:
+            logger.debug(f"exitability ATR/high [{symbol}]: {e_atr}")
+
+        # Recent range already reached our TP → recyclable mean-reversion name
+        tagged = recent_high >= floor * 0.998 if recent_high > 0 else False
+        atr_ok = atr_pct > 0 and need_pct <= max(EXIT_NEED_PCT_CAP, EXIT_ATR_MULT * atr_pct)
+        tiny = need_pct <= 0.006
+
+        if tiny or (tagged and (atr_ok or need_pct <= EXIT_NEED_PCT_CAP)):
+            gate = EntryGate(
+                True,
+                f"exitability ok (need {need_pct*100:.2f}%, atr {atr_pct*100:.2f}%, tagged={tagged})",
+            )
+        elif tagged and need_pct <= EXIT_NEED_PCT_CAP * 1.25:
+            gate = EntryGate(True, f"exitability ok soft (need {need_pct*100:.2f}%, tagged)")
+        else:
+            gate = EntryGate(
+                False,
+                (
+                    f"exitability veto: fee-proof TP +{need_pct*100:.2f}% "
+                    f"(cap {EXIT_NEED_PCT_CAP*100:.1f}% / ATR {atr_pct*100:.2f}%, "
+                    f"36h high tagged={tagged})"
+                ),
+            )
+        if float(buy_price or 0.0) <= 0:
+            _EXIT_CACHE[sym] = (time.time(), gate)
+        return gate
+    except Exception as e:
+        logger.debug(f"exitability_at_buy [{symbol}]: {e}")
+        return EntryGate(True, "")
+
+
 def entry_buys_allowed(symbol: str, exchange) -> EntryGate:
     """Combined gate used before placing/building new buys."""
     from trading_engine.spot.asset_guards import is_fee_buffer_asset, is_never_buy_symbol
@@ -148,6 +244,9 @@ def entry_buys_allowed(symbol: str, exchange) -> EntryGate:
     trend = check_4h_trend_veto(symbol, exchange)
     if not trend.allow_buys:
         return EntryGate(False, trend.reason)
+    ex = check_exitability_at_buy(symbol, exchange)
+    if not ex.allow_buys:
+        return EntryGate(False, ex.reason)
     return EntryGate(True, "")
 
 
