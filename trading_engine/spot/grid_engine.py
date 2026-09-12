@@ -11,8 +11,8 @@ from uuid import uuid4
 # Path where auto_optimizer.py writes winning params
 _BEST_PARAMS_FILE = Path(__file__).parent / 'best_params.json'
 
-# 🛑 User Pause on ARB: strictly prevent buying ARB until after September 16, 2026 UTC (resumes Sept 17 00:00 UTC)
-ARB_PAUSE_UNTIL_UTC = datetime(2026, 9, 17, 0, 0, 0, tzinfo=timezone.utc)
+# 🛑 User Pause on ARB: strictly prevent buying ARB until after September 23, 2026 UTC (resumes Sept 24 00:00 UTC) — covers mid/late-Sep unlock window
+ARB_PAUSE_UNTIL_UTC = datetime(2026, 9, 24, 0, 0, 0, tzinfo=timezone.utc)  # keep in sync with unlock_calendar.ARB_HARD_PAUSE_UNTIL_UTC
 
 from trading_engine.spot.sell_guard import (
     resolve_sell_cost_ref,
@@ -25,9 +25,18 @@ from trading_engine.spot.sell_guard import (
 )
 
 def is_arb_buy_paused(symbol: str) -> bool:
-    """Returns True if buying ARB is paused (until after September 16, 2026 UTC)."""
-    if symbol in ('ARB/USDT', 'ARB'):
-        return datetime.now(timezone.utc) < ARB_PAUSE_UNTIL_UTC
+    """True if buys are paused for unlock risk (ARB/TIA calendar + ARB hard floor)."""
+    try:
+        from trading_engine.spot.unlock_calendar import is_unlock_buy_paused
+        paused, _reason = is_unlock_buy_paused(symbol)
+        if paused:
+            return True
+    except Exception:
+        pass
+    # Fallback hard floor if calendar import fails
+    if symbol in ('ARB/USDT', 'ARB', 'TIA/USDT', 'TIA'):
+        if symbol in ('ARB/USDT', 'ARB') and datetime.now(timezone.utc) < ARB_PAUSE_UNTIL_UTC:
+            return True
     return False
 
 @dataclass
@@ -615,7 +624,7 @@ class GridEngine:
 
                             # 🛑 Temporary User Pause on ARB (Until After September 16, 2026 UTC):
                             if is_arb_buy_paused(self.symbol):
-                                logger.info(f"[{self.symbol}] 🛑 [PAUSE TILL SEPT 17] Skipping buy order (${req_cost:.2f}) - paused until after September 16, 2026.")
+                                logger.info(f"[{self.symbol}] 🛑 [PAUSE TILL SEPT 24] Skipping buy order (${req_cost:.2f}) - paused until after September 23, 2026.")
                                 level.status = 'cancelled'
                                 continue
 

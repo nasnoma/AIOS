@@ -39,13 +39,22 @@ _active_roster: set[str] = set()
 _last_blended_score_ts: float = 0.0
 _cached_blended_scores: dict[str, float] = {}
 
-# 🛑 User Pause on ARB: strictly prevent buying ARB until after September 16, 2026 UTC (resumes Sept 17 00:00 UTC)
-ARB_PAUSE_UNTIL_UTC = datetime(2026, 9, 17, 0, 0, 0, tzinfo=timezone.utc)
+# 🛑 User Pause on ARB: strictly prevent buying ARB until after September 23, 2026 UTC (resumes Sept 24 00:00 UTC) — covers mid/late-Sep unlock window
+ARB_PAUSE_UNTIL_UTC = datetime(2026, 9, 24, 0, 0, 0, tzinfo=timezone.utc)  # keep in sync with unlock_calendar.ARB_HARD_PAUSE_UNTIL_UTC
 
 def is_arb_buy_paused(symbol: str) -> bool:
-    """Returns True if buying ARB is paused (until after September 16, 2026 UTC)."""
-    if symbol in ('ARB/USDT', 'ARB'):
-        return datetime.now(timezone.utc) < ARB_PAUSE_UNTIL_UTC
+    """True if buys are paused for unlock risk (ARB/TIA calendar + ARB hard floor)."""
+    try:
+        from trading_engine.spot.unlock_calendar import is_unlock_buy_paused
+        paused, _reason = is_unlock_buy_paused(symbol)
+        if paused:
+            return True
+    except Exception:
+        pass
+    # Fallback hard floor if calendar import fails
+    if symbol in ('ARB/USDT', 'ARB', 'TIA/USDT', 'TIA'):
+        if symbol in ('ARB/USDT', 'ARB') and datetime.now(timezone.utc) < ARB_PAUSE_UNTIL_UTC:
+            return True
     return False
 
 def _get_dynamic_hot_asset_allocations(
@@ -194,11 +203,11 @@ def _get_dynamic_hot_asset_allocations(
                 reg_str = reg.name if hasattr(reg, 'name') else str(reg)
                 if reg_str == 'BEAR':
                     is_bear = True
-        # 🛑 Exclude Gold (XAUT), Macro Store of Value (BTC, ETH), and ARB (paused until after Sept 16, 2026 UTC)
+        # 🛑 Exclude Gold (XAUT), Macro Store of Value (BTC, ETH), and ARB (paused until after Sept 23, 2026 UTC)
         arb_paused = is_arb_buy_paused(sym)
         is_blacklisted = sym in ['XAUT/USDT', 'XAUT', 'BTC/USDT', 'ETH/USDT'] or arb_paused
         if is_blacklisted:
-            reason = "USER PAUSE TILL SEPT 17" if arb_paused else "LOW VOLATILITY EXCLUSION"
+            reason = "USER PAUSE TILL SEPT 24" if arb_paused else "LOW VOLATILITY EXCLUSION"
             logger.info(f"🛑 [{reason}] {sym} excluded from active buy allocations.")
 
         is_disqualified = is_capped or is_bear or is_blacklisted
@@ -731,12 +740,12 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                             if (o.get('side') or '').lower() == 'buy' and o.get('id'):
                                 try:
                                     exchange.cancel_order(o['id'], symbol=symbol)
-                                    logger.info(f"🛑 [{symbol}] [PAUSE TILL SEPT 17] Cancelled live Bybit BUY order {o['id']}.")
+                                    logger.info(f"🛑 [{symbol}] [PAUSE TILL SEPT 24] Cancelled live Bybit BUY order {o['id']}.")
                                 except Exception:
                                     pass
                     except Exception:
                         pass
-                logger.info(f"🛑 [{symbol}] User Pause active until after September 16, 2026. Strictly locked in Sell-Only Mode.")
+                logger.info(f"🛑 [{symbol}] User Pause active until after September 23, 2026. Strictly locked in Sell-Only Mode.")
                 
             try:
                 ticker = tickers.get(symbol)
