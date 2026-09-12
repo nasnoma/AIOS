@@ -356,7 +356,11 @@ def is_exposure_capped(symbol: str, portfolio=None, equity: float = 0.0, price: 
 def entry_buys_allowed(symbol: str, exchange, *, arm_dump: bool = True, portfolio=None, equity: float = 0.0) -> EntryGate:
     """Combined gate used before placing/building new buys."""
     from trading_engine.spot.asset_guards import is_fee_buffer_asset, is_never_buy_symbol
+    from trading_engine.spot.crash_guard import is_crash_buy_halted
 
+    halted, halt_reason = is_crash_buy_halted()
+    if halted:
+        return EntryGate(False, halt_reason)
     if is_fee_buffer_asset(symbol) or is_never_buy_symbol(symbol):
         return EntryGate(False, "fee-buffer hold-only")
     capped, cap_reason = is_exposure_capped(symbol, portfolio=portfolio, equity=equity)

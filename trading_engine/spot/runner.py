@@ -16,6 +16,7 @@ from loguru import logger
 from typing import Dict, Any
 from trading_engine.spot.spot_portfolio import AssetHolding
 from trading_engine.spot.btc_master_filter import btc_master_filter
+from trading_engine.spot.crash_guard import update_crash_halt, is_crash_buy_halted, crash_halt_summary
 from trading_engine.spot.asset_guards import is_never_sell_symbol, is_fee_buffer_asset
 from trading_engine.spot.entry_guards import entry_buys_allowed, exitability_score, remaining_buy_room_usd, EXPOSURE_TARGET_PCT
 
@@ -75,7 +76,7 @@ def _get_dynamic_hot_asset_allocations(
        - If any asset's current holding value >= 10% of total portfolio equity, it is disqualified
          from new buy allocations (locked at 0.0%) to prevent over-accumulation.
     3. Concentrates 100% of active capital across the Top 8 eligible leaders:
-       - 10.0% max allocation per asset across Top 8 leaders (80% deployed, 20% liquid cash reserve)
+       - 10.0% max allocation per asset across Top 8 leaders; USDT hard reserve = spot_settings.usdt_hard_reserve_pct (dynamic % of equity)
        - Rank 9 to 23 & Demoted/Disqualified: 0.0% buy allocation (rotated to profit-taking Sell-Only Mode)
     """
     global _last_blended_score_ts, _cached_blended_scores
@@ -394,11 +395,23 @@ def run_spot_regime_check():
     global _regime_detectors, _grid_engines, _active_roster
     exchange = get_spot_exchange()
 
-    # 1. Update BTC Macro Master Filter
+    # 1. Update BTC Macro Master Filter + rare true-crash buy halt latch
     try:
         btc_master_filter.update(exchange)
     except Exception as e_btc_r:
         logger.debug(f"BTC master filter in regime check: {e_btc_r}")
+    try:
+        _eq_crash = float(
+            getattr(_portfolio, 'total_unified_equity', 0)
+            or getattr(_portfolio, 'total_capital', 0)
+            or 0
+        )
+        update_crash_halt(
+            btc_24h_pct=float(getattr(btc_master_filter.state, 'btc_24h_change_pct', 0) or 0),
+            equity=_eq_crash,
+        )
+    except Exception as e_crash_r:
+        logger.debug(f"crash halt update in regime check: {e_crash_r}")
 
     # 2. Run regime detection on active roster, candidate symbols, and all 23 universe assets in parallel
     symbols_to_check = list(set(ALL_23_HALAL_UNIVERSE) | set(spot_settings.asset_list) | _active_roster)
@@ -568,6 +581,15 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 elif _portfolio.usdt_available > 0:
                     _portfolio.usdt_reserved = _portfolio.usdt_available * spot_settings.usdt_hard_reserve_pct
 
+                # Rare true-crash buy halt (BTC 24h <= -15% or equity DD >= 25% from peak)
+                try:
+                    update_crash_halt(
+                        btc_24h_pct=float(getattr(btc_master_filter.state, 'btc_24h_change_pct', 0) or 0),
+                        equity=float(getattr(_portfolio, 'total_unified_equity', 0) or tot_equity or 0),
+                    )
+                except Exception as e_crash_t:
+                    logger.debug(f"crash halt update in tick: {e_crash_t}")
+
                 tot = bal.get('total', {})
                 active_symbols = set(spot_settings.asset_list) | _active_roster
                 for coin, units in tot.items():
@@ -694,6 +716,16 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 if any(lvl.side == 'buy' for lvl in engine.grid_levels):
                     engine.cancel_buys_only(exchange)
 
+            # 🛑 True-crash buy halt (rare): cancel resting buys; sells/TPs untouched
+            _crash_on, _crash_why = is_crash_buy_halted()
+            if _crash_on:
+                engine.allocated_usd = 0.0
+                if hasattr(engine, 'params') and engine.params:
+                    engine.params.buy_levels = 0
+                if any(lvl.side == 'buy' for lvl in engine.grid_levels):
+                    logger.info(f"[{symbol}] 🛑 [CRASH HALT] Cancelling buys — {_crash_why}")
+                    engine.cancel_buys_only(exchange)
+
             # 🛑 Anti-Falling-Knife Guard: strictly suppress buys if asset is in confirmed BEAR regime
             if getattr(engine, 'current_regime', 'RANGE') == 'BEAR':
                 engine.allocated_usd = 0.0
@@ -702,13 +734,17 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 if any(lvl.side == 'buy' for lvl in engine.grid_levels):
                     engine.cancel_buys_only(exchange)
 
-            # 🛡️ Dynamic 20% Hard Cash Reserve Shield:
-            # If total available USDT is below the dynamic reserve floor, cancel resting buys to free cash
+            # 🛡️ Dynamic USDT hard-reserve shield (spot_settings.usdt_hard_reserve_pct of equity):
+            # If free USDT is below the floor, cancel resting buys so cash is not re-committed
             res_floor = float(getattr(_portfolio, 'usdt_reserved', 0.0) or 0.0)
             avail_usdt = float(getattr(_portfolio, 'usdt_available', 0.0) or 0.0)
             if res_floor > 0 and avail_usdt < res_floor:
                 if any(lvl.side == 'buy' for lvl in engine.grid_levels):
-                    logger.info(f"[{symbol}] 🛡️ [RESERVE SHIELD] Freeing capital - cancelling resting buys to protect 20% cash reserve (${res_floor:,.2f} floor).")
+                    res_pct = float(getattr(spot_settings, 'usdt_hard_reserve_pct', 0.0) or 0.0) * 100.0
+                    logger.info(
+                        f"[{symbol}] 🛡️ [RESERVE SHIELD] Freeing capital - cancelling resting buys to protect "
+                        f"{res_pct:.0f}% cash reserve (${res_floor:,.2f} floor)."
+                    )
                     engine.cancel_buys_only(exchange)
 
             # 🛑 10% Max Position Exposure Hard Ceiling:
@@ -1515,6 +1551,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
         "regimes": regimes,
         "grids": grids,
         "btc_guard": btc_master_filter.summary(),
+        "crash_halt": crash_halt_summary(),
         "recent_trades": recent_trades[:50]
     }
 
