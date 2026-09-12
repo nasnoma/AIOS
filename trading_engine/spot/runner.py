@@ -17,7 +17,7 @@ from typing import Dict, Any
 from trading_engine.spot.spot_portfolio import AssetHolding
 from trading_engine.spot.btc_master_filter import btc_master_filter
 from trading_engine.spot.asset_guards import is_never_sell_symbol, is_fee_buffer_asset
-from trading_engine.spot.entry_guards import entry_buys_allowed, exitability_score
+from trading_engine.spot.entry_guards import entry_buys_allowed, exitability_score, remaining_buy_room_usd, EXPOSURE_TARGET_PCT
 
 ALL_23_HISTORICAL_COSTS = {
     'NEAR/USDT': 2.3953, 'TIA/USDT': 0.4474, 'SUI/USDT': 0.8297, 'FET/USDT': 0.1791,
@@ -922,17 +922,29 @@ def run_spot_dca_check():
                     logger.info(f"🛑 [DCA PAUSED] Skipping DCA buy for {symbol} (${order_size:.2f}) - Would breach hard cash reserve (${res_floor:,.2f} floor).")
                     continue
 
-                # 🛑 10% MAXIMUM ASSET EXPOSURE CEILING FOR DCA BUYS:
+                # 🛑 PRE-FILL BAG CLAMP (~8% TARGET) FOR DCA BUYS:
                 tot_eq_val = float(getattr(_portfolio, 'total_unified_equity', 0.0) or getattr(_portfolio, 'total_capital', 0.0) or 0.0)
                 if tot_eq_val > 0:
-                    cap_10 = tot_eq_val * 0.10
-                    h_qty = _portfolio.get_position(symbol) if hasattr(_portfolio, 'get_position') else 0.0
                     ticker_dca = exchange.fetch_ticker(symbol)
                     p_dca = float(ticker_dca.get('last', 0) or 0)
-                    h_val = h_qty * p_dca
-                    if (h_val + order_size) > cap_10:
-                        logger.info(f"🛑 [DCA 10% CAP] Skipping DCA buy for {symbol} - Total exposure (${(h_val + order_size):.2f}) would exceed 10% equity cap (${cap_10:.2f}).")
+                    room = remaining_buy_room_usd(
+                        symbol,
+                        portfolio=_portfolio,
+                        equity=tot_eq_val,
+                        price=p_dca,
+                    )
+                    if room < 35.0:
+                        logger.info(
+                            f"🛑 [DCA 8% TARGET] Skipping DCA buy for {symbol} — "
+                            f"room ${room:.2f} under {EXPOSURE_TARGET_PCT*100:.0f}% equity"
+                        )
                         continue
+                    if order_size > room:
+                        logger.info(
+                            f"✂️ [DCA 8% TARGET] Clamping DCA {symbol} "
+                            f"${order_size:.2f} -> ${room:.2f}"
+                        )
+                        order_size = room
 
                 # Execute DCA Buy
                 if engine and _portfolio.usdt_available >= order_size:

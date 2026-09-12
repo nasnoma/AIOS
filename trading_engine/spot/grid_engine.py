@@ -15,7 +15,7 @@ _BEST_PARAMS_FILE = Path(__file__).parent / 'best_params.json'
 ARB_PAUSE_UNTIL_UTC = datetime(2026, 9, 24, 0, 0, 0, tzinfo=timezone.utc)  # keep in sync with unlock_calendar.ARB_HARD_PAUSE_UNTIL_UTC
 
 from trading_engine.spot.asset_guards import is_never_sell_symbol, is_fee_buffer_asset, is_never_buy_symbol
-from trading_engine.spot.entry_guards import entry_buys_allowed
+from trading_engine.spot.entry_guards import entry_buys_allowed, remaining_buy_room_usd, EXPOSURE_TARGET_PCT
 from trading_engine.spot.sell_guard import (
     resolve_sell_cost_ref,
     min_fee_proof_sell_price,
@@ -238,13 +238,13 @@ class GridEngine:
         raw_order_size = (self.allocated_usd * self.params.capital_pct) / total_levels if total_levels > 0 else 0
         base_order_size = max(35.0, raw_order_size) if (raw_order_size > 0 and self.allocated_usd >= 35.0) else 0.0
 
-        # 🛑 Position Exposure Hard Ceiling Guard inside build_grid
+        # 🛑 Pre-fill bag clamp: no new buy ladder once holding already at/above ~8% equity
         if portfolio:
             tot_eq_val = float(getattr(portfolio, 'total_unified_equity', 0.0) or getattr(portfolio, 'total_capital', 0.0) or 0.0)
             if tot_eq_val > 0:
                 h_pos = portfolio.get_position(self.symbol) if hasattr(portfolio, 'get_position') else 0.0
                 h_val = h_pos * current_price
-                if (h_val / tot_eq_val) >= 0.10:
+                if (h_val / tot_eq_val) >= EXPOSURE_TARGET_PCT:
                     base_order_size = 0.0
                     self.params.buy_levels = 0
                     self.allocated_usd = 0.0
@@ -325,6 +325,39 @@ class GridEngine:
 
                 price = current_price * (1.0 - dip_pct)
                 lvl_size = base_order_size * level_boost
+                # Pre-fill clamp: do not plan buys that would push bag past ~8% equity
+                try:
+                    planned = sum(
+                        float(getattr(l, 'size_usd', 0) or 0)
+                        for l in self.grid_levels
+                        if getattr(l, 'side', '') == 'buy'
+                    )
+                    _eq_build = float(
+                        getattr(portfolio, 'total_unified_equity', 0)
+                        or getattr(portfolio, 'total_capital', 0)
+                        or 0
+                    ) if portfolio else 0.0
+                    room = remaining_buy_room_usd(
+                        self.symbol,
+                        portfolio=portfolio,
+                        equity=_eq_build,
+                        price=current_price,
+                        already_planned_usd=planned,
+                    )
+                    if room < 35.0:
+                        logger.info(
+                            f"[{self.symbol}] 🛑 [8% TARGET] Stopping buy ladder — "
+                            f"remaining room ${room:.2f} under {EXPOSURE_TARGET_PCT*100:.0f}% equity"
+                        )
+                        break
+                    if lvl_size > room:
+                        logger.info(
+                            f"[{self.symbol}] ✂️ [8% TARGET] Clamping buy level "
+                            f"${lvl_size:.2f} -> ${room:.2f}"
+                        )
+                        lvl_size = room
+                except Exception as e_room:
+                    logger.debug(f"[{self.symbol}] buy-room clamp skipped: {e_room}")
                 qty = lvl_size / price
                 self.grid_levels.append(GridLevel(
                     price=price,
@@ -686,16 +719,28 @@ class GridEngine:
                                 level.status = 'cancelled'
                                 continue
 
-                            # 🛑 STRICT 10% MAXIMUM ASSET EXPOSURE CEILING:
-                            # (Current Holding Value + Existing Open Buys + New Buy Order) MUST NOT exceed 10% of Total Unified Equity
+                            # 🛑 PRE-FILL BAG CLAMP (~8% TARGET):
+                            # Holding + open buys + this order must stay under EXPOSURE_TARGET_PCT of equity
                             tot_eq_val = float(getattr(portfolio, 'total_unified_equity', 0.0) or getattr(portfolio, 'total_capital', 0.0) or 0.0)
                             if tot_eq_val > 0:
-                                cap_10 = tot_eq_val * 0.10
-                                h_qty = portfolio.get_position(self.symbol) if hasattr(portfolio, 'get_position') else 0.0
-                                h_val = h_qty * price_val
-                                existing_open_buys = sum(float(getattr(l, 'qty', 0) or 0) * float(getattr(l, 'price', 0) or 0) for l in self.grid_levels if getattr(l, 'status', '') == 'open' and getattr(l, 'side', '') == 'buy')
-                                if (h_val + existing_open_buys + req_cost) > cap_10:
-                                    logger.info(f"[{self.symbol}] 🛑 [10% CEILING] Skipping buy order (${req_cost:.2f}) - Total exposure (${(h_val + existing_open_buys + req_cost):.2f}) would exceed 10% equity cap (${cap_10:.2f}).")
+                                existing_open_buys = sum(
+                                    float(getattr(l, 'qty', 0) or 0) * float(getattr(l, 'price', 0) or 0)
+                                    for l in self.grid_levels
+                                    if getattr(l, 'status', '') == 'open' and getattr(l, 'side', '') == 'buy'
+                                )
+                                room = remaining_buy_room_usd(
+                                    self.symbol,
+                                    portfolio=portfolio,
+                                    equity=tot_eq_val,
+                                    price=price_val,
+                                    already_planned_usd=existing_open_buys,
+                                )
+                                if req_cost > room:
+                                    logger.info(
+                                        f"[{self.symbol}] 🛑 [8% TARGET] Skipping buy order (${req_cost:.2f}) — "
+                                        f"room left ${room:.2f} under {EXPOSURE_TARGET_PCT*100:.0f}% equity "
+                                        f"(open buys ${existing_open_buys:.2f})."
+                                    )
                                     level.status = 'cancelled'
                                     continue
 

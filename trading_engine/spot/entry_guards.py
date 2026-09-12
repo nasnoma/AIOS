@@ -277,11 +277,62 @@ def check_exitability_at_buy(
 
 
 
-EXPOSURE_CAP_PCT = 0.10  # match engine 10% ceiling — no average-down into traps
+EXPOSURE_CAP_PCT = 0.10  # hard sell-only when already >=10% equity (no average-down)
+EXPOSURE_TARGET_PCT = 0.08  # pre-fill / place ceiling — new buys must not push a bag past ~8%
+
+
+def _holding_value_usd(symbol: str, portfolio=None, price: float = 0.0) -> float:
+    """Current mark value of a symbol holding, or 0 if unknown."""
+    try:
+        if portfolio is None:
+            return 0.0
+        holdings = getattr(portfolio, "holdings", None) or {}
+        h = holdings.get(symbol) or holdings.get(symbol.replace("/USDT", ""))
+        if h is None and hasattr(portfolio, "get_position"):
+            qty = float(portfolio.get_position(symbol) or 0.0)
+            px = float(price or 0.0)
+            return qty * px if px > 0 and qty > 0 else 0.0
+        if h is None:
+            return 0.0
+        units = float(getattr(h, "units_held", 0) or (h.get("units_held") if isinstance(h, dict) else 0) or 0)
+        px = float(price or 0.0)
+        if px <= 0:
+            px = float(getattr(h, "last_price", 0) or (h.get("last_price") if isinstance(h, dict) else 0) or 0)
+        if units > 0 and px > 0:
+            return units * px
+        return float(getattr(h, "value_usd", 0) or (h.get("value_usd") if isinstance(h, dict) else 0) or 0)
+    except Exception:
+        return 0.0
+
+
+def remaining_buy_room_usd(
+    symbol: str,
+    portfolio=None,
+    equity: float = 0.0,
+    price: float = 0.0,
+    *,
+    target_pct: float = EXPOSURE_TARGET_PCT,
+    already_planned_usd: float = 0.0,
+) -> float:
+    """USD notional still allowed under target_pct of equity before this bag is full."""
+    try:
+        if portfolio is None:
+            return 1e12  # no portfolio context — do not invent a clamp
+        eq = float(equity or 0.0)
+        if eq <= 0:
+            eq = float(getattr(portfolio, "total_unified_equity", 0) or getattr(portfolio, "total_capital", 0) or 0)
+        if eq <= 0:
+            return 1e12
+        cur = _holding_value_usd(symbol, portfolio=portfolio, price=price)
+        room = (float(target_pct) * eq) - cur - float(already_planned_usd or 0.0)
+        return max(0.0, room)
+    except Exception as e:
+        logger.debug(f"remaining_buy_room_usd [{symbol}]: {e}")
+        return 1e12
 
 
 def is_exposure_capped(symbol: str, portfolio=None, equity: float = 0.0, price: float = 0.0) -> tuple[bool, str]:
-    """True if this symbol already holds >= 10% of equity (OP-style capital trap)."""
+    """True if this symbol already holds >= 10% of equity (hard sell-only; no average-down)."""
     try:
         if portfolio is None:
             return False, ""
@@ -290,15 +341,7 @@ def is_exposure_capped(symbol: str, portfolio=None, equity: float = 0.0, price: 
             eq = float(getattr(portfolio, "total_unified_equity", 0) or getattr(portfolio, "total_capital", 0) or 0)
         if eq <= 0:
             return False, ""
-        holdings = getattr(portfolio, "holdings", None) or {}
-        h = holdings.get(symbol) or holdings.get(symbol.replace("/USDT", ""))
-        if h is None:
-            return False, ""
-        units = float(getattr(h, "units_held", 0) or (h.get("units_held") if isinstance(h, dict) else 0) or 0)
-        px = float(price or 0.0)
-        if px <= 0:
-            px = float(getattr(h, "last_price", 0) or (h.get("last_price") if isinstance(h, dict) else 0) or 0)
-        val = units * px if px > 0 else float(getattr(h, "value_usd", 0) or (h.get("value_usd") if isinstance(h, dict) else 0) or 0)
+        val = _holding_value_usd(symbol, portfolio=portfolio, price=price)
         if val <= 0:
             return False, ""
         pct = val / eq
