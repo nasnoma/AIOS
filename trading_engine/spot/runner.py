@@ -17,6 +17,7 @@ from typing import Dict, Any
 from trading_engine.spot.spot_portfolio import AssetHolding
 from trading_engine.spot.btc_master_filter import btc_master_filter
 from trading_engine.spot.asset_guards import is_never_sell_symbol, is_fee_buffer_asset
+from trading_engine.spot.entry_guards import entry_buys_allowed, exitability_score, is_dump_buy_paused, check_4h_trend_veto
 
 ALL_23_HISTORICAL_COSTS = {
     'NEAR/USDT': 2.3953, 'TIA/USDT': 0.4474, 'SUI/USDT': 0.8297, 'FET/USDT': 0.1791,
@@ -204,6 +205,32 @@ def _get_dynamic_hot_asset_allocations(
                 reg_str = reg.name if hasattr(reg, 'name') else str(reg)
                 if reg_str == 'BEAR':
                     is_bear = True
+        # 4h trend veto + soft dump brake (protection — sells untouched)
+        is_entry_blocked = False
+        if pub_ex is not None and not is_bear:
+            try:
+                dump_paused, _ = is_dump_buy_paused(sym)
+                if dump_paused:
+                    is_entry_blocked = True
+                else:
+                    gate4 = check_4h_trend_veto(sym, pub_ex)
+                    if not gate4.allow_buys:
+                        is_entry_blocked = True
+                        logger.info(f"🛑 [4H VETO] {sym} excluded from buy allocations — {gate4.reason}")
+                    else:
+                        from trading_engine.spot.entry_guards import check_dump_brake
+                        dg = check_dump_brake(sym, pub_ex)
+                        if not dg.allow_buys:
+                            is_entry_blocked = True
+                            logger.info(f"🛑 [DUMP BRAKE] {sym} excluded from buy allocations — {dg.reason}")
+            except Exception as e_ent:
+                logger.debug(f"entry veto score [{sym}]: {e_ent}")
+        # Exitability blend: prefer names that can recycle fee-proof (cycles > raw ATR hype)
+        try:
+            ex_sc = exitability_score(sym, exchange=pub_ex, portfolio=portfolio)
+            vol_score = float(vol_score) + 0.35 * float(ex_sc)
+        except Exception:
+            pass
         # 🛑 Exclude Gold (XAUT), Macro Store of Value (BTC, ETH), and ARB (paused until after Sept 23, 2026 UTC)
         arb_paused = is_arb_buy_paused(sym)
         is_blacklisted = sym in ['XAUT/USDT', 'XAUT', 'BTC/USDT', 'ETH/USDT'] or arb_paused
@@ -211,10 +238,10 @@ def _get_dynamic_hot_asset_allocations(
             reason = "USER PAUSE TILL SEPT 24" if arb_paused else "LOW VOLATILITY EXCLUSION"
             logger.info(f"🛑 [{reason}] {sym} excluded from active buy allocations.")
 
-        is_disqualified = is_capped or is_bear or is_blacklisted
+        is_disqualified = is_capped or is_bear or is_blacklisted or is_entry_blocked
         scored_pairs.append((sym, vol_score, is_disqualified))
 
-    # Rank assets by volatility score
+    # Rank assets by volatility + exitability blend
     scored_pairs.sort(key=lambda x: x[1], reverse=True)
     
     # Select Top 8 eligible (non-capped, non-BEAR) leaders
@@ -916,6 +943,10 @@ def run_spot_dca_check():
                     
                     if not spot_settings.paper_mode and exchange:
                         try:
+                            gate = entry_buys_allowed(symbol, exchange)
+                            if not gate.allow_buys:
+                                logger.info(f"🛑 DCA skipped [{symbol}] — {gate.reason}")
+                                continue
                             # Limit-only DCA entry (no market) — post-only near bid to avoid taker fees
                             bid = float(ticker.get('bid') or 0) or float(price)
                             limit_px = bid * 0.999 if bid > 0 else float(price) * 0.999

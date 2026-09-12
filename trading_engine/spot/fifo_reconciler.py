@@ -34,7 +34,7 @@ ALL_SYMBOLS = [
     # Legacy bags
     "UNI/USDT", "RENDER/USDT", "ADA/USDT", "ICP/USDT", "LINK/USDT",
     "ETH/USDT", "ATOM/USDT", "DOT/USDT", "ALGO/USDT", "XAUT/USDT",
-    "BTC/USDT", "MNT/USDT",
+    "BTC/USDT",  # MNT excluded — fee-buffer hold-only, never trade cycles
 ]
 
 
@@ -493,6 +493,10 @@ def get_fifo_cost_basis(symbol: str, units_held: Optional[float] = None) -> Dict
     valid_ts = [b["ts_ms"] for b in active_lots if b.get("ts_ms") and b["ts_ms"] > 0]
     oldest_age_h = round(max(0.0, (now_ms - min(valid_ts)) / 3600000.0), 1) if valid_ts else 0.0
     newest_age_h = round(max(0.0, (now_ms - max(valid_ts)) / 3600000.0), 1) if valid_ts else 0.0
+    # Missing timestamps used to report age=0 and stall aged-compress — treat as aged.
+    if active_lots and not valid_ts:
+        oldest_age_h = 72.0
+        newest_age_h = 72.0
 
     return {
         'units_open': round(tot_qty, 6),
@@ -581,11 +585,19 @@ def get_fifo_lot_cost_for_qty(symbol: str, qty: float) -> Dict[str, float]:
     }
 
 
-def reconcile(exchange, fee_rate: float = 0.00075) -> Dict[str, Any]:
+def reconcile(exchange, fee_rate: float = None) -> Dict[str, Any]:
     """
     Sync new fills from Bybit, run FIFO match, return today's and all-time P&L.
     Safe to call frequently — fully incremental.
     """
+    if fee_rate is None:
+        try:
+            from trading_engine.spot.sell_guard import get_fee_factor
+            # get_fee_factor includes safety mult; FIFO match wants raw-ish per-side — use config base
+            from trading_engine.config import spot_settings
+            fee_rate = float(getattr(spot_settings, "fee_rate", 0.001) or 0.001)
+        except Exception:
+            fee_rate = 0.001
     new_fills  = sync_fills(exchange)
     new_cycles = run_fifo_match(fee_rate=fee_rate)
     daily      = get_daily_pnl()

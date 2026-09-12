@@ -282,11 +282,11 @@ class SpotGridSettings(BaseSettings):
     range_capital_deployed: float = 0.75
     range_base_hold_pct: float = 0.20
 
-    # ── Grid Params: BEAR ──────────────────────────────────────
+    # ── Grid Params: BEAR (engine is sell-only; buys forced off) ──
     bear_grid_spacing: float = 0.0250 # 2.50% wide spacing in downtrend (patient accumulation)
-    bear_buy_levels: int = 4
+    bear_buy_levels: int = 0          # sell-only in BEAR
     bear_sell_levels: int = 3
-    bear_capital_deployed: float = 0.35
+    bear_capital_deployed: float = 0.0
     bear_base_hold_pct: float = 0.15
 
 

@@ -15,6 +15,7 @@ _BEST_PARAMS_FILE = Path(__file__).parent / 'best_params.json'
 ARB_PAUSE_UNTIL_UTC = datetime(2026, 9, 24, 0, 0, 0, tzinfo=timezone.utc)  # keep in sync with unlock_calendar.ARB_HARD_PAUSE_UNTIL_UTC
 
 from trading_engine.spot.asset_guards import is_never_sell_symbol, is_fee_buffer_asset, is_never_buy_symbol
+from trading_engine.spot.entry_guards import entry_buys_allowed
 from trading_engine.spot.sell_guard import (
     resolve_sell_cost_ref,
     min_fee_proof_sell_price,
@@ -69,7 +70,7 @@ def _load_regime_params() -> Dict[str, RegimeParams]:
             ),
             'BEAR': RegimeParams(
                 grid_spacing=float(ss.bear_grid_spacing),
-                buy_levels=0,  # hard: no new buys in BEAR regardless of config
+                buy_levels=0,  # intentional sell-only in BEAR (knife protection)
                 sell_levels=int(ss.bear_sell_levels),
                 capital_pct=0.0,
                 base_hold_pct=float(ss.bear_base_hold_pct),
@@ -263,7 +264,16 @@ class GridEngine:
                 logger.info(f"🛑 [{self.symbol}] BEAR trend active (Price < SMA50, -DI dominant). Buying paused to prevent catching falling knives.")
 
         # Build BUY ladder (only if capital is allocated to this asset and not in BEAR regime)
-        if base_order_size > 0 and self.current_regime != 'BEAR' and self.params.buy_levels > 0:
+        _buys_ok = base_order_size > 0 and self.current_regime != 'BEAR' and self.params.buy_levels > 0
+        if _buys_ok and getattr(self, 'exchange', None) is not None:
+            try:
+                gate = entry_buys_allowed(self.symbol, self.exchange)
+                if not gate.allow_buys:
+                    logger.info(f"🛑 [{self.symbol}] Buy grid skipped — {gate.reason}")
+                    _buys_ok = False
+            except Exception as e_gate:
+                logger.debug(f"entry gate [{self.symbol}]: {e_gate}")
+        if _buys_ok:
             # 🌊 Dip-Quality Buy Level Sizing:
             # When an intraday dip signal is detected (dip_boost > 1.05),
             # Level 1 is trimmed to 0.80x to conserve dry powder,
@@ -289,8 +299,15 @@ class GridEngine:
                 ]
 
             buy_count = min(self.params.buy_levels, len(tier_configs))
+            # Scale dip ladder by regime spacing (RANGE baseline 1.20%)
+            try:
+                regime_spacing = float(getattr(self.params, 'grid_spacing', 0.012) or 0.012)
+            except Exception:
+                regime_spacing = 0.012
+            spacing_scale = max(0.70, min(2.20, regime_spacing / 0.0120))
             for i in range(buy_count):
                 dip_pct, level_boost = tier_configs[i]
+                dip_pct = dip_pct * spacing_scale
                 
                 # If BTC is in defensive BEAR mode, widen altcoin dip tiers
                 try:
@@ -315,7 +332,7 @@ class GridEngine:
                     size_usd=lvl_size
                 ))
 
-        self.current_spacing = 0.0078
+        self.current_spacing = float(getattr(self.params, "grid_spacing", 0.0078) or 0.0078)
 
 
 
@@ -477,7 +494,7 @@ class GridEngine:
                 for i in range(sell_levels_count):
                     min_net_usd = min_net_profit_tiers[i] if i < len(min_net_profit_tiers) else (0.60 + 0.40 * i)
                     if is_aged_position:
-                        # ⚡ Age-Weighted Target Compression: For holdings > 24h old,
+                        # ⚡ Age-Weighted Target Compression: For holdings >= 12h old (or missing FIFO age),
                         # collapse target to fee-proof profit ($0.60) across all tiers to recycle capital rapidly
                         min_net_usd = 0.60
                     else:
@@ -502,7 +519,7 @@ class GridEngine:
                     min_fee_proof_price = (cost_ref * qty_per_sell * (1.0 + fee_factor) + min_net_usd) / denom if denom > 0 else cost_ref * 1.015
 
                     if is_aged_position:
-                        # Stagnant position (>24h): tightest possible fee-proof profit exit (+0.0%, +0.1%, +0.2% stagger)
+                        # Stagnant/aged position: tightest possible fee-proof profit exit (+0.0%, +0.1%, +0.2% stagger)
                         stagger_step = 0.0010 * i
                         target_p = max(min_fee_proof_price, min_fee_proof_price * (1.0 + stagger_step))
                     elif current_price > cost_ref:
@@ -579,6 +596,15 @@ class GridEngine:
                     logger.warning(f"🚫 [{self.symbol}] Skipping grid place — MNT fee-buffer is hold-only (no buy/sell).")
                     level.status = 'cancelled'
                     continue
+                if level.side == 'buy' and getattr(self, 'exchange', None) is not None:
+                    try:
+                        gate = entry_buys_allowed(self.symbol, self.exchange)
+                        if not gate.allow_buys:
+                            logger.info(f"🛑 [{self.symbol}] Buy place blocked — {gate.reason}")
+                            level.status = 'cancelled'
+                            continue
+                    except Exception:
+                        pass
 
                 if self.paper_mode:
                     level.status = 'open'
