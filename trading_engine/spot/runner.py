@@ -846,7 +846,7 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                             0.0, h_cost, test_qty, fee_factor=fee_factor, min_net_usd=0.60
                         ) if test_qty > 0 else (h_cost * 1.01)
                         target_quick_exit = max(fee_proof, h_cost * 1.0035, price * 1.0035)
-                        if min_sell_p > (target_quick_exit * 1.008):
+                        if min_sell_p > (target_quick_exit * 1.005):
                             invalid_sells = True
                             logger.info(
                                 f"🚪 Re-aligning legacy holding {symbol} to Quick-Exit/aged target "

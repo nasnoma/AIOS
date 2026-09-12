@@ -86,7 +86,13 @@ def resolve_sell_cost_ref(
     except Exception as e:
         logger.debug(f"sell_guard FIFO lookup failed for {symbol}: {e}")
 
-    live = max(float(portfolio_avg_cost or 0.0), fifo_avg, fifo_max)
+    # Prefer FIFO avg for the qty being sold (oldest lots first). Do NOT pin every
+    # sell to fifo_max / one expensive lot — that stalls aged-compress and cycles.
+    # When qty is unknown, keep max lot as a conservative floor.
+    if float(sell_qty or 0.0) > 1e-12 and fifo_avg > 0:
+        live = max(float(portfolio_avg_cost or 0.0), fifo_avg)
+    else:
+        live = max(float(portfolio_avg_cost or 0.0), fifo_avg, fifo_max)
     if live > 0:
         return live
 

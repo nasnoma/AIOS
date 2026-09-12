@@ -413,7 +413,9 @@ class GridEngine:
                 fee_factor = get_fee_factor()
                 sell_levels_count = 1 if total_held_usd < 150.0 else 2
                 qty_per_sell = base_qty_held / sell_levels_count
-                min_net_usd = 0.75  # Target guaranteed > $0.50 net profit
+                # Aged legacy (>=12h): same fee-proof compress as active path (+$0.60).
+                # Fresh legacy: keep slightly higher +$0.75 quick-exit target.
+                min_net_usd = 0.60 if is_aged_position else 0.75
 
                 for i in range(sell_levels_count):
                     from trading_engine.spot.runner import ALL_23_HISTORICAL_COSTS
@@ -432,11 +434,19 @@ class GridEngine:
                     denom = qty_per_sell * (1.0 - fee_factor)
                     min_fee_proof_price = (cost_ref * qty_per_sell * (1.0 + fee_factor) + min_net_usd) / denom if denom > 0 else cost_ref * 1.005
 
-                    if current_price > cost_ref:
-                        # Already in profit: place slightly above market for instant execution (+0.35% + 0.20%*i)
+                    if is_aged_position:
+                        # 12h+ aged-compress for legacy (ALGO etc.): collapse to fee-proof + tiny stagger
+                        stagger_step = 0.0010 * i
+                        target_p = max(min_fee_proof_price, min_fee_proof_price * (1.0 + stagger_step))
+                        if current_price > cost_ref:
+                            # In profit vs cost_ref: also allow a tight market ask so maker fills can happen
+                            target_p = max(min_fee_proof_price, min(target_p, current_price * (1.0035 + 0.0010 * i)))
+                            target_p = max(target_p, min_fee_proof_price)
+                    elif current_price > cost_ref:
+                        # Fresh legacy in profit: slightly above market
                         target_p = max(min_fee_proof_price, current_price * (1.0035 + 0.0020 * i))
                     else:
-                        # Underwater: place at the exact minimum price to break even + $0.75 profit
+                        # Fresh legacy underwater: fee-proof floor + stagger
                         target_p = max(min_fee_proof_price, min_fee_proof_price * (1.0 + 0.0030 * i))
 
                     # Absolute Hard Safety Gate: target_p MUST be strictly >= min_fee_proof_price
@@ -463,8 +473,9 @@ class GridEngine:
                             logger.critical(f"🚨 [{self.symbol}] FATAL: cannot build fee-proof sell (target ${target_p:.4f}, cost ${cost_ref:.4f}). Aborting level!")
                             continue
 
-                    logger.info(f"🚪 [{self.symbol}] Quick-Exit Sell Level {i+1}/{sell_levels_count}: Target=${target_p:.4f} "
-                                f"(CostRef: ${cost_ref:.4f}, Live: ${current_price:.4f}, Net Profit: +${actual_net_pnl:.2f} USD)")
+                    tier_lbl = "Aged-Compress Quick-Exit" if is_aged_position else "Quick-Exit"
+                    logger.info(f"🚪 [{self.symbol}] {tier_lbl} Sell Level {i+1}/{sell_levels_count}: Target=${target_p:.4f} "
+                                f"(CostRef: ${cost_ref:.4f}, Live: ${current_price:.4f}, Age: {oldest_lot_age_hours:.1f}h, Net Profit: +${actual_net_pnl:.2f} USD)")
 
                     self.grid_levels.append(GridLevel(
                         price=target_p,
