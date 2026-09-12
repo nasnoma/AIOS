@@ -35,6 +35,11 @@ def is_never_sell_symbol(symbol: str) -> bool:
     return base in NEVER_SELL_SYMBOLS or f"{base}/USDT" in NEVER_SELL_SYMBOLS
 
 
+def is_never_buy_symbol(symbol: str) -> bool:
+    """MNT fee buffer: never buy more (hold existing only)."""
+    return is_fee_buffer_asset(symbol)
+
+
 def is_fee_buffer_asset(symbol: str) -> bool:
     s = _norm(symbol)
     if s in FEE_BUFFER_SYMBOLS:

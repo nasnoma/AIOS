@@ -526,7 +526,7 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                     pass
 
         # ── Live Exchange Portfolio Sync ──
-        bal = {}  # safe default; prevents NameError in MNT refill block if fetch_balance raises early
+        bal = {}  # safe default; prevents NameError in MNT hold-only block if fetch_balance raises early
         if not spot_settings.paper_mode and exchange:
             try:
                 bal = exchange.fetch_balance({'accountType': 'UNIFIED'})
@@ -583,37 +583,14 @@ def run_spot_grid_tick() -> Dict[str, Any]:
             except Exception as e_sync:
                 logger.debug(f"Live balance sync in tick failed: {e_sync}")
 
-        # ── Auto-Refill MNT Fee Buffer (Maintains 25% Fee Discount Continuously) ──
-        if not spot_settings.paper_mode and exchange:
-            try:
-                mnt_balance = float(bal.get('total', {}).get('MNT', 0) or 0)
-                usdt_free_bal = float(bal.get('free', {}).get('USDT', 0) or 0)
-                if mnt_balance < 10.0 and usdt_free_bal >= 20.0:
-                    mnt_ticker = tickers.get('MNT/USDT')
-                    if not mnt_ticker:
-                        try:
-                            mnt_ticker = exchange.fetch_ticker('MNT/USDT')
-                        except Exception:
-                            mnt_ticker = {}
-                    mnt_p = float(mnt_ticker.get('last') or 0.51)
-                    if mnt_p > 0:
-                        import math
-                        target_buy_usdt = 15.0  # Refill with $15 worth of MNT
-                        raw_qty = target_buy_usdt / mnt_p
-                        prec = 0.01
-                        if hasattr(exchange, 'market') and 'MNT/USDT' in exchange.markets:
-                            prec = exchange.market('MNT/USDT').get('precision', {}).get('amount', 0.01)
-                        decimals = max(0, -int(math.floor(math.log10(float(prec)))))
-                        buy_qty = math.floor(raw_qty * (10 ** decimals)) / (10 ** decimals)
-                        logger.info(f"🪙 MNT Fee Balance low ({mnt_balance:.2f} MNT). Auto-refilling {buy_qty} MNT (~${target_buy_usdt:.2f})...")
-                        # Limit-only (no market) — cheaper fees / no taker surprise
-                        ask_p = float(mnt_ticker.get('ask') or (mnt_p * 1.001))
-                        if hasattr(exchange, 'price_to_precision'):
-                            ask_p = float(exchange.price_to_precision('MNT/USDT', ask_p))
-                        exchange.create_limit_buy_order('MNT/USDT', buy_qty, ask_p, params={'category': 'spot', 'postOnly': True})
-                        logger.info(f"✅ MNT limit refill placed {buy_qty} @ ${ask_p:.6f} (no market order).")
-            except Exception as e_mnt_refill:
-                logger.debug(f"MNT auto-refill check: {e_mnt_refill}")
+        # ── MNT Fee Buffer: HOLD ONLY (no buy, no sell) ──
+        # Nasir: do not buy more MNT; never sell existing MNT (fee-discount buffer).
+        try:
+            mnt_balance = float(bal.get('total', {}).get('MNT', 0) or 0)
+            if mnt_balance > 0:
+                logger.debug(f"🪙 MNT fee buffer hold-only: {mnt_balance:.4f} MNT (no buy/sell).")
+        except Exception as e_mnt_hold:
+            logger.debug(f"MNT hold-only check: {e_mnt_hold}")
 
         # ── Calculate Global Open Buy Commitments Across All Assets ──
         total_open_buy_usd = 0.0

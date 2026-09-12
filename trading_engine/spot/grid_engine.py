@@ -14,7 +14,7 @@ _BEST_PARAMS_FILE = Path(__file__).parent / 'best_params.json'
 # 🛑 User Pause on ARB: strictly prevent buying ARB until after September 23, 2026 UTC (resumes Sept 24 00:00 UTC) — covers mid/late-Sep unlock window
 ARB_PAUSE_UNTIL_UTC = datetime(2026, 9, 24, 0, 0, 0, tzinfo=timezone.utc)  # keep in sync with unlock_calendar.ARB_HARD_PAUSE_UNTIL_UTC
 
-from trading_engine.spot.asset_guards import is_never_sell_symbol, is_fee_buffer_asset
+from trading_engine.spot.asset_guards import is_never_sell_symbol, is_fee_buffer_asset, is_never_buy_symbol
 from trading_engine.spot.sell_guard import (
     resolve_sell_cost_ref,
     min_fee_proof_sell_price,
@@ -575,8 +575,8 @@ class GridEngine:
                     )
                     level.status = 'cancelled'
                     continue
-                if is_fee_buffer_asset(self.symbol):
-                    logger.warning(f"🚫 [{self.symbol}] Skipping grid place — MNT fee-buffer is buy/hold only.")
+                if is_fee_buffer_asset(self.symbol) or is_never_buy_symbol(self.symbol):
+                    logger.warning(f"🚫 [{self.symbol}] Skipping grid place — MNT fee-buffer is hold-only (no buy/sell).")
                     level.status = 'cancelled'
                     continue
 
