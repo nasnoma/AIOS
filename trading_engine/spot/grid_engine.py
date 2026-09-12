@@ -779,6 +779,10 @@ class GridEngine:
                             else:
                                 raise e_post
 
+                        if not order or not order.get('id'):
+                            logger.warning(f"🚫 [{self.symbol}] {level.side} place aborted (no order id — protected asset or exchange reject).")
+                            level.status = 'cancelled'
+                            continue
                         level.status = 'open'
                         level.order_id = order['id']
                         if level.side == 'buy' and hasattr(portfolio, 'total_open_buy_usd'):
@@ -877,7 +881,7 @@ class GridEngine:
                     # ── HARD GATE: never sell below buy, and require >= $0.50 net after fees ──
                     MIN_NET_PROFIT_USD = 0.50
                     if buy_orig_p > 0 and not sell_clears_buy(level.price, buy_orig_p):
-                        fee_factor = self.fee_rate
+                        fee_factor = get_fee_factor()
                         denom = level.qty * (1.0 - fee_factor) if level.qty > 0 else 0.0
                         min_sell_price = enforce_sell_floor(
                             buy_orig_p * 1.0090,
@@ -901,9 +905,12 @@ class GridEngine:
                                 if not sell_clears_buy(p_val, buy_orig_p):
                                     p_val = float(exchange.price_to_precision(self.symbol, buy_orig_p * 1.01)) if hasattr(exchange, 'price_to_precision') else (buy_orig_p * 1.01)
                                 if self._refuse_protected_sell():
-                                    new_order = None
-                                else:
-                                    new_order = exchange.create_limit_sell_order(self.symbol, qty_val, p_val, new_params)
+                                    logger.critical(f"🚫 [{self.symbol}] Refusing below-buy sell replace — protected asset.")
+                                    level.status = 'cancelled'
+                                    continue
+                                new_order = exchange.create_limit_sell_order(self.symbol, qty_val, p_val, new_params)
+                                if not new_order or not new_order.get('id'):
+                                    raise RuntimeError('replace sell returned no id')
                                 level.price = float(p_val)
                                 level.linked_buy_price = buy_orig_p
                                 level.order_id = new_order['id']
@@ -939,9 +946,12 @@ class GridEngine:
                                 qty_val = float(exchange.amount_to_precision(self.symbol, level.qty)) if hasattr(exchange, 'amount_to_precision') else level.qty
                                 p_val = float(exchange.price_to_precision(self.symbol, min_sell_price)) if hasattr(exchange, 'price_to_precision') else min_sell_price
                                 if self._refuse_protected_sell():
-                                    new_order = None
-                                else:
-                                    new_order = exchange.create_limit_sell_order(self.symbol, qty_val, p_val, new_params)
+                                    logger.critical(f"🚫 [{self.symbol}] Refusing fee-unsafe sell replace — protected asset.")
+                                    level.status = 'cancelled'
+                                    continue
+                                new_order = exchange.create_limit_sell_order(self.symbol, qty_val, p_val, new_params)
+                                if not new_order or not new_order.get('id'):
+                                    raise RuntimeError('fee-proof replace sell returned no id')
                                 level.price = min_sell_price
                                 level.order_id = new_order['id']
                                 logger.info(f"✅ [{self.symbol}] Replaced with guaranteed sell @ ${min_sell_price:.4f} (Net >= +${MIN_NET_PROFIT_USD:.2f} USD)")

@@ -193,8 +193,10 @@ def check_exitability_at_buy(
             if ohlcv and len(ohlcv) >= 20:
                 # simple ATR% proxy: mean true range / price over last 14
                 trs = []
-                for i in range(1, min(15, len(ohlcv))):
-                    h, l, c_prev = float(ohlcv[-i][2]), float(ohlcv[-i][3]), float(ohlcv[-i - 1][4])
+                # Last 14 completed bars (consecutive), not a reverse-index mix-up
+                tail = ohlcv[-(15):]
+                for i in range(1, len(tail)):
+                    h, l, c_prev = float(tail[i][2]), float(tail[i][3]), float(tail[i - 1][4])
                     trs.append(max(h - l, abs(h - c_prev), abs(l - c_prev)))
                 if trs:
                     atr_pct = (sum(trs) / len(trs)) / px
@@ -205,7 +207,7 @@ def check_exitability_at_buy(
 
         # Recent range already reached our TP → recyclable mean-reversion name
         tagged = recent_high >= floor * 0.998 if recent_high > 0 else False
-        atr_ok = atr_pct > 0 and need_pct <= max(EXIT_NEED_PCT_CAP, EXIT_ATR_MULT * atr_pct)
+        atr_ok = (need_pct <= EXIT_NEED_PCT_CAP) or (atr_pct > 0 and need_pct <= (EXIT_ATR_MULT * atr_pct))
         tiny = need_pct <= 0.006
 
         if tiny or (tagged and (atr_ok or need_pct <= EXIT_NEED_PCT_CAP)):
