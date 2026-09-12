@@ -14,6 +14,7 @@ _BEST_PARAMS_FILE = Path(__file__).parent / 'best_params.json'
 # 🛑 User Pause on ARB: strictly prevent buying ARB until after September 23, 2026 UTC (resumes Sept 24 00:00 UTC) — covers mid/late-Sep unlock window
 ARB_PAUSE_UNTIL_UTC = datetime(2026, 9, 24, 0, 0, 0, tzinfo=timezone.utc)  # keep in sync with unlock_calendar.ARB_HARD_PAUSE_UNTIL_UTC
 
+from trading_engine.spot.asset_guards import is_never_sell_symbol, is_fee_buffer_asset
 from trading_engine.spot.sell_guard import (
     resolve_sell_cost_ref,
     min_fee_proof_sell_price,
@@ -187,6 +188,10 @@ class GridEngine:
 
     def build_grid(self, current_price: float, portfolio=None, atr: float = 0.0, force: bool = False, dip_boost: float = 1.0):
         """Build grid levels. If ATR provided, use it for dynamic spacing. dip_boost scales deeper tiers."""
+        if is_fee_buffer_asset(self.symbol) or is_never_sell_symbol(self.symbol):
+            self.grid_levels = []
+            logger.debug(f"[{self.symbol}] build_grid skipped — protected/fee-buffer asset (buy/hold only).")
+            return
         if current_price <= 0:
             logger.warning(f"[{self.symbol}] Invalid current_price {current_price} in build_grid, skipping.")
             return
@@ -316,6 +321,12 @@ class GridEngine:
 
 
             
+        if is_fee_buffer_asset(self.symbol) or is_never_sell_symbol(self.symbol):
+            # Never build sell inventory for MNT / protected fee assets
+            self.grid_levels = [lvl for lvl in self.grid_levels if lvl.side != 'sell']
+            logger.debug(f"[{self.symbol}] Skipping sell-grid build (protected/fee-buffer asset).")
+            return
+
         # Build Sell Levels (strictly above average purchase cost basis)
         def _get_val(obj, key, default=0.0):
             if obj is None:
@@ -368,6 +379,15 @@ class GridEngine:
                 return
             from trading_engine.config import spot_settings
             is_legacy = self.symbol not in spot_settings.asset_list
+
+            # FIFO age is often 0 on Railway when fill timestamps are missing. Legacy bags
+            # should still use compressed/quick-exit geometry so capital is not parked.
+            if (not is_aged_position) and is_legacy and oldest_lot_age_hours <= 0:
+                is_aged_position = True
+                logger.info(
+                    f"⏳ [{self.symbol}] FIFO lot age unavailable — treating legacy holding as aged "
+                    f"for compressed/quick-exit sells (units={base_qty_held:.4f})."
+                )
 
             if is_legacy:
                 # 🚪 Quick-Exit Mode for Legacy Holdings Outside Top 12:
@@ -538,10 +558,28 @@ class GridEngine:
 
 
 
+    def _refuse_protected_sell(self) -> bool:
+        """True if this symbol must never place/record a sell (MNT fee buffer, etc.)."""
+        if is_never_sell_symbol(self.symbol) or is_fee_buffer_asset(self.symbol):
+            logger.critical(f"🚫 [{self.symbol}] Refusing sell — protected fee-buffer / never-sell asset.")
+            return True
+        return False
+
     def place_grid_orders(self, portfolio, exchange: ccxt.Exchange):
         self.exchange = exchange
         for level in self.grid_levels:
             if level.status == 'pending':
+                if is_never_sell_symbol(self.symbol) and level.side == 'sell':
+                    logger.critical(
+                        f"🚫 [{self.symbol}] BLOCKED sell place — fee-buffer/protected asset must never be sold."
+                    )
+                    level.status = 'cancelled'
+                    continue
+                if is_fee_buffer_asset(self.symbol):
+                    logger.warning(f"🚫 [{self.symbol}] Skipping grid place — MNT fee-buffer is buy/hold only.")
+                    level.status = 'cancelled'
+                    continue
+
                 if self.paper_mode:
                     level.status = 'open'
                     level.order_id = f'PAPER_{uuid4().hex[:8]}'
@@ -661,7 +699,10 @@ class GridEngine:
                             if level.side == 'buy':
                                 order = exchange.create_limit_buy_order(self.symbol, qty_val, price_val, params)
                             else:
-                                order = exchange.create_limit_sell_order(self.symbol, qty_val, price_val, params)
+                                if self._refuse_protected_sell():
+                                    order = None
+                                else:
+                                    order = exchange.create_limit_sell_order(self.symbol, qty_val, price_val, params)
                         except Exception as e_post:
                             # If postOnly was rejected because price is at or across spread, retry with standard limit order
                             if 'postonly' in str(e_post).lower() or 'post_only' in str(e_post).lower() or '170193' in str(e_post):
@@ -669,7 +710,10 @@ class GridEngine:
                                 if level.side == 'buy':
                                     order = exchange.create_limit_buy_order(self.symbol, qty_val, price_val, fallback_params)
                                 else:
-                                    order = exchange.create_limit_sell_order(self.symbol, qty_val, price_val, fallback_params)
+                                    if self._refuse_protected_sell():
+                                        order = None
+                                    else:
+                                        order = exchange.create_limit_sell_order(self.symbol, qty_val, price_val, fallback_params)
                             elif level.side == 'sell' and ('balance' in str(e_post).lower() or '170131' in str(e_post)):
                                 # Insufficient balance on sell: fetch exact available coin balance and retry
                                 try:
@@ -684,7 +728,10 @@ class GridEngine:
                                             new_qty = math.floor(new_qty * (10 ** decimals)) / (10 ** decimals)
                                         if new_qty > 0 and (new_qty * price_val) >= float(min_cost if 'min_cost' in locals() else 5.0):
                                             logger.info(f"[{self.symbol}] Adjusting sell qty from {qty_val} to exact exchange balance {new_qty}")
-                                            order = exchange.create_limit_sell_order(self.symbol, new_qty, price_val, {'category': 'spot'})
+                                            if self._refuse_protected_sell():
+                                                order = None
+                                            else:
+                                                order = exchange.create_limit_sell_order(self.symbol, new_qty, price_val, {'category': 'spot'})
                                             qty_val = new_qty
                                         else:
                                             raise e_post
@@ -784,6 +831,10 @@ class GridEngine:
 
                     
                 elif level.side == 'sell':
+                    if is_never_sell_symbol(self.symbol):
+                        logger.critical(f"🚫 [{self.symbol}] BLOCKED sell fill handling — protected asset.")
+                        level.status = 'cancelled'
+                        continue
                     buy_orig_p = level.linked_buy_price or (level.price / (1 + getattr(self, 'current_spacing', self.params.grid_spacing)))
 
                     # ── HARD GATE: never sell below buy, and require >= $0.50 net after fees ──
@@ -812,7 +863,10 @@ class GridEngine:
                                 p_val = float(exchange.price_to_precision(self.symbol, min_sell_price)) if hasattr(exchange, 'price_to_precision') else min_sell_price
                                 if not sell_clears_buy(p_val, buy_orig_p):
                                     p_val = float(exchange.price_to_precision(self.symbol, buy_orig_p * 1.01)) if hasattr(exchange, 'price_to_precision') else (buy_orig_p * 1.01)
-                                new_order = exchange.create_limit_sell_order(self.symbol, qty_val, p_val, new_params)
+                                if self._refuse_protected_sell():
+                                    new_order = None
+                                else:
+                                    new_order = exchange.create_limit_sell_order(self.symbol, qty_val, p_val, new_params)
                                 level.price = float(p_val)
                                 level.linked_buy_price = buy_orig_p
                                 level.order_id = new_order['id']
@@ -847,7 +901,10 @@ class GridEngine:
                                 new_params = {'category': 'spot', 'postOnly': True}
                                 qty_val = float(exchange.amount_to_precision(self.symbol, level.qty)) if hasattr(exchange, 'amount_to_precision') else level.qty
                                 p_val = float(exchange.price_to_precision(self.symbol, min_sell_price)) if hasattr(exchange, 'price_to_precision') else min_sell_price
-                                new_order = exchange.create_limit_sell_order(self.symbol, qty_val, p_val, new_params)
+                                if self._refuse_protected_sell():
+                                    new_order = None
+                                else:
+                                    new_order = exchange.create_limit_sell_order(self.symbol, qty_val, p_val, new_params)
                                 level.price = min_sell_price
                                 level.order_id = new_order['id']
                                 logger.info(f"✅ [{self.symbol}] Replaced with guaranteed sell @ ${min_sell_price:.4f} (Net >= +${MIN_NET_PROFIT_USD:.2f} USD)")

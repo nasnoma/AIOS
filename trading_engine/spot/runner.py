@@ -16,6 +16,7 @@ from loguru import logger
 from typing import Dict, Any
 from trading_engine.spot.spot_portfolio import AssetHolding
 from trading_engine.spot.btc_master_filter import btc_master_filter
+from trading_engine.spot.asset_guards import is_never_sell_symbol, is_fee_buffer_asset
 
 ALL_23_HISTORICAL_COSTS = {
     'NEAR/USDT': 2.3953, 'TIA/USDT': 0.4474, 'SUI/USDT': 0.8297, 'FET/USDT': 0.1791,
@@ -543,7 +544,7 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 tot = bal.get('total', {})
                 active_symbols = set(spot_settings.asset_list) | _active_roster
                 for coin, units in tot.items():
-                    if coin in ['USDT', 'USDC', 'MNT']:
+                    if coin in ['USDT', 'USDC', 'MNT'] or is_never_sell_symbol(coin):
                         continue
 
                     u_val = float(units or 0)
@@ -605,12 +606,12 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                         decimals = max(0, -int(math.floor(math.log10(float(prec)))))
                         buy_qty = math.floor(raw_qty * (10 ** decimals)) / (10 ** decimals)
                         logger.info(f"🪙 MNT Fee Balance low ({mnt_balance:.2f} MNT). Auto-refilling {buy_qty} MNT (~${target_buy_usdt:.2f})...")
-                        try:
-                            exchange.create_market_buy_order('MNT/USDT', buy_qty, params={'category': 'spot'})
-                            logger.info(f"✅ Auto-refilled {buy_qty} MNT successfully! 25% fee discount maintained.")
-                        except Exception:
-                            ask_p = float(mnt_ticker.get('ask') or (mnt_p * 1.002))
-                            exchange.create_limit_buy_order('MNT/USDT', buy_qty, ask_p, params={'category': 'spot'})
+                        # Limit-only (no market) — cheaper fees / no taker surprise
+                        ask_p = float(mnt_ticker.get('ask') or (mnt_p * 1.001))
+                        if hasattr(exchange, 'price_to_precision'):
+                            ask_p = float(exchange.price_to_precision('MNT/USDT', ask_p))
+                        exchange.create_limit_buy_order('MNT/USDT', buy_qty, ask_p, params={'category': 'spot', 'postOnly': True})
+                        logger.info(f"✅ MNT limit refill placed {buy_qty} @ ${ask_p:.6f} (no market order).")
             except Exception as e_mnt_refill:
                 logger.debug(f"MNT auto-refill check: {e_mnt_refill}")
 
@@ -635,7 +636,7 @@ def run_spot_grid_tick() -> Dict[str, Any]:
         all_candidate_symbols = list(set(spot_settings.asset_list) | _active_roster)
         if hasattr(_portfolio, 'holdings') and isinstance(_portfolio.holdings, dict):
             for sym_k, h_v in _portfolio.holdings.items():
-                if sym_k in ['MNT/USDT', 'MNT']:
+                if is_fee_buffer_asset(sym_k) or is_never_sell_symbol(sym_k):
                     continue
                 if sym_k not in all_candidate_symbols:
                     u_held = float(getattr(h_v, 'units_held', 0) if hasattr(h_v, 'units_held') else (h_v or {}).get('units_held', 0) or 0)
@@ -646,12 +647,22 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                     if (u_held * p_ref) >= 5.0:
                         all_candidate_symbols.append(sym_k)
 
+        # Drop fee-buffer / never-sell engines (MNT must never run a sell grid)
+        for _sym_drop in list(_grid_engines.keys()):
+            if is_fee_buffer_asset(_sym_drop) or is_never_sell_symbol(_sym_drop):
+                logger.warning(f"🚫 Dropping grid engine for protected asset {_sym_drop}")
+                _grid_engines.pop(_sym_drop, None)
+
         # Prune any in-memory engines for legacy symbols that are no longer candidates (e.g. sub-$5 dust)
         for sym_eng in list(_grid_engines.keys()):
             if sym_eng not in all_candidate_symbols:
                 del _grid_engines[sym_eng]
 
         for symbol in all_candidate_symbols:
+            if is_fee_buffer_asset(symbol) or is_never_sell_symbol(symbol):
+                # MNT fee-buffer: never grid, never sell-only engine
+                _grid_engines.pop(symbol, None)
+                continue
             engine = _grid_engines.get(symbol)
             if not engine:
                 # Initialize a sell-only GridEngine for legacy holding assets (allocated_usd = 0 means no new buys)
@@ -811,25 +822,33 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                     if has_loss_sells:
                         invalid_sells = True
                         logger.info(f"🛡️ Re-aligning below-cost sell orders for {symbol} to guaranteed profit geometry (Cost: ${h_cost:.4f}, Live: ${price:.4f})...")
-                    elif symbol in (set(spot_settings.asset_list) | _active_roster) and price > (h_cost * 1.02):
-                        # For active watchlist assets in profit: tighten if existing sells are excessively wide (>3% above market)
+                    elif symbol in (set(spot_settings.asset_list) | _active_roster) and price > (h_cost * 1.01):
+                        # In profit: rebuild if resting sells are >1.5% above market (was 3% — too loose)
                         min_sell_p = min((l.price for l in open_sells), default=0.0)
-                        if min_sell_p > (price * 1.03):
-                            # Verify that tightening to price * 1.008 still guarantees >= $0.50 net profit
+                        if min_sell_p > (price * 1.015):
                             test_qty = open_sells[0].qty if open_sells else 0.0
                             if test_qty > 0:
-                                net_tight = ((price * 1.008) * test_qty * (1.0 - fee_factor)) - (h_cost * test_qty * (1.0 + fee_factor))
+                                net_tight = ((price * 1.005) * test_qty * (1.0 - fee_factor)) - (h_cost * test_qty * (1.0 + fee_factor))
                                 if net_tight >= 0.50:
                                     invalid_sells = True
-                                    logger.info(f"⚡ Tightening wide take-profit targets for {symbol} (Live: ${price:.4f} > Cost: ${h_cost:.4f})...")
+                                    logger.info(f"⚡ Tightening wide take-profit targets for {symbol} (Live: ${price:.4f} > Cost: ${h_cost:.4f}, Sell: ${min_sell_p:.4f})...")
                     elif symbol not in (set(spot_settings.asset_list) | _active_roster):
-                        # 🛡️ Zero-Loss Fee-Proof Quick-Exit for legacy holdings:
-                        # Re-align if existing orders are excessively wide (>3.5% above cost/price), but NEVER below cost+fees+$0.50
-                        target_quick_exit = max(h_cost * 1.0035, price * 1.0035)
+                        # Legacy quick-exit: rebuild when sells drift above fee-proof / market target.
+                        # Previous 3.5% slack left ALGO-style bags uncompresssed for days.
+                        from trading_engine.spot.sell_guard import enforce_sell_floor
                         min_sell_p = min((l.price for l in open_sells), default=0.0)
-                        if min_sell_p > (target_quick_exit * 1.035):
+                        test_qty = open_sells[0].qty if open_sells else 0.0
+                        fee_proof = enforce_sell_floor(
+                            0.0, h_cost, test_qty, fee_factor=fee_factor, min_net_usd=0.60
+                        ) if test_qty > 0 else (h_cost * 1.01)
+                        target_quick_exit = max(fee_proof, h_cost * 1.0035, price * 1.0035)
+                        if min_sell_p > (target_quick_exit * 1.008):
                             invalid_sells = True
-                            logger.info(f"🚪 Re-aligning legacy holding {symbol} to Quick-Exit target (Current: ${min_sell_p:.4f} -> Target ~${target_quick_exit:.4f})...")
+                            logger.info(
+                                f"🚪 Re-aligning legacy holding {symbol} to Quick-Exit/aged target "
+                                f"(Current sell: ${min_sell_p:.4f} -> Target ~${target_quick_exit:.4f}, "
+                                f"Live: ${price:.4f}, Cost: ${h_cost:.4f})..."
+                            )
 
                 if not engine.grid_levels or is_stale or force_reset or missing_sells or invalid_sells:
                     if is_stale:
@@ -920,11 +939,23 @@ def run_spot_dca_check():
                     
                     if not spot_settings.paper_mode and exchange:
                         try:
-                            buy_ord = exchange.create_market_buy_order(symbol, qty)
+                            # Limit-only DCA entry (no market) — post-only near bid to avoid taker fees
+                            bid = float(ticker.get('bid') or 0) or float(price)
+                            limit_px = bid * 0.999 if bid > 0 else float(price) * 0.999
+                            if hasattr(exchange, 'price_to_precision'):
+                                limit_px = float(exchange.price_to_precision(symbol, limit_px))
+                            if hasattr(exchange, 'amount_to_precision'):
+                                qty = float(exchange.amount_to_precision(symbol, qty))
+                            buy_ord = exchange.create_limit_buy_order(
+                                symbol, qty, limit_px, {'category': 'spot', 'postOnly': True}
+                            )
                             if buy_ord and buy_ord.get('id'):
                                 order_id_str = str(buy_ord['id'])
+                            price = limit_px  # record at limit price, not last
+                            order_size = qty * price
+                            logger.info(f"📥 DCA limit buy placed [{symbol}]: qty={qty:.6f} @ ${limit_px:.6f} (no market order)")
                         except Exception as buy_err:
-                            logger.error(f"Live DCA market buy failed [{symbol}]: {buy_err}")
+                            logger.error(f"Live DCA limit buy failed [{symbol}]: {buy_err}")
                             continue
 
                     _portfolio.record_buy(symbol, qty, price, order_size, order_id_str, is_dca=True)
@@ -950,7 +981,9 @@ def run_spot_dca_check():
                         exit_price = 0.0
                     if exit_price > 0:
                         try:
-                            if not spot_settings.paper_mode and exchange:
+                            if is_never_sell_symbol(symbol):
+                                logger.critical(f"🚫 DCA exit sell blocked for protected asset {symbol}")
+                            elif not spot_settings.paper_mode and exchange:
                                 exchange.create_limit_sell_order(symbol, qty, exit_price)
                                 logger.info(f"📤 DCA Exit Limit Sell placed [{symbol}]: qty={qty:.6f} @ ${exit_price:.4f} (CostRef: ${cost_ref:.4f}, Guaranteed Net: >= +$0.60 USD)")
                             else:
@@ -988,7 +1021,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
     grids = {}
     display_regime_symbols = set(spot_settings.asset_list) | _active_roster | set(_portfolio.holdings.keys() if hasattr(_portfolio, 'holdings') and isinstance(_portfolio.holdings, dict) else [])
     for sym in display_regime_symbols:
-        if sym in ['MNT/USDT', 'MNT']:
+        if is_fee_buffer_asset(sym) or is_never_sell_symbol(sym):
             continue
         det = _regime_detectors.get(sym)
         h_obj = _portfolio.holdings.get(sym) if hasattr(_portfolio, 'holdings') and isinstance(_portfolio.holdings, dict) else None
@@ -1028,7 +1061,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
             active_symbols = set(spot_settings.asset_list) | _active_roster
             legacy_held_symbols = set()
             for sym, h in _portfolio.holdings.items():
-                if sym in ['MNT/USDT', 'MNT']:
+                if is_fee_buffer_asset(sym) or is_never_sell_symbol(sym):
                     continue
                 u_held = float(getattr(h, 'units_held', 0) if hasattr(h, 'units_held') else (h or {}).get('units_held', 0) or 0)
                 p_ref = float(getattr(h, 'last_price', 0) if hasattr(h, 'last_price') else (h or {}).get('last_price', 0) or 0)
@@ -1055,6 +1088,15 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
                         is_sell = (o.get('side') or '').lower() == 'sell'
                         has_holding = sym in legacy_held_symbols
                         
+                        # Never leave resting sells on MNT / fee-buffer — cancel immediately
+                        if is_sell and is_never_sell_symbol(sym) and o.get('id'):
+                            try:
+                                exchange.cancel_order(o['id'], symbol=sym)
+                                logger.warning(f"🚫 Cancelled protected-asset SELL {o['id']} on {sym} (fee-buffer never-sell).")
+                            except Exception:
+                                pass
+                            continue
+
                         # Only cancel rogue BUY orders on decommissioned, capped, or paused assets; NEVER cancel resting take-profit SELL orders on legacy holdings!
                         arb_paused = is_arb_buy_paused(sym)
                         if not is_sell and (sym not in active_symbols or is_capped_sym or arb_paused) and o.get('id'):
@@ -1493,6 +1535,14 @@ def run_spot_self_healing_and_optimize() -> Dict[str, Any]:
                 is_capped_sym = (tot_eq_self > 0 and ((units_held * p_ref) / tot_eq_self) >= 0.10)
 
                 # Protect: never cancel a sell order on an asset we still hold with >= $5 notional
+                if is_sell and is_never_sell_symbol(sym):
+                    # MNT fee-buffer must never keep resting sells
+                    try:
+                        exchange.cancel_order(o.get('id'), symbol=sym)
+                        logger.warning(f"🚫 Self-Healing: Cancelled protected-asset SELL {o.get('id')} on {sym} (never-sell policy).")
+                    except Exception as e_canc:
+                        logger.debug(f"Could not cancel protected sell {o.get('id')} on {sym}: {e_canc}")
+                    continue
                 if is_sell and has_holding:
                     logger.debug(f"🛡️ Self-Healing: Preserving legacy TP sell {o.get('id')} on {sym} (still holding {units_held:.4f} units, val=${units_held*p_ref:.2f}).")
                     continue

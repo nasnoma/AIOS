@@ -1,3 +1,4 @@
+from trading_engine.spot.asset_guards import is_never_sell_symbol
 import json
 import datetime
 import threading
@@ -247,6 +248,10 @@ class SpotPortfolio:
             self.save()
             
     def record_sell(self, symbol: str, qty: float, price: float, size_usd: float, order_id: str, buy_cost_basis: float):
+        if is_never_sell_symbol(symbol):
+            logger.error(f"🚫 Refusing to record_sell on protected fee-buffer asset {symbol}")
+            return
+
         with self._lock:
             if order_id and order_id in self.processed_order_ids:
                 return
