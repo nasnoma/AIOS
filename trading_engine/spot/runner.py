@@ -20,20 +20,26 @@ from trading_engine.spot.crash_guard import update_crash_halt, is_crash_buy_halt
 from trading_engine.spot.asset_guards import is_never_sell_symbol, is_fee_buffer_asset
 from trading_engine.spot.entry_guards import entry_buys_allowed, exitability_score, remaining_buy_room_usd, EXPOSURE_TARGET_PCT
 
+# Fallback seed costs only (FIFO live cost wins). Name kept as ALL_23_* for compat;
+# universe is the screened Bybit spot set (now includes liquid extras XRP/LTC/XLM).
 ALL_23_HISTORICAL_COSTS = {
     'NEAR/USDT': 2.3953, 'TIA/USDT': 0.4474, 'SUI/USDT': 0.8297, 'FET/USDT': 0.1791,
     'ICP/USDT': 2.8460, 'ADA/USDT': 0.2102, 'APT/USDT': 0.6153, 'OP/USDT': 0.1086,
     'RENDER/USDT': 1.4773, 'ARB/USDT': 0.1852, 'DOT/USDT': 1.1759, 'ALGO/USDT': 0.0908,
     'UNI/USDT': 6.6739, 'INJ/USDT': 6.3400, 'AVAX/USDT': 8.1317, 'SOL/USDT': 103.0504,
     'ETH/USDT': 2477.2894, 'BTC/USDT': 80295.00, 'XAUT/USDT': 4583.60, 'ARKM/USDT': 0.1125,
-    'ATOM/USDT': 1.8158, 'LINK/USDT': 12.7713, 'SEI/USDT': 0.0468
+    'ATOM/USDT': 1.8158, 'LINK/USDT': 12.7713, 'SEI/USDT': 0.0468,
+    # Liquid extras (Bybit spot grid-fit screen 2026-09-13) — seed last px; FIFO overrides
+    'XRP/USDT': 1.3397, 'LTC/USDT': 53.54, 'XLM/USDT': 0.1782,
 }
 
 ALL_23_HALAL_UNIVERSE = [
     'FET/USDT', 'NEAR/USDT', 'SUI/USDT', 'TIA/USDT', 'ARB/USDT', 'OP/USDT',
     'APT/USDT', 'AVAX/USDT', 'SEI/USDT', 'SOL/USDT', 'INJ/USDT', 'ARKM/USDT',
     'UNI/USDT', 'RENDER/USDT', 'ADA/USDT', 'ICP/USDT', 'LINK/USDT', 'ETH/USDT',
-    'ATOM/USDT', 'DOT/USDT', 'ALGO/USDT', 'BTC/USDT', 'XAUT/USDT'
+    'ATOM/USDT', 'DOT/USDT', 'ALGO/USDT', 'BTC/USDT', 'XAUT/USDT',
+    # Liquid extras for Top-8 rotation eligibility (still gated by reserve / 8% / entry guards)
+    'XRP/USDT', 'LTC/USDT', 'XLM/USDT',
 ]
 
 _last_trades_fetch_time: float = 0.0
@@ -67,8 +73,8 @@ def _get_dynamic_hot_asset_allocations(
     total_equity: float = 0.0
 ) -> dict[str, float]:
     """
-    Dynamic 23-Asset Scanner & Concentrated Top-8 Volatility Rotator:
-    1. Evaluates all 23 Halal spot assets on Bybit using a Blended Quantitative Score:
+    Dynamic screened-universe scanner & Concentrated Top-8 Volatility Rotator:
+    1. Evaluates the screened Halal spot universe on Bybit using a Blended Quantitative Score:
        - 60% 48-Hour Volatility Range: ((High_48h - Low_48h) / Low_48h) over last 2 daily candles
        - 40% 7-Day Average True Range (ATR%): Sustained structural volatility over 7 days
        This prevents 1-day hype pump bag traps while keeping high-velocity oscillation leaders.
@@ -148,7 +154,7 @@ def _get_dynamic_hot_asset_allocations(
             except Exception as e_score:
                 logger.debug(f"Blended score calculation error: {e_score}")
 
-    # Evaluate each asset in the 23-asset universe
+    # Evaluate each asset in the screened Halal spot universe
     for sym in scan_list:
         last_price = 0.0
         if tickers and sym in tickers:
@@ -375,7 +381,7 @@ def init_spot_engine():
         _portfolio.usdt_available = expected_free
         _portfolio.save()
 
-    # Pre-populate regime detectors for all 23 assets in the Halal universe
+    # Pre-populate regime detectors for all assets in the Halal universe
     for symbol in ALL_23_HALAL_UNIVERSE:
         if symbol not in _regime_detectors:
             _regime_detectors[symbol] = RegimeDetector(symbol=symbol, timeframe=spot_settings.regime_timeframe)
@@ -439,7 +445,7 @@ def run_spot_regime_check():
             if reg_name and st:
                 logger.info(f"📊 Regime [{sym}]: {reg_name} (ADX: {st.adx:.1f}, +DI: {st.plus_di:.1f}, -DI: {st.minus_di:.1f})")
 
-    # 3. Dynamic 23-Asset Scanner & Capital Rotation with 10% Exposure Ceiling
+    # 3. Dynamic screened-universe scanner & Capital Rotation with 10% Exposure Ceiling
     try:
         total_eq = _portfolio.usdt_available + sum(
             (float(getattr(h, 'units_held', 0) if hasattr(h, 'units_held') else (h or {}).get('units_held', 0) or 0)) *
