@@ -55,6 +55,7 @@ def resolve_sell_cost_ref(
     portfolio_avg_cost: float = 0.0,
     units_held: Optional[float] = None,
     sell_qty: Optional[float] = None,
+    qty_offset: float = 0.0,
     hist_cost: float = 0.0,
     linked_buy_price: Optional[float] = None,
     current_price: float = 0.0,
@@ -62,7 +63,13 @@ def resolve_sell_cost_ref(
     """
     Resolve the minimum cost basis a sell must clear.
 
-    Preference: linked buy -> FIFO lot cost for qty -> portfolio avg -> hist -> price.
+    Preference: linked buy -> FIFO slice cost for qty (+ optional offset) ->
+    portfolio avg -> hist -> price.
+
+    SAFETY > cycle speed for this floor: NEVER return a cost_ref below the
+    max buy price of lots covered by sell_qty (after qty_offset), or of
+    remaining open lots when qty is unknown. Bag/FIFO *avg* alone allowed
+    multi-level sells to fill below a dearer lot once FIFO consumed cheap lots.
     """
     linked = float(linked_buy_price or 0.0)
     if linked > 0:
@@ -74,25 +81,25 @@ def resolve_sell_cost_ref(
         from trading_engine.spot.fifo_reconciler import get_fifo_cost_basis, get_fifo_lot_cost_for_qty
 
         qty = float(sell_qty or 0.0)
+        offset = float(qty_offset or 0.0)
         if qty > 1e-12:
-            lot = get_fifo_lot_cost_for_qty(symbol, qty) or {}
+            lot = get_fifo_lot_cost_for_qty(symbol, qty, qty_offset=offset) or {}
             fifo_avg = float(lot.get("avg_cost", 0.0) or 0.0)
             fifo_max = float(lot.get("max_buy_price", 0.0) or 0.0)
-        if fifo_avg <= 0:
+        if fifo_avg <= 0 and fifo_max <= 0:
             fb = get_fifo_cost_basis(symbol, units_held=units_held if units_held and units_held > 0 else None) or {}
             fifo_avg = float(fb.get("avg_cost", 0.0) or 0.0)
-            if qty <= 1e-12:
-                fifo_max = float(fb.get("max_buy_price", 0.0) or 0.0)
+            fifo_max = float(fb.get("max_buy_price", 0.0) or 0.0)
+        elif qty <= 1e-12:
+            fb = get_fifo_cost_basis(symbol, units_held=units_held if units_held and units_held > 0 else None) or {}
+            fifo_avg = max(fifo_avg, float(fb.get("avg_cost", 0.0) or 0.0))
+            fifo_max = max(fifo_max, float(fb.get("max_buy_price", 0.0) or 0.0))
     except Exception as e:
         logger.debug(f"sell_guard FIFO lookup failed for {symbol}: {e}")
 
-    # Prefer FIFO avg for the qty being sold (oldest lots first). Do NOT pin every
-    # sell to fifo_max / one expensive lot — that stalls aged-compress and cycles.
-    # When qty is unknown, keep max lot as a conservative floor.
-    if float(sell_qty or 0.0) > 1e-12 and fifo_avg > 0:
-        live = max(float(portfolio_avg_cost or 0.0), fifo_avg)
-    else:
-        live = max(float(portfolio_avg_cost or 0.0), fifo_avg, fifo_max)
+    # Lot-level never-sell-below-buy: floor is max(avg_of_slice, max_buy_in_slice).
+    # Always include fifo_max — safety beats cycle speed for this floor.
+    live = max(float(portfolio_avg_cost or 0.0), fifo_avg, fifo_max)
     if live > 0:
         return live
 

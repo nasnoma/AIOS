@@ -134,6 +134,7 @@ class GridEngine:
         self.completed_cycles: List[Dict[str, Any]] = []
         self.exchange: Optional[ccxt.Exchange] = None
         self._last_rebuild_time: float = 0.0
+        self._post_sell_rebuild: bool = False
         self.current_spacing: float = self.params.grid_spacing
 
         # Load optimizer-tuned params for this symbol if available
@@ -408,9 +409,9 @@ class GridEngine:
             fifo_basis = get_fifo_cost_basis(self.symbol, units_held=base_qty_held if base_qty_held > 0 else None) or {}
             if fifo_basis.get('avg_cost', 0) > 0:
                 fifo_max_cost = float(fifo_basis.get('max_buy_price', 0.0) or 0.0)
-                # Use live FIFO average as portfolio floor. Per-sell floors use
-                # get_fifo_lot_cost_for_qty (oldest lots first) via resolve_sell_cost_ref,
-                # so one expensive lot no longer pins every sell above the whole book.
+                # Bag avg is a soft portfolio floor only. Per-sell floors walk FIFO
+                # slices (qty_offset) and use max(avg_slice, max_buy_in_slice) so
+                # multi-level sells cannot fill below a dearer lot.
                 avg_cost = max(avg_cost, float(fifo_basis['avg_cost']))
             oldest_lot_age_hours = float(fifo_basis.get('oldest_buy_age_hours', 0.0) or 0.0)
         except Exception as e_fifo_cb:
@@ -460,6 +461,7 @@ class GridEngine:
                         portfolio_avg_cost=avg_cost,
                         units_held=base_qty_held,
                         sell_qty=qty_per_sell,
+                        qty_offset=i * qty_per_sell,
                         hist_cost=hist_cost,
                         current_price=current_price,
                     )
@@ -553,6 +555,7 @@ class GridEngine:
                         portfolio_avg_cost=avg_cost,
                         units_held=base_qty_held,
                         sell_qty=qty_per_sell,
+                        qty_offset=i * qty_per_sell,
                         hist_cost=hist_cost,
                         current_price=current_price,
                     )
@@ -1030,11 +1033,27 @@ class GridEngine:
                             logger.debug(f"Failed to record cycle to SQLite: {e_db}")
                     logger.info(f"✅ SELL filled at {level.price}. Completed cycle for {self.symbol}. Net PnL: +${net_pnl:.2f} USD")
 
+                    # Belt-and-suspenders: after a sell fill, cancel remaining resting
+                    # sells so they reprice against leftover FIFO lots (prevents a
+                    # second simultaneous fill from hitting a dearer lot below its cost).
+                    for other in list(self.grid_levels):
+                        if other is level:
+                            continue
+                        if other.side != 'sell' or other.status not in ('open', 'pending'):
+                            continue
+                        if exchange and other.order_id and not str(other.order_id).startswith('PAPER'):
+                            try:
+                                exchange.cancel_order(other.order_id, self.symbol, {'category': 'spot'})
+                            except Exception:
+                                pass
+                        other.status = 'cancelled'
+                        logger.info(
+                            f"🔄 [{self.symbol}] Cancelled resting sell @ ${other.price:.4f} "
+                            f"for post-fill FIFO reprice (after sell fill @ ${level.price:.4f})"
+                        )
+                    self._last_rebuild_time = 0.0
+                    self._post_sell_rebuild = True
 
-
-
-
-                
                     from trading_engine.config import spot_settings
                     if (self.symbol in spot_settings.asset_list and 
                         getattr(self, 'allocated_usd', 0.0) > 0 and 

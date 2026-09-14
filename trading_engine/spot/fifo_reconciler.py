@@ -514,15 +514,20 @@ def get_fifo_cost_basis(symbol: str, units_held: Optional[float] = None) -> Dict
 
 
 
-def get_fifo_lot_cost_for_qty(symbol: str, qty: float) -> Dict[str, float]:
+def fifo_slice_cost_from_lots(
+    open_lots: List[Dict[str, Any]],
+    qty: float,
+    qty_offset: float = 0.0,
+) -> Dict[str, float]:
     """
-    Cost basis for selling `qty` under strict FIFO (oldest open lots first).
+    Pure FIFO slice walker (oldest-first).
 
-    This is the correct floor for a partial sell: never below the buy prices of
-    the lots that FIFO would actually consume — without inflating to the max
-    lot across the entire book (which stalls cycles when one expensive lot exists).
+    Skips `qty_offset` units of open inventory, then takes up to `qty`.
+    Returns avg/min/max buy of THAT slice — used so sell level N is floored
+    against the lots FIFO would consume for that level, not the bag average.
     """
     qty = float(qty or 0.0)
+    skip = float(qty_offset or 0.0)
     if qty <= 1e-12:
         return {
             'units': 0.0,
@@ -531,6 +536,44 @@ def get_fifo_lot_cost_for_qty(symbol: str, qty: float) -> Dict[str, float]:
             'max_buy_price': 0.0,
         }
 
+    taken: List[Dict[str, float]] = []
+    for b in open_lots:
+        rem = float(b.get("rem", 0.0) or 0.0)
+        if rem <= 1e-8:
+            continue
+        if skip > 1e-8:
+            d = min(skip, rem)
+            skip -= d
+            rem -= d
+        if rem <= 1e-8 or qty <= 1e-8:
+            continue
+        take = min(qty, rem)
+        taken.append({"price": float(b["price"]), "qty": take})
+        qty -= take
+        if qty <= 1e-8:
+            break
+
+    if not taken:
+        return {
+            'units': 0.0,
+            'avg_cost': 0.0,
+            'min_buy_price': 0.0,
+            'max_buy_price': 0.0,
+        }
+
+    tot_qty = sum(t["qty"] for t in taken)
+    tot_val = sum(t["qty"] * t["price"] for t in taken)
+    avg_cost = tot_val / tot_qty if tot_qty > 0 else 0.0
+    return {
+        'units': round(tot_qty, 6),
+        'avg_cost': round(avg_cost, 6),
+        'min_buy_price': round(min(t["price"] for t in taken), 6),
+        'max_buy_price': round(max(t["price"] for t in taken), 6),
+    }
+
+
+def _open_buy_lots_from_fills(symbol: str) -> List[Dict[str, Any]]:
+    """Rebuild open buy lots for symbol from SQLite fills (FIFO residual)."""
     db = _conn()
     rows = db.execute(
         "SELECT side, price, qty, ts_ms FROM fills WHERE symbol = ? ORDER BY ts_ms ASC, id ASC",
@@ -554,19 +597,25 @@ def get_fifo_lot_cost_for_qty(symbol: str, qty: float) -> Dict[str, float]:
                 buy_lots[0]["rem"] -= take
                 if buy_lots[0]["rem"] <= 1e-8:
                     buy_lots.popleft()
+    return [b for b in buy_lots if b["rem"] > 1e-8]
 
-    needed = qty
-    taken = []
-    for b in buy_lots:
-        if needed <= 1e-8:
-            break
-        if b["rem"] <= 1e-8:
-            continue
-        take = min(needed, b["rem"])
-        taken.append({"price": b["price"], "qty": take})
-        needed -= take
 
-    if not taken:
+def get_fifo_lot_cost_for_qty(
+    symbol: str,
+    qty: float,
+    qty_offset: float = 0.0,
+) -> Dict[str, float]:
+    """
+    Cost basis for selling `qty` under strict FIFO (oldest open lots first).
+
+    Optional `qty_offset` skips older units already assigned to earlier sell
+    slices in a multi-level grid (slice 1 = offset 0, slice 2 = offset qty, …).
+
+    Floor for a slice is max(avg, max_buy) of lots THIS sell would consume —
+    never the whole-book bag average alone (that allowed sell-below-lot losses).
+    """
+    qty = float(qty or 0.0)
+    if qty <= 1e-12:
         return {
             'units': 0.0,
             'avg_cost': 0.0,
@@ -574,15 +623,8 @@ def get_fifo_lot_cost_for_qty(symbol: str, qty: float) -> Dict[str, float]:
             'max_buy_price': 0.0,
         }
 
-    tot_qty = sum(t["qty"] for t in taken)
-    tot_val = sum(t["qty"] * t["price"] for t in taken)
-    avg_cost = tot_val / tot_qty if tot_qty > 0 else 0.0
-    return {
-        'units': round(tot_qty, 6),
-        'avg_cost': round(avg_cost, 6),
-        'min_buy_price': round(min(t["price"] for t in taken), 6),
-        'max_buy_price': round(max(t["price"] for t in taken), 6),
-    }
+    open_lots = _open_buy_lots_from_fills(symbol)
+    return fifo_slice_cost_from_lots(open_lots, qty, qty_offset=float(qty_offset or 0.0))
 
 
 def reconcile(exchange, fee_rate: float = None) -> Dict[str, Any]:

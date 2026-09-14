@@ -862,7 +862,9 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                     # 🛡️ STRICT ZERO-LOSS RULE ACROSS ALL ASSETS:
                     # Every sell order must strictly guarantee at least +$0.50 net profit above actual FIFO cost basis.
                     has_loss_sells = any(
-                        (l.price * l.qty * (1.0 - fee_factor)) - (h_cost * l.qty * (1.0 + fee_factor)) < 0.50
+                        (l.price * l.qty * (1.0 - fee_factor)) - (
+                            float(getattr(l, 'linked_buy_price', 0) or h_cost) * l.qty * (1.0 + fee_factor)
+                        ) < 0.50
                         for l in open_sells
                     )
                     if has_loss_sells:
@@ -911,8 +913,18 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 # Process tick (checks crossable fills & places replacement orders)
                 events = engine.tick(price, _portfolio, exchange=exchange, open_orders_by_id=open_orders_by_id)
                 fill_events.extend(events)
-                
-                if events:
+
+                # After a sell fill: remaining sells were cancelled in tick — rebuild so
+                # subsequent levels reprice against leftover FIFO lots (lot-level safety).
+                if getattr(engine, '_post_sell_rebuild', False):
+                    engine._post_sell_rebuild = False
+                    logger.info(
+                        f"🔄 [{symbol}] Post-sell-fill rebuild — reprice remaining sells vs leftover FIFO lots"
+                    )
+                    engine.cancel_all(exchange)
+                    engine.build_grid(price, _portfolio, atr=atr_val, force=True)
+                    engine.place_grid_orders(_portfolio, exchange)
+                elif events:
                     # If fills occurred, immediately place new replacement SELL/BUY limit orders on Bybit exchange!
                     engine.place_grid_orders(_portfolio, exchange)
             except Exception as e:
