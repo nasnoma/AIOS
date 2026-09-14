@@ -86,19 +86,17 @@ def resolve_sell_cost_ref(
             lot = get_fifo_lot_cost_for_qty(symbol, qty, qty_offset=offset) or {}
             fifo_avg = float(lot.get("avg_cost", 0.0) or 0.0)
             fifo_max = float(lot.get("max_buy_price", 0.0) or 0.0)
-        if fifo_avg <= 0 and fifo_max <= 0:
-            fb = get_fifo_cost_basis(symbol, units_held=units_held if units_held and units_held > 0 else None) or {}
-            fifo_avg = float(fb.get("avg_cost", 0.0) or 0.0)
-            fifo_max = float(fb.get("max_buy_price", 0.0) or 0.0)
-        elif qty <= 1e-12:
-            fb = get_fifo_cost_basis(symbol, units_held=units_held if units_held and units_held > 0 else None) or {}
-            fifo_avg = max(fifo_avg, float(fb.get("avg_cost", 0.0) or 0.0))
-            fifo_max = max(fifo_max, float(fb.get("max_buy_price", 0.0) or 0.0))
+        # ALWAYS load bag-wide max: Bybit fills the *lowest* resting sell first,
+        # which FIFO then matches to the *oldest* lots — slice offsets alone are
+        # not safe if a cheaper level can fill before a dearer-priced level.
+        fb = get_fifo_cost_basis(symbol, units_held=units_held if units_held and units_held > 0 else None) or {}
+        fifo_avg = max(fifo_avg, float(fb.get("avg_cost", 0.0) or 0.0))
+        fifo_max = max(fifo_max, float(fb.get("max_buy_price", 0.0) or 0.0))
     except Exception as e:
         logger.debug(f"sell_guard FIFO lookup failed for {symbol}: {e}")
 
-    # Lot-level never-sell-below-buy: floor is max(avg_of_slice, max_buy_in_slice).
-    # Always include fifo_max — safety beats cycle speed for this floor.
+    # Lot-level never-sell-below-buy: floor includes bag-wide max buy.
+    # Safety beats cycle speed — every resting sell must clear the dearest open lot.
     live = max(float(portfolio_avg_cost or 0.0), fifo_avg, fifo_max)
     if live > 0:
         return live

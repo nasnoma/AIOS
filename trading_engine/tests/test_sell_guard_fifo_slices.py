@@ -125,9 +125,26 @@ def test_post_rebuild_second_slice_still_safe():
     assert sell_is_fee_proof(floor, cost, qty, fee_factor=fee, min_net_usd=0.55)
 
 
+def test_fill_order_requires_bag_max_on_all_levels():
+    """Bybit fills lowest sell first → that sell hits oldest/dearest lots.
+    Every resting sell must therefore clear bag-wide max buy, not only its slice.
+    """
+    lots = _sol_like_lots()
+    qty = 1.0
+    bag_max = max(l["price"] for l in lots)
+    s2 = fifo_slice_cost_from_lots(lots, qty, qty_offset=qty)
+    slice2_only = max(s2["avg_cost"], s2["max_buy_price"])
+    cost_ref = max(slice2_only, bag_max)
+    assert cost_ref >= bag_max - 1e-9
+    fee = 0.0011
+    px = min_fee_proof_sell_price(cost_ref, qty, fee_factor=fee, min_net_usd=0.60)
+    assert sell_clears_buy(px, bag_max)
+    assert sell_is_fee_proof(px, cost_ref, qty, fee_factor=fee, min_net_usd=0.55)
+
+
 if __name__ == "__main__":
     test_fifo_slice_walk_assigns_dear_lot_to_second_sell()
     test_second_sell_fee_proof_floor_clears_dear_lot()
     test_resolve_sell_cost_ref_never_below_max_buy()
-    test_post_rebuild_second_slice_still_safe()
+    test_fill_order_requires_bag_max_on_all_levels()
     print("ALL PASS: sell_guard FIFO slice never-sell-below-buy")
