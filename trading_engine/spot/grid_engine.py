@@ -754,17 +754,23 @@ class GridEngine:
                                 continue
 
                         # Placement-time never-sell-below-buy gate (after exchange precision rounding)
+                        # ALWAYS refresh bag-wide FIFO max floor — do not trust a stale linked_buy_price alone.
                         if level.side == 'sell':
-                            cost_floor = float(getattr(level, 'linked_buy_price', 0.0) or 0.0)
-                            if cost_floor <= 0:
-                                try:
-                                    cost_floor = resolve_sell_cost_ref(
-                                        self.symbol,
-                                        sell_qty=qty_val,
-                                        current_price=price_val,
-                                    )
-                                except Exception:
-                                    cost_floor = 0.0
+                            try:
+                                _u_held = 0.0
+                                if portfolio is not None and hasattr(portfolio, 'holdings'):
+                                    _h = portfolio.holdings.get(self.symbol) if isinstance(portfolio.holdings, dict) else None
+                                    if _h is not None:
+                                        _u_held = float(getattr(_h, 'units_held', 0) or (_h or {}).get('units_held', 0) or 0)
+                                cost_floor = resolve_sell_cost_ref(
+                                    self.symbol,
+                                    portfolio_avg_cost=float(getattr(level, 'linked_buy_price', 0.0) or 0.0),
+                                    units_held=_u_held if _u_held > 0 else None,
+                                    sell_qty=qty_val,
+                                    current_price=price_val,
+                                )
+                            except Exception:
+                                cost_floor = float(getattr(level, 'linked_buy_price', 0.0) or 0.0)
                             if cost_floor > 0 and not sell_clears_buy(price_val, cost_floor):
                                 safe_p = enforce_sell_floor(price_val, cost_floor, qty_val, fee_factor=get_fee_factor(), min_net_usd=0.60)
                                 logger.warning(

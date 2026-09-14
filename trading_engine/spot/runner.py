@@ -860,16 +860,37 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                     from trading_engine.spot.sell_guard import get_fee_factor
                     fee_factor = get_fee_factor()
                     # 🛡️ STRICT ZERO-LOSS RULE ACROSS ALL ASSETS:
-                    # Every sell order must strictly guarantee at least +$0.50 net profit above actual FIFO cost basis.
+                    # Every sell must clear bag-wide FIFO max lot (+ fees). Silent prevent — cancel/rebuild, no user ping.
+                    bag_max = 0.0
+                    cost_floor = h_cost
+                    try:
+                        from trading_engine.spot.fifo_reconciler import get_fifo_cost_basis
+                        from trading_engine.spot.sell_guard import resolve_sell_cost_ref
+                        _fb = get_fifo_cost_basis(symbol, units_held=holding_qty if holding_qty > 0 else None) or {}
+                        bag_max = float(_fb.get('max_buy_price') or 0.0)
+                        cost_floor = resolve_sell_cost_ref(
+                            symbol,
+                            portfolio_avg_cost=h_cost,
+                            units_held=holding_qty if holding_qty > 0 else None,
+                            current_price=price,
+                        )
+                    except Exception:
+                        pass
+                    floor = max(float(h_cost or 0), float(bag_max or 0), float(cost_floor or 0))
                     has_loss_sells = any(
-                        (l.price * l.qty * (1.0 - fee_factor)) - (
-                            float(getattr(l, 'linked_buy_price', 0) or h_cost) * l.qty * (1.0 + fee_factor)
-                        ) < 0.50
+                        (
+                            (l.price * l.qty * (1.0 - fee_factor)) - (
+                                float(getattr(l, 'linked_buy_price', 0) or floor) * l.qty * (1.0 + fee_factor)
+                            ) < 0.50
+                        ) or (floor > 0 and float(l.price) + 1e-12 < floor)
                         for l in open_sells
                     )
                     if has_loss_sells:
                         invalid_sells = True
-                        logger.info(f"🛡️ Re-aligning below-cost sell orders for {symbol} to guaranteed profit geometry (Cost: ${h_cost:.4f}, Live: ${price:.4f})...")
+                        logger.info(
+                            f"🛡️ Re-aligning below-lot sell orders for {symbol} "
+                            f"(floor ${floor:.4f}, bag_max ${bag_max:.4f}, live ${price:.4f})..."
+                        )
                     elif symbol in (set(spot_settings.asset_list) | _active_roster) and price > (h_cost * 1.01):
                         # In profit: rebuild if resting sells are >1.5% above market (was 3% — too loose)
                         min_sell_p = min((l.price for l in open_sells), default=0.0)
