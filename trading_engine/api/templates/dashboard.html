@@ -371,7 +371,9 @@ function renderSpotStatus(data) {
       'BTC/USDT','ETH/USDT','SOL/USDT','NEAR/USDT','AVAX/USDT','SUI/USDT','FET/USDT','UNI/USDT','ARKM/USDT',
       'ICP/USDT','ARB/USDT','RENDER/USDT','ADA/USDT','APT/USDT',
       'LINK/USDT','INJ/USDT','DOT/USDT','ATOM/USDT','ALGO/USDT','OP/USDT',
-      'TIA/USDT','SEI/USDT','XAUT/USDT'
+      'TIA/USDT','SEI/USDT','XAUT/USDT',
+      // Universe extras (Top-8 eligible)
+      'XRP/USDT','LTC/USDT','XLM/USDT'
     ]);
 
     const allAssets = [...new Set([...Object.keys(regimes),...Object.keys(grids),...(p.holdings?Object.keys(p.holdings):[])])]

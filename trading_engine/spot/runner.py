@@ -1115,7 +1115,7 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
 
     regimes = {}
     grids = {}
-    display_regime_symbols = set(spot_settings.asset_list) | _active_roster | set(_portfolio.holdings.keys() if hasattr(_portfolio, 'holdings') and isinstance(_portfolio.holdings, dict) else [])
+    display_regime_symbols = set(ALL_23_HALAL_UNIVERSE) | set(spot_settings.asset_list) | _active_roster | set(_portfolio.holdings.keys() if hasattr(_portfolio, 'holdings') and isinstance(_portfolio.holdings, dict) else [])
     for sym in display_regime_symbols:
         if is_fee_buffer_asset(sym) or is_never_sell_symbol(sym):
             continue
