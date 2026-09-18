@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, replace, field
 from typing import Optional, List, Dict, Any
 import json
 import math
@@ -132,7 +132,8 @@ class GridEngine:
         self.fee_rate = fee_rate
         
         self.current_regime: str = 'RANGE'
-        self.params: RegimeParams = REGIME_PARAMS[self.current_regime]
+        # Per-engine copy — never share REGIME_PARAMS templates (buy_levels=0 must not poison peers)
+        self.params: RegimeParams = replace(REGIME_PARAMS[self.current_regime])
         
         self.grid_levels: List[GridLevel] = []
         self.completed_cycles: List[Dict[str, Any]] = []
@@ -157,13 +158,15 @@ class GridEngine:
             orig = REGIME_PARAMS.get(regime)
             if not orig:
                 return
-            REGIME_PARAMS[regime] = RegimeParams(
-                grid_spacing=float(sym_params.get('grid_spacing', orig.grid_spacing)),
-                buy_levels  =int(sym_params.get('buy_levels',    orig.buy_levels)),
-                sell_levels =int(sym_params.get('sell_levels',   orig.sell_levels)),
-                capital_pct =float(sym_params.get('capital_pct', orig.capital_pct)),
-                base_hold_pct=orig.base_hold_pct,
-            )
+            # Apply onto this engine only — never overwrite global REGIME_PARAMS templates
+            if self.current_regime == regime:
+                self.params = RegimeParams(
+                    grid_spacing=float(sym_params.get('grid_spacing', orig.grid_spacing)),
+                    buy_levels  =int(sym_params.get('buy_levels',    orig.buy_levels)),
+                    sell_levels =int(sym_params.get('sell_levels',   orig.sell_levels)),
+                    capital_pct =float(sym_params.get('capital_pct', orig.capital_pct)),
+                    base_hold_pct=orig.base_hold_pct,
+                )
             logger.info(f"Loaded optimized params [{self.symbol} {regime}]: "
                         f"spacing={sym_params['grid_spacing']:.3f} "
                         f"buy={sym_params['buy_levels']} sell={sym_params['sell_levels']} "
@@ -171,14 +174,25 @@ class GridEngine:
         except Exception as e:
             logger.debug(f"Could not load best_params for {self.symbol}: {e}")
 
+    def restore_regime_params(self) -> None:
+        """Re-copy template params for current regime (clears sticky buy_levels=0 after demote/ceiling)."""
+        if self.current_regime not in REGIME_PARAMS:
+            return
+        self.params = replace(REGIME_PARAMS[self.current_regime])
+        try:
+            self._apply_best_params()
+        except Exception:
+            pass
+
     def set_regime(self, regime: str, exchange: Optional[ccxt.Exchange] = None):
+
         if regime not in REGIME_PARAMS:
             logger.error(f"Invalid regime {regime}")
             return
             
         old_params = self.params
         self.current_regime = regime
-        self.params = REGIME_PARAMS[regime]
+        self.params = replace(REGIME_PARAMS[regime])  # copy — demote/ceiling must not zero global template
         
         if regime == 'BEAR':
             self.cancel_buys_only(exchange or self.exchange)

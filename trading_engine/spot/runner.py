@@ -531,6 +531,18 @@ def run_spot_regime_check():
                     engine.allocated_usd = new_asset_usd
                     engine._last_rebuild_time = 0.0  # Force grid rebuild for new Top Mover
                     logger.info(f"🔄 Rotated Capital Allocation for {symbol}: ${new_asset_usd:,.2f} ({alloc_pct*100:.1f}%)")
+                # If a prior demote/ceiling zeroed buy_levels on this engine, restore template
+                # so Top-8 books can place buys again (params are per-engine copies).
+                if (
+                    new_asset_usd >= 35.0
+                    and getattr(engine, 'current_regime', 'RANGE') != 'BEAR'
+                    and hasattr(engine, 'params') and engine.params
+                    and int(getattr(engine.params, 'buy_levels', 0) or 0) <= 0
+                    and hasattr(engine, 'restore_regime_params')
+                ):
+                    engine.restore_regime_params()
+                    engine._last_rebuild_time = 0.0
+                    logger.info(f"♻️ [{symbol}] Restored regime buy_levels after sticky sell-only lock")
     except Exception as e_rot:
         logger.debug(f"Capital rotation rebalance: {e_rot}")
 
