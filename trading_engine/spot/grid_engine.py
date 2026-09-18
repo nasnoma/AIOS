@@ -307,6 +307,15 @@ class GridEngine:
             except Exception:
                 regime_spacing = 0.012
             spacing_scale = max(0.70, min(2.20, regime_spacing / 0.0120))
+            # Weekend flush: widen buy dips only (no size boost). Fri 18:00–Sun 18:00 UTC.
+            # Applied to the current tier ladder — the old spacing*=1.45 path is dead after ATR tiers.
+            is_wknd = is_weekend_window()
+            if is_wknd:
+                spacing_scale *= 1.35
+                logger.info(
+                    f"🌙 Weekend Dip Mode [{self.symbol}]: buy dip ladder widened 1.35x "
+                    f"(spacing_scale={spacing_scale:.2f})"
+                )
             for i in range(buy_count):
                 dip_pct, level_boost = tier_configs[i]
                 dip_pct = dip_pct * spacing_scale
