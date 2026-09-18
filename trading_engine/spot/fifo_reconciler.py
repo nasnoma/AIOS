@@ -35,6 +35,8 @@ ALL_SYMBOLS = [
     "UNI/USDT", "RENDER/USDT", "ADA/USDT", "ICP/USDT", "LINK/USDT",
     "ETH/USDT", "ATOM/USDT", "DOT/USDT", "ALGO/USDT", "XAUT/USDT",
     "BTC/USDT",  # MNT excluded — fee-buffer hold-only, never trade cycles
+    # Screened universe add — must stay here or fills are dropped from FIFO ledger
+    "XRP/USDT", "LTC/USDT", "XLM/USDT",
 ]
 
 
