@@ -207,7 +207,12 @@ class GridEngine:
         # Throttle rebuilds: don't rebuild more than once per 10 minutes
         # unless grid is completely empty or force=True
         has_open_buys = any(l.status == 'open' and l.side == 'buy' for l in self.grid_levels)
-        if not force and has_open_buys and (now - self._last_rebuild_time) < 600:
+        _wknd_now = is_weekend_window()
+        _wknd_prev = getattr(self, '_weekend_mode_at_build', _wknd_now)
+        _weekend_edge = bool(_wknd_prev != _wknd_now)
+        # Allow immediate rebuild when Fri/Sun weekend window flips so resting
+        # weekday buys are not left on the book for hours after 21:00 UTC.
+        if not force and has_open_buys and (now - self._last_rebuild_time) < 600 and not _weekend_edge:
             return
         self._last_rebuild_time = now
 
@@ -320,6 +325,9 @@ class GridEngine:
                     f"🌙 Weekend Dip Mode [{self.symbol}]: buy dip ladder widened 1.35x "
                     f"(spacing_scale={spacing_scale:.2f})"
                 )
+            self._weekend_mode_at_build = is_wknd
+            # Report effective L1 dip (post weekend/regime scale), not raw params.grid_spacing
+            self.current_spacing = float(0.0078 * spacing_scale)
             for i in range(buy_count):
                 dip_pct, level_boost = tier_configs[i]
                 dip_pct = dip_pct * spacing_scale
@@ -380,7 +388,11 @@ class GridEngine:
                     size_usd=lvl_size
                 ))
 
-        self.current_spacing = float(getattr(self.params, "grid_spacing", 0.0078) or 0.0078)
+        # Buy ladder already set current_spacing + weekend flag when buys ran.
+        # Only seed defaults when this rebuild skipped the buy path entirely.
+        if not hasattr(self, '_weekend_mode_at_build'):
+            self._weekend_mode_at_build = is_weekend_window()
+            self.current_spacing = float(getattr(self.params, "grid_spacing", 0.0078) or 0.0078)
 
 
 

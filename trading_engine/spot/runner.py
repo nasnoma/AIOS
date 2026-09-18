@@ -271,6 +271,7 @@ from trading_engine.config import spot_settings, settings
 from trading_engine.spot.regime_detector import RegimeDetector
 from trading_engine.spot.spot_portfolio import SpotPortfolio
 from trading_engine.spot.grid_engine import GridEngine
+from trading_engine.spot.grid_engine import is_weekend_window
 from trading_engine.spot.dca_manager import DCAManager
 
 _portfolio = SpotPortfolio()
@@ -831,6 +832,26 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 # When buy orders are paused (e.g. cash reserve floor or sell-only holdings), it is NOT stale.
                 is_stale = bool(max_buy_p > 0 and (max_buy_p > price * 1.015 or max_buy_p < price * 0.985))
                 force_reset = getattr(engine, '_last_rebuild_time', 0) == 0
+
+                # Weekend window edge: rebuild buys only so 1.35x dip ladder engages/exits
+                # without waiting for a 1.5% price drift (sells left untouched).
+                try:
+                    from trading_engine.spot.grid_engine import is_weekend_window
+                    _wknd_now = is_weekend_window()
+                    _wknd_built = getattr(engine, '_weekend_mode_at_build', None)
+                    if _wknd_built is not None and _wknd_now != _wknd_built:
+                        logger.info(
+                            f"🌙 [{symbol}] Weekend dip window {'ENTER' if _wknd_now else 'EXIT'} "
+                            f"— rebuilding buys for {'1.35x' if _wknd_now else 'weekday'} spacing"
+                        )
+                        engine.cancel_buys_only(exchange)
+                        engine._last_rebuild_time = 0.0
+                        engine.build_grid(price, _portfolio, atr=atr_val, force=False, dip_boost=1.0)
+                        engine.place_grid_orders(_portfolio, exchange)
+                        open_buys = [l for l in engine.grid_levels if l.status == 'open' and l.side == 'buy']
+                        max_buy_p = max((l.price for l in open_buys), default=0.0)
+                except Exception as e_wknd:
+                    logger.debug(f"[{symbol}] weekend edge rebuild skipped: {e_wknd}")
 
                 # Also check if we hold coins for this asset but have 0 open sell orders (critical for profit taking)
                 holding_qty = _portfolio.get_position(symbol) if hasattr(_portfolio, 'get_position') else 0.0
