@@ -99,16 +99,20 @@ class GridLevel:
 def is_weekend_window() -> bool:
     """
     Returns True during the low-liquidity weekend flush window:
-    Friday 18:00 UTC through Sunday 18:00 UTC (including all of Saturday).
+    Friday 21:00 UTC through Sunday 21:00 UTC (including all of Saturday).
+
+    Timed after typical U.S. cash/ETF session fade (~20:00–21:00 UTC Fri)
+    through thin Sat/Sun books; exits before Asia Monday liquidity refill.
+    (CME crypto is largely 24/7 since 2026 — this tracks spot/ETF thinness, not CME gaps.)
     """
     now_utc = datetime.now(timezone.utc)
     weekday = now_utc.weekday()  # 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri, 5=Sat, 6=Sun
     hour = now_utc.hour
-    if weekday == 4 and hour >= 18:       # Friday evening
+    if weekday == 4 and hour >= 21:       # Friday after U.S. session fade
         return True
     elif weekday == 5:                     # Saturday all day
         return True
-    elif weekday == 6 and hour < 18:       # Sunday before 18:00 UTC
+    elif weekday == 6 and hour < 21:       # Sunday before Asia Monday refill
         return True
     return False
 
@@ -307,7 +311,7 @@ class GridEngine:
             except Exception:
                 regime_spacing = 0.012
             spacing_scale = max(0.70, min(2.20, regime_spacing / 0.0120))
-            # Weekend flush: widen buy dips only (no size boost). Fri 18:00–Sun 18:00 UTC.
+            # Weekend flush: widen buy dips only (no size boost). Fri 21:00–Sun 21:00 UTC.
             # Applied to the current tier ladder — the old spacing*=1.45 path is dead after ATR tiers.
             is_wknd = is_weekend_window()
             if is_wknd:
