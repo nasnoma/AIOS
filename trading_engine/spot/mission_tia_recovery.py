@@ -22,11 +22,11 @@ from typing import Tuple
 from loguru import logger
 
 TIA_SYMBOL = "TIA/USDT"
-SLEEVE_USD = 1200.0  # sized for ~5% bounce to fee-proof BE from ~0.407
+SLEEVE_USD = 0.0  # disabled — no average-down (reverted 2026-09-19)
 # Tiny net target on full-bag recovery exit (USD), on top of fee-proof floor
 RECOVERY_MIN_NET_USD = 3.0
 # Soft ceiling while mission averaging: do not push TIA above this % equity
-MISSION_EXPOSURE_SOFT_CAP = 0.24  # allow ~23% bag during recovery sleeve
+MISSION_EXPOSURE_SOFT_CAP = 0.10  # no special TIA buy room
 
 _STATE_PATH = Path(__file__).resolve().parents[2] / "data" / "tia_recovery_mission.json"
 _lock = threading.Lock()
@@ -39,7 +39,7 @@ def _load() -> dict:
     except Exception as e:
         logger.debug(f"tia mission load: {e}")
     return {
-        "active": True,
+        "active": False,
         "sleeve_usd": SLEEVE_USD,
         "spent_usd": 0.0,
         "completed": False,

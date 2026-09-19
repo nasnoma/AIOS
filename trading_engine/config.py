@@ -250,7 +250,7 @@ class SpotGridSettings(BaseSettings):
 
     # ── Capital ────────────────────────────────────────────────
     total_capital_pct: float = 0.90   # 90% active deployment; keep ~10% dry powder
-    usdt_hard_reserve_pct: float = 0.02  # TEMP 2% while TIA recovery sleeve runs (was 0.10; restore to 0.10 after TIA fee-proof exit)
+    usdt_hard_reserve_pct: float = 0.10  # 10% USDT floor — pause buys before free cash is trapped in bags
 
     # ── Asset Split (Performance-Weighted by 30-Day Volatility & Cycle Potential) ──────
     btc_allocation_pct: float = 0.00   # 0% → BTC (low volatility, reallocated to top alts)
