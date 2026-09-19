@@ -924,18 +924,16 @@ class GridEngine:
                                 if self._refuse_protected_sell():
                                     order = None
                                 else:
-                                    
-                        # HARD: never place a sell below fee-proof(bag FIFO max lot)
-                        if level.side == 'sell':
-                            ok_bag, why_bag = assert_sell_clears_bag_max(
-                                self.symbol, float(price_val), float(qty_val),
-                                units_held=float(getattr(self, '_last_base_qty_held', 0) or 0),
-                            )
-                            if not ok_bag:
-                                logger.error(f"🛑 [{self.symbol}] BLOCKED sell @{price_val} — {why_bag}")
-                                level.status = 'cancelled'
-                                continue
-                            order = exchange.create_limit_sell_order(self.symbol, qty_val, price_val, params)
+                                    # HARD: never place a sell below fee-proof(bag FIFO max lot)
+                                    ok_bag, why_bag = assert_sell_clears_bag_max(
+                                        self.symbol, float(price_val), float(qty_val),
+                                        units_held=float(getattr(self, '_last_base_qty_held', 0) or 0),
+                                    )
+                                    if not ok_bag:
+                                        logger.error(f"🛑 [{self.symbol}] BLOCKED sell @{price_val} — {why_bag}")
+                                        level.status = 'cancelled'
+                                        continue
+                                    order = exchange.create_limit_sell_order(self.symbol, qty_val, price_val, params)
                         except Exception as e_post:
                             # If postOnly was rejected because price is at or across spread, retry with standard limit order
                             if 'postonly' in str(e_post).lower() or 'post_only' in str(e_post).lower() or '170193' in str(e_post):
