@@ -5,7 +5,7 @@ Goal: use a capped USDT sleeve to average down so a single fee-proof bag exit
 can reach breakeven / tiny profit sooner — without open-ended DCA.
 
 Rules:
-- Max sleeve notional (default $350). Spent fills are tracked on disk.
+- Max sleeve notional (default $1200). Spent fills are tracked on disk.
 - May bypass the 10% exposure hard sell-only *only for TIA* while sleeve remains.
 - Still subject to crash halt, dump brake, trend veto, exitability, USDT reserve,
   and TIA unlock buy-pauses.
@@ -22,11 +22,11 @@ from typing import Tuple
 from loguru import logger
 
 TIA_SYMBOL = "TIA/USDT"
-SLEEVE_USD = 350.0
+SLEEVE_USD = 1200.0  # sized for ~5% bounce to fee-proof BE from ~0.407
 # Tiny net target on full-bag recovery exit (USD), on top of fee-proof floor
 RECOVERY_MIN_NET_USD = 3.0
 # Soft ceiling while mission averaging: do not push TIA above this % equity
-MISSION_EXPOSURE_SOFT_CAP = 0.14
+MISSION_EXPOSURE_SOFT_CAP = 0.24  # allow ~23% bag during recovery sleeve
 
 _STATE_PATH = Path(__file__).resolve().parents[2] / "data" / "tia_recovery_mission.json"
 _lock = threading.Lock()
