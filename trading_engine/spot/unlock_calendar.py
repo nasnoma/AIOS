@@ -16,6 +16,9 @@ UNLOCK_PAD_DAYS = 4
 # ARB Sep 23 unlock: buy-only pause through end of Sep 27 UTC (resume Sep 28 00:00 UTC).
 # Sells / resting TPs stay active. User-approved 2026-09-19.
 ARB_HARD_PAUSE_UNTIL_UTC = datetime(2026, 9, 28, 0, 0, 0, tzinfo=timezone.utc)
+# User uncomfortable holding through unlock: force resting sells to this pin (fee-proof vs cost still enforced).
+# Cleared automatically when bag is flat / pause expires — or set to 0 to disable.
+ARB_PINNED_SELL_PX = 0.2121  # near-market exit lock-in (~+14.5% vs ~0.1852 cost); buys still paused
 
 # Explicit unlock dates (UTC). TIA month-end vesting; ARB listed for visibility (hard floor above is authoritative until it expires).
 _EXPLICIT_UNLOCKS: List[Tuple[str, date]] = [

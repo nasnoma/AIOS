@@ -11,7 +11,7 @@ from uuid import uuid4
 # Path where auto_optimizer.py writes winning params
 _BEST_PARAMS_FILE = Path(__file__).parent / 'best_params.json'
 
-# 🛑 User Pause on ARB: strictly prevent buying ARB until after September 23, 2026 UTC (resumes Sept 24 00:00 UTC) — covers mid/late-Sep unlock window
+# 🛑 ARB buy-only pause through Sep 27 2026 UTC (resumes Sep 28 00:00 UTC) — Sep 23 unlock + aftershock; sells stay
 ARB_PAUSE_UNTIL_UTC = datetime(2026, 9, 28, 0, 0, 0, tzinfo=timezone.utc)  # keep in sync with unlock_calendar.ARB_HARD_PAUSE_UNTIL_UTC
 
 from trading_engine.spot.asset_guards import is_never_sell_symbol, is_fee_buffer_asset, is_never_buy_symbol
@@ -27,7 +27,7 @@ from trading_engine.spot.sell_guard import (
 )
 
 def is_arb_buy_paused(symbol: str) -> bool:
-    """True if buys are paused for unlock risk (TIA calendar only; ARB pauses removed)."""
+    """True if buys are paused for unlock risk (ARB hard floor through Sep 27 UTC; TIA calendar pads)."""
     try:
         from trading_engine.spot.unlock_calendar import is_unlock_buy_paused
         paused, _reason = is_unlock_buy_paused(symbol)
@@ -539,6 +539,19 @@ class GridEngine:
 
                     # Absolute Hard Safety Gate: target_p MUST be strictly >= min_fee_proof_price
                     target_p = max(target_p, min_fee_proof_price)
+
+                    # ARB comfort exit pin (buy-paused through unlock): keep sells at pin, not far TPs
+                    try:
+                        if str(self.symbol).upper().startswith("ARB"):
+                            from trading_engine.spot.unlock_calendar import ARB_PINNED_SELL_PX
+                            pinned = float(ARB_PINNED_SELL_PX or 0.0)
+                            if pinned > 0:
+                                if float(current_price) >= float(pinned):
+                                    target_p = max(float(min_fee_proof_price), float(current_price) * 1.0008)
+                                else:
+                                    target_p = max(float(min_fee_proof_price), float(pinned))
+                    except Exception:
+                        pass
                     # TIA recovery mission: pull resting sells down to fee-proof BE (+tiny net)
                     # so an all-bag exit can clear sooner after averaging down.
                     try:
@@ -657,6 +670,19 @@ class GridEngine:
 
                     # Absolute Hard Safety Gate: target_p MUST be strictly >= min_fee_proof_price
                     target_p = max(target_p, min_fee_proof_price)
+
+                    # ARB comfort exit pin (buy-paused through unlock): keep sells at pin, not far TPs
+                    try:
+                        if str(self.symbol).upper().startswith("ARB"):
+                            from trading_engine.spot.unlock_calendar import ARB_PINNED_SELL_PX
+                            pinned = float(ARB_PINNED_SELL_PX or 0.0)
+                            if pinned > 0:
+                                if float(current_price) >= float(pinned):
+                                    target_p = max(float(min_fee_proof_price), float(current_price) * 1.0008)
+                                else:
+                                    target_p = max(float(min_fee_proof_price), float(pinned))
+                    except Exception:
+                        pass
                     # TIA recovery mission: pull resting sells down to fee-proof BE (+tiny net)
                     # so an all-bag exit can clear sooner after averaging down.
                     try:
