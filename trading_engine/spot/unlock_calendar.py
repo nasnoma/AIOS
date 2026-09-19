@@ -1,40 +1,19 @@
 """
-Small unlock calendar for ARB and TIA only.
+Unlock calendar — TIA only (ARB unlock buy-pauses removed by user 2026-09-19).
 
-Around known vesting/unlock dates, new buys are paused (sell-only / resting TPs kept).
-Unlock ≠ guaranteed dump, but supply overhang raises knife risk for the Spot grid.
+Around known TIA vesting/unlock dates, new buys are paused (sell-only / resting TPs kept).
+ARB trades under normal entry guards only (no hard floor, no unlock pad).
 """
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 from typing import Iterable, List, Optional, Tuple
 
 # Buy-pause window: pad days before and after each unlock date (UTC calendar day)
 UNLOCK_PAD_DAYS = 4
 
-# Hard floor: no ARB buys until this instant (covers mid/late-Sep 2026 unlock cluster)
-ARB_HARD_PAUSE_UNTIL_UTC = datetime(2026, 9, 24, 0, 0, 0, tzinfo=timezone.utc)
-
-# Explicit unlock dates (UTC). ARB: mid-month + 23rd cluster through early 2027.
-# TIA: month-end style vesting events (Tokenomics / DefiLlama-style calendars).
+# Explicit unlock dates (UTC). TIA only.
 _EXPLICIT_UNLOCKS: List[Tuple[str, date]] = [
-    # ARB — Sep 2026 cluster (trackers cite ~16 and/or ~23)
-    ("ARB/USDT", date(2026, 9, 16)),
-    ("ARB/USDT", date(2026, 9, 23)),
-    # ARB — remaining monthly-ish team/investor vest window (~through Mar 2027)
-    ("ARB/USDT", date(2026, 10, 16)),
-    ("ARB/USDT", date(2026, 10, 23)),
-    ("ARB/USDT", date(2026, 11, 16)),
-    ("ARB/USDT", date(2026, 11, 23)),
-    ("ARB/USDT", date(2026, 12, 16)),
-    ("ARB/USDT", date(2026, 12, 23)),
-    ("ARB/USDT", date(2027, 1, 16)),
-    ("ARB/USDT", date(2027, 1, 23)),
-    ("ARB/USDT", date(2027, 2, 16)),
-    ("ARB/USDT", date(2027, 2, 23)),
-    ("ARB/USDT", date(2027, 3, 16)),
-    ("ARB/USDT", date(2027, 3, 23)),
-    # TIA — month-end unlocks (smaller overhang than ARB; still pause buys near event)
     ("TIA/USDT", date(2026, 9, 30)),
     ("TIA/USDT", date(2026, 10, 31)),
     ("TIA/USDT", date(2026, 11, 30)),
@@ -84,21 +63,18 @@ def is_unlock_buy_paused(
     pad_days: int = UNLOCK_PAD_DAYS,
 ) -> Tuple[bool, str]:
     """
-    True if new buys should be paused for this symbol due to unlock calendar / hard ARB floor.
-    Only ARB and TIA are covered. Returns (paused, reason).
+    True if new buys should be paused for unlock risk.
+    ARB: never paused here (hard floor + ARB unlock pads removed).
+    TIA: ±pad around listed unlock dates only.
     """
     now = now or datetime.now(timezone.utc)
     if now.tzinfo is None:
         now = now.replace(tzinfo=timezone.utc)
     sym = _norm_symbol(symbol)
-    if sym not in ("ARB/USDT", "TIA/USDT"):
+    if sym == "ARB/USDT":
         return False, ""
-
-    if sym == "ARB/USDT" and now < ARB_HARD_PAUSE_UNTIL_UTC:
-        return True, (
-            f"ARB hard buy-pause until {ARB_HARD_PAUSE_UNTIL_UTC.date().isoformat()} UTC "
-            f"(mid/late-Sep unlock window)"
-        )
+    if sym != "TIA/USDT":
+        return False, ""
 
     today = now.date()
     pad = max(0, int(pad_days))

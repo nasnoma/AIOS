@@ -49,22 +49,16 @@ _last_blended_score_ts: float = 0.0
 _cached_blended_scores: dict[str, float] = {}
 
 # 🛑 User Pause on ARB: strictly prevent buying ARB until after September 23, 2026 UTC (resumes Sept 24 00:00 UTC) — covers mid/late-Sep unlock window
-ARB_PAUSE_UNTIL_UTC = datetime(2026, 9, 24, 0, 0, 0, tzinfo=timezone.utc)  # keep in sync with unlock_calendar.ARB_HARD_PAUSE_UNTIL_UTC
+ARB_PAUSE_UNTIL_UTC = datetime(2020, 1, 1, 0, 0, 0, tzinfo=timezone.utc)  # ARB hard pause removed 2026-09-19 (was 2026-09-24)
 
 def is_arb_buy_paused(symbol: str) -> bool:
-    """True if buys are paused for unlock risk (ARB/TIA calendar + ARB hard floor)."""
+    """True if buys are paused for unlock risk (TIA calendar only; ARB pauses removed)."""
     try:
         from trading_engine.spot.unlock_calendar import is_unlock_buy_paused
         paused, _reason = is_unlock_buy_paused(symbol)
-        if paused:
-            return True
+        return bool(paused)
     except Exception:
-        pass
-    # Fallback hard floor if calendar import fails
-    if symbol in ('ARB/USDT', 'ARB', 'TIA/USDT', 'TIA'):
-        if symbol in ('ARB/USDT', 'ARB') and datetime.now(timezone.utc) < ARB_PAUSE_UNTIL_UTC:
-            return True
-    return False
+        return False
 
 def _get_dynamic_hot_asset_allocations(
     universe: list[str] = None,
@@ -199,8 +193,20 @@ def _get_dynamic_hot_asset_allocations(
                 holding_val = u_held * px_ref
                 exposure_pct = holding_val / total_equity
                 if exposure_pct >= 0.10:
-                    is_capped = True
-                    logger.info(f"🛑 [CAP REACHED] {sym} exposure (${holding_val:,.2f}, {exposure_pct*100:.1f}%) >= 10% equity ceiling. Disqualified from active buy allocation to prevent trapped capital.")
+                    _keep = False
+                    try:
+                        from trading_engine.spot.mission_tia_recovery import allows_exposure_bypass, mission_buy_room_usd
+                        if allows_exposure_bypass(sym) and mission_buy_room_usd(sym, equity=total_equity, holding_usd=holding_val) >= 35.0:
+                            _keep = True
+                            logger.info(
+                                f"🎯 [TIA MISSION] {sym} kept in buy allocation despite {exposure_pct*100:.1f}% eq "
+                                f"(recovery sleeve active)"
+                            )
+                    except Exception:
+                        pass
+                    if not _keep:
+                        is_capped = True
+                        logger.info(f"🛑 [CAP REACHED] {sym} exposure (${holding_val:,.2f}, {exposure_pct*100:.1f}%) >= 10% equity ceiling. Disqualified from active buy allocation to prevent trapped capital.")
 
         # 🛑 Individual BEAR Trend Filter (Anti-Falling-Knife Guard)
         is_bear = False
@@ -513,6 +519,12 @@ def run_spot_regime_check():
                 h_val = u_held * p_ref
             
             max_headroom_usd = max(0.0, (total_eq * 0.10) - h_val)
+            try:
+                from trading_engine.spot.mission_tia_recovery import allows_exposure_bypass, mission_buy_room_usd
+                if allows_exposure_bypass(symbol):
+                    max_headroom_usd = max(max_headroom_usd, mission_buy_room_usd(symbol, equity=total_eq, holding_usd=h_val))
+            except Exception:
+                pass
             new_asset_usd = min(new_asset_usd, max_headroom_usd)
 
             engine = _grid_engines.get(symbol)
@@ -778,7 +790,18 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 if ref_p <= 0.0 and symbol in ALL_23_HISTORICAL_COSTS:
                     ref_p = float(ALL_23_HISTORICAL_COSTS[symbol])
                 h_val = h_qty * ref_p
-                if (h_val / tot_eq_val) >= 0.10:
+                _tia_bypass = False
+                try:
+                    from trading_engine.spot.mission_tia_recovery import allows_exposure_bypass, mission_buy_room_usd
+                    if allows_exposure_bypass(symbol) and mission_buy_room_usd(symbol, equity=tot_eq_val, holding_usd=h_val) >= 35.0:
+                        _tia_bypass = True
+                        logger.info(
+                            f"🎯 [{symbol}] [TIA MISSION] Exposure ceiling bypass — recovery sleeve still has room "
+                            f"(holding ${h_val:,.2f}, {(h_val/tot_eq_val)*100:.1f}% eq)"
+                        )
+                except Exception:
+                    _tia_bypass = False
+                if (h_val / tot_eq_val) >= 0.10 and not _tia_bypass:
                     engine.allocated_usd = 0.0
                     if hasattr(engine, 'params') and engine.params:
                         engine.params.buy_levels = 0

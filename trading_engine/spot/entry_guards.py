@@ -325,7 +325,14 @@ def remaining_buy_room_usd(
             return 1e12
         cur = _holding_value_usd(symbol, portfolio=portfolio, price=price)
         room = (float(target_pct) * eq) - cur - float(already_planned_usd or 0.0)
-        return max(0.0, room)
+        room = float(max(0.0, room))
+        try:
+            from trading_engine.spot.mission_tia_recovery import mission_buy_room_usd
+            held = _holding_value_usd(symbol, portfolio=portfolio, price=price) if portfolio is not None else 0.0
+            room = max(room, float(mission_buy_room_usd(symbol, equity=eq, holding_usd=held)))
+        except Exception:
+            pass
+        return room
     except Exception as e:
         logger.debug(f"remaining_buy_room_usd [{symbol}]: {e}")
         return 1e12
@@ -346,6 +353,15 @@ def is_exposure_capped(symbol: str, portfolio=None, equity: float = 0.0, price: 
             return False, ""
         pct = val / eq
         if pct >= EXPOSURE_CAP_PCT:
+            # TIA recovery mission may average down within a capped sleeve
+            try:
+                from trading_engine.spot.mission_tia_recovery import allows_exposure_bypass, mission_buy_room_usd
+                if allows_exposure_bypass(symbol):
+                    room = mission_buy_room_usd(symbol, equity=eq, holding_usd=val)
+                    if room >= 35.0:
+                        return False, f"TIA recovery mission bypass ({pct*100:.1f}% eq, sleeve room ${room:.0f})"
+            except Exception:
+                pass
             return True, f"exposure cap {pct*100:.1f}% >= {EXPOSURE_CAP_PCT*100:.0f}% equity (sell-only, no average-down)"
         return False, ""
     except Exception as e:

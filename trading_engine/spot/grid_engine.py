@@ -12,7 +12,7 @@ from uuid import uuid4
 _BEST_PARAMS_FILE = Path(__file__).parent / 'best_params.json'
 
 # 🛑 User Pause on ARB: strictly prevent buying ARB until after September 23, 2026 UTC (resumes Sept 24 00:00 UTC) — covers mid/late-Sep unlock window
-ARB_PAUSE_UNTIL_UTC = datetime(2026, 9, 24, 0, 0, 0, tzinfo=timezone.utc)  # keep in sync with unlock_calendar.ARB_HARD_PAUSE_UNTIL_UTC
+ARB_PAUSE_UNTIL_UTC = datetime(2020, 1, 1, 0, 0, 0, tzinfo=timezone.utc)  # ARB hard pause removed 2026-09-19
 
 from trading_engine.spot.asset_guards import is_never_sell_symbol, is_fee_buffer_asset, is_never_buy_symbol
 from trading_engine.spot.entry_guards import entry_buys_allowed, remaining_buy_room_usd, EXPOSURE_TARGET_PCT
@@ -27,19 +27,13 @@ from trading_engine.spot.sell_guard import (
 )
 
 def is_arb_buy_paused(symbol: str) -> bool:
-    """True if buys are paused for unlock risk (ARB/TIA calendar + ARB hard floor)."""
+    """True if buys are paused for unlock risk (TIA calendar only; ARB pauses removed)."""
     try:
         from trading_engine.spot.unlock_calendar import is_unlock_buy_paused
         paused, _reason = is_unlock_buy_paused(symbol)
-        if paused:
-            return True
+        return bool(paused)
     except Exception:
-        pass
-    # Fallback hard floor if calendar import fails
-    if symbol in ('ARB/USDT', 'ARB', 'TIA/USDT', 'TIA'):
-        if symbol in ('ARB/USDT', 'ARB') and datetime.now(timezone.utc) < ARB_PAUSE_UNTIL_UTC:
-            return True
-    return False
+        return False
 
 @dataclass
 class RegimeParams:
@@ -269,10 +263,22 @@ class GridEngine:
                 h_pos = portfolio.get_position(self.symbol) if hasattr(portfolio, 'get_position') else 0.0
                 h_val = h_pos * current_price
                 if (h_val / tot_eq_val) >= EXPOSURE_TARGET_PCT:
-                    base_order_size = 0.0
-                    self.params.buy_levels = 0
-                    self.allocated_usd = 0.0
-                    logger.info(f"🛑 [{self.symbol}] Holding value (${h_val:,.2f}, {(h_val/tot_eq_val)*100:.1f}%) >= 10% equity limit. Suppressing all grid buy levels.")
+                    _tia_bypass = False
+                    try:
+                        from trading_engine.spot.mission_tia_recovery import allows_exposure_bypass, mission_buy_room_usd
+                        if allows_exposure_bypass(self.symbol) and mission_buy_room_usd(self.symbol, equity=tot_eq_val, holding_usd=h_val) >= 35.0:
+                            _tia_bypass = True
+                            logger.info(
+                                f"🎯 [{self.symbol}] [TIA MISSION] Allowing recovery buys despite "
+                                f"{(h_val/tot_eq_val)*100:.1f}% equity (sleeve room left)"
+                            )
+                    except Exception:
+                        pass
+                    if not _tia_bypass:
+                        base_order_size = 0.0
+                        self.params.buy_levels = 0
+                        self.allocated_usd = 0.0
+                        logger.info(f"🛑 [{self.symbol}] Holding value (${h_val:,.2f}, {(h_val/tot_eq_val)*100:.1f}%) >= 10% equity limit. Suppressing all grid buy levels.")
 
         # 🛑 User Pause on ARB (Until After September 16, 2026 UTC):
         if is_arb_buy_paused(self.symbol):
@@ -526,6 +532,18 @@ class GridEngine:
 
                     # Absolute Hard Safety Gate: target_p MUST be strictly >= min_fee_proof_price
                     target_p = max(target_p, min_fee_proof_price)
+                    # TIA recovery mission: pull resting sells down to fee-proof BE (+tiny net)
+                    # so an all-bag exit can clear sooner after averaging down.
+                    try:
+                        from trading_engine.spot.mission_tia_recovery import (
+                            mission_active, recovery_sell_price,
+                        )
+                        if mission_active(self.symbol) and cost_ref > 0 and qty_per_sell > 0:
+                            rec_p = recovery_sell_price(cost_ref, qty_per_sell, fee_rate=fee_factor)
+                            if rec_p > 0:
+                                target_p = max(min_fee_proof_price, min(target_p, rec_p))
+                    except Exception:
+                        pass
 
                     # Post-only safety: if target_p <= current_price, current price is so high that target_p would cross spread,
                     # so place slightly above current_price while still strictly preserving profit
@@ -620,6 +638,18 @@ class GridEngine:
 
                     # Absolute Hard Safety Gate: target_p MUST be strictly >= min_fee_proof_price
                     target_p = max(target_p, min_fee_proof_price)
+                    # TIA recovery mission: pull resting sells down to fee-proof BE (+tiny net)
+                    # so an all-bag exit can clear sooner after averaging down.
+                    try:
+                        from trading_engine.spot.mission_tia_recovery import (
+                            mission_active, recovery_sell_price,
+                        )
+                        if mission_active(self.symbol) and cost_ref > 0 and qty_per_sell > 0:
+                            rec_p = recovery_sell_price(cost_ref, qty_per_sell, fee_rate=fee_factor)
+                            if rec_p > 0:
+                                target_p = max(min_fee_proof_price, min(target_p, rec_p))
+                    except Exception:
+                        pass
 
                     # Ensure post-only safety: target_p must be strictly above current_price
                     if target_p <= current_price:
@@ -963,6 +993,21 @@ class GridEngine:
                         new_sell.status = 'open'
                         new_sell.order_id = f'PAPER_{uuid4().hex[:8]}'
                     fills.append({'side': 'buy', 'price': level.price, 'qty': level.qty})
+                    try:
+                        from trading_engine.spot.mission_tia_recovery import (
+                            mission_active, record_buy_fill, recovery_sell_price,
+                        )
+                        record_buy_fill(self.symbol, float(level.price) * float(level.qty))
+                        if mission_active(self.symbol):
+                            rec = recovery_sell_price(cost_ref, level.qty, fee_rate=fee_factor)
+                            fee_floor = cost_ref * (1.0 + fee_factor) / max(1e-12, (1.0 - fee_factor))
+                            if rec > 0:
+                                sell_price = max(fee_floor, min(sell_price, rec))
+                                if self.grid_levels and self.grid_levels[-1].side == 'sell':
+                                    self.grid_levels[-1].price = sell_price
+                                    self.grid_levels[-1].size_usd = sell_price * level.qty
+                    except Exception as _e_m:
+                        logger.debug(f"tia mission buy-fill hook: {_e_m}")
                     logger.info(f"BUY filled at {level.price}. Created new SELL level at {sell_price:.4f} (CostRef: ${cost_ref:.4f}, Guaranteed Net: +${min_net_usd:.2f})")
 
                     
