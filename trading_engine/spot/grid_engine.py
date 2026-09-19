@@ -275,17 +275,24 @@ class GridEngine:
                     except Exception:
                         pass
                     if not _tia_bypass:
+                        # Suppress this build only — do NOT sticky-zero params.buy_levels
+                        # (that caused sell-only lock to persist after exposure drops).
                         base_order_size = 0.0
-                        self.params.buy_levels = 0
-                        self.allocated_usd = 0.0
-                        logger.info(f"🛑 [{self.symbol}] Holding value (${h_val:,.2f}, {(h_val/tot_eq_val)*100:.1f}%) >= 10% equity limit. Suppressing all grid buy levels.")
+                        logger.info(
+                            f"🛑 [{self.symbol}] Holding value (${h_val:,.2f}, "
+                            f"{(h_val/tot_eq_val)*100:.1f}%) >= {EXPOSURE_TARGET_PCT*100:.0f}% "
+                            f"pre-fill target. Suppressing buy levels this build."
+                        )
 
-        # 🛑 User Pause on ARB (Until After September 16, 2026 UTC):
+        # 🛑 Unlock-calendar buy pause (TIA near vesting; ARB pauses removed)
         if is_arb_buy_paused(self.symbol):
             base_order_size = 0.0
-            self.params.buy_levels = 0
-            self.allocated_usd = 0.0
-            logger.info(f"🛑 [{self.symbol}] User pause active until after September 16, 2026. Suppressing all grid buy levels.")
+            try:
+                from trading_engine.spot.unlock_calendar import is_unlock_buy_paused
+                _paused, _why = is_unlock_buy_paused(self.symbol)
+            except Exception:
+                _why = 'unlock buy-pause'
+            logger.info(f"🛑 [{self.symbol}] {_why or 'unlock buy-pause'}. Suppressing buy levels this build.")
 
         # 🛑 Anti-Falling-Knife Guard: strictly suppress buys in confirmed BEAR regimes or when buy_levels is 0
         if self.current_regime == 'BEAR' or self.params.buy_levels <= 0 or self.allocated_usd < 35.0:
@@ -536,9 +543,11 @@ class GridEngine:
                     # so an all-bag exit can clear sooner after averaging down.
                     try:
                         from trading_engine.spot.mission_tia_recovery import (
-                            mission_active, recovery_sell_price,
+                            is_tia, mission_active, recovery_sell_price,
                         )
-                        if mission_active(self.symbol) and cost_ref > 0 and qty_per_sell > 0:
+                        # TIA sell-only bags: always prefer fee-proof BE (+tiny net), mission or not.
+                        # Avoids rebuild stomping manual/near-BE exits back up toward ~0.48.
+                        if (is_tia(self.symbol) or mission_active(self.symbol)) and cost_ref > 0 and qty_per_sell > 0:
                             rec_p = recovery_sell_price(cost_ref, qty_per_sell, fee_rate=fee_factor)
                             if rec_p > 0:
                                 target_p = max(min_fee_proof_price, min(target_p, rec_p))
@@ -642,9 +651,11 @@ class GridEngine:
                     # so an all-bag exit can clear sooner after averaging down.
                     try:
                         from trading_engine.spot.mission_tia_recovery import (
-                            mission_active, recovery_sell_price,
+                            is_tia, mission_active, recovery_sell_price,
                         )
-                        if mission_active(self.symbol) and cost_ref > 0 and qty_per_sell > 0:
+                        # TIA sell-only bags: always prefer fee-proof BE (+tiny net), mission or not.
+                        # Avoids rebuild stomping manual/near-BE exits back up toward ~0.48.
+                        if (is_tia(self.symbol) or mission_active(self.symbol)) and cost_ref > 0 and qty_per_sell > 0:
                             rec_p = recovery_sell_price(cost_ref, qty_per_sell, fee_rate=fee_factor)
                             if rec_p > 0:
                                 target_p = max(min_fee_proof_price, min(target_p, rec_p))
