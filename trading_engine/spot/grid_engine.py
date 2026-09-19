@@ -543,14 +543,26 @@ class GridEngine:
                     # so an all-bag exit can clear sooner after averaging down.
                     try:
                         from trading_engine.spot.mission_tia_recovery import (
-                            is_tia, mission_active, recovery_sell_price,
+                            is_tia, mission_active, recovery_sell_price, status as tia_mission_status,
                         )
-                        # TIA sell-only bags: always prefer fee-proof BE (+tiny net), mission or not.
-                        # Avoids rebuild stomping manual/near-BE exits back up toward ~0.48.
                         if (is_tia(self.symbol) or mission_active(self.symbol)) and cost_ref > 0 and qty_per_sell > 0:
                             rec_p = recovery_sell_price(cost_ref, qty_per_sell, fee_rate=fee_factor)
+                            pinned = 0.0
+                            try:
+                                from trading_engine.spot.mission_tia_recovery import PINNED_SELL_PX
+                                pinned = float((tia_mission_status() or {}).get('pinned_sell_px') or PINNED_SELL_PX or 0.0)
+                            except Exception:
+                                try:
+                                    from trading_engine.spot.mission_tia_recovery import PINNED_SELL_PX as _pin
+                                    pinned = float(_pin)
+                                except Exception:
+                                    pinned = 0.4740
+                            # Floor at user-pinned lot-safe exit (e.g. $0.474); never pull below fee-proof or pin
+                            floor_p = max(min_fee_proof_price, pinned)
                             if rec_p > 0:
-                                target_p = max(min_fee_proof_price, min(target_p, rec_p))
+                                target_p = max(floor_p, min(target_p, max(rec_p, floor_p)))
+                            else:
+                                target_p = max(target_p, floor_p)
                     except Exception:
                         pass
 
@@ -651,14 +663,26 @@ class GridEngine:
                     # so an all-bag exit can clear sooner after averaging down.
                     try:
                         from trading_engine.spot.mission_tia_recovery import (
-                            is_tia, mission_active, recovery_sell_price,
+                            is_tia, mission_active, recovery_sell_price, status as tia_mission_status,
                         )
-                        # TIA sell-only bags: always prefer fee-proof BE (+tiny net), mission or not.
-                        # Avoids rebuild stomping manual/near-BE exits back up toward ~0.48.
                         if (is_tia(self.symbol) or mission_active(self.symbol)) and cost_ref > 0 and qty_per_sell > 0:
                             rec_p = recovery_sell_price(cost_ref, qty_per_sell, fee_rate=fee_factor)
+                            pinned = 0.0
+                            try:
+                                from trading_engine.spot.mission_tia_recovery import PINNED_SELL_PX
+                                pinned = float((tia_mission_status() or {}).get('pinned_sell_px') or PINNED_SELL_PX or 0.0)
+                            except Exception:
+                                try:
+                                    from trading_engine.spot.mission_tia_recovery import PINNED_SELL_PX as _pin
+                                    pinned = float(_pin)
+                                except Exception:
+                                    pinned = 0.4740
+                            # Floor at user-pinned lot-safe exit (e.g. $0.474); never pull below fee-proof or pin
+                            floor_p = max(min_fee_proof_price, pinned)
                             if rec_p > 0:
-                                target_p = max(min_fee_proof_price, min(target_p, rec_p))
+                                target_p = max(floor_p, min(target_p, max(rec_p, floor_p)))
+                            else:
+                                target_p = max(target_p, floor_p)
                     except Exception:
                         pass
 

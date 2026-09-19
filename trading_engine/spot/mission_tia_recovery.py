@@ -23,6 +23,7 @@ from loguru import logger
 
 TIA_SYMBOL = "TIA/USDT"
 SLEEVE_USD = 0.0  # disabled — no average-down (reverted 2026-09-19)
+PINNED_SELL_PX = 0.4740  # user-approved lot-safe full-bag exit (fee-proof on dearest open lot)
 # Tiny net target on full-bag recovery exit (USD), on top of fee-proof floor
 RECOVERY_MIN_NET_USD = 3.0
 # Soft ceiling while mission averaging: do not push TIA above this % equity
@@ -147,4 +148,7 @@ def status() -> dict:
     st = _load()
     st = dict(st)
     st["remaining_usd"] = sleeve_remaining_usd()
+    st.setdefault("pinned_sell_px", float(st.get("pinned_sell_px") or PINNED_SELL_PX or 0.0))
+    if float(st.get("pinned_sell_px") or 0.0) <= 0:
+        st["pinned_sell_px"] = float(PINNED_SELL_PX)
     return st
