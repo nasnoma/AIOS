@@ -892,7 +892,15 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 holding_qty = _portfolio.get_position(symbol) if hasattr(_portfolio, 'get_position') else 0.0
                 holding_val_usd = holding_qty * price
                 try:
-                    engine.cancel_unsafe_resting_sells(exchange, units_held=float(holding_qty or 0))
+                    _avg_c = 0.0
+                    try:
+                        _ho = _portfolio.get_holding(symbol) if hasattr(_portfolio, 'get_holding') else None
+                        _avg_c = float(getattr(_ho, 'avg_cost_basis', 0) or 0) if _ho else 0.0
+                    except Exception:
+                        _avg_c = 0.0
+                    engine.cancel_unsafe_resting_sells(
+                        exchange, units_held=float(holding_qty or 0), portfolio_avg_cost=_avg_c,
+                    )
                     open_sells = [l for l in engine.grid_levels if l.status == 'open' and l.side == 'sell']
                 except Exception as _e_cu:
                     logger.debug(f"[{symbol}] cancel_unsafe_resting_sells tick: {_e_cu}")
@@ -947,6 +955,7 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                             float(l.price),
                             float(l.qty),
                             units_held=float(holding_qty or 0),
+                            portfolio_avg_cost=float(h_cost or 0),
                         )
                         if not ok_s:
                             has_loss_sells = True
@@ -974,6 +983,7 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                                 ok_tight, why_tight, floor_tight = resting_sell_is_safe(
                                     symbol, float(price) * 1.005, float(test_qty),
                                     units_held=float(holding_qty or 0),
+                                    portfolio_avg_cost=float(h_cost or 0),
                                 )
                                 if ok_tight:
                                     invalid_sells = True

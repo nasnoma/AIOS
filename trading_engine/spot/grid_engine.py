@@ -827,7 +827,7 @@ class GridEngine:
         return False
 
 
-    def cancel_unsafe_resting_sells(self, exchange, units_held: float = 0.0) -> int:
+    def cancel_unsafe_resting_sells(self, exchange, units_held: float = 0.0, portfolio_avg_cost: float = 0.0) -> int:
         """Cancel resting sells that fail fee-proof(bag FIFO max) + >= $0.50 net."""
         cancelled = 0
         u = float(units_held or getattr(self, '_last_base_qty_held', 0) or 0)
@@ -841,7 +841,7 @@ class GridEngine:
             qty = float(getattr(level, 'qty', 0) or 0)
             if px <= 0 or qty <= 0:
                 continue
-            ok, why, floor = resting_sell_is_safe(self.symbol, px, qty, units_held=u)
+            ok, why, floor = resting_sell_is_safe(self.symbol, px, qty, units_held=u, portfolio_avg_cost=float(portfolio_avg_cost or 0.0))
             if ok:
                 continue
             logger.error(
@@ -875,7 +875,13 @@ class GridEngine:
                 _u = float(getattr(self, '_last_base_qty_held', 0) or 0)
             if _u > 0:
                 self._last_base_qty_held = _u
-            self.cancel_unsafe_resting_sells(exchange, units_held=_u)
+            _avg = 0.0
+            try:
+                _h = (getattr(portfolio, 'holdings', {}) or {}).get(self.symbol)
+                _avg = float(getattr(_h, 'avg_cost_basis', 0) or (_h or {}).get('avg_cost_basis', 0) or 0)
+            except Exception:
+                _avg = 0.0
+            self.cancel_unsafe_resting_sells(exchange, units_held=_u, portfolio_avg_cost=_avg)
         except Exception as e_unsafe:
             logger.warning(f"[{self.symbol}] cancel_unsafe_resting_sells: {e_unsafe}")
         for level in self.grid_levels:

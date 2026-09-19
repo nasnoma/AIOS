@@ -187,15 +187,16 @@ def resting_sell_is_safe(
     qty: float,
     *,
     units_held: float = 0.0,
+    portfolio_avg_cost: float = 0.0,
     min_net_usd: float | None = None,
 ) -> tuple[bool, str, float]:
-    """Return (ok, reason, floor_px). Floor is fee-proof(bag FIFO max) + min_net (>= HARD_MIN_NET_USD)."""
+    """Return (ok, reason, floor_px). Floor is fee-proof(max(FIFO bag max, avg)) + min_net (>= HARD_MIN_NET_USD)."""
     min_net = float(HARD_MIN_NET_USD if min_net_usd is None else min_net_usd)
     min_net = max(min_net, float(HARD_MIN_NET_USD))
     try:
         cref = resolve_sell_cost_ref(
             symbol,
-            portfolio_avg_cost=0.0,
+            portfolio_avg_cost=float(portfolio_avg_cost or 0.0),
             units_held=units_held or None,
             sell_qty=qty,
         )
@@ -213,8 +214,10 @@ def resting_sell_is_safe(
     except Exception as e:
         return False, f"resting safety check failed: {e}", 0.0
 
-def assert_sell_clears_bag_max(symbol: str, sell_price: float, qty: float, *, units_held: float = 0.0) -> tuple[bool, str]:
+def assert_sell_clears_bag_max(symbol: str, sell_price: float, qty: float, *, units_held: float = 0.0, portfolio_avg_cost: float = 0.0) -> tuple[bool, str]:
     """Final gate: sell must be fee-proof vs bag-wide FIFO max lot with >= HARD_MIN_NET_USD."""
-    ok, why, _floor = resting_sell_is_safe(symbol, sell_price, qty, units_held=units_held)
+    ok, why, _floor = resting_sell_is_safe(
+        symbol, sell_price, qty, units_held=units_held, portfolio_avg_cost=portfolio_avg_cost,
+    )
     return ok, why
 
