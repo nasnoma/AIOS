@@ -544,25 +544,23 @@ class GridEngine:
                     try:
                         from trading_engine.spot.mission_tia_recovery import (
                             is_tia, mission_active, recovery_sell_price, status as tia_mission_status,
+                            PINNED_SELL_PX,
                         )
                         if (is_tia(self.symbol) or mission_active(self.symbol)) and cost_ref > 0 and qty_per_sell > 0:
-                            rec_p = recovery_sell_price(cost_ref, qty_per_sell, fee_rate=fee_factor)
                             pinned = 0.0
                             try:
-                                from trading_engine.spot.mission_tia_recovery import PINNED_SELL_PX
-                                pinned = float((tia_mission_status() or {}).get('pinned_sell_px') or PINNED_SELL_PX or 0.0)
+                                pinned = float((tia_mission_status() or {}).get("pinned_sell_px") or PINNED_SELL_PX or 0.0)
                             except Exception:
-                                try:
-                                    from trading_engine.spot.mission_tia_recovery import PINNED_SELL_PX as _pin
-                                    pinned = float(_pin)
-                                except Exception:
-                                    pinned = 0.4740
-                            # Floor at user-pinned lot-safe exit (e.g. $0.474); never pull below fee-proof or pin
-                            floor_p = max(min_fee_proof_price, pinned)
-                            if rec_p > 0:
-                                target_p = max(floor_p, min(target_p, max(rec_p, floor_p)))
+                                pinned = float(PINNED_SELL_PX or 0.4740)
+                            # User-approved lot-safe exit: force TIA sells to the pin (do not
+                            # let stagger / inflated cost_ref drift targets up to ~0.477–0.48).
+                            if pinned > 0:
+                                target_p = float(pinned)
+                                min_fee_proof_price = min(float(min_fee_proof_price), float(pinned))
                             else:
-                                target_p = max(target_p, floor_p)
+                                rec_p = recovery_sell_price(cost_ref, qty_per_sell, fee_rate=fee_factor)
+                                if rec_p > 0:
+                                    target_p = max(min_fee_proof_price, min(target_p, rec_p))
                     except Exception:
                         pass
 
@@ -664,25 +662,23 @@ class GridEngine:
                     try:
                         from trading_engine.spot.mission_tia_recovery import (
                             is_tia, mission_active, recovery_sell_price, status as tia_mission_status,
+                            PINNED_SELL_PX,
                         )
                         if (is_tia(self.symbol) or mission_active(self.symbol)) and cost_ref > 0 and qty_per_sell > 0:
-                            rec_p = recovery_sell_price(cost_ref, qty_per_sell, fee_rate=fee_factor)
                             pinned = 0.0
                             try:
-                                from trading_engine.spot.mission_tia_recovery import PINNED_SELL_PX
-                                pinned = float((tia_mission_status() or {}).get('pinned_sell_px') or PINNED_SELL_PX or 0.0)
+                                pinned = float((tia_mission_status() or {}).get("pinned_sell_px") or PINNED_SELL_PX or 0.0)
                             except Exception:
-                                try:
-                                    from trading_engine.spot.mission_tia_recovery import PINNED_SELL_PX as _pin
-                                    pinned = float(_pin)
-                                except Exception:
-                                    pinned = 0.4740
-                            # Floor at user-pinned lot-safe exit (e.g. $0.474); never pull below fee-proof or pin
-                            floor_p = max(min_fee_proof_price, pinned)
-                            if rec_p > 0:
-                                target_p = max(floor_p, min(target_p, max(rec_p, floor_p)))
+                                pinned = float(PINNED_SELL_PX or 0.4740)
+                            # User-approved lot-safe exit: force TIA sells to the pin (do not
+                            # let stagger / inflated cost_ref drift targets up to ~0.477–0.48).
+                            if pinned > 0:
+                                target_p = float(pinned)
+                                min_fee_proof_price = min(float(min_fee_proof_price), float(pinned))
                             else:
-                                target_p = max(target_p, floor_p)
+                                rec_p = recovery_sell_price(cost_ref, qty_per_sell, fee_rate=fee_factor)
+                                if rec_p > 0:
+                                    target_p = max(min_fee_proof_price, min(target_p, rec_p))
                     except Exception:
                         pass
 
