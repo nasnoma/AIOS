@@ -451,6 +451,7 @@ class GridEngine:
                         break
 
         base_qty_held = float(_get_val(holding, 'units_held', 0.0) or 0.0)
+            self._last_base_qty_held = base_qty_held
         avg_cost = float(_get_val(holding, 'avg_cost_basis', 0.0) or 0.0)
 
         # Query authoritative SQLite FIFO inventory to get the exact un-exited buy price
@@ -891,6 +892,7 @@ class GridEngine:
                                     _h = portfolio.holdings.get(self.symbol) if isinstance(portfolio.holdings, dict) else None
                                     if _h is not None:
                                         _u_held = float(getattr(_h, 'units_held', 0) or (_h or {}).get('units_held', 0) or 0)
+                        self._last_base_qty_held = _u_held
                                 cost_floor = resolve_sell_cost_ref(
                                     self.symbol,
                                     portfolio_avg_cost=float(getattr(level, 'linked_buy_price', 0.0) or 0.0),
@@ -944,6 +946,14 @@ class GridEngine:
                                     if self._refuse_protected_sell():
                                         order = None
                                     else:
+                                        ok_bag, why_bag = assert_sell_clears_bag_max(
+                                            self.symbol, float(price_val), float(qty_val),
+                                            units_held=float(getattr(self, '_last_base_qty_held', 0) or 0),
+                                        )
+                                        if not ok_bag:
+                                            logger.error(f"🛑 [{self.symbol}] BLOCKED sell @{price_val} — {why_bag}")
+                                            level.status = 'cancelled'
+                                            continue
                                         order = exchange.create_limit_sell_order(self.symbol, qty_val, price_val, fallback_params)
                             elif level.side == 'sell' and ('balance' in str(e_post).lower() or '170131' in str(e_post)):
                                 # Insufficient balance on sell: fetch exact available coin balance and retry
@@ -962,6 +972,14 @@ class GridEngine:
                                             if self._refuse_protected_sell():
                                                 order = None
                                             else:
+                                                ok_bag, why_bag = assert_sell_clears_bag_max(
+                                                    self.symbol, float(price_val), float(new_qty),
+                                                    units_held=float(getattr(self, '_last_base_qty_held', 0) or 0),
+                                                )
+                                                if not ok_bag:
+                                                    logger.error(f"🛑 [{self.symbol}] BLOCKED sell @{price_val} — {why_bag}")
+                                                    level.status = 'cancelled'
+                                                    continue
                                                 order = exchange.create_limit_sell_order(self.symbol, new_qty, price_val, {'category': 'spot'})
                                             qty_val = new_qty
                                         else:
@@ -1117,6 +1135,14 @@ class GridEngine:
                                     logger.critical(f"🚫 [{self.symbol}] Refusing below-buy sell replace — protected asset.")
                                     level.status = 'cancelled'
                                     continue
+                                ok_bag, why_bag = assert_sell_clears_bag_max(
+                                    self.symbol, float(p_val), float(qty_val),
+                                    units_held=float(getattr(self, '_last_base_qty_held', 0) or 0),
+                                )
+                                if not ok_bag:
+                                    logger.error(f"🛑 [{self.symbol}] BLOCKED sell @{p_val} — {why_bag}")
+                                    level.status = 'cancelled'
+                                    continue
                                 new_order = exchange.create_limit_sell_order(self.symbol, qty_val, p_val, new_params)
                                 if not new_order or not new_order.get('id'):
                                     raise RuntimeError('replace sell returned no id')
@@ -1156,6 +1182,14 @@ class GridEngine:
                                 p_val = float(exchange.price_to_precision(self.symbol, min_sell_price)) if hasattr(exchange, 'price_to_precision') else min_sell_price
                                 if self._refuse_protected_sell():
                                     logger.critical(f"🚫 [{self.symbol}] Refusing fee-unsafe sell replace — protected asset.")
+                                    level.status = 'cancelled'
+                                    continue
+                                ok_bag, why_bag = assert_sell_clears_bag_max(
+                                    self.symbol, float(p_val), float(qty_val),
+                                    units_held=float(getattr(self, '_last_base_qty_held', 0) or 0),
+                                )
+                                if not ok_bag:
+                                    logger.error(f"🛑 [{self.symbol}] BLOCKED sell @{p_val} — {why_bag}")
                                     level.status = 'cancelled'
                                     continue
                                 new_order = exchange.create_limit_sell_order(self.symbol, qty_val, p_val, new_params)
