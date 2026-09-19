@@ -12,7 +12,7 @@ from uuid import uuid4
 _BEST_PARAMS_FILE = Path(__file__).parent / 'best_params.json'
 
 # 🛑 User Pause on ARB: strictly prevent buying ARB until after September 23, 2026 UTC (resumes Sept 24 00:00 UTC) — covers mid/late-Sep unlock window
-ARB_PAUSE_UNTIL_UTC = datetime(2020, 1, 1, 0, 0, 0, tzinfo=timezone.utc)  # ARB hard pause removed 2026-09-19
+ARB_PAUSE_UNTIL_UTC = datetime(2026, 9, 28, 0, 0, 0, tzinfo=timezone.utc)  # keep in sync with unlock_calendar.ARB_HARD_PAUSE_UNTIL_UTC
 
 from trading_engine.spot.asset_guards import is_never_sell_symbol, is_fee_buffer_asset, is_never_buy_symbol
 from trading_engine.spot.entry_guards import entry_buys_allowed, remaining_buy_room_usd, EXPOSURE_TARGET_PCT

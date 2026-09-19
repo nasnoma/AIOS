@@ -1,8 +1,9 @@
 """
-Unlock calendar — TIA only (ARB unlock buy-pauses removed by user 2026-09-19).
+Unlock calendar — TIA vesting pads + temporary ARB hard buy-pause through unlock aftershock.
 
-Around known TIA vesting/unlock dates, new buys are paused (sell-only / resting TPs kept).
-ARB trades under normal entry guards only (no hard floor, no unlock pad).
+- TIA: ±UNLOCK_PAD_DAYS around listed month-end unlocks (sells kept).
+- ARB: hard buy-only pause until ARB_HARD_PAUSE_UNTIL_UTC (sells kept).
+  Covers Sep 23 2026 unlock day + short aftershock; resumes 2026-09-28 00:00 UTC.
 """
 from __future__ import annotations
 
@@ -12,8 +13,13 @@ from typing import Iterable, List, Optional, Tuple
 # Buy-pause window: pad days before and after each unlock date (UTC calendar day)
 UNLOCK_PAD_DAYS = 4
 
-# Explicit unlock dates (UTC). TIA only.
+# ARB Sep 23 unlock: buy-only pause through end of Sep 27 UTC (resume Sep 28 00:00 UTC).
+# Sells / resting TPs stay active. User-approved 2026-09-19.
+ARB_HARD_PAUSE_UNTIL_UTC = datetime(2026, 9, 28, 0, 0, 0, tzinfo=timezone.utc)
+
+# Explicit unlock dates (UTC). TIA month-end vesting; ARB listed for visibility (hard floor above is authoritative until it expires).
 _EXPLICIT_UNLOCKS: List[Tuple[str, date]] = [
+    ("ARB/USDT", date(2026, 9, 23)),  # informational; hard pause covers through Sep 27
     ("TIA/USDT", date(2026, 9, 30)),
     ("TIA/USDT", date(2026, 10, 31)),
     ("TIA/USDT", date(2026, 11, 30)),
@@ -64,16 +70,22 @@ def is_unlock_buy_paused(
 ) -> Tuple[bool, str]:
     """
     True if new buys should be paused for unlock risk.
-    ARB: never paused here (hard floor + ARB unlock pads removed).
+    ARB: hard buy-pause until ARB_HARD_PAUSE_UNTIL_UTC (sells unaffected).
     TIA: ±pad around listed unlock dates only.
     """
     now = now or datetime.now(timezone.utc)
     if now.tzinfo is None:
         now = now.replace(tzinfo=timezone.utc)
     sym = _norm_symbol(symbol)
-    if sym == "ARB/USDT":
+    if sym not in ("ARB/USDT", "TIA/USDT"):
         return False, ""
-    if sym != "TIA/USDT":
+
+    if sym == "ARB/USDT":
+        if now < ARB_HARD_PAUSE_UNTIL_UTC:
+            return True, (
+                f"ARB hard buy-pause until {ARB_HARD_PAUSE_UNTIL_UTC.date().isoformat()} UTC "
+                f"(Sep 23 unlock + aftershock through Sep 27; sells stay)"
+            )
         return False, ""
 
     today = now.date()

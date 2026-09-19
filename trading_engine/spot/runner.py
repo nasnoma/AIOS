@@ -49,7 +49,7 @@ _last_blended_score_ts: float = 0.0
 _cached_blended_scores: dict[str, float] = {}
 
 # 🛑 User Pause on ARB: strictly prevent buying ARB until after September 23, 2026 UTC (resumes Sept 24 00:00 UTC) — covers mid/late-Sep unlock window
-ARB_PAUSE_UNTIL_UTC = datetime(2020, 1, 1, 0, 0, 0, tzinfo=timezone.utc)  # ARB hard pause removed 2026-09-19 (was 2026-09-24)
+ARB_PAUSE_UNTIL_UTC = datetime(2026, 9, 28, 0, 0, 0, tzinfo=timezone.utc)  # keep in sync with unlock_calendar.ARB_HARD_PAUSE_UNTIL_UTC
 
 def is_arb_buy_paused(symbol: str) -> bool:
     """True if buys are paused for unlock risk (TIA calendar only; ARB pauses removed)."""
