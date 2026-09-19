@@ -22,6 +22,7 @@ from trading_engine.spot.sell_guard import (
     sell_clears_buy,
     sell_is_fee_proof,
     enforce_sell_floor,
+    assert_sell_clears_bag_max,
     get_fee_factor,
     estimated_net_pnl,
 )
@@ -540,16 +541,17 @@ class GridEngine:
                     # Absolute Hard Safety Gate: target_p MUST be strictly >= min_fee_proof_price
                     target_p = max(target_p, min_fee_proof_price)
 
-                    # ARB comfort exit pin (buy-paused through unlock): keep sells at pin, not far TPs
+                    # ARB optional exit pin — ONLY if pin >= fee-proof floor (never undercut FIFO max lots)
                     try:
                         if str(self.symbol).upper().startswith("ARB"):
                             from trading_engine.spot.unlock_calendar import ARB_PINNED_SELL_PX
                             pinned = float(ARB_PINNED_SELL_PX or 0.0)
-                            if pinned > 0:
+                            if pinned > 0 and pinned + 1e-12 >= float(min_fee_proof_price):
                                 if float(current_price) >= float(pinned):
                                     target_p = max(float(min_fee_proof_price), float(current_price) * 1.0008)
                                 else:
                                     target_p = max(float(min_fee_proof_price), float(pinned))
+                            # if pin is below fee-proof, ignore it (safer to wait than lot-lose)
                     except Exception:
                         pass
                     # TIA recovery mission: pull resting sells down to fee-proof BE (+tiny net)
@@ -671,16 +673,17 @@ class GridEngine:
                     # Absolute Hard Safety Gate: target_p MUST be strictly >= min_fee_proof_price
                     target_p = max(target_p, min_fee_proof_price)
 
-                    # ARB comfort exit pin (buy-paused through unlock): keep sells at pin, not far TPs
+                    # ARB optional exit pin — ONLY if pin >= fee-proof floor (never undercut FIFO max lots)
                     try:
                         if str(self.symbol).upper().startswith("ARB"):
                             from trading_engine.spot.unlock_calendar import ARB_PINNED_SELL_PX
                             pinned = float(ARB_PINNED_SELL_PX or 0.0)
-                            if pinned > 0:
+                            if pinned > 0 and pinned + 1e-12 >= float(min_fee_proof_price):
                                 if float(current_price) >= float(pinned):
                                     target_p = max(float(min_fee_proof_price), float(current_price) * 1.0008)
                                 else:
                                     target_p = max(float(min_fee_proof_price), float(pinned))
+                            # if pin is below fee-proof, ignore it (safer to wait than lot-lose)
                     except Exception:
                         pass
                     # TIA recovery mission: pull resting sells down to fee-proof BE (+tiny net)
@@ -921,7 +924,18 @@ class GridEngine:
                                 if self._refuse_protected_sell():
                                     order = None
                                 else:
-                                    order = exchange.create_limit_sell_order(self.symbol, qty_val, price_val, params)
+                                    
+                        # HARD: never place a sell below fee-proof(bag FIFO max lot)
+                        if level.side == 'sell':
+                            ok_bag, why_bag = assert_sell_clears_bag_max(
+                                self.symbol, float(price_val), float(qty_val),
+                                units_held=float(getattr(self, '_last_base_qty_held', 0) or 0),
+                            )
+                            if not ok_bag:
+                                logger.error(f"🛑 [{self.symbol}] BLOCKED sell @{price_val} — {why_bag}")
+                                level.status = 'cancelled'
+                                continue
+                            order = exchange.create_limit_sell_order(self.symbol, qty_val, price_val, params)
                         except Exception as e_post:
                             # If postOnly was rejected because price is at or across spread, retry with standard limit order
                             if 'postonly' in str(e_post).lower() or 'post_only' in str(e_post).lower() or '170193' in str(e_post):

@@ -175,3 +175,20 @@ def enforce_sell_floor(
         else 0.0,
     )
     return max(float(sell_price or 0.0), floor)
+
+
+def assert_sell_clears_bag_max(symbol: str, sell_price: float, qty: float, *, units_held: float = 0.0) -> tuple[bool, str]:
+    """Final gate: sell must be fee-proof vs bag-wide FIFO max lot, not just avg/linked slice."""
+    try:
+        cref = resolve_sell_cost_ref(
+            symbol,
+            portfolio_avg_cost=0.0,
+            units_held=units_held or None,
+            sell_qty=qty,
+        )
+        floor = min_fee_proof_sell_price(cref, qty, fee_factor=None, min_net_usd=DEFAULT_MIN_NET_USD)
+        if float(sell_price) + 1e-12 < float(floor):
+            return False, f"sell {sell_price} < fee-proof bag-max floor {floor} (cost_ref={cref})"
+        return True, ""
+    except Exception as e:
+        return False, f"bag-max check failed: {e}"
