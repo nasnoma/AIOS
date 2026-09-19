@@ -23,6 +23,7 @@ from trading_engine.spot.sell_guard import (
     sell_is_fee_proof,
     enforce_sell_floor,
     assert_sell_clears_bag_max,
+    HARD_MIN_NET_USD,
     get_fee_factor,
     estimated_net_pnl,
 )
@@ -601,6 +602,38 @@ class GridEngine:
                             logger.critical(f"🚨 [{self.symbol}] FATAL: cannot build fee-proof sell (target ${target_p:.4f}, cost ${cost_ref:.4f}). Aborting level!")
                             continue
 
+                    # HARD: after every compress/pin/market tweak, re-floor to >= $0.50 net vs bag FIFO max
+                    try:
+                        bag_cref = resolve_sell_cost_ref(
+                            self.symbol,
+                            portfolio_avg_cost=float(avg_cost or 0.0),
+                            units_held=float(base_qty_held or 0.0) or None,
+                            sell_qty=float(qty_per_sell or 0.0),
+                        )
+                        floor_p = min_fee_proof_sell_price(
+                            max(float(cost_ref or 0.0), float(bag_cref or 0.0)),
+                            float(qty_per_sell or 0.0),
+                            fee_factor=fee_factor,
+                            min_net_usd=max(0.50, float(HARD_MIN_NET_USD)),
+                        )
+                        if floor_p > 0 and target_p + 1e-12 < floor_p:
+                            logger.warning(
+                                f"🛡️ [{self.symbol}] Raising sell ${target_p:.4f} -> ${floor_p:.4f} "
+                                f"to clear >= ${max(0.50, float(HARD_MIN_NET_USD)):.2f} net vs bag-max"
+                            )
+                            target_p = float(floor_p)
+                        actual_net_pnl = (target_p * qty_per_sell * (1.0 - fee_factor)) - (
+                            max(float(cost_ref or 0.0), float(bag_cref or 0.0)) * qty_per_sell * (1.0 + fee_factor)
+                        )
+                        if actual_net_pnl + 1e-9 < 0.50:
+                            logger.critical(
+                                f"🚨 [{self.symbol}] Abort sell level — projected net ${actual_net_pnl:.2f} < $0.50"
+                            )
+                            continue
+                    except Exception as e_floor:
+                        logger.error(f"[{self.symbol}] min-net final floor failed: {e_floor}")
+                        continue
+
                     tier_lbl = "Aged-Compress Quick-Exit" if is_aged_position else "Quick-Exit"
                     logger.info(f"🚪 [{self.symbol}] {tier_lbl} Sell Level {i+1}/{sell_levels_count}: Target=${target_p:.4f} "
                                 f"(CostRef: ${cost_ref:.4f}, Live: ${current_price:.4f}, Age: {oldest_lot_age_hours:.1f}h, Net Profit: +${actual_net_pnl:.2f} USD)")
@@ -732,6 +765,38 @@ class GridEngine:
                         if not sell_is_fee_proof(target_p, cost_ref, qty_per_sell, fee_factor=fee_factor, min_net_usd=0.55):
                             logger.critical(f"🚨 [{self.symbol}] FATAL: cannot build fee-proof sell (target ${target_p:.4f}, cost ${cost_ref:.4f}). Aborting level!")
                             continue
+
+                    # HARD: after every compress/pin/market tweak, re-floor to >= $0.50 net vs bag FIFO max
+                    try:
+                        bag_cref = resolve_sell_cost_ref(
+                            self.symbol,
+                            portfolio_avg_cost=float(avg_cost or 0.0),
+                            units_held=float(base_qty_held or 0.0) or None,
+                            sell_qty=float(qty_per_sell or 0.0),
+                        )
+                        floor_p = min_fee_proof_sell_price(
+                            max(float(cost_ref or 0.0), float(bag_cref or 0.0)),
+                            float(qty_per_sell or 0.0),
+                            fee_factor=fee_factor,
+                            min_net_usd=max(0.50, float(HARD_MIN_NET_USD)),
+                        )
+                        if floor_p > 0 and target_p + 1e-12 < floor_p:
+                            logger.warning(
+                                f"🛡️ [{self.symbol}] Raising sell ${target_p:.4f} -> ${floor_p:.4f} "
+                                f"to clear >= ${max(0.50, float(HARD_MIN_NET_USD)):.2f} net vs bag-max"
+                            )
+                            target_p = float(floor_p)
+                        actual_net_pnl = (target_p * qty_per_sell * (1.0 - fee_factor)) - (
+                            max(float(cost_ref or 0.0), float(bag_cref or 0.0)) * qty_per_sell * (1.0 + fee_factor)
+                        )
+                        if actual_net_pnl + 1e-9 < 0.50:
+                            logger.critical(
+                                f"🚨 [{self.symbol}] Abort sell level — projected net ${actual_net_pnl:.2f} < $0.50"
+                            )
+                            continue
+                    except Exception as e_floor:
+                        logger.error(f"[{self.symbol}] min-net final floor failed: {e_floor}")
+                        continue
 
                     tier_label = "Compressed Aged" if is_aged_position else "High-Velocity"
                     logger.info(f"🎯 [{self.symbol}] {tier_label} Sell Level {i+1}/{sell_levels_count}: Target=${target_p:.4f} "
@@ -902,7 +967,7 @@ class GridEngine:
                                 )
                             except Exception:
                                 cost_floor = float(getattr(level, 'linked_buy_price', 0.0) or 0.0)
-                            if cost_floor > 0 and not sell_clears_buy(price_val, cost_floor):
+                            if cost_floor > 0 and not sell_is_fee_proof(price_val, cost_floor, qty_val, fee_factor=get_fee_factor(), min_net_usd=0.50):
                                 safe_p = enforce_sell_floor(price_val, cost_floor, qty_val, fee_factor=get_fee_factor(), min_net_usd=0.60)
                                 logger.warning(
                                     f"🛡️ [{self.symbol}] Bumping sell before place: "

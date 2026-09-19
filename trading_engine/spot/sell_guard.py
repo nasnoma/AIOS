@@ -19,6 +19,8 @@ DEFAULT_FEE_FACTOR = 0.0010
 # Extra buffer on top of configured fee_rate for VIP changes / rounding
 FEE_SAFETY_MULT = 1.10
 DEFAULT_MIN_NET_USD = 0.60
+# Absolute floor Nasir expects on every completed cycle (after fees). Never place below this.
+HARD_MIN_NET_USD = 0.50
 
 
 def get_fee_factor() -> float:
@@ -188,7 +190,7 @@ def assert_sell_clears_bag_max(symbol: str, sell_price: float, qty: float, *, un
         )
         if float(cref or 0.0) <= 0 or float(qty or 0.0) <= 0:
             return False, f"bag-max check missing cost/qty (cost_ref={cref}, qty={qty})"
-        floor = min_fee_proof_sell_price(cref, qty, fee_factor=None, min_net_usd=DEFAULT_MIN_NET_USD)
+        floor = min_fee_proof_sell_price(cref, qty, fee_factor=None, min_net_usd=max(DEFAULT_MIN_NET_USD, HARD_MIN_NET_USD))
         if float(floor or 0.0) <= 0:
             return False, f"bag-max fee-proof floor invalid ({floor}) for cost_ref={cref}"
         if float(sell_price) + 1e-12 < float(floor):
