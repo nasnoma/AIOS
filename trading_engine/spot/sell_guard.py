@@ -179,8 +179,19 @@ def enforce_sell_floor(
     return max(float(sell_price or 0.0), floor)
 
 
-def assert_sell_clears_bag_max(symbol: str, sell_price: float, qty: float, *, units_held: float = 0.0) -> tuple[bool, str]:
-    """Final gate: sell must be fee-proof vs bag-wide FIFO max lot, not just avg/linked slice."""
+
+
+def resting_sell_is_safe(
+    symbol: str,
+    sell_price: float,
+    qty: float,
+    *,
+    units_held: float = 0.0,
+    min_net_usd: float | None = None,
+) -> tuple[bool, str, float]:
+    """Return (ok, reason, floor_px). Floor is fee-proof(bag FIFO max) + min_net (>= HARD_MIN_NET_USD)."""
+    min_net = float(HARD_MIN_NET_USD if min_net_usd is None else min_net_usd)
+    min_net = max(min_net, float(HARD_MIN_NET_USD))
     try:
         cref = resolve_sell_cost_ref(
             symbol,
@@ -189,12 +200,21 @@ def assert_sell_clears_bag_max(symbol: str, sell_price: float, qty: float, *, un
             sell_qty=qty,
         )
         if float(cref or 0.0) <= 0 or float(qty or 0.0) <= 0:
-            return False, f"bag-max check missing cost/qty (cost_ref={cref}, qty={qty})"
-        floor = min_fee_proof_sell_price(cref, qty, fee_factor=None, min_net_usd=max(DEFAULT_MIN_NET_USD, HARD_MIN_NET_USD))
+            return False, f"missing cost/qty (cost_ref={cref}, qty={qty})", 0.0
+        floor = min_fee_proof_sell_price(cref, qty, fee_factor=None, min_net_usd=min_net)
         if float(floor or 0.0) <= 0:
-            return False, f"bag-max fee-proof floor invalid ({floor}) for cost_ref={cref}"
+            return False, f"invalid floor {floor}", 0.0
         if float(sell_price) + 1e-12 < float(floor):
-            return False, f"sell {sell_price} < fee-proof bag-max floor {floor} (cost_ref={cref})"
-        return True, ""
+            return False, (
+                f"sell {sell_price} < fee-proof+${min_net:.2f} floor {floor} "
+                f"(bag cost_ref={cref})"
+            ), float(floor)
+        return True, "", float(floor)
     except Exception as e:
-        return False, f"bag-max check failed: {e}"
+        return False, f"resting safety check failed: {e}", 0.0
+
+def assert_sell_clears_bag_max(symbol: str, sell_price: float, qty: float, *, units_held: float = 0.0) -> tuple[bool, str]:
+    """Final gate: sell must be fee-proof vs bag-wide FIFO max lot with >= HARD_MIN_NET_USD."""
+    ok, why, _floor = resting_sell_is_safe(symbol, sell_price, qty, units_held=units_held)
+    return ok, why
+

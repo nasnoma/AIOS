@@ -48,11 +48,11 @@ _active_roster: set[str] = set()
 _last_blended_score_ts: float = 0.0
 _cached_blended_scores: dict[str, float] = {}
 
-# 🛑 User Pause on ARB: strictly prevent buying ARB until after September 23, 2026 UTC (resumes Sept 24 00:00 UTC) — covers mid/late-Sep unlock window
+# 🛑 ARB buy-only pause through Sep 27 2026 UTC (resumes Sep 28 00:00 UTC) — Sep 23 unlock + aftershock; sells stay
 ARB_PAUSE_UNTIL_UTC = datetime(2026, 9, 28, 0, 0, 0, tzinfo=timezone.utc)  # keep in sync with unlock_calendar.ARB_HARD_PAUSE_UNTIL_UTC
 
 def is_arb_buy_paused(symbol: str) -> bool:
-    """True if buys are paused for unlock risk (TIA calendar only; ARB pauses removed)."""
+    """True if buys are paused for unlock risk (ARB hard floor through Sep 27 UTC; TIA calendar pads)."""
     try:
         from trading_engine.spot.unlock_calendar import is_unlock_buy_paused
         paused, _reason = is_unlock_buy_paused(symbol)
@@ -891,6 +891,11 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 # Also check if we hold coins for this asset but have 0 open sell orders (critical for profit taking)
                 holding_qty = _portfolio.get_position(symbol) if hasattr(_portfolio, 'get_position') else 0.0
                 holding_val_usd = holding_qty * price
+                try:
+                    engine.cancel_unsafe_resting_sells(exchange, units_held=float(holding_qty or 0))
+                    open_sells = [l for l in engine.grid_levels if l.status == 'open' and l.side == 'sell']
+                except Exception as _e_cu:
+                    logger.debug(f"[{symbol}] cancel_unsafe_resting_sells tick: {_e_cu}")
                 # Only require sell orders if holding value is >= $5.00 (Bybit minimum limit order notional)
                 missing_sells = bool(holding_val_usd >= 5.0 and len(open_sells) == 0)
 
@@ -898,8 +903,8 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 h_obj = _portfolio.get_holding(symbol) if hasattr(_portfolio, 'get_holding') else None
                 h_cost = float(getattr(h_obj, 'avg_cost_basis', 0) or 0) if h_obj else 0.0
                 try:
-                    from trading_engine.spot.sell_guard import resolve_sell_cost_ref
-                    # Prefer live FIFO avg / lot cost — do not pin to whole-book max_buy (stalls cycles)
+                    from trading_engine.spot.sell_guard import resolve_sell_cost_ref, resting_sell_is_safe
+                    # Safety: bag-wide FIFO max must floor resting-sell audits (avg alone undercuts dear lots)
                     h_cost = max(
                         h_cost,
                         resolve_sell_cost_ref(
@@ -913,7 +918,7 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                     pass
                 invalid_sells = False
                 if h_cost > 0 and open_sells:
-                    from trading_engine.spot.sell_guard import get_fee_factor
+                    from trading_engine.spot.sell_guard import get_fee_factor, resting_sell_is_safe
                     fee_factor = get_fee_factor()
                     # 🛡️ STRICT ZERO-LOSS RULE ACROSS ALL ASSETS:
                     # Every sell must clear bag-wide FIFO max lot (+ fees). Silent prevent — cancel/rebuild, no user ping.
@@ -933,14 +938,26 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                     except Exception:
                         pass
                     floor = max(float(h_cost or 0), float(bag_max or 0), float(cost_floor or 0))
-                    has_loss_sells = any(
-                        (
-                            (l.price * l.qty * (1.0 - fee_factor)) - (
-                                float(getattr(l, 'linked_buy_price', 0) or floor) * l.qty * (1.0 + fee_factor)
-                            ) < 0.50
-                        ) or (floor > 0 and float(l.price) + 1e-12 < floor)
-                        for l in open_sells
-                    )
+                    # CRITICAL: never use linked_buy alone — it can be a cheap fill while FIFO
+                    # matches a dearer lot (AVAX 9.747 lots sold at 9.762 → fee loss).
+                    has_loss_sells = False
+                    for l in open_sells:
+                        ok_s, why_s, floor_s = resting_sell_is_safe(
+                            symbol,
+                            float(l.price),
+                            float(l.qty),
+                            units_held=float(holding_qty or 0),
+                        )
+                        if not ok_s:
+                            has_loss_sells = True
+                            logger.info(
+                                f"🛡️ [{symbol}] Unsafe resting sell @{l.price} qty={l.qty} — {why_s}"
+                            )
+                            break
+                        # Also flag raw under bag-max / fee-proof floor
+                        if floor > 0 and float(l.price) + 1e-12 < float(floor_s or floor):
+                            has_loss_sells = True
+                            break
                     if has_loss_sells:
                         invalid_sells = True
                         logger.info(
@@ -953,10 +970,19 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                         if min_sell_p > (price * 1.015):
                             test_qty = open_sells[0].qty if open_sells else 0.0
                             if test_qty > 0:
-                                net_tight = ((price * 1.005) * test_qty * (1.0 - fee_factor)) - (h_cost * test_qty * (1.0 + fee_factor))
-                                if net_tight >= 0.50:
+                                # Only tighten if the new near-market price still clears bag-max + $0.50
+                                ok_tight, why_tight, floor_tight = resting_sell_is_safe(
+                                    symbol, float(price) * 1.005, float(test_qty),
+                                    units_held=float(holding_qty or 0),
+                                )
+                                if ok_tight:
                                     invalid_sells = True
-                                    logger.info(f"⚡ Tightening wide take-profit targets for {symbol} (Live: ${price:.4f} > Cost: ${h_cost:.4f}, Sell: ${min_sell_p:.4f})...")
+                                    logger.info(
+                                        f"⚡ Tightening wide take-profit targets for {symbol} "
+                                        f"(Live: ${price:.4f}, floor ${floor_tight:.4f}, Sell: ${min_sell_p:.4f})..."
+                                    )
+                                else:
+                                    logger.debug(f"[{symbol}] skip tighten — near-market would be unsafe: {why_tight}")
                     elif symbol not in (set(spot_settings.asset_list) | _active_roster):
                         # Legacy quick-exit: rebuild when sells drift above fee-proof / market target.
                         # Previous 3.5% slack left ALGO-style bags uncompresssed for days.

@@ -23,6 +23,7 @@ from trading_engine.spot.sell_guard import (
     sell_is_fee_proof,
     enforce_sell_floor,
     assert_sell_clears_bag_max,
+    resting_sell_is_safe,
     HARD_MIN_NET_USD,
     get_fee_factor,
     estimated_net_pnl,
@@ -825,8 +826,58 @@ class GridEngine:
             return True
         return False
 
+
+    def cancel_unsafe_resting_sells(self, exchange, units_held: float = 0.0) -> int:
+        """Cancel resting sells that fail fee-proof(bag FIFO max) + >= $0.50 net."""
+        cancelled = 0
+        u = float(units_held or getattr(self, '_last_base_qty_held', 0) or 0)
+        levels = list(getattr(self, 'grid_levels', None) or [])
+        for level in levels:
+            if getattr(level, 'side', '') != 'sell':
+                continue
+            if getattr(level, 'status', '') not in ('open', 'pending', 'partial'):
+                continue
+            px = float(getattr(level, 'price', 0) or 0)
+            qty = float(getattr(level, 'qty', 0) or 0)
+            if px <= 0 or qty <= 0:
+                continue
+            ok, why, floor = resting_sell_is_safe(self.symbol, px, qty, units_held=u)
+            if ok:
+                continue
+            logger.error(
+                f"🛑 [{self.symbol}] CANCEL unsafe resting sell @{px} qty={qty} "
+                f"(floor={floor:.6f}) — {why}"
+            )
+            try:
+                oid = getattr(level, 'order_id', None)
+                if oid and exchange is not None:
+                    try:
+                        exchange.cancel_order(oid, self.symbol, {'category': 'spot'})
+                    except Exception:
+                        try:
+                            exchange.cancel_order(oid, self.symbol)
+                        except Exception as e_cx:
+                            logger.warning(f"[{self.symbol}] cancel_order failed {oid}: {e_cx}")
+                level.status = 'cancelled'
+                cancelled += 1
+            except Exception as e:
+                logger.error(f"[{self.symbol}] cancel_unsafe_resting_sells error: {e}")
+        return cancelled
+
     def place_grid_orders(self, portfolio, exchange: ccxt.Exchange):
         self.exchange = exchange
+        try:
+            _u = 0.0
+            try:
+                _h = (getattr(portfolio, 'holdings', {}) or {}).get(self.symbol)
+                _u = float(getattr(_h, 'units_held', 0) or (_h or {}).get('units_held', 0) or 0)
+            except Exception:
+                _u = float(getattr(self, '_last_base_qty_held', 0) or 0)
+            if _u > 0:
+                self._last_base_qty_held = _u
+            self.cancel_unsafe_resting_sells(exchange, units_held=_u)
+        except Exception as e_unsafe:
+            logger.warning(f"[{self.symbol}] cancel_unsafe_resting_sells: {e_unsafe}")
         for level in self.grid_levels:
             if level.status == 'pending':
                 if is_never_sell_symbol(self.symbol) and level.side == 'sell':
