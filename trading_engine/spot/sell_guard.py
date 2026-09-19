@@ -72,8 +72,9 @@ def resolve_sell_cost_ref(
     multi-level sells to fill below a dearer lot once FIFO consumed cheap lots.
     """
     linked = float(linked_buy_price or 0.0)
-    if linked > 0:
-        return linked
+    # NOTE: never early-return `linked` alone. A sell sized/linked to a cheap fill can
+    # still FIFO-match a dearer older lot (Bybit fills lowest sell first). Always fold
+    # bag-wide fifo_max into the floor below.
 
     fifo_avg = 0.0
     fifo_max = 0.0
@@ -97,7 +98,8 @@ def resolve_sell_cost_ref(
 
     # Lot-level never-sell-below-buy: floor includes bag-wide max buy.
     # Safety beats cycle speed — every resting sell must clear the dearest open lot.
-    live = max(float(portfolio_avg_cost or 0.0), fifo_avg, fifo_max)
+    live = max(
+        float(portfolio_avg_cost or 0.0), fifo_avg, fifo_max, linked)
     if live > 0:
         return live
 
