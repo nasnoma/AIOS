@@ -451,7 +451,7 @@ class GridEngine:
                         break
 
         base_qty_held = float(_get_val(holding, 'units_held', 0.0) or 0.0)
-            self._last_base_qty_held = base_qty_held
+        self._last_base_qty_held = base_qty_held
         avg_cost = float(_get_val(holding, 'avg_cost_basis', 0.0) or 0.0)
 
         # Query authoritative SQLite FIFO inventory to get the exact un-exited buy price
@@ -892,7 +892,7 @@ class GridEngine:
                                     _h = portfolio.holdings.get(self.symbol) if isinstance(portfolio.holdings, dict) else None
                                     if _h is not None:
                                         _u_held = float(getattr(_h, 'units_held', 0) or (_h or {}).get('units_held', 0) or 0)
-                        self._last_base_qty_held = _u_held
+                                        self._last_base_qty_held = _u_held
                                 cost_floor = resolve_sell_cost_ref(
                                     self.symbol,
                                     portfolio_avg_cost=float(getattr(level, 'linked_buy_price', 0.0) or 0.0),
