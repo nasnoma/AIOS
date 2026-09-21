@@ -38,13 +38,33 @@ NOUL_BUY_OK = 0.60
 NOUL_BUY_BLOCK = 0.40
 CHOICE_MIN_PROB = 0.55
 
-_DATA_DIR = Path(__file__).resolve().parents[1] / "data"
+def _resolve_data_dir() -> Path:
+    """Prefer env, then repo data/, then /tmp (Railway ephemeral FS is fine for shadow)."""
+    env = (os.environ.get("SPOT_JEV_SHADOW_DIR") or "").strip()
+    if env:
+        return Path(env).expanduser()
+    repo_data = Path(__file__).resolve().parents[1] / "data"
+    try:
+        repo_data.mkdir(parents=True, exist_ok=True)
+        probe = repo_data / ".jev_shadow_write_probe"
+        probe.write_text("ok", encoding="utf-8")
+        probe.unlink(missing_ok=True)
+        return repo_data
+    except Exception:
+        tmp = Path(os.environ.get("TMPDIR") or "/tmp") / "aios_jev_shadow"
+        tmp.mkdir(parents=True, exist_ok=True)
+        return tmp
+
+
+_DATA_DIR = _resolve_data_dir()
 _DB_PATH = _DATA_DIR / "jev_shadow.db"
 _JSONL_PATH = _DATA_DIR / "jev_shadow.jsonl"
 
 _lock = threading.Lock()
 _last_ask_ts: dict[str, float] = {}
 _db_ready = False
+_inflight = threading.Semaphore(int(os.environ.get("SPOT_JEV_SHADOW_MAX_INFLIGHT", "4") or 4))
+_success_log_counter = 0
 
 
 def shadow_enabled() -> bool:
@@ -91,6 +111,19 @@ def _safe_float(v: Any, default: Any = "unknown") -> Any:
     except (TypeError, ValueError):
         return default
 
+
+
+def _range_pct(v: Any) -> Any:
+    """Normalize 24h range to percent. Accepts fraction (0.05) or percent (5.0)."""
+    f = _safe_float(v)
+    if not isinstance(f, (int, float)):
+        return f
+    f = float(f)
+    # Fractions from runner tick are typically < 1.5 for crypto 24h ranges;
+    # values already in percent are usually >= 1.5 when markets move.
+    if abs(f) <= 1.5:
+        return round(f * 100.0, 4)
+    return round(f, 4)
 
 def build_state(symbol: str, ctx: dict[str, Any]) -> dict[str, Any]:
     """
@@ -151,7 +184,7 @@ def build_state(symbol: str, ctx: dict[str, Any]) -> dict[str, Any]:
         "in_top8": _unk(ctx.get("in_top8")),
         "allow_buys_effective": _unk(ctx.get("allow_buys_effective")),
         "fee_rate_roundtrip": _safe_float(ctx.get("fee_rate_roundtrip")),
-        "range_24h_pct": _safe_float(ctx.get("range_24h_pct")),
+        "range_24h_pct": _range_pct(ctx.get("range_24h_pct")),
         "notes": (
             "Judge only from fields present. "
             "Treat unknown as missing evidence, not neutral. "
@@ -373,30 +406,35 @@ def _ensure_db() -> None:
     global _db_ready
     if _db_ready:
         return
-    _DATA_DIR.mkdir(parents=True, exist_ok=True)
-    with sqlite3.connect(str(_DB_PATH)) as conn:
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS jev_shadow_log (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                ts TEXT NOT NULL,
-                symbol TEXT NOT NULL,
-                model TEXT,
-                latency_ms REAL,
-                state_json TEXT,
-                answers_json TEXT,
-                shadow_gate_json TEXT,
-                spot_action_json TEXT,
-                error TEXT,
-                ok INTEGER NOT NULL DEFAULT 0
+    with _lock:
+        if _db_ready:
+            return
+        _DATA_DIR.mkdir(parents=True, exist_ok=True)
+        with sqlite3.connect(str(_DB_PATH)) as conn:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS jev_shadow_log (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ts TEXT NOT NULL,
+                    symbol TEXT NOT NULL,
+                    model TEXT,
+                    latency_ms REAL,
+                    state_json TEXT,
+                    answers_json TEXT,
+                    shadow_gate_json TEXT,
+                    spot_action_json TEXT,
+                    error TEXT,
+                    ok INTEGER NOT NULL DEFAULT 0
+                )
+                """
             )
-            """
-        )
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_jev_shadow_ts_sym ON jev_shadow_log(ts, symbol)"
-        )
-        conn.commit()
-    _db_ready = True
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_jev_shadow_ts_sym ON jev_shadow_log(ts, symbol)"
+            )
+            conn.commit()
+        _db_ready = True
+        logger.info(f"[jev_shadow] db ready at {_DB_PATH}")
+
 
 
 def log_row(row: dict[str, Any]) -> None:
@@ -453,8 +491,9 @@ def _collect_ctx(symbol: str, ctx: dict[str, Any]) -> dict[str, Any]:
 
             out["btc_filter"] = btc_master_filter.summary()
             st = btc_master_filter.state
-            # Prefer per-symbol indicators when provided; else BTC master as weak proxy only for BTC
-            if symbol in ("BTC/USDT", "BTCUSDT") or out.get("sma_50") is None:
+            # Only copy BTC master SMAs/ADX onto BTC itself — never onto alts.
+            _sym = str(symbol or "").replace(" ", "").upper()
+            if _sym in ("BTC/USDT", "BTCUSDT", "BTC"):
                 if out.get("sma_50") is None and getattr(st, "sma_50", 0):
                     out["sma_50"] = st.sma_50
                 if out.get("sma_200") is None and getattr(st, "sma_200", 0):
@@ -467,6 +506,17 @@ def _collect_ctx(symbol: str, ctx: dict[str, Any]) -> dict[str, Any]:
 
 
 def _run_one(symbol: str, ctx: dict[str, Any]) -> None:
+    if not _inflight.acquire(blocking=False):
+        logger.debug(f"[jev_shadow] drop {symbol}: max inflight reached")
+        return
+    try:
+        _run_one_inner(symbol, ctx)
+    finally:
+        _inflight.release()
+
+
+def _run_one_inner(symbol: str, ctx: dict[str, Any]) -> None:
+    global _success_log_counter
     ts = datetime.now(timezone.utc).isoformat()
     spot_action = {
         "allow_buys_effective": ctx.get("allow_buys_effective"),
@@ -498,10 +548,18 @@ def _run_one(symbol: str, ctx: dict[str, Any]) -> None:
                 "error": None,
             }
         )
-        logger.debug(
+        _success_log_counter += 1
+        _gate = (payload.get("shadow_gate") or {})
+        _msg = (
             f"[jev_shadow] logged {symbol} latency={payload.get('latency_ms')}ms "
-            f"gate={payload.get('shadow_gate', {}).get('shadow_allow_new_grid_buys')}"
+            f"gate={_gate.get('shadow_allow_new_grid_buys', _gate.get('shadow_allow_new_grid_buys'))} "
+            f"db={_DB_PATH}"
         )
+        # Periodic info so Railway log drain proves shadow is alive even if DB is ephemeral
+        if _success_log_counter == 1 or _success_log_counter % 25 == 0:
+            logger.info(_msg + f" (n={_success_log_counter})")
+        else:
+            logger.debug(_msg)
     except Exception as e:  # noqa: BLE001 — fail-open
         log_row(
             {

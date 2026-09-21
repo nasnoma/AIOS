@@ -1087,7 +1087,7 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                                     "in_top8": True,
                                     "allow_buys_effective": _allow,
                                     "fee_rate_roundtrip": float(getattr(spot_settings, "fee_rate", 0) or 0) * 2.0,
-                                    "range_24h_pct": float(range_24h_pct) * 100.0 if range_24h_pct is not None else None,
+                                    "range_24h_pct": float(range_24h_pct) if range_24h_pct is not None else None,  # fraction or pct; jev_shadow normalizes
                                     "buy_levels": _buy_levels,
                                     "tick_events_n": len(events) if events else 0,
                                     "grid_action_summary": _grid_summary,
