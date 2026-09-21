@@ -63,6 +63,7 @@ _JSONL_PATH = _DATA_DIR / "jev_shadow.jsonl"
 _lock = threading.Lock()
 _last_ask_ts: dict[str, float] = {}
 _db_ready = False
+_shadow_announced = False
 _inflight = threading.Semaphore(int(os.environ.get("SPOT_JEV_SHADOW_MAX_INFLIGHT", "4") or 4))
 _success_log_counter = 0
 
@@ -590,6 +591,13 @@ def maybe_shadow_log(symbol: str, ctx: dict[str, Any], *, async_ok: bool = True)
             return
         if _should_skip(symbol):
             return
+        global _shadow_announced
+        if not _shadow_announced:
+            _shadow_announced = True
+            logger.info(
+                f"[jev_shadow] enabled — model={_model()} db={_DB_PATH} "
+                f"min_interval={_min_interval()}s timeout={_timeout_sec()}s"
+            )
         if async_ok:
             threading.Thread(
                 target=_run_one,
