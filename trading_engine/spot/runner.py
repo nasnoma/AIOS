@@ -1040,6 +1040,63 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 elif events:
                     # If fills occurred, immediately place new replacement SELL/BUY limit orders on Bybit exchange!
                     engine.place_grid_orders(_portfolio, exchange)
+
+                # ── Jev / TypeSafe SHADOW logger (observability only; never influences orders) ──
+                # Gated by SPOT_JEV_SHADOW=1. Throttled + fail-open + async. Top-8 / active only.
+                try:
+                    if symbol in _active_roster:
+                        from trading_engine.spot.jev_shadow import maybe_shadow_log, shadow_enabled
+                        if shadow_enabled():
+                            _open_buys = [l for l in engine.grid_levels if getattr(l, "status", "") == "open" and getattr(l, "side", "") == "buy"]
+                            _open_sells = [l for l in engine.grid_levels if getattr(l, "status", "") == "open" and getattr(l, "side", "") == "sell"]
+                            _ob_notional = sum(float(getattr(l, "price", 0) or 0) * float(getattr(l, "qty", 0) or 0) for l in _open_buys)
+                            _h = _portfolio.get_holding(symbol) if hasattr(_portfolio, "get_holding") else None
+                            _units = float(getattr(_h, "units_held", 0) or 0) if _h else float(holding_qty or 0)
+                            _cost = float(getattr(_h, "avg_cost_basis", 0) or 0) if _h else float(h_cost or 0)
+                            _det = _regime_detectors.get(symbol)
+                            _rst = getattr(_det, "_cached_state", None) if _det else None
+                            _buy_levels = int(getattr(getattr(engine, "params", None), "buy_levels", 0) or 0)
+                            _allow = bool(
+                                float(getattr(engine, "allocated_usd", 0) or 0) > 0
+                                and _buy_levels > 0
+                                and getattr(engine, "current_regime", "RANGE") != "BEAR"
+                            )
+                            _grid_summary = (
+                                f"regime={getattr(engine, 'current_regime', '?')} "
+                                f"alloc=${float(getattr(engine, 'allocated_usd', 0) or 0):.0f} "
+                                f"buy_levels={_buy_levels} "
+                                f"open_buys={len(_open_buys)} open_sells={len(_open_sells)} "
+                                f"events={len(events) if events else 0} "
+                                f"stale={bool(is_stale)} missing_sells={bool(missing_sells)}"
+                            )
+                            maybe_shadow_log(
+                                symbol,
+                                {
+                                    "price": price,
+                                    "sma_50": float(getattr(_rst, "sma_50", 0) or 0) or None,
+                                    "sma_200": float(getattr(_rst, "sma_200", 0) or 0) or None,
+                                    "adx_1h": float(getattr(_rst, "adx", 0) or 0) or None,
+                                    "spot_regime": getattr(engine, "current_regime", None) or (getattr(_rst, "regime", None) if _rst else None),
+                                    "inventory_usd": float(_units) * float(price) if price else None,
+                                    "inventory_units": _units,
+                                    "avg_cost_basis": _cost or None,
+                                    "open_buy_notional_usd": _ob_notional,
+                                    "open_buy_count": len(_open_buys),
+                                    "open_sell_count": len(_open_sells),
+                                    "allocated_usd": float(getattr(engine, "allocated_usd", 0) or 0),
+                                    "in_top8": True,
+                                    "allow_buys_effective": _allow,
+                                    "fee_rate_roundtrip": float(getattr(spot_settings, "fee_rate", 0) or 0) * 2.0,
+                                    "range_24h_pct": float(range_24h_pct) * 100.0 if range_24h_pct is not None else None,
+                                    "buy_levels": _buy_levels,
+                                    "tick_events_n": len(events) if events else 0,
+                                    "grid_action_summary": _grid_summary,
+                                },
+                                async_ok=True,
+                            )
+                except Exception as _e_jev:
+                    logger.debug(f"[{symbol}] jev_shadow hook skipped: {_e_jev}")
+
             except Exception as e:
                 logger.warning(f"Error in grid tick for {symbol}: {e}")
             
