@@ -1172,8 +1172,46 @@ def run_spot_dca_check():
                             if is_never_sell_symbol(symbol):
                                 logger.critical(f"🚫 DCA exit sell blocked for protected asset {symbol}")
                             elif not spot_settings.paper_mode and exchange:
-                                exchange.create_limit_sell_order(symbol, qty, exit_price)
-                                logger.info(f"📤 DCA Exit Limit Sell placed [{symbol}]: qty={qty:.6f} @ ${exit_price:.4f} (CostRef: ${cost_ref:.4f}, Guaranteed Net: >= +$0.60 USD)")
+                                from trading_engine.spot.sell_guard import assert_sell_clears_bag_max
+                                _units = 0.0
+                                _avg = float(cost_ref or 0.0)
+                                try:
+                                    _h = _portfolio.get_holding(symbol) if hasattr(_portfolio, 'get_holding') else None
+                                    if _h is not None:
+                                        _units = float(getattr(_h, 'units_held', 0) or 0)
+                                        _avg = max(_avg, float(getattr(_h, 'avg_cost_basis', 0) or 0))
+                                except Exception:
+                                    pass
+                                ok_bag, why_bag = assert_sell_clears_bag_max(
+                                    symbol, float(exit_price), float(qty),
+                                    units_held=_units, portfolio_avg_cost=_avg,
+                                )
+                                if not ok_bag:
+                                    # Raise to bag-max fee-proof floor rather than placing under $0.50
+                                    from trading_engine.spot.sell_guard import enforce_sell_floor, resolve_sell_cost_ref, HARD_MIN_NET_USD
+                                    bag_cost = resolve_sell_cost_ref(
+                                        symbol,
+                                        portfolio_avg_cost=_avg,
+                                        units_held=_units or None,
+                                        sell_qty=qty,
+                                        linked_buy_price=cost_ref,
+                                        current_price=price,
+                                    )
+                                    exit_price = float(enforce_sell_floor(
+                                        exit_price, bag_cost, qty,
+                                        fee_factor=fee_factor,
+                                        min_net_usd=max(0.60, float(HARD_MIN_NET_USD)),
+                                    ))
+                                    ok_bag, why_bag = assert_sell_clears_bag_max(
+                                        symbol, float(exit_price), float(qty),
+                                        units_held=_units, portfolio_avg_cost=_avg,
+                                    )
+                                if not ok_bag:
+                                    logger.error(f"🛑 DCA exit BLOCKED [{symbol}] @{exit_price} — {why_bag}")
+                                    exit_price = 0.0
+                                else:
+                                    exchange.create_limit_sell_order(symbol, qty, exit_price)
+                                    logger.info(f"📤 DCA Exit Limit Sell placed [{symbol}]: qty={qty:.6f} @ ${exit_price:.4f} (CostRef: ${cost_ref:.4f}, Guaranteed Net: >= +$0.60 USD)")
                             else:
                                 logger.info(f"📤 [PAPER] DCA Exit Limit Sell [{symbol}]: qty={qty:.6f} @ ${exit_price:.4f} (CostRef: ${cost_ref:.4f}, Guaranteed Net: >= +$0.60 USD)")
                         except Exception as sell_err:

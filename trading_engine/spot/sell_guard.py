@@ -221,3 +221,41 @@ def assert_sell_clears_bag_max(symbol: str, sell_price: float, qty: float, *, un
     )
     return ok, why
 
+
+def batch_completed_cycles_by_fill(cycles: list) -> list[dict]:
+    """Group FIFO lot-rows from one sell fill into batches.
+
+    Bybit/FIFO accounting often splits one sell into several completed-cycle
+    rows (one per matched buy lot). Health / gate audits must sum net_pnl per
+    batch — not flag individual lot-rows under HARD_MIN_NET_USD.
+    """
+    from collections import defaultdict
+    buckets: dict = defaultdict(list)
+    for c in cycles or []:
+        if not isinstance(c, dict):
+            continue
+        sym = str(c.get("symbol") or "")
+        try:
+            sell_px = round(float(c.get("sell_price") or 0.0), 6)
+        except Exception:
+            sell_px = 0.0
+        ts = str(c.get("timestamp") or c.get("sell_timestamp") or "")
+        # minute bucket (handles Z and offset forms)
+        minute = ts[:16] if len(ts) >= 16 else ts
+        buckets[(sym, sell_px, minute)].append(c)
+    out = []
+    for (sym, sell_px, minute), lots in buckets.items():
+        nets = [float(x.get("net_pnl") or 0.0) for x in lots]
+        fees = [float(x.get("fee") or 0.0) for x in lots]
+        out.append({
+            "symbol": sym,
+            "sell_price": sell_px,
+            "minute": minute,
+            "lots": len(lots),
+            "net_pnl": sum(nets),
+            "fee": sum(fees),
+            "thin_lot_rows": sum(1 for n in nets if n + 1e-9 < float(HARD_MIN_NET_USD)),
+            "under_floor": sum(nets) + 1e-9 < float(HARD_MIN_NET_USD),
+            "cycles": lots,
+        })
+    return out

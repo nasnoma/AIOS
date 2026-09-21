@@ -881,6 +881,7 @@ class GridEngine:
                 _avg = float(getattr(_h, 'avg_cost_basis', 0) or (_h or {}).get('avg_cost_basis', 0) or 0)
             except Exception:
                 _avg = 0.0
+            self._last_portfolio_avg_cost = float(_avg or 0.0)
             self.cancel_unsafe_resting_sells(exchange, units_held=_u, portfolio_avg_cost=_avg)
         except Exception as e_unsafe:
             logger.warning(f"[{self.symbol}] cancel_unsafe_resting_sells: {e_unsafe}")
@@ -1052,6 +1053,7 @@ class GridEngine:
                                     ok_bag, why_bag = assert_sell_clears_bag_max(
                                         self.symbol, float(price_val), float(qty_val),
                                         units_held=float(getattr(self, '_last_base_qty_held', 0) or 0),
+                                        portfolio_avg_cost=float(getattr(self, '_last_portfolio_avg_cost', 0) or 0),
                                     )
                                     if not ok_bag:
                                         logger.error(f"🛑 [{self.symbol}] BLOCKED sell @{price_val} — {why_bag}")
@@ -1071,6 +1073,7 @@ class GridEngine:
                                         ok_bag, why_bag = assert_sell_clears_bag_max(
                                             self.symbol, float(price_val), float(qty_val),
                                             units_held=float(getattr(self, '_last_base_qty_held', 0) or 0),
+                                            portfolio_avg_cost=float(getattr(self, '_last_portfolio_avg_cost', 0) or 0),
                                         )
                                         if not ok_bag:
                                             logger.error(f"🛑 [{self.symbol}] BLOCKED sell @{price_val} — {why_bag}")
@@ -1097,6 +1100,7 @@ class GridEngine:
                                                 ok_bag, why_bag = assert_sell_clears_bag_max(
                                                     self.symbol, float(price_val), float(new_qty),
                                                     units_held=float(getattr(self, '_last_base_qty_held', 0) or 0),
+                                                    portfolio_avg_cost=float(getattr(self, '_last_portfolio_avg_cost', 0) or 0),
                                                 )
                                                 if not ok_bag:
                                                     logger.error(f"🛑 [{self.symbol}] BLOCKED sell @{price_val} — {why_bag}")
@@ -1260,6 +1264,7 @@ class GridEngine:
                                 ok_bag, why_bag = assert_sell_clears_bag_max(
                                     self.symbol, float(p_val), float(qty_val),
                                     units_held=float(getattr(self, '_last_base_qty_held', 0) or 0),
+                                    portfolio_avg_cost=float(getattr(self, '_last_portfolio_avg_cost', 0) or 0),
                                 )
                                 if not ok_bag:
                                     logger.error(f"🛑 [{self.symbol}] BLOCKED sell @{p_val} — {why_bag}")
@@ -1309,6 +1314,7 @@ class GridEngine:
                                 ok_bag, why_bag = assert_sell_clears_bag_max(
                                     self.symbol, float(p_val), float(qty_val),
                                     units_held=float(getattr(self, '_last_base_qty_held', 0) or 0),
+                                    portfolio_avg_cost=float(getattr(self, '_last_portfolio_avg_cost', 0) or 0),
                                 )
                                 if not ok_bag:
                                     logger.error(f"🛑 [{self.symbol}] BLOCKED sell @{p_val} — {why_bag}")
