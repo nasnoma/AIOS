@@ -476,6 +476,16 @@ class GridEngine:
 
         is_aged_position = (oldest_lot_age_hours >= 12.0)  # recycle capital sooner while still fee-proof
 
+        # Fail closed: inventory without FIFO max/avg must not place sells off stale hist/portfolio.
+        # (SEI 2026-09-22: hist 0.0468 + missing FIFO → ~0.059 sells filled under ~0.0636 bag.)
+        _fifo_known = float(fifo_max_cost or 0.0) > 0 or float((fifo_basis or {}).get('avg_cost') or 0.0) > 0
+        _skip_sells_no_fifo = bool(base_qty_held > 0.000001 and not _fifo_known)
+        if _skip_sells_no_fifo:
+            logger.error(
+                f"🛑 [{self.symbol}] Refusing sell placement — holding {base_qty_held:.6f} but FIFO cost unknown. "
+                f"Wait for FIFO sync (prevents hist/portfolio undercut)."
+            )
+
         # Safety: If avg_cost is 0 or missing, ensure we never sell below current_price * 1.015
         if avg_cost <= 0:
             avg_cost = current_price
@@ -484,6 +494,8 @@ class GridEngine:
             total_held_usd = base_qty_held * current_price
             if total_held_usd < 5.0:
                 # Sub-$5 dust cannot be placed as a Bybit limit order
+                return
+            if _skip_sells_no_fifo:
                 return
             from trading_engine.config import spot_settings
             is_legacy = self.symbol not in spot_settings.asset_list

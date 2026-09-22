@@ -1660,18 +1660,18 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
 
 
 
-                    # Compute exact FIFO cost basis in-memory (0ms network latency)
-                    avg_cost_basis = ALL_23_HISTORICAL_COSTS.get(symbol, cur_price)
-                    
+                    # Live cost from recent buys when coverage is good; hist is FALLBACK only.
+                    # NEVER overwrite a live avg with stale ALL_23_HISTORICAL_COSTS (SEI hist
+                    # 0.0468 undercut a ~0.0636 bag and let ~0.059 sells fill at a loss).
+                    avg_cost_basis = 0.0
                     sym_buys = [t for t in trades_by_sym.get(symbol, []) if str(t.get('side', '')).upper() == 'BUY']
                     if sym_buys:
                         acc_q = sum(float(b.get('amount') or b.get('qty') or 0.0) for b in sym_buys)
                         acc_c = sum(float(b.get('size_usd') or b.get('cost') or 0.0) or (float(b.get('price') or 0.0) * float(b.get('amount') or b.get('qty') or 0.0)) for b in sym_buys)
                         if acc_q >= units_val * 0.90 and acc_q > 0:
                             avg_cost_basis = acc_c / acc_q
-
-                    if symbol in ALL_23_HISTORICAL_COSTS:
-                        avg_cost_basis = ALL_23_HISTORICAL_COSTS[symbol]
+                    if avg_cost_basis <= 0:
+                        avg_cost_basis = float(ALL_23_HISTORICAL_COSTS.get(symbol, 0.0) or 0.0) or float(cur_price or 0.0)
 
                     unrealised_pnl = (cur_price - avg_cost_basis) * units_val
                     total_cost = avg_cost_basis * units_val
