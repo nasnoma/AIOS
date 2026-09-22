@@ -86,7 +86,7 @@ def resolve_sell_cost_ref(
         qty = float(sell_qty or 0.0)
         offset = float(qty_offset or 0.0)
         if qty > 1e-12:
-            lot = get_fifo_lot_cost_for_qty(symbol, qty, qty_offset=offset) or {}
+            lot = get_fifo_lot_cost_for_qty(symbol, qty, qty_offset=offset, units_held=units_held) or {}
             fifo_avg = float(lot.get("avg_cost", 0.0) or 0.0)
             fifo_max = float(lot.get("max_buy_price", 0.0) or 0.0)
         # ALWAYS load bag-wide max: Bybit fills the *lowest* resting sell first,

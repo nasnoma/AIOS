@@ -606,6 +606,7 @@ def get_fifo_lot_cost_for_qty(
     symbol: str,
     qty: float,
     qty_offset: float = 0.0,
+    units_held: Optional[float] = None,
 ) -> Dict[str, float]:
     """
     Cost basis for selling `qty` under strict FIFO (oldest open lots first).
@@ -613,8 +614,9 @@ def get_fifo_lot_cost_for_qty(
     Optional `qty_offset` skips older units already assigned to earlier sell
     slices in a multi-level grid (slice 1 = offset 0, slice 2 = offset qty, …).
 
-    Floor for a slice is max(avg, max_buy) of lots THIS sell would consume —
-    never the whole-book bag average alone (that allowed sell-below-lot losses).
+    When `units_held` is set, open lots are wallet-trimmed (newest-first) before
+    the FIFO walk — same anti-ghost rule as get_fifo_cost_basis. Otherwise a
+    dust/ghost lot (e.g. ATOM 0.34 @ 1.928) can poison every sell floor.
     """
     qty = float(qty or 0.0)
     if qty <= 1e-12:
@@ -626,6 +628,21 @@ def get_fifo_lot_cost_for_qty(
         }
 
     open_lots = _open_buy_lots_from_fills(symbol)
+    held = float(units_held or 0.0)
+    if held > 1e-6 and open_lots:
+        need = held
+        wallet: List[Dict[str, Any]] = []
+        for b in sorted(open_lots, key=lambda x: -int(x.get("ts_ms") or 0)):
+            rem = float(b.get("rem") or 0.0)
+            if rem <= 1e-8 or need <= 1e-8:
+                continue
+            take = min(need, rem)
+            wallet.append({"price": float(b["price"]), "rem": take, "ts_ms": b.get("ts_ms") or 0})
+            need -= take
+            if need <= 1e-8:
+                break
+        # FIFO consume order is still oldest-first among wallet-true lots
+        open_lots = sorted(wallet, key=lambda x: int(x.get("ts_ms") or 0))
     return fifo_slice_cost_from_lots(open_lots, qty, qty_offset=float(qty_offset or 0.0))
 
 

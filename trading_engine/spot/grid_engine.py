@@ -556,6 +556,27 @@ class GridEngine:
                     # Absolute Hard Safety Gate: target_p MUST be strictly >= min_fee_proof_price
                     target_p = max(target_p, min_fee_proof_price)
 
+                    # ATOM user pin: fee-proof bag + $0.50 (never below; replaces fat aged targets)
+                    try:
+                        if str(self.symbol).upper().startswith("ATOM"):
+                            from trading_engine.spot.atom_exit_pin import atom_fee_proof_pin
+                            _ap = atom_fee_proof_pin(
+                                units_held=float(base_qty_held or 0.0),
+                                portfolio_avg_cost=float(avg_cost or 0.0),
+                                sell_qty=float(qty_per_sell or 0.0),
+                                current_price=float(current_price or 0.0),
+                                min_net_usd=0.50,
+                            )
+                            if _ap > 0:
+                                if target_p > _ap * 1.001:
+                                    logger.info(
+                                        f"📌 [ATOM/USDT] Tightening sell ${target_p:.4f} -> ${_ap:.4f} "
+                                        f"(fee-proof+$0.50 pin)"
+                                    )
+                                target_p = max(float(min_fee_proof_price), float(_ap))
+                    except Exception as _e_atom:
+                        logger.debug(f"ATOM pin skipped: {_e_atom}")
+
                     # ARB optional exit pin — ONLY if pin >= fee-proof floor (never undercut FIFO max lots)
                     try:
                         if str(self.symbol).upper().startswith("ARB"):
@@ -719,6 +740,27 @@ class GridEngine:
 
                     # Absolute Hard Safety Gate: target_p MUST be strictly >= min_fee_proof_price
                     target_p = max(target_p, min_fee_proof_price)
+
+                    # ATOM user pin: fee-proof bag + $0.50 (never below; replaces fat aged targets)
+                    try:
+                        if str(self.symbol).upper().startswith("ATOM"):
+                            from trading_engine.spot.atom_exit_pin import atom_fee_proof_pin
+                            _ap = atom_fee_proof_pin(
+                                units_held=float(base_qty_held or 0.0),
+                                portfolio_avg_cost=float(avg_cost or 0.0),
+                                sell_qty=float(qty_per_sell or 0.0),
+                                current_price=float(current_price or 0.0),
+                                min_net_usd=0.50,
+                            )
+                            if _ap > 0:
+                                if target_p > _ap * 1.001:
+                                    logger.info(
+                                        f"📌 [ATOM/USDT] Tightening sell ${target_p:.4f} -> ${_ap:.4f} "
+                                        f"(fee-proof+$0.50 pin)"
+                                    )
+                                target_p = max(float(min_fee_proof_price), float(_ap))
+                    except Exception as _e_atom:
+                        logger.debug(f"ATOM pin skipped: {_e_atom}")
 
                     # ARB optional exit pin — ONLY if pin >= fee-proof floor (never undercut FIFO max lots)
                     try:
