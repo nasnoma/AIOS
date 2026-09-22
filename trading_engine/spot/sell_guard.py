@@ -102,14 +102,26 @@ def resolve_sell_cost_ref(
     # Safety beats cycle speed — every resting sell must clear the dearest open lot.
     live = max(
         float(portfolio_avg_cost or 0.0), fifo_avg, fifo_max, linked)
-    if live > 0:
-        return live
-
     hist = float(hist_cost or 0.0)
+    px = float(current_price or 0.0)
+
+    # Hist is RAISE-ONLY. Stale ALL_23 hist (e.g. SEI 0.0468) must never undercut
+    # a live bag (~0.0636) or become the sole floor while inventory exists.
+    if live > 0:
+        return max(live, hist) if hist > live else live
+
+    held = float(units_held or 0.0)
+    if held > 1e-12:
+        # Inventory but no live FIFO/portfolio/linked — refuse cheap hist floor.
+        logger.error(
+            f"[sell_guard] {symbol}: holding {held} but no live FIFO/portfolio cost — "
+            f"fail-closed (hist={hist}, px={px}); caller must skip sells"
+        )
+        return 0.0
+
     if hist > 0:
         return hist
-
-    return float(current_price or 0.0)
+    return px
 
 
 def min_fee_proof_sell_price(

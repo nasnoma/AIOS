@@ -381,9 +381,13 @@ class SpotPortfolio:
                 
                 # Import historical costs reference to prevent display anomalies
                 try:
+                    # Hist is display/raise-only — never overwrite a higher live avg
+                    # (SEI 2026-09-22: hist 0.0468 replaced ~0.0636 and poisoned sells).
                     from trading_engine.spot.runner import ALL_23_HISTORICAL_COSTS
-                    ref_cost = ALL_23_HISTORICAL_COSTS.get(k, 0.0)
-                    if ref_cost > 0:
+                    ref_cost = float(ALL_23_HISTORICAL_COSTS.get(k, 0.0) or 0.0)
+                    if cost <= 0 and ref_cost > 0:
+                        cost = ref_cost
+                    elif ref_cost > cost > 0:
                         cost = ref_cost
                 except Exception:
                     pass
@@ -399,9 +403,13 @@ class SpotPortfolio:
                 val = float(getattr(v, 'value_usd', u * price))
                 
                 try:
+                    # Hist is display/raise-only — never overwrite a higher live avg
+                    # (SEI 2026-09-22: hist 0.0468 replaced ~0.0636 and poisoned sells).
                     from trading_engine.spot.runner import ALL_23_HISTORICAL_COSTS
-                    ref_cost = ALL_23_HISTORICAL_COSTS.get(k, 0.0)
-                    if ref_cost > 0:
+                    ref_cost = float(ALL_23_HISTORICAL_COSTS.get(k, 0.0) or 0.0)
+                    if cost <= 0 and ref_cost > 0:
+                        cost = ref_cost
+                    elif ref_cost > cost > 0:
                         cost = ref_cost
                 except Exception:
                     pass

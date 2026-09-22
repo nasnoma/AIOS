@@ -23,12 +23,12 @@ from trading_engine.spot.entry_guards import entry_buys_allowed, exitability_sco
 # Fallback seed costs only (FIFO live cost wins). Name kept as ALL_23_* for compat;
 # universe is the screened Bybit spot set (now includes liquid extras XRP/LTC/XLM).
 ALL_23_HISTORICAL_COSTS = {
-    'NEAR/USDT': 2.3953, 'TIA/USDT': 0.4474, 'SUI/USDT': 0.8297, 'FET/USDT': 0.1791,
-    'ICP/USDT': 2.8460, 'ADA/USDT': 0.2102, 'APT/USDT': 0.6153, 'OP/USDT': 0.1086,
+    'NEAR/USDT': 4.2700, 'TIA/USDT': 0.4474, 'SUI/USDT': 0.8297, 'FET/USDT': 0.1791,
+    'ICP/USDT': 2.8460, 'ADA/USDT': 0.2102, 'APT/USDT': 0.7857, 'OP/USDT': 0.1086,
     'RENDER/USDT': 1.4773, 'ARB/USDT': 0.1852, 'DOT/USDT': 1.1759, 'ALGO/USDT': 0.0908,
     'UNI/USDT': 6.6739, 'INJ/USDT': 6.3400, 'AVAX/USDT': 8.1317, 'SOL/USDT': 103.0504,
     'ETH/USDT': 2477.2894, 'BTC/USDT': 80295.00, 'XAUT/USDT': 4583.60, 'ARKM/USDT': 0.1125,
-    'ATOM/USDT': 1.8158, 'LINK/USDT': 12.7713, 'SEI/USDT': 0.0468,
+    'ATOM/USDT': 1.8158, 'LINK/USDT': 12.7713, 'SEI/USDT': 0.06357,
     # Liquid extras (Bybit spot grid-fit screen 2026-09-13) — seed last px; FIFO overrides
     'XRP/USDT': 1.3397, 'LTC/USDT': 53.54, 'XLM/USDT': 0.1782,
 }
