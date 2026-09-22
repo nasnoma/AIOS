@@ -925,7 +925,7 @@ def get_shadow_status(*, recent_n: int = 20, hours: float = 24.0) -> dict[str, A
             "digest_lines": [
                 "Jev accuracy: unavailable (grader error).",
                 "Best/worst: n/a.",
-                "Recommendation: Wait — accuracy grader failed.",
+                "What to do: Wait — grader had a problem; try again later.",
             ],
             "note": f"{type(e).__name__}: {e}",
         }
@@ -1113,9 +1113,9 @@ def _recommendation(
         return {
             "status": "wait",
             "reason": (
-                f"too few graded calls "
-                f"(graded={graded}/{MIN_GRADED_FOR_REC}, "
-                f"shadow_days={shadow_days:.1f}/{MIN_SHADOW_DAYS_FOR_REC})"
+                f"still collecting — {graded} finished calls "
+                f"(need {MIN_GRADED_FOR_REC}) over {shadow_days:.1f} days "
+                f"(need {MIN_SHADOW_DAYS_FOR_REC})"
             ),
             "bars_used": bars,
         }
@@ -1138,11 +1138,11 @@ def _recommendation(
         why = (
             f"hit rate {hr:.1f}% < {HIT_RATE_DROP_PCT:.0f}%"
             if hr < HIT_RATE_DROP_PCT
-            else f"false-ALLOW rate {false_allow_rate:.0%} clearly hurts"
+            else f"too many bad 'buy ok' calls ({false_allow_rate:.0%})"
         )
         return {
             "status": "drop",
-            "reason": f"{why} — retune before any soft gate (still advisory; do not auto-wire)",
+            "reason": f"{why} — not good enough; drop or retune (still advisory)",
             "bars_used": bars,
         }
 
@@ -1155,8 +1155,8 @@ def _recommendation(
         return {
             "status": "adopt",
             "reason": (
-                f"hit rate {hr:.1f}% over {graded} graded calls in {shadow_days:.1f}d; "
-                "soft buy influence only after Nasir says yes (never auto-wire)"
+                f"right {hr:.0f}% of the time on {graded} calls over {shadow_days:.1f} days; "
+                "ready to discuss turning on — still needs your yes"
             ),
             "bars_used": bars,
         }
@@ -1164,56 +1164,51 @@ def _recommendation(
     return {
         "status": "keep_shadow_only",
         "reason": (
-            f"hit rate {hr:.1f}% in 45–55% band or mixed selectivity "
-            f"(false_allow={false_allow_rate}, block_hit={block_correct_rate})"
+            f"right {hr:.0f}% of the time — mixed so far; keep watching in shadow only"
         ),
         "bars_used": bars,
     }
 
 
 def _digest_lines(accuracy: dict[str, Any]) -> list[str]:
+    """Plain-English lines for the morning briefing (Nasir-facing)."""
     graded = int(accuracy.get("graded") or 0)
     correct = int(accuracy.get("correct") or 0)
     incorrect = int(accuracy.get("incorrect") or 0)
     hr = accuracy.get("hit_rate_pct")
     rec = accuracy.get("recommendation") or {}
-    status = str(rec.get("status") or "wait").upper()
-    reason = str(rec.get("reason") or "")
+    status = str(rec.get("status") or "wait").lower()
     best = accuracy.get("best")
     worst = accuracy.get("worst")
 
     if graded <= 0 or hr is None:
-        line1 = (
-            "Jev accuracy: insufficient to grade "
-            f"(need horizon-elapsed marks; graded={graded})."
-        )
+        line1 = "Right so far: not enough finished calls yet to score."
     else:
-        line1 = (
-            f"Jev accuracy: {hr:.1f}% hit rate "
-            f"({correct} right / {incorrect} wrong, n={graded})."
-        )
+        line1 = f"Right so far: {correct} out of {graded} calls ({hr:.0f}%)."
 
     def _fmt(card: Any, label: str) -> str:
         if not isinstance(card, dict):
-            return f"{label}: n/a."
-        rw = "RIGHT" if card.get("right") else "WRONG"
-        return (
-            f"{label}: {card.get('symbol')} {card.get('kind')}={card.get('call')} "
-            f"→ {card.get('outcome')} ({rw}, ret={card.get('ret_pct')}%)."
-        )
+            return f"{label}: none yet."
+        ok = "right" if card.get("right") else "wrong"
+        ret = card.get("ret_pct")
+        ret_s = f", price moved {ret:+.1f}%" if isinstance(ret, (int, float)) else ""
+        kind = str(card.get("kind") or "call")
+        call = str(card.get("call") or "")
+        sym = str(card.get("symbol") or "?")
+        return f"{label}: {sym} said {call} ({kind}) — {ok}{ret_s}."
 
-    line2_best = _fmt(best, "Best call")
-    line2_worst = _fmt(worst, "Worst call")
-    # Keep best+worst as one digest pair line plus recommendation
-    line2 = f"{line2_best} | {line2_worst}"
-    # Human label for status
-    status_print = {
-        "ADOPT": "Adopt",
-        "WAIT": "Wait",
-        "DROP": "Drop",
-        "KEEP_SHADOW_ONLY": "Keep shadow only",
-    }.get(status, status.title())
-    line3 = f"Recommendation: {status_print} — {reason}"
+    line2 = f"{_fmt(best, 'Best call')} {_fmt(worst, 'Worst call')}"
+
+    what = {
+        "wait": "What to do: Wait — still collecting results (need a few days).",
+        "keep_shadow_only": "What to do: Looking okay — keep watching in shadow only.",
+        "adopt": (
+            "What to do: Ready to discuss turning it on "
+            "(still needs your yes; nothing changes live until you say so)."
+        ),
+        "drop": "What to do: Not working well — drop or retune.",
+    }.get(status, f"What to do: {status}.")
+    line3 = what
     return [line1, line2, line3]
 
 
