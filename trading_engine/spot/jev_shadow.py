@@ -611,6 +611,169 @@ def maybe_shadow_log(symbol: str, ctx: dict[str, Any], *, async_ok: bool = True)
         logger.debug(f"[jev_shadow] maybe_shadow_log swallowed: {e}")
 
 
+
+def get_shadow_status(*, recent_n: int = 20, hours: float = 24.0) -> dict[str, Any]:
+    """
+    Aggregate shadow observability for ops digests /api.
+    Advisory only — never influences orders. Safe if DB missing/empty.
+    """
+    enabled = shadow_enabled()
+    out: dict[str, Any] = {
+        "enabled": enabled,
+        "model": _model(),
+        "db_path": str(_DB_PATH),
+        "jsonl_path": str(_JSONL_PATH),
+        "min_interval_sec": _min_interval(),
+        "timeout_sec": _timeout_sec(),
+        "window_hours": hours,
+        "note": (
+            "Advisory only — does not place/cancel orders. "
+            "SQLite may reset on Railway redeploy unless SPOT_JEV_SHADOW_DIR points at a volume. "
+            "TypeSafe console usage remains the external spend/request proof."
+        ),
+        "totals": {
+            "rows": 0,
+            "ok": 0,
+            "errors": 0,
+            "allow": 0,
+            "block": 0,
+            "no_gate": 0,
+        },
+        "by_symbol": {},
+        "top_block_reasons": [],
+        "recent": [],
+        "db_present": _DB_PATH.exists(),
+        "error": None,
+    }
+    if not _DB_PATH.exists():
+        out["error"] = "shadow db not created yet (no successful/failed log rows on this instance)"
+        return out
+    try:
+        _ensure_db()
+        cutoff = datetime.now(timezone.utc).timestamp() - max(1.0, float(hours)) * 3600.0
+        with sqlite3.connect(str(_DB_PATH)) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                """
+                SELECT ts, symbol, model, latency_ms, shadow_gate_json, error, ok
+                FROM jev_shadow_log
+                ORDER BY id DESC
+                LIMIT 5000
+                """
+            ).fetchall()
+        # Filter by window when ts parses; keep unparsable rows in totals for visibility
+        window_rows = []
+        for r in rows:
+            ts = r["ts"] or ""
+            keep = True
+            try:
+                # Accept Z / offset ISO
+                t = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                if t.tzinfo is None:
+                    t = t.replace(tzinfo=timezone.utc)
+                keep = t.timestamp() >= cutoff
+            except Exception:
+                keep = True
+            if keep:
+                window_rows.append(r)
+
+        reason_counts: dict[str, int] = {}
+        by_sym: dict[str, dict[str, Any]] = {}
+        for r in window_rows:
+            sym = r["symbol"] or "unknown"
+            slot = by_sym.setdefault(
+                sym,
+                {"rows": 0, "ok": 0, "errors": 0, "allow": 0, "block": 0, "avg_latency_ms": None},
+            )
+            slot["rows"] += 1
+            out["totals"]["rows"] += 1
+            if int(r["ok"] or 0) == 1:
+                slot["ok"] += 1
+                out["totals"]["ok"] += 1
+            else:
+                slot["errors"] += 1
+                out["totals"]["errors"] += 1
+
+            gate = None
+            raw = r["shadow_gate_json"]
+            if raw:
+                try:
+                    gate = json.loads(raw)
+                except Exception:
+                    gate = None
+            allow = None
+            if isinstance(gate, dict):
+                allow = gate.get("shadow_allow_new_grid_buys")
+                reasons = gate.get("reasons") or []
+                if allow is False:
+                    for reason in reasons:
+                        key = str(reason)
+                        reason_counts[key] = reason_counts.get(key, 0) + 1
+
+            if allow is True:
+                slot["allow"] += 1
+                out["totals"]["allow"] += 1
+            elif allow is False:
+                slot["block"] += 1
+                out["totals"]["block"] += 1
+            else:
+                out["totals"]["no_gate"] += 1
+
+            lat = r["latency_ms"]
+            if lat is not None:
+                prev = slot.get("_lat_sum", 0.0)
+                n = slot.get("_lat_n", 0)
+                slot["_lat_sum"] = prev + float(lat)
+                slot["_lat_n"] = n + 1
+
+        for sym, slot in by_sym.items():
+            n = slot.pop("_lat_n", 0)
+            s = slot.pop("_lat_sum", 0.0)
+            slot["avg_latency_ms"] = round(s / n, 1) if n else None
+            ok = slot["ok"]
+            decided = slot["allow"] + slot["block"]
+            slot["allow_rate"] = round(slot["allow"] / decided, 3) if decided else None
+            slot["ok_rate"] = round(ok / slot["rows"], 3) if slot["rows"] else None
+
+        out["by_symbol"] = dict(sorted(by_sym.items(), key=lambda kv: (-kv[1]["rows"], kv[0])))
+        out["top_block_reasons"] = [
+            {"reason": k, "count": v}
+            for k, v in sorted(reason_counts.items(), key=lambda kv: (-kv[1], kv[0]))[:12]
+        ]
+        # Recent newest-first (already DESC from query; re-filter window)
+        recent = []
+        for r in window_rows[: max(1, min(int(recent_n), 100))]:
+            gate = None
+            if r["shadow_gate_json"]:
+                try:
+                    gate = json.loads(r["shadow_gate_json"])
+                except Exception:
+                    gate = {"raw": r["shadow_gate_json"][:200]}
+            recent.append(
+                {
+                    "ts": r["ts"],
+                    "symbol": r["symbol"],
+                    "ok": bool(r["ok"]),
+                    "latency_ms": r["latency_ms"],
+                    "model": r["model"],
+                    "allow": (gate or {}).get("shadow_allow_new_grid_buys") if isinstance(gate, dict) else None,
+                    "reasons": (gate or {}).get("reasons") if isinstance(gate, dict) else None,
+                    "error": r["error"],
+                }
+            )
+        out["recent"] = recent
+        decided = out["totals"]["allow"] + out["totals"]["block"]
+        out["totals"]["allow_rate"] = (
+            round(out["totals"]["allow"] / decided, 3) if decided else None
+        )
+        out["totals"]["ok_rate"] = (
+            round(out["totals"]["ok"] / out["totals"]["rows"], 3) if out["totals"]["rows"] else None
+        )
+    except Exception as e:  # noqa: BLE001
+        out["error"] = f"{type(e).__name__}: {e}"
+    return out
+
+
 def db_path() -> Path:
     return _DB_PATH
 

@@ -403,6 +403,21 @@ async def get_spot_status_endpoint():
         return {"error": str(e)}
 
 
+@app.get("/api/spot/jev-shadow")
+async def get_spot_jev_shadow_status(hours: float = 24.0, recent_n: int = 20):
+    """Jev / TypeSafe shadow observability (advisory only; never influences orders)."""
+    try:
+        from trading_engine.spot.jev_shadow import get_shadow_status
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            _executor,
+            lambda: get_shadow_status(recent_n=recent_n, hours=hours),
+        )
+    except Exception as e:
+        logger.error(f"Error fetching jev shadow status: {e}")
+        return {"error": str(e), "enabled": False}
+
+
 @app.post("/api/spot/tick")
 async def trigger_spot_tick_endpoint():
     """Manually trigger a spot grid tick."""
