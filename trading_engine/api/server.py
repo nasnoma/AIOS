@@ -405,7 +405,7 @@ async def get_spot_status_endpoint():
 
 @app.get("/api/spot/jev-shadow")
 async def get_spot_jev_shadow_status(hours: float = 24.0, recent_n: int = 20):
-    """Jev / TypeSafe shadow observability (advisory only; never influences orders)."""
+    """Jev / TypeSafe shadow observability + predictive accuracy (advisory only; never influences orders)."""
     try:
         from trading_engine.spot.jev_shadow import get_shadow_status
         loop = asyncio.get_event_loop()

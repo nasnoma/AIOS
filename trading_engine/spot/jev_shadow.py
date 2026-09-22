@@ -906,6 +906,618 @@ def get_shadow_status(*, recent_n: int = 20, hours: float = 24.0) -> dict[str, A
         }
     if "score" not in out:
         out["score"] = _score_shadow(out.get("totals") or {}, avg_latency_ms=None)
+    # Predictive accuracy (after-the-fact vs later marks) — advisory only
+    try:
+        out["accuracy"] = compute_predictive_accuracy()
+    except Exception as e:  # noqa: BLE001
+        out["accuracy"] = {
+            "hit_rate_pct": None,
+            "graded": 0,
+            "correct": 0,
+            "incorrect": 0,
+            "best": None,
+            "worst": None,
+            "recommendation": {
+                "status": "wait",
+                "reason": f"accuracy grader failed: {type(e).__name__}",
+                "bars_used": _ACCURACY_BARS,
+            },
+            "digest_lines": [
+                "Jev accuracy: unavailable (grader error).",
+                "Best/worst: n/a.",
+                "Recommendation: Wait — accuracy grader failed.",
+            ],
+            "note": f"{type(e).__name__}: {e}",
+        }
+    return out
+
+
+# ── Predictive accuracy (roadmap step 2) ─────────────────────────────────────
+# Grade only after the horizon has elapsed. Prefer later SQLite shadow marks for
+# the same symbol (no fill invention). Optional Bybit public kline fallback.
+# NEVER wired into allow_buys.
+
+REGIME_HORIZON_SEC = 4 * 3600
+ALLOW_HORIZON_SEC = 4 * 3600
+REGIME_MOVE_PCT = 0.5  # |ret| <= 0.5% => RANGE; else BULL/BEAR by sign
+MARK_MATCH_TOLERANCE_SEC = 45 * 60  # accept a mark within ±45m of target horizon
+DEFAULT_FEE_ROUNDTRIP = 0.0015  # 0.15% if state lacks fee_rate_roundtrip
+MIN_GRADED_FOR_REC = 30
+MIN_SHADOW_DAYS_FOR_REC = 3
+HIT_RATE_ADOPT_PCT = 55.0
+HIT_RATE_DROP_PCT = 45.0
+
+_ACCURACY_BARS = {
+    "regime_horizon_hours": REGIME_HORIZON_SEC / 3600.0,
+    "allow_horizon_hours": ALLOW_HORIZON_SEC / 3600.0,
+    "regime_move_pct": REGIME_MOVE_PCT,
+    "min_graded": MIN_GRADED_FOR_REC,
+    "min_shadow_days": MIN_SHADOW_DAYS_FOR_REC,
+    "adopt_hit_rate_pct": HIT_RATE_ADOPT_PCT,
+    "drop_hit_rate_pct": HIT_RATE_DROP_PCT,
+    "price_source": "later_shadow_marks_then_bybit_kline",
+    "advisory_only": True,
+}
+
+
+def _parse_iso_ts(ts: Any) -> Optional[datetime]:
+    if not ts:
+        return None
+    try:
+        t = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+        if t.tzinfo is None:
+            t = t.replace(tzinfo=timezone.utc)
+        return t.astimezone(timezone.utc)
+    except Exception:
+        return None
+
+
+def _actual_regime(ret_pct: float, threshold_pct: float = REGIME_MOVE_PCT) -> str:
+    if ret_pct > threshold_pct:
+        return "BULL"
+    if ret_pct < -threshold_pct:
+        return "BEAR"
+    return "RANGE"
+
+
+def _bybit_spot_symbol(symbol: str) -> str:
+    return str(symbol or "").replace("/", "").replace("-", "").upper()
+
+
+def _fetch_bybit_mark_near(symbol: str, target: datetime) -> Optional[float]:
+    """Public Bybit spot 15m kline close nearest to target. Best-effort; never raises."""
+    try:
+        import urllib.parse
+        import urllib.request
+
+        sym = _bybit_spot_symbol(symbol)
+        if not sym.endswith("USDT"):
+            return None
+        # 15-minute kline window around target
+        start_ms = int((target.timestamp() - 30 * 60) * 1000)
+        end_ms = int((target.timestamp() + 30 * 60) * 1000)
+        q = urllib.parse.urlencode(
+            {
+                "category": "spot",
+                "symbol": sym,
+                "interval": "15",
+                "start": start_ms,
+                "end": end_ms,
+                "limit": 10,
+            }
+        )
+        url = f"https://api.bybit.com/v5/market/kline?{q}"
+        req = urllib.request.Request(url, headers={"User-Agent": "aios-jev-shadow-grade/1.0"})
+        with urllib.request.urlopen(req, timeout=4.0) as resp:
+            payload = json.loads(resp.read().decode("utf-8"))
+        if str(payload.get("retCode")) not in ("0", "0.0"):
+            return None
+        rows = ((payload.get("result") or {}).get("list")) or []
+        # Bybit returns newest-first: [start, open, high, low, close, ...]
+        best = None
+        best_dt = None
+        for row in rows:
+            try:
+                start = int(row[0]) / 1000.0
+                close = float(row[4])
+            except Exception:
+                continue
+            dt = datetime.fromtimestamp(start, tz=timezone.utc)
+            if best is None or abs((dt - target).total_seconds()) < abs(
+                (best_dt - target).total_seconds()
+            ):
+                best, best_dt = close, dt
+        if best is None or best_dt is None:
+            return None
+        if abs((best_dt - target).total_seconds()) > MARK_MATCH_TOLERANCE_SEC:
+            return None
+        return float(best)
+    except Exception:
+        return None
+
+
+def _future_mark(
+    timeline: dict[str, list[tuple[datetime, float]]],
+    symbol: str,
+    call_ts: datetime,
+    horizon_sec: float,
+    *,
+    allow_bybit: bool = True,
+) -> tuple[Optional[float], Optional[datetime], str]:
+    """
+    Return (mark, observed_ts, source) near call_ts + horizon.
+    Prefer later SQLite shadow marks; optional Bybit public kline fallback.
+    """
+    target = call_ts.timestamp() + float(horizon_sec)
+    cands = timeline.get(symbol) or []
+    best: Optional[tuple[float, datetime, float]] = None  # abs_delta, ts, mark
+    for ts, mark in cands:
+        delta = ts.timestamp() - target
+        # Prefer marks at/after horizon, but allow ±tolerance
+        if abs(delta) > MARK_MATCH_TOLERANCE_SEC:
+            continue
+        score = abs(delta) + (0.0 if delta >= -60 else 30.0)  # slight preference for at/after
+        if best is None or score < best[0]:
+            best = (score, ts, mark)
+    if best is not None:
+        return best[2], best[1], "shadow_mark"
+    if allow_bybit:
+        tgt = datetime.fromtimestamp(target, tz=timezone.utc)
+        m = _fetch_bybit_mark_near(symbol, tgt)
+        if m is not None:
+            return m, tgt, "bybit_kline"
+    return None, None, "none"
+
+
+def _call_card(
+    *,
+    symbol: str,
+    call_ts: datetime,
+    call: str,
+    outcome: str,
+    right: bool,
+    ret_pct: float,
+    source: str,
+    kind: str,
+) -> dict[str, Any]:
+    return {
+        "symbol": symbol,
+        "ts": call_ts.isoformat(),
+        "kind": kind,
+        "call": call,
+        "outcome": outcome,
+        "right": bool(right),
+        "ret_pct": round(float(ret_pct), 4),
+        "price_source": source,
+    }
+
+
+def _recommendation(
+    *,
+    graded: int,
+    correct: int,
+    incorrect: int,
+    hit_rate_pct: Optional[float],
+    shadow_days: float,
+    false_allow_rate: Optional[float],
+    baseline_down_rate: Optional[float],
+    block_correct_rate: Optional[float],
+    allow_n: int,
+    block_n: int,
+) -> dict[str, Any]:
+    """
+    Adopt / wait / drop / keep_shadow_only — advisory only, never auto-wires.
+    """
+    bars = dict(_ACCURACY_BARS)
+    if graded < MIN_GRADED_FOR_REC or shadow_days < MIN_SHADOW_DAYS_FOR_REC:
+        return {
+            "status": "wait",
+            "reason": (
+                f"too few graded calls "
+                f"(graded={graded}/{MIN_GRADED_FOR_REC}, "
+                f"shadow_days={shadow_days:.1f}/{MIN_SHADOW_DAYS_FOR_REC})"
+            ),
+            "bars_used": bars,
+        }
+
+    hr = float(hit_rate_pct if hit_rate_pct is not None else 0.0)
+    false_allow_hurts = (
+        false_allow_rate is not None
+        and false_allow_rate >= 0.60
+        and allow_n >= 10
+    )
+    false_allow_ok = True
+    if false_allow_rate is not None and baseline_down_rate is not None and allow_n >= 10:
+        # Not worse than market base rate of down periods (small slack)
+        false_allow_ok = false_allow_rate <= (baseline_down_rate + 0.05)
+    block_ok = True
+    if block_n >= 5 and block_correct_rate is not None:
+        block_ok = block_correct_rate >= 0.50
+
+    if hr < HIT_RATE_DROP_PCT or false_allow_hurts:
+        why = (
+            f"hit rate {hr:.1f}% < {HIT_RATE_DROP_PCT:.0f}%"
+            if hr < HIT_RATE_DROP_PCT
+            else f"false-ALLOW rate {false_allow_rate:.0%} clearly hurts"
+        )
+        return {
+            "status": "drop",
+            "reason": f"{why} — retune before any soft gate (still advisory; do not auto-wire)",
+            "bars_used": bars,
+        }
+
+    if (
+        hr >= HIT_RATE_ADOPT_PCT
+        and false_allow_ok
+        and block_ok
+        and not false_allow_hurts
+    ):
+        return {
+            "status": "adopt",
+            "reason": (
+                f"hit rate {hr:.1f}% over {graded} graded calls in {shadow_days:.1f}d; "
+                "soft buy influence only after Nasir says yes (never auto-wire)"
+            ),
+            "bars_used": bars,
+        }
+
+    return {
+        "status": "keep_shadow_only",
+        "reason": (
+            f"hit rate {hr:.1f}% in 45–55% band or mixed selectivity "
+            f"(false_allow={false_allow_rate}, block_hit={block_correct_rate})"
+        ),
+        "bars_used": bars,
+    }
+
+
+def _digest_lines(accuracy: dict[str, Any]) -> list[str]:
+    graded = int(accuracy.get("graded") or 0)
+    correct = int(accuracy.get("correct") or 0)
+    incorrect = int(accuracy.get("incorrect") or 0)
+    hr = accuracy.get("hit_rate_pct")
+    rec = accuracy.get("recommendation") or {}
+    status = str(rec.get("status") or "wait").upper()
+    reason = str(rec.get("reason") or "")
+    best = accuracy.get("best")
+    worst = accuracy.get("worst")
+
+    if graded <= 0 or hr is None:
+        line1 = (
+            "Jev accuracy: insufficient to grade "
+            f"(need horizon-elapsed marks; graded={graded})."
+        )
+    else:
+        line1 = (
+            f"Jev accuracy: {hr:.1f}% hit rate "
+            f"({correct} right / {incorrect} wrong, n={graded})."
+        )
+
+    def _fmt(card: Any, label: str) -> str:
+        if not isinstance(card, dict):
+            return f"{label}: n/a."
+        rw = "RIGHT" if card.get("right") else "WRONG"
+        return (
+            f"{label}: {card.get('symbol')} {card.get('kind')}={card.get('call')} "
+            f"→ {card.get('outcome')} ({rw}, ret={card.get('ret_pct')}%)."
+        )
+
+    line2_best = _fmt(best, "Best call")
+    line2_worst = _fmt(worst, "Worst call")
+    # Keep best+worst as one digest pair line plus recommendation
+    line2 = f"{line2_best} | {line2_worst}"
+    # Human label for status
+    status_print = {
+        "ADOPT": "Adopt",
+        "WAIT": "Wait",
+        "DROP": "Drop",
+        "KEEP_SHADOW_ONLY": "Keep shadow only",
+    }.get(status, status.title())
+    line3 = f"Recommendation: {status_print} — {reason}"
+    return [line1, line2, line3]
+
+
+def compute_predictive_accuracy(
+    *,
+    lookback_hours: float = 24.0 * 21,
+    allow_bybit_fallback: bool = True,
+    max_bybit_lookups: int = 40,
+) -> dict[str, Any]:
+    """
+    After-the-fact grading of regime_4h + ALLOW/BLOCK vs later marks.
+
+    Rules (honest / conservative):
+      • Only grade rows with ok=1, a numeric mark, and horizon fully elapsed.
+      • regime_4h: BULL if next ~4h ret > +0.5%; BEAR if < −0.5%; else RANGE.
+      • ALLOW: right if mark ret over ~4h >= 0 (flat-or-better vs mark; fee not in verdict).
+      • BLOCK: right if mark ret over ~4h < 0 (avoided a red / down period).
+      • Prices from later shadow marks for the same symbol; Bybit public kline fallback.
+      • Sample size reported; insufficient data → null hit_rate + wait recommendation.
+    """
+    note_parts = [
+        "Grades regime_4h and ALLOW/BLOCK only after horizon elapsed.",
+        f"RANGE band = |4h ret| ≤ {REGIME_MOVE_PCT}%.",
+        "Prices: later SQLite shadow marks preferred; Bybit public kline fallback.",
+        "Mark-vs-mark (not fill-vs-fill); advisory only — never wired into allow_buys.",
+    ]
+    empty = {
+        "hit_rate_pct": None,
+        "graded": 0,
+        "correct": 0,
+        "incorrect": 0,
+        "best": None,
+        "worst": None,
+        "by_kind": {},
+        "false_allow_rate": None,
+        "baseline_down_rate": None,
+        "block_correct_rate": None,
+        "shadow_days": 0.0,
+        "recommendation": {
+            "status": "wait",
+            "reason": "too few graded calls",
+            "bars_used": dict(_ACCURACY_BARS),
+        },
+        "digest_lines": [],
+        "note": " ".join(note_parts),
+        "bars": dict(_ACCURACY_BARS),
+    }
+
+    if not _DB_PATH.exists():
+        empty["note"] = "shadow db missing — " + empty["note"]
+        empty["digest_lines"] = _digest_lines(empty)
+        return empty
+
+    now = datetime.now(timezone.utc)
+    cutoff = now.timestamp() - max(1.0, float(lookback_hours)) * 3600.0
+    bybit_lookups = 0
+
+    try:
+        _ensure_db()
+        with sqlite3.connect(str(_DB_PATH)) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                """
+                SELECT id, ts, symbol, ok, state_json, answers_json, shadow_gate_json
+                FROM jev_shadow_log
+                WHERE ok = 1
+                ORDER BY id ASC
+                LIMIT 20000
+                """
+            ).fetchall()
+    except Exception as e:  # noqa: BLE001
+        empty["note"] = f"db read failed: {type(e).__name__}: {e}"
+        empty["digest_lines"] = _digest_lines(empty)
+        return empty
+
+    # Build mark timeline from all ok rows (including those outside lookback)
+    timeline: dict[str, list[tuple[datetime, float]]] = {}
+    parsed: list[dict[str, Any]] = []
+    first_ts: Optional[datetime] = None
+    last_ts: Optional[datetime] = None
+
+    for r in rows:
+        ts = _parse_iso_ts(r["ts"])
+        if ts is None:
+            continue
+        if first_ts is None or ts < first_ts:
+            first_ts = ts
+        if last_ts is None or ts > last_ts:
+            last_ts = ts
+        try:
+            state = json.loads(r["state_json"] or "{}")
+        except Exception:
+            state = {}
+        mark = state.get("mark_price")
+        try:
+            mark_f = float(mark)
+            if mark_f != mark_f or mark_f <= 0:
+                continue
+        except (TypeError, ValueError):
+            continue
+        sym = str(r["symbol"] or state.get("symbol") or "unknown")
+        timeline.setdefault(sym, []).append((ts, mark_f))
+
+        # Only consider calls inside lookback window for grading candidates
+        if ts.timestamp() < cutoff:
+            continue
+        try:
+            answers = json.loads(r["answers_json"] or "{}")
+        except Exception:
+            answers = {}
+        try:
+            gate = json.loads(r["shadow_gate_json"] or "{}")
+        except Exception:
+            gate = {}
+        fee = state.get("fee_rate_roundtrip")
+        try:
+            fee_f = float(fee) if fee is not None and fee != "unknown" else DEFAULT_FEE_ROUNDTRIP
+        except (TypeError, ValueError):
+            fee_f = DEFAULT_FEE_ROUNDTRIP
+        parsed.append(
+            {
+                "id": r["id"],
+                "ts": ts,
+                "symbol": sym,
+                "mark": mark_f,
+                "answers": answers if isinstance(answers, dict) else {},
+                "gate": gate if isinstance(gate, dict) else {},
+                "fee": fee_f,
+            }
+        )
+
+    for sym in timeline:
+        timeline[sym].sort(key=lambda x: x[0])
+
+    shadow_days = 0.0
+    if first_ts and last_ts:
+        shadow_days = max(0.0, (last_ts - first_ts).total_seconds() / 86400.0)
+
+    graded_cards: list[dict[str, Any]] = []
+    down_periods = 0
+    down_period_n = 0
+    false_allows = 0
+    allow_graded = 0
+    block_correct = 0
+    block_graded = 0
+    by_kind: dict[str, dict[str, int]] = {
+        "regime_4h": {"correct": 0, "incorrect": 0},
+        "allow_block": {"correct": 0, "incorrect": 0},
+    }
+
+    def _resolve_future(sym: str, call_ts: datetime, horizon: float) -> tuple[Optional[float], Optional[datetime], str]:
+        nonlocal bybit_lookups
+        mark, obs, src = _future_mark(
+            timeline, sym, call_ts, horizon, allow_bybit=False
+        )
+        if mark is not None:
+            return mark, obs, src
+        if allow_bybit_fallback and bybit_lookups < max_bybit_lookups:
+            bybit_lookups += 1
+            return _future_mark(timeline, sym, call_ts, horizon, allow_bybit=True)
+        return None, None, "none"
+
+    for item in parsed:
+        call_ts: datetime = item["ts"]
+        sym = item["symbol"]
+        mark0 = float(item["mark"])
+        age = (now - call_ts).total_seconds()
+
+        # ── regime_4h ──────────────────────────────────────────────
+        if age >= REGIME_HORIZON_SEC:
+            regime_ans = (item["answers"].get("regime_4h") or {})
+            choice = regime_ans.get("choice")
+            if choice in ("BULL", "BEAR", "RANGE"):
+                fut, _, src = _resolve_future(sym, call_ts, REGIME_HORIZON_SEC)
+                if fut is not None and mark0 > 0:
+                    ret = (fut / mark0 - 1.0) * 100.0
+                    actual = _actual_regime(ret)
+                    right = choice == actual
+                    card = _call_card(
+                        symbol=sym,
+                        call_ts=call_ts,
+                        call=str(choice),
+                        outcome=f"actual_{actual}",
+                        right=right,
+                        ret_pct=ret,
+                        source=src,
+                        kind="regime_4h",
+                    )
+                    graded_cards.append(card)
+                    bucket = by_kind["regime_4h"]
+                    bucket["correct" if right else "incorrect"] += 1
+
+        # ── ALLOW / BLOCK ──────────────────────────────────────────
+        if age >= ALLOW_HORIZON_SEC:
+            allow = item["gate"].get("shadow_allow_new_grid_buys")
+            if allow is True or allow is False:
+                fut, _, src = _resolve_future(sym, call_ts, ALLOW_HORIZON_SEC)
+                if fut is not None and mark0 > 0:
+                    ret = (fut / mark0 - 1.0) * 100.0
+                    fee_pct = float(item["fee"]) * 100.0
+                    down_period_n += 1
+                    if ret < 0:
+                        down_periods += 1
+                    if allow is True:
+                        # Flat-or-better vs mark after horizon (fee noted in limitations)
+                        right = ret >= 0.0
+                        outcome = "flat_or_better" if right else "red_after_allow"
+                        allow_graded += 1
+                        if not right:
+                            false_allows += 1
+                        call_label = "ALLOW"
+                    else:
+                        right = ret < 0.0
+                        outcome = "avoided_red" if right else "missed_up"
+                        block_graded += 1
+                        if right:
+                            block_correct += 1
+                        call_label = "BLOCK"
+                    card = _call_card(
+                        symbol=sym,
+                        call_ts=call_ts,
+                        call=call_label,
+                        outcome=outcome,
+                        right=right,
+                        ret_pct=ret,
+                        source=src,
+                        kind="allow_block",
+                    )
+                    graded_cards.append(card)
+                    bucket = by_kind["allow_block"]
+                    bucket["correct" if right else "incorrect"] += 1
+
+    correct = sum(1 for c in graded_cards if c.get("right"))
+    incorrect = sum(1 for c in graded_cards if not c.get("right"))
+    graded = correct + incorrect
+    hit_rate = round(100.0 * correct / graded, 1) if graded else None
+
+    def _rank_key(card: dict[str, Any], want_right: bool) -> float:
+        # Larger = more extreme confirmation (best) or more extreme miss (worst)
+        ret = abs(float(card.get("ret_pct") or 0.0))
+        return ret if bool(card.get("right")) == want_right else -1.0
+
+    best = None
+    worst = None
+    if graded:
+        rights = [c for c in graded_cards if c.get("right")]
+        wrongs = [c for c in graded_cards if not c.get("right")]
+        if rights:
+            best = max(rights, key=lambda c: abs(float(c.get("ret_pct") or 0.0)))
+        if wrongs:
+            worst = max(wrongs, key=lambda c: abs(float(c.get("ret_pct") or 0.0)))
+        elif rights:
+            # No wrongs — still report least-impressive correct as worst? skip
+            worst = None
+
+    false_allow_rate = (
+        round(false_allows / allow_graded, 3) if allow_graded else None
+    )
+    baseline_down_rate = (
+        round(down_periods / down_period_n, 3) if down_period_n else None
+    )
+    block_correct_rate = (
+        round(block_correct / block_graded, 3) if block_graded else None
+    )
+
+    rec = _recommendation(
+        graded=graded,
+        correct=correct,
+        incorrect=incorrect,
+        hit_rate_pct=hit_rate,
+        shadow_days=shadow_days,
+        false_allow_rate=false_allow_rate,
+        baseline_down_rate=baseline_down_rate,
+        block_correct_rate=block_correct_rate,
+        allow_n=allow_graded,
+        block_n=block_graded,
+    )
+
+    if bybit_lookups:
+        note_parts.append(f"Bybit kline lookups used: {bybit_lookups}.")
+    if graded == 0:
+        note_parts.append(
+            "Insufficient to grade — need ok rows with marks whose 4h horizon has elapsed "
+            "and a later mark (or Bybit kline) for the same symbol."
+        )
+
+    out = {
+        "hit_rate_pct": hit_rate,
+        "graded": graded,
+        "correct": correct,
+        "incorrect": incorrect,
+        "best": best,
+        "worst": worst,
+        "by_kind": by_kind,
+        "false_allow_rate": false_allow_rate,
+        "baseline_down_rate": baseline_down_rate,
+        "block_correct_rate": block_correct_rate,
+        "shadow_days": round(shadow_days, 2),
+        "recommendation": rec,
+        "digest_lines": [],
+        "note": " ".join(note_parts),
+        "bars": dict(_ACCURACY_BARS),
+    }
+    out["digest_lines"] = _digest_lines(out)
     return out
 
 
