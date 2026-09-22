@@ -46,3 +46,11 @@ trading_engine/data/jev_shadow.jsonl
 **/jev_shadow.db
 **/jev_shadow.jsonl
 trading_engine/data/.typesafe_key_tmp
+
+# local caches / dbs (do not commit)
+.firecrawl/
+antigravity/
+*.db
+*.sqlite
+*.bak
+tia-early-buy-pause.patch
