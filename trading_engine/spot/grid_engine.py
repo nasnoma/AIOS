@@ -11,7 +11,7 @@ from uuid import uuid4
 # Path where auto_optimizer.py writes winning params
 _BEST_PARAMS_FILE = Path(__file__).parent / 'best_params.json'
 
-# 🛑 ARB buy-only pause through Sep 27 2026 UTC (resumes Sep 28 00:00 UTC) — Sep 23 unlock + aftershock; sells stay
+# 🛑 Unlock buy-pauses (ARB hard floor through Sep 27 UTC; TIA hard floor through Sep 25 UTC then ±pad). Sells stay.
 ARB_PAUSE_UNTIL_UTC = datetime(2026, 9, 28, 0, 0, 0, tzinfo=timezone.utc)  # keep in sync with unlock_calendar.ARB_HARD_PAUSE_UNTIL_UTC
 
 from trading_engine.spot.asset_guards import is_never_sell_symbol, is_fee_buffer_asset, is_never_buy_symbol
@@ -30,7 +30,7 @@ from trading_engine.spot.sell_guard import (
 )
 
 def is_arb_buy_paused(symbol: str) -> bool:
-    """True if buys are paused for unlock risk (ARB hard floor through Sep 27 UTC; TIA calendar pads)."""
+    """True if buys are paused for unlock risk (ARB/TIA hard floors + TIA calendar pads via unlock_calendar)."""
     try:
         from trading_engine.spot.unlock_calendar import is_unlock_buy_paused
         paused, _reason = is_unlock_buy_paused(symbol)
@@ -287,7 +287,7 @@ class GridEngine:
                             f"pre-fill target. Suppressing buy levels this build."
                         )
 
-        # 🛑 Unlock-calendar buy pause (TIA near vesting; ARB pauses removed)
+        # 🛑 Unlock-calendar buy pause (ARB hard floor; TIA early hard floor + vesting pads)
         if is_arb_buy_paused(self.symbol):
             base_order_size = 0.0
             try:

@@ -48,11 +48,11 @@ _active_roster: set[str] = set()
 _last_blended_score_ts: float = 0.0
 _cached_blended_scores: dict[str, float] = {}
 
-# 🛑 ARB buy-only pause through Sep 27 2026 UTC (resumes Sep 28 00:00 UTC) — Sep 23 unlock + aftershock; sells stay
+# 🛑 Unlock buy-pauses (ARB hard floor through Sep 27 UTC / resumes Sep 28; TIA hard floor through Sep 25 UTC / resumes Sep 26 then ±pad). Sells stay.
 ARB_PAUSE_UNTIL_UTC = datetime(2026, 9, 28, 0, 0, 0, tzinfo=timezone.utc)  # keep in sync with unlock_calendar.ARB_HARD_PAUSE_UNTIL_UTC
 
 def is_arb_buy_paused(symbol: str) -> bool:
-    """True if buys are paused for unlock risk (ARB hard floor through Sep 27 UTC; TIA calendar pads)."""
+    """True if buys are paused for unlock risk (ARB/TIA hard floors + TIA calendar pads via unlock_calendar)."""
     try:
         from trading_engine.spot.unlock_calendar import is_unlock_buy_paused
         paused, _reason = is_unlock_buy_paused(symbol)
@@ -234,7 +234,7 @@ def _get_dynamic_hot_asset_allocations(
         arb_paused = is_arb_buy_paused(sym)
         is_blacklisted = sym in ['XAUT/USDT', 'XAUT', 'BTC/USDT', 'ETH/USDT'] or arb_paused
         if is_blacklisted:
-            reason = "USER PAUSE TILL SEPT 24" if arb_paused else "LOW VOLATILITY EXCLUSION"
+            reason = "UNLOCK BUY-PAUSE" if arb_paused else "LOW VOLATILITY EXCLUSION"
             logger.info(f"🛑 [{reason}] {sym} excluded from active buy allocations.")
 
         is_disqualified = is_capped or is_bear or is_blacklisted
@@ -833,12 +833,12 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                             if (o.get('side') or '').lower() == 'buy' and o.get('id'):
                                 try:
                                     exchange.cancel_order(o['id'], symbol=symbol)
-                                    logger.info(f"🛑 [{symbol}] [PAUSE TILL SEPT 24] Cancelled live Bybit BUY order {o['id']}.")
+                                    logger.info(f"🛑 [{symbol}] [UNLOCK BUY-PAUSE] Cancelled live Bybit BUY order {o['id']}.")
                                 except Exception:
                                     pass
                     except Exception:
                         pass
-                logger.info(f"🛑 [{symbol}] User Pause active until after September 23, 2026. Strictly locked in Sell-Only Mode.")
+                logger.info(f"🛑 [{symbol}] Unlock buy-pause active (calendar hard floor / pad). Strictly locked in Sell-Only Mode.")
                 
             try:
                 ticker = tickers.get(symbol)

@@ -1,4 +1,4 @@
-"""Regression: TIA mission disabled must not bypass exposure; ARB unlock pauses gone; fee-proof helper OK."""
+"""Regression: TIA mission disabled; ARB/TIA unlock hard pauses; fee-proof helper OK."""
 from datetime import datetime, timezone
 
 from trading_engine.spot.mission_tia_recovery import (
@@ -10,7 +10,12 @@ from trading_engine.spot.mission_tia_recovery import (
     recovery_sell_price,
     status,
 )
-from trading_engine.spot.unlock_calendar import is_unlock_buy_paused, iter_unlock_dates
+from trading_engine.spot.unlock_calendar import (
+    ARB_HARD_PAUSE_UNTIL_UTC,
+    TIA_HARD_PAUSE_UNTIL_UTC,
+    is_unlock_buy_paused,
+    iter_unlock_dates,
+)
 from trading_engine.config import spot_settings
 
 
@@ -23,10 +28,26 @@ def test_mission_disabled():
     assert st.get("active") is False or float(st.get("sleeve_usd") or 0) == 0.0
 
 
-def test_arb_not_unlock_paused():
-    assert not any(s.startswith("ARB") for s, _ in iter_unlock_dates())
-    paused, _ = is_unlock_buy_paused("ARB/USDT", now=datetime(2026, 9, 23, tzinfo=timezone.utc))
-    assert paused is False
+def test_arb_hard_pause_active():
+    assert any(s.startswith("ARB") for s, _ in iter_unlock_dates())
+    paused, reason = is_unlock_buy_paused("ARB/USDT", now=datetime(2026, 9, 23, tzinfo=timezone.utc))
+    assert paused is True
+    assert "ARB" in reason
+    # resumes at ARB_HARD_PAUSE_UNTIL_UTC
+    paused_after, _ = is_unlock_buy_paused("ARB/USDT", now=ARB_HARD_PAUSE_UNTIL_UTC)
+    assert paused_after is False
+
+
+def test_tia_early_hard_pause_until_sep26():
+    # Nasir 2026-09-22 early unlock buy-pause — before normal ±4d pad
+    paused, reason = is_unlock_buy_paused("TIA/USDT", now=datetime(2026, 9, 22, 21, 0, tzinfo=timezone.utc))
+    assert paused is True
+    assert "hard buy-pause" in reason
+    assert "2026-09-26" in reason
+    # hard floor ends at TIA_HARD_PAUSE_UNTIL_UTC; pad around Sep 30 starts same day
+    paused_at_boundary, reason_b = is_unlock_buy_paused("TIA/USDT", now=TIA_HARD_PAUSE_UNTIL_UTC)
+    assert paused_at_boundary is True  # ±4d around 2026-09-30 includes Sep 26
+    assert "±" in reason_b or "pad" in reason_b.lower() or "unlock buy-pause" in reason_b
 
 
 def test_tia_unlock_pad_still_works():
@@ -53,7 +74,8 @@ def test_is_tia():
 
 if __name__ == "__main__":
     test_mission_disabled()
-    test_arb_not_unlock_paused()
+    test_arb_hard_pause_active()
+    test_tia_early_hard_pause_until_sep26()
     test_tia_unlock_pad_still_works()
     test_reserve_restored()
     test_recovery_sell_price_fee_proof()

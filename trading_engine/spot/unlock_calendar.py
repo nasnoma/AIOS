@@ -1,7 +1,8 @@
 """
-Unlock calendar — TIA vesting pads + temporary ARB hard buy-pause through unlock aftershock.
+Unlock calendar — TIA vesting pads + temporary ARB/TIA hard buy-pauses through unlock risk.
 
-- TIA: ±UNLOCK_PAD_DAYS around listed month-end unlocks (sells kept).
+- TIA: ±UNLOCK_PAD_DAYS around listed month-end unlocks (sells kept), plus optional
+  early hard buy-pause until TIA_HARD_PAUSE_UNTIL_UTC (bridges into the pad window).
 - ARB: hard buy-only pause until ARB_HARD_PAUSE_UNTIL_UTC (sells kept).
   Covers Sep 23 2026 unlock day + short aftershock; resumes 2026-09-28 00:00 UTC.
 """
@@ -19,6 +20,11 @@ ARB_HARD_PAUSE_UNTIL_UTC = datetime(2026, 9, 28, 0, 0, 0, tzinfo=timezone.utc)
 # User uncomfortable holding through unlock: force resting sells to this pin (fee-proof vs cost still enforced).
 # Cleared automatically when bag is flat / pause expires — or set to 0 to disable.
 ARB_PINNED_SELL_PX = 0.0  # DISABLED — prior 0.2121 undercut FIFO max lots (~0.213); never pin below fee-proof(fifo_max)
+
+# TIA early buy-only pause until normal ±4d pad around Sep 30 unlock begins (resume Sep 26 00:00 UTC).
+# Nasir 2026-09-22 early unlock buy-pause until calendar window. Sells / resting TPs stay active.
+# On/after 2026-09-26 the ±UNLOCK_PAD_DAYS window around 2026-09-30 takes over continuously.
+TIA_HARD_PAUSE_UNTIL_UTC = datetime(2026, 9, 26, 0, 0, 0, tzinfo=timezone.utc)
 
 # Explicit unlock dates (UTC). TIA month-end vesting; ARB listed for visibility (hard floor above is authoritative until it expires).
 _EXPLICIT_UNLOCKS: List[Tuple[str, date]] = [
@@ -74,7 +80,8 @@ def is_unlock_buy_paused(
     """
     True if new buys should be paused for unlock risk.
     ARB: hard buy-pause until ARB_HARD_PAUSE_UNTIL_UTC (sells unaffected).
-    TIA: ±pad around listed unlock dates only.
+    TIA: hard buy-pause until TIA_HARD_PAUSE_UNTIL_UTC, then ±pad around unlocks
+         (sells unaffected). Early hard floor bridges into the Sep 30 pad window.
     """
     now = now or datetime.now(timezone.utc)
     if now.tzinfo is None:
@@ -90,6 +97,13 @@ def is_unlock_buy_paused(
                 f"(Sep 23 unlock + aftershock through Sep 27; sells stay)"
             )
         return False, ""
+
+    # TIA early hard floor (Nasir 2026-09-22) then normal ±pad around unlock dates
+    if now < TIA_HARD_PAUSE_UNTIL_UTC:
+        return True, (
+            f"TIA hard buy-pause until {TIA_HARD_PAUSE_UNTIL_UTC.date().isoformat()} UTC "
+            f"(Nasir 2026-09-22 early unlock buy-pause until calendar window; sells stay)"
+        )
 
     today = now.date()
     pad = max(0, int(pad_days))
