@@ -612,6 +612,124 @@ def maybe_shadow_log(symbol: str, ctx: dict[str, Any], *, async_ok: bool = True)
 
 
 
+def _score_shadow(totals: dict[str, Any], *, avg_latency_ms: float | None = None) -> dict[str, Any]:
+    """
+    Plain 0–100 smoke score for how Jev shadow is doing (ops + signal, not PnL edge).
+
+    Components (equal weight when data exists):
+      reliability  — successful TypeSafe asks (ok_rate)
+      coverage     — enough logged calls in the window
+      discrimination — not stuck always-ALLOW or always-BLOCK
+      speed        — median/avg latency vs timeout (soft)
+
+    Edge vs Spot cycles/net is NOT in this score until we join fills.
+    """
+    rows = int(totals.get("rows") or 0)
+    ok = int(totals.get("ok") or 0)
+    allow = int(totals.get("allow") or 0)
+    block = int(totals.get("block") or 0)
+    decided = allow + block
+    ok_rate = (ok / rows) if rows else 0.0
+    allow_rate = (allow / decided) if decided else None
+
+    # reliability 0–100
+    reliability = round(100.0 * ok_rate, 1)
+
+    # coverage: 0 under 5, ramps to 100 by 40 calls in window
+    if rows <= 0:
+        coverage = 0.0
+    elif rows >= 40:
+        coverage = 100.0
+    else:
+        coverage = round(100.0 * (rows / 40.0), 1)
+
+    # discrimination: best near ~40–70% allow; flat 100% allow or 0% allow scores low
+    if decided < 5:
+        discrimination = 30.0  # too little to judge
+        disc_note = "too few gate decisions yet"
+    elif allow_rate is None:
+        discrimination = 0.0
+        disc_note = "no gate decisions"
+    else:
+        # distance from 0.55 sweet spot; 0.55 → 100, 0.0 or 1.0 → 0
+        discrimination = round(max(0.0, 100.0 * (1.0 - abs(allow_rate - 0.55) / 0.55)), 1)
+        if allow_rate >= 0.95:
+            disc_note = "almost always ALLOW — little selecting yet"
+        elif allow_rate <= 0.05:
+            disc_note = "almost always BLOCK — very defensive"
+        else:
+            disc_note = "mixing ALLOW and BLOCK"
+
+    # speed vs 12s timeout: <2s=100, 2–6s linear, >6s low
+    timeout = 12.0
+    try:
+        timeout = float(_timeout_sec())
+    except Exception:
+        pass
+    if avg_latency_ms is None or avg_latency_ms <= 0:
+        speed = 50.0
+        speed_note = "latency unknown"
+    else:
+        sec = float(avg_latency_ms) / 1000.0
+        if sec <= 2.0:
+            speed = 100.0
+        elif sec >= timeout:
+            speed = 10.0
+        else:
+            # 2s→100, timeout→10
+            speed = round(100.0 - (sec - 2.0) * (90.0 / max(0.1, timeout - 2.0)), 1)
+        speed_note = f"avg {avg_latency_ms:.0f}ms"
+
+    if rows <= 0:
+        total = 0
+        label = "no data"
+        summary = "No shadow rows in this window yet."
+        components = {
+            "reliability": reliability,
+            "coverage": coverage,
+            "discrimination": discrimination,
+            "speed": speed,
+        }
+    else:
+        # weight: reliability 35%, coverage 25%, discrimination 25%, speed 15%
+        total = round(
+            0.35 * reliability + 0.25 * coverage + 0.25 * discrimination + 0.15 * speed
+        )
+        total = int(max(0, min(100, total)))
+        if total >= 80:
+            label = "strong"
+        elif total >= 60:
+            label = "ok"
+        elif total >= 40:
+            label = "weak"
+        else:
+            label = "poor"
+        summary = (
+            f"Reliability {reliability:.0f}/100, coverage {coverage:.0f}/100, "
+            f"selectivity {discrimination:.0f}/100 ({disc_note}), speed {speed:.0f}/100 ({speed_note}). "
+            "This is smoke health — not profit edge vs Spot cycles."
+        )
+        components = {
+            "reliability": reliability,
+            "coverage": coverage,
+            "discrimination": discrimination,
+            "speed": speed,
+        }
+
+    return {
+        "total": total,
+        "label": label,
+        "summary": summary,
+        "components": components,
+        "notes": [
+            "0–100 smoke score (call health + whether the gate is choosing).",
+            "Does not measure profit edge until shadow decisions are joined to Spot cycles/net.",
+            disc_note if rows else "no rows",
+        ],
+    }
+
+
+
 def get_shadow_status(*, recent_n: int = 20, hours: float = 24.0) -> dict[str, Any]:
     """
     Aggregate shadow observability for ops digests /api.
@@ -769,8 +887,25 @@ def get_shadow_status(*, recent_n: int = 20, hours: float = 24.0) -> dict[str, A
         out["totals"]["ok_rate"] = (
             round(out["totals"]["ok"] / out["totals"]["rows"], 3) if out["totals"]["rows"] else None
         )
+        # Average latency across per-symbol slots when present
+        _lats = [
+            float(s["avg_latency_ms"])
+            for s in (out.get("by_symbol") or {}).values()
+            if isinstance(s, dict) and s.get("avg_latency_ms") is not None
+        ]
+        _avg_lat = (sum(_lats) / len(_lats)) if _lats else None
+        out["score"] = _score_shadow(out["totals"], avg_latency_ms=_avg_lat)
     except Exception as e:  # noqa: BLE001
         out["error"] = f"{type(e).__name__}: {e}"
+        out["score"] = {
+            "total": 0,
+            "label": "error",
+            "summary": out["error"],
+            "components": {},
+            "notes": ["status aggregation failed"],
+        }
+    if "score" not in out:
+        out["score"] = _score_shadow(out.get("totals") or {}, avg_latency_ms=None)
     return out
 
 
