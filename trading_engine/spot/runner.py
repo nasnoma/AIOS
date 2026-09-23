@@ -51,6 +51,15 @@ _cached_blended_scores: dict[str, float] = {}
 # 🛑 Unlock buy-pauses (ARB hard floor through Sep 27 UTC / resumes Sep 28; TIA hard floor through Sep 25 UTC / resumes Sep 26 then ±pad). Sells stay.
 ARB_PAUSE_UNTIL_UTC = datetime(2026, 9, 28, 0, 0, 0, tzinfo=timezone.utc)  # keep in sync with unlock_calendar.ARB_HARD_PAUSE_UNTIL_UTC
 
+def is_cascade_buy_paused() -> tuple:
+    """LIVE A_tuned cascade: pause/cancel NEW grid buys only. Sells untouched. Fail-open if off/stale."""
+    try:
+        from trading_engine.spot.cascade_guard import cascade_guard
+        return cascade_guard.is_cascade_pause()
+    except Exception:
+        return False, "cascade unavailable"
+
+
 def is_arb_buy_paused(symbol: str) -> bool:
     """True if buys are paused for unlock risk (ARB/TIA hard floors + TIA calendar pads via unlock_calendar)."""
     try:
@@ -839,6 +848,33 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                     except Exception:
                         pass
                 logger.info(f"🛑 [{symbol}] Unlock buy-pause active (calendar hard floor / pad). Strictly locked in Sell-Only Mode.")
+
+            # 🛑 Cascade A_tuned LIVE buy-pause (Nasir accepted 2026-09-23 dump tradeoff):
+            # Cancel/suppress NEW buys only; fee-proof resting sells stay. Do NOT sticky-zero buy_levels
+            # (90m latch — avoid sell-only lock until roster rotation). build_grid/place_grid also gate.
+            _casc_on, _casc_why = is_cascade_buy_paused()
+            if _casc_on:
+                if any(lvl.side == 'buy' for lvl in engine.grid_levels):
+                    logger.info(f"🛑 [{symbol}] [CASCADE LIVE] Cancelling buys — {_casc_why}")
+                    engine.cancel_buys_only(exchange)
+                    try:
+                        from trading_engine.spot.cascade_guard import cascade_guard
+                        cascade_guard.note_live_cancel()
+                    except Exception:
+                        pass
+                if not spot_settings.paper_mode and exchange:
+                    try:
+                        live_orders = exchange.fetch_open_orders(symbol, params={'category': 'spot'})
+                        for o in live_orders:
+                            if (o.get('side') or '').lower() == 'buy' and o.get('id'):
+                                try:
+                                    exchange.cancel_order(o['id'], symbol=symbol)
+                                    logger.info(f"🛑 [{symbol}] [CASCADE LIVE] Cancelled live Bybit BUY order {o['id']}.")
+                                except Exception:
+                                    pass
+                    except Exception:
+                        pass
+
                 
             try:
                 ticker = tickers.get(symbol)
@@ -1097,23 +1133,15 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 except Exception as _e_jev:
                     logger.debug(f"[{symbol}] jev_shadow hook skipped: {_e_jev}")
 
-                # ── Cascade SHADOW (observability only; NEVER cancels buys unless SPOT_CASCADE_LIVE=1) ──
-                # Fuller sweep 2026-09-23: no variant passed gates → live default OFF; shadow logs would-pause.
+                # ── Cascade observability (shadow JSONL + live status). Live cancel is wired above. ──
                 try:
                     from trading_engine.spot.cascade_guard import cascade_guard, shadow_enabled, live_enabled
-                    if shadow_enabled() and symbol in _active_roster:
+                    if (shadow_enabled() or live_enabled()) and symbol in _active_roster:
                         _wp, _wr = cascade_guard.would_pause()
                         if _wp:
                             logger.debug(
-                                f"[{symbol}] [CASCADE SHADOW] would_pause={_wp} reason={_wr} "
-                                f"live={live_enabled()} (orders unchanged while live off)"
-                            )
-                        # Hard safety: even if someone sets LIVE, refuse cancel here unless
-                        # explicit live path is separately reviewed — place_grid does not call cancel.
-                        if live_enabled():
-                            logger.warning(
-                                f"[{symbol}] SPOT_CASCADE_LIVE=1 set but live cancel is NOT wired "
-                                f"(gates failed / shadow-only rollout). Ignoring live flag for orders."
+                                f"[{symbol}] [CASCADE] latch={_wp} reason={_wr} "
+                                f"live={live_enabled()} shadow={shadow_enabled()}"
                             )
                 except Exception as _e_casc:
                     logger.debug(f"[{symbol}] cascade_shadow hook skipped: {_e_casc}")
@@ -1149,6 +1177,11 @@ def run_spot_dca_check():
         regime = engine.current_regime if engine else "RANGE"
         if regime == "BEAR" or is_arb_buy_paused(symbol):
             continue
+        _casc_dca, _casc_dca_why = is_cascade_buy_paused()
+        if _casc_dca:
+            logger.info(f"🛑 [DCA PAUSED] Skipping DCA buy for {symbol} — {_casc_dca_why}")
+            continue
+
         
         try:
             signal = _dca_manager.check(symbol, exchange, regime)

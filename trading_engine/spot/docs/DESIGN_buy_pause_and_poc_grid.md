@@ -1,10 +1,10 @@
 # Design Note: Cascade Buy-Pause (A) + POC-Aware Grid Spacing (B)
 
-**Status:** Spec A **shadow-only** on Mac (log would-pause); **live buy-cancel NOT enabled** — fuller sweep gates FAILED. **Not Railway-bound.**  
+**Status:** Spec A **A_tuned LIVE** enabled (Nasir accepted 2026-09-23 modest cycles/net haircut for dump cut). `SPOT_CASCADE_LIVE` default ON; `SPOT_CASCADE_SHADOW` kept for ops logs. Buys-only pause; sells/fee-proof/MNT/sticky floors unchanged. Do **not** use highbar/flash_cont as live policy.
 **Date:** 2026-09-23 (Africa/Lagos)  
 **Authority:** Nasir: improve engine without reducing cycles/profit; do NOT enable live pause unless fuller backtest cycles≥baseline (or ≥99%) AND net≥baseline AND buy-into-dump down.  
 **Scope order:** Implement/eval **A first**, then **B**. Phase C out of this backtest. **No B/POC implementation now.**  
-**Spec A threshold revision + sweep (same day):** Smoke mid-tier A_tuned (`−1.4%` close OR `−2.0%` wick, 90m) cut dump buys but **failed** fuller Top-8 ~21d (40→35 cycles, +$63.77→+$54.53). Stricter/shorter grid also **no winner**. Shadow logger uses A_tuned obs thresholds; `SPOT_CASCADE_LIVE` default OFF and **not wired** into cancel path.
+**Spec A threshold revision + sweep (same day):** Smoke mid-tier A_tuned (`−1.4%` close OR `−2.0%` wick, 90m) cut dump buys but **failed** fuller Top-8 ~21d (40→35 cycles, +$63.77→+$54.53). Stricter/shorter grid also **no winner**. Shadow logger uses A_tuned obs thresholds; `SPOT_CASCADE_LIVE` default ON and wired to cancel_buys_only / build+place gates / DCA skip.
 
 ---
 
@@ -281,6 +281,6 @@ Sep23 dump-slice: variants that fire on −1.47%/−2.26% wick cut dump buys 12�
 - `runner` tick: shadow debug line only; warns if LIVE set (orders still unchanged)
 - Status: `btc_guard.summary()["cascade"]`
 
-**Ready-to-deploy shadow:** set `SPOT_CASCADE_SHADOW=1` on Railway when parent approves; do **not** set `SPOT_CASCADE_LIVE`. No `railway up` from this task.
+**Ready-to-deploy shadow:** set `SPOT_CASCADE_SHADOW=1` on Railway when parent approves; set `SPOT_CASCADE_LIVE=1` (default ON) and keep `SPOT_CASCADE_SHADOW=1`. `railway up` deploys LIVE A_tuned buy-pause.
 
 *End of draft. Prefer leave this file **untracked** until Nasir accepts.*
