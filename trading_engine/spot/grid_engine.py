@@ -1277,7 +1277,38 @@ class GridEngine:
                         logger.debug(f"tia mission buy-fill hook: {_e_m}")
                     logger.info(f"BUY filled at {level.price}. Created new SELL level at {sell_price:.4f} (CostRef: ${cost_ref:.4f}, Guaranteed Net: +${min_net_usd:.2f})")
 
-                    
+                    # CRITICAL: a dearer buy raises bag FIFO max. Pre-existing resting sells
+                    # pinned below the new lot (fee-proof + $0.50) must be cancelled NOW —
+                    # FIFO SQLite sync and the next runner tick can lag, which is how ARKM
+                    # sold @0.1341 against a fresh 0.1343 lot (2026-09-23). Raise the
+                    # portfolio_avg_cost floor with this fill so lag cannot undercut.
+                    try:
+                        _held = float(getattr(self, '_last_base_qty_held', 0) or 0) + float(level.qty or 0)
+                        if _held > 0:
+                            self._last_base_qty_held = _held
+                        _avg_floor = max(
+                            float(getattr(self, '_last_portfolio_avg_cost', 0) or 0),
+                            float(level.price or 0),
+                            float(cost_ref or 0),
+                        )
+                        self._last_portfolio_avg_cost = _avg_floor
+                        # exchange may be None (paper); cancel_unsafe still flips local status.
+                        n_cx = self.cancel_unsafe_resting_sells(
+                            exchange,
+                            units_held=_held,
+                            portfolio_avg_cost=_avg_floor,
+                        )
+                        if n_cx:
+                            logger.warning(
+                                f"🛡️ [{self.symbol}] Post-buy cancel: removed {n_cx} resting "
+                                f"sell(s) under fee-proof floor of buy @{level.price}"
+                            )
+                            # Force rebuild so replacement sells clear the new bag max.
+                            self._last_rebuild_time = 0.0
+                            self._post_sell_rebuild = True
+                    except Exception as _e_pb:
+                        logger.error(f"[{self.symbol}] post-buy unsafe-sell cancel failed: {_e_pb}")
+
                 elif level.side == 'sell':
                     if is_never_sell_symbol(self.symbol):
                         logger.critical(f"🚫 [{self.symbol}] BLOCKED sell fill handling — protected asset.")
