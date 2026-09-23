@@ -118,3 +118,84 @@ def test_runner_helper_wires_live_pause(monkeypatch):
     monkeypatch.setenv("SPOT_CASCADE_LIVE", "0")
     on2, _ = spot_runner.is_cascade_buy_paused()
     assert on2 is False
+
+def test_place_grid_orders_cascade_skips_buys_not_sells(monkeypatch):
+    """Regression: cascade continue must be buy-gated — sells stay placable during latch."""
+    from types import SimpleNamespace
+
+    cascade_guard.update_returns(-2.0, 0.0, 0.0, now=time.time())
+    assert cascade_guard.is_cascade_pause()[0] is True
+
+    eng = GridEngine(symbol="ETH/USDT", allocated_usd=1000.0, paper_mode=False)
+    eng._last_portfolio_avg_cost = 100.0
+
+    class _Ex:
+        markets = {
+            "ETH/USDT": {
+                "precision": {"amount": 0.001, "price": 0.01},
+                "limits": {"amount": {"min": 0.001}, "cost": {"min": 5.0}},
+            }
+        }
+
+        def __init__(self):
+            self.created = []
+
+        def market(self, s):
+            return self.markets[s]
+
+        def amount_to_precision(self, s, q):
+            return float(q)
+
+        def price_to_precision(self, s, p):
+            return float(p)
+
+        def create_limit_buy_order(self, symbol, amount, price, params=None):
+            self.created.append({"side": "buy", "amount": amount, "price": price})
+            return {"id": f"OID-{len(self.created)}", "status": "open"}
+
+        def create_limit_sell_order(self, symbol, amount, price, params=None):
+            self.created.append({"side": "sell", "amount": amount, "price": price})
+            return {"id": f"OID-{len(self.created)}", "status": "open"}
+
+        def cancel_order(self, oid, symbol=None, params=None):
+            return {"id": oid}
+
+        def fetch_balance(self, params=None):
+            return {"free": {"ETH": 1.0, "USDT": 100000.0}}
+
+    ex = _Ex()
+    eng.exchange = ex
+    buy = GridLevel(price=90.0, side="buy", qty=1.0, size_usd=90.0, status="pending")
+    sell = GridLevel(
+        price=120.0, side="sell", qty=1.0, size_usd=120.0, status="pending",
+        linked_buy_price=100.0,
+    )
+    eng.grid_levels = [buy, sell]
+
+    holding = SimpleNamespace(units_held=1.0, avg_cost_basis=100.0)
+
+    class _P:
+        holdings = {"ETH/USDT": holding}
+        usdt_reserved = 0.0
+        usdt_available = 100000.0
+        total_open_buy_usd = 0.0
+        total_unified_equity = 10000.0
+        total_capital = 10000.0
+
+    import trading_engine.spot.grid_engine as ge
+    monkeypatch.setattr(
+        ge, "entry_buys_allowed",
+        lambda *a, **k: SimpleNamespace(allow_buys=True, reason="ok"),
+    )
+    # Fee-proof bag gate must not block this regression focus
+    monkeypatch.setattr(
+        ge, "assert_sell_clears_bag_max",
+        lambda *a, **k: (True, "ok"),
+    )
+
+    eng.place_grid_orders(_P(), ex)
+
+    assert any(c["side"] == "sell" for c in ex.created), "cascade must still place sells"
+    assert not any(c["side"] == "buy" for c in ex.created), "cascade must not place buys"
+    assert buy.status == "pending"
+    assert sell.status == "open"

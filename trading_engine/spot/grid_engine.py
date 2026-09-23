@@ -308,7 +308,7 @@ class GridEngine:
         except Exception:
             pass
 
-# 🛑 Anti-Falling-Knife Guard: strictly suppress buys in confirmed BEAR regimes or when buy_levels is 0
+        # 🛑 Anti-Falling-Knife Guard: strictly suppress buys in confirmed BEAR regimes or when buy_levels is 0
         if self.current_regime == 'BEAR' or self.params.buy_levels <= 0 or self.allocated_usd < 35.0:
             base_order_size = 0.0
             if self.current_regime == 'BEAR':
@@ -1074,15 +1074,15 @@ class GridEngine:
                             except Exception as e_btc:
                                 logger.debug(f"BTC filter check error: {e_btc}")
 
-                        
-                        try:
-                            from trading_engine.spot.cascade_guard import cascade_guard
-                            _casc_on, _casc_why = cascade_guard.is_cascade_pause()
-                            if _casc_on:
-                                logger.debug(f"[{self.symbol}] 🛑 [CASCADE LIVE] Pausing buy order: {_casc_why}")
-                                continue
-                        except Exception as e_casc:
-                            logger.debug(f"cascade place check error: {e_casc}")
+                            # Buys-only — must NOT continue for sells (fee-proof TPs stay placable during latch)
+                            try:
+                                from trading_engine.spot.cascade_guard import cascade_guard
+                                _casc_on, _casc_why = cascade_guard.is_cascade_pause()
+                                if _casc_on:
+                                    logger.debug(f"[{self.symbol}] 🛑 [CASCADE LIVE] Pausing buy order: {_casc_why}")
+                                    continue
+                            except Exception as e_casc:
+                                logger.debug(f"cascade place check error: {e_casc}")
 
                         if level.side == 'buy' and not self.paper_mode and exchange:
                             res_floor = float(getattr(portfolio, 'usdt_reserved', 0.0) or 0.0)
