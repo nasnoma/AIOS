@@ -1,0 +1,1066 @@
+[sweep] Fetching OHLCV since 2026-09-02T23:00:00+00:00 … symbols=['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'AVAX/USDT', 'LINK/USDT', 'SUI/USDT', 'NEAR/USDT', 'DOT/USDT'] modes=['baseline', 'A_tuned', 'dual_and_90', 'dual_and_60', 'dual_and_45', 'or_short_45', 'or_short_30', 'highbar_or_90', 'highbar_or_60', 'flash_cont_30', 'flash_cont_60']
+BTC bars=502 2026-09-02 23:00:00+00:00 → 2026-09-23 20:00:00+00:00
+PREFLIGHT {
+  "window_start": "2026-09-02 23:00:00+00:00",
+  "window_end": "2026-09-23 20:00:00+00:00",
+  "worst_btc_1h_close": {
+    "pct": -2.1752137909637805,
+    "ts": "2026-09-04 12:00:00+00:00"
+  },
+  "sep23_worst_ol": {
+    "ol_pct": -2.26154109736724,
+    "ts": "2026-09-23 14:00:00+00:00",
+    "r1_pct": -1.4713303861659446
+  },
+  "A_tuned_triggers": 3,
+  "A_tuned_pause_bars": 7,
+  "A_tuned_pause_hours": 7,
+  "A_tuned_pause_days": 3,
+  "dual_and_90_triggers": 2,
+  "dual_and_90_pause_bars": 5,
+  "dual_and_90_pause_hours": 5,
+  "dual_and_90_pause_days": 2,
+  "dual_and_60_triggers": 2,
+  "dual_and_60_pause_bars": 3,
+  "dual_and_60_pause_hours": 3,
+  "dual_and_60_pause_days": 2,
+  "dual_and_45_triggers": 2,
+  "dual_and_45_pause_bars": 3,
+  "dual_and_45_pause_hours": 3,
+  "dual_and_45_pause_days": 2,
+  "or_short_45_triggers": 3,
+  "or_short_45_pause_bars": 4,
+  "or_short_45_pause_hours": 4,
+  "or_short_45_pause_days": 3,
+  "or_short_30_triggers": 3,
+  "or_short_30_pause_bars": 4,
+  "or_short_30_pause_hours": 4,
+  "or_short_30_pause_days": 3,
+  "highbar_or_90_triggers": 2,
+  "highbar_or_90_pause_bars": 5,
+  "highbar_or_90_pause_hours": 5,
+  "highbar_or_90_pause_days": 2,
+  "highbar_or_60_triggers": 2,
+  "highbar_or_60_pause_bars": 2,
+  "highbar_or_60_pause_hours": 2,
+  "highbar_or_60_pause_days": 2,
+  "flash_cont_30_triggers": 1,
+  "flash_cont_30_pause_bars": 1,
+  "flash_cont_30_pause_hours": 1,
+  "flash_cont_30_pause_days": 1,
+  "flash_cont_60_triggers": 1,
+  "flash_cont_60_pause_bars": 1,
+  "flash_cont_60_pause_hours": 1,
+  "flash_cont_60_pause_days": 1
+}
+ETH/USDT bars=502
+SOL/USDT bars=502
+AVAX/USDT bars=502
+LINK/USDT bars=502
+SUI/USDT bars=502
+NEAR/USDT bars=502
+DOT/USDT bars=502
+baseline   BTC/USDT   cycles=   4 net=$   +6.50 dump_buys=7 triggers=0 pause_bars=0 pause_h=0 pause_d=0
+baseline   ETH/USDT   cycles=   6 net=$   +9.17 dump_buys=9 triggers=0 pause_bars=0 pause_h=0 pause_d=0
+baseline   SOL/USDT   cycles=  11 net=$  +16.81 dump_buys=9 triggers=0 pause_bars=0 pause_h=0 pause_d=0
+baseline   AVAX/USDT  cycles=   4 net=$   +6.23 dump_buys=5 triggers=0 pause_bars=0 pause_h=0 pause_d=0
+baseline   LINK/USDT  cycles=   5 net=$   +8.03 dump_buys=8 triggers=0 pause_bars=0 pause_h=0 pause_d=0
+baseline   SUI/USDT   cycles=   2 net=$   +3.12 dump_buys=6 triggers=0 pause_bars=0 pause_h=0 pause_d=0
+baseline   NEAR/USDT  cycles=   5 net=$   +9.10 dump_buys=1 triggers=0 pause_bars=0 pause_h=0 pause_d=0
+baseline   DOT/USDT   cycles=   3 net=$   +4.82 dump_buys=6 triggers=0 pause_bars=0 pause_h=0 pause_d=0
+A_tuned    BTC/USDT   cycles=   3 net=$   +4.58 dump_buys=2 triggers=3 pause_bars=7 pause_h=7 pause_d=3
+A_tuned    ETH/USDT   cycles=   5 net=$   +7.64 dump_buys=3 triggers=3 pause_bars=7 pause_h=7 pause_d=3
+A_tuned    SOL/USDT   cycles=  10 net=$  +15.28 dump_buys=3 triggers=3 pause_bars=7 pause_h=7 pause_d=3
+A_tuned    AVAX/USDT  cycles=   4 net=$   +6.23 dump_buys=2 triggers=3 pause_bars=7 pause_h=7 pause_d=3
+A_tuned    LINK/USDT  cycles=   5 net=$   +8.03 dump_buys=2 triggers=3 pause_bars=7 pause_h=7 pause_d=3
+A_tuned    SUI/USDT   cycles=   2 net=$   +3.12 dump_buys=1 triggers=3 pause_bars=7 pause_h=7 pause_d=3
+A_tuned    NEAR/USDT  cycles=   3 net=$   +4.84 dump_buys=0 triggers=3 pause_bars=7 pause_h=7 pause_d=3
+A_tuned    DOT/USDT   cycles=   3 net=$   +4.82 dump_buys=2 triggers=3 pause_bars=7 pause_h=7 pause_d=3
+dual_and_90 BTC/USDT   cycles=   3 net=$   +4.58 dump_buys=3 triggers=2 pause_bars=5 pause_h=5 pause_d=2
+dual_and_90 ETH/USDT   cycles=   5 net=$   +7.64 dump_buys=4 triggers=2 pause_bars=5 pause_h=5 pause_d=2
+dual_and_90 SOL/USDT   cycles=  10 net=$  +15.28 dump_buys=4 triggers=2 pause_bars=5 pause_h=5 pause_d=2
+dual_and_90 AVAX/USDT  cycles=   4 net=$   +6.23 dump_buys=3 triggers=2 pause_bars=5 pause_h=5 pause_d=2
+dual_and_90 LINK/USDT  cycles=   5 net=$   +8.03 dump_buys=3 triggers=2 pause_bars=5 pause_h=5 pause_d=2
+dual_and_90 SUI/USDT   cycles=   2 net=$   +3.12 dump_buys=2 triggers=2 pause_bars=5 pause_h=5 pause_d=2
+dual_and_90 NEAR/USDT  cycles=   3 net=$   +4.84 dump_buys=0 triggers=2 pause_bars=5 pause_h=5 pause_d=2
+dual_and_90 DOT/USDT   cycles=   3 net=$   +4.82 dump_buys=4 triggers=2 pause_bars=5 pause_h=5 pause_d=2
+dual_and_60 BTC/USDT   cycles=   3 net=$   +4.58 dump_buys=3 triggers=2 pause_bars=3 pause_h=3 pause_d=2
+dual_and_60 ETH/USDT   cycles=   5 net=$   +7.64 dump_buys=4 triggers=2 pause_bars=3 pause_h=3 pause_d=2
+dual_and_60 SOL/USDT   cycles=  10 net=$  +15.28 dump_buys=4 triggers=2 pause_bars=3 pause_h=3 pause_d=2
+dual_and_60 AVAX/USDT  cycles=   4 net=$   +6.23 dump_buys=3 triggers=2 pause_bars=3 pause_h=3 pause_d=2
+dual_and_60 LINK/USDT  cycles=   5 net=$   +8.03 dump_buys=3 triggers=2 pause_bars=3 pause_h=3 pause_d=2
+dual_and_60 SUI/USDT   cycles=   2 net=$   +3.12 dump_buys=2 triggers=2 pause_bars=3 pause_h=3 pause_d=2
+dual_and_60 NEAR/USDT  cycles=   3 net=$   +4.84 dump_buys=0 triggers=2 pause_bars=3 pause_h=3 pause_d=2
+dual_and_60 DOT/USDT   cycles=   3 net=$   +4.82 dump_buys=4 triggers=2 pause_bars=3 pause_h=3 pause_d=2
+dual_and_45 BTC/USDT   cycles=   3 net=$   +4.58 dump_buys=3 triggers=2 pause_bars=3 pause_h=3 pause_d=2
+dual_and_45 ETH/USDT   cycles=   5 net=$   +7.64 dump_buys=4 triggers=2 pause_bars=3 pause_h=3 pause_d=2
+dual_and_45 SOL/USDT   cycles=  10 net=$  +15.28 dump_buys=4 triggers=2 pause_bars=3 pause_h=3 pause_d=2
+dual_and_45 AVAX/USDT  cycles=   4 net=$   +6.23 dump_buys=3 triggers=2 pause_bars=3 pause_h=3 pause_d=2
+dual_and_45 LINK/USDT  cycles=   5 net=$   +8.03 dump_buys=3 triggers=2 pause_bars=3 pause_h=3 pause_d=2
+dual_and_45 SUI/USDT   cycles=   2 net=$   +3.12 dump_buys=2 triggers=2 pause_bars=3 pause_h=3 pause_d=2
+dual_and_45 NEAR/USDT  cycles=   3 net=$   +4.84 dump_buys=0 triggers=2 pause_bars=3 pause_h=3 pause_d=2
+dual_and_45 DOT/USDT   cycles=   3 net=$   +4.82 dump_buys=4 triggers=2 pause_bars=3 pause_h=3 pause_d=2
+or_short_45 BTC/USDT   cycles=   3 net=$   +4.58 dump_buys=2 triggers=3 pause_bars=4 pause_h=4 pause_d=3
+or_short_45 ETH/USDT   cycles=   5 net=$   +7.64 dump_buys=3 triggers=3 pause_bars=4 pause_h=4 pause_d=3
+or_short_45 SOL/USDT   cycles=  10 net=$  +15.28 dump_buys=3 triggers=3 pause_bars=4 pause_h=4 pause_d=3
+or_short_45 AVAX/USDT  cycles=   4 net=$   +6.23 dump_buys=2 triggers=3 pause_bars=4 pause_h=4 pause_d=3
+or_short_45 LINK/USDT  cycles=   5 net=$   +8.03 dump_buys=2 triggers=3 pause_bars=4 pause_h=4 pause_d=3
+or_short_45 SUI/USDT   cycles=   2 net=$   +3.12 dump_buys=1 triggers=3 pause_bars=4 pause_h=4 pause_d=3
+or_short_45 NEAR/USDT  cycles=   3 net=$   +4.84 dump_buys=0 triggers=3 pause_bars=4 pause_h=4 pause_d=3
+or_short_45 DOT/USDT   cycles=   3 net=$   +4.82 dump_buys=2 triggers=3 pause_bars=4 pause_h=4 pause_d=3
+or_short_30 BTC/USDT   cycles=   3 net=$   +4.58 dump_buys=2 triggers=3 pause_bars=4 pause_h=4 pause_d=3
+or_short_30 ETH/USDT   cycles=   5 net=$   +7.64 dump_buys=3 triggers=3 pause_bars=4 pause_h=4 pause_d=3
+or_short_30 SOL/USDT   cycles=  10 net=$  +15.28 dump_buys=3 triggers=3 pause_bars=4 pause_h=4 pause_d=3
+or_short_30 AVAX/USDT  cycles=   4 net=$   +6.23 dump_buys=2 triggers=3 pause_bars=4 pause_h=4 pause_d=3
+or_short_30 LINK/USDT  cycles=   5 net=$   +8.03 dump_buys=2 triggers=3 pause_bars=4 pause_h=4 pause_d=3
+or_short_30 SUI/USDT   cycles=   2 net=$   +3.12 dump_buys=1 triggers=3 pause_bars=4 pause_h=4 pause_d=3
+or_short_30 NEAR/USDT  cycles=   3 net=$   +4.84 dump_buys=0 triggers=3 pause_bars=4 pause_h=4 pause_d=3
+or_short_30 DOT/USDT   cycles=   3 net=$   +4.82 dump_buys=2 triggers=3 pause_bars=4 pause_h=4 pause_d=3
+highbar_or_90 BTC/USDT   cycles=   3 net=$   +4.58 dump_buys=4 triggers=2 pause_bars=5 pause_h=5 pause_d=2
+highbar_or_90 ETH/USDT   cycles=   5 net=$   +7.64 dump_buys=5 triggers=2 pause_bars=5 pause_h=5 pause_d=2
+highbar_or_90 SOL/USDT   cycles=  10 net=$  +15.28 dump_buys=5 triggers=2 pause_bars=5 pause_h=5 pause_d=2
+highbar_or_90 AVAX/USDT  cycles=   4 net=$   +6.23 dump_buys=2 triggers=2 pause_bars=5 pause_h=5 pause_d=2
+highbar_or_90 LINK/USDT  cycles=   5 net=$   +8.03 dump_buys=4 triggers=2 pause_bars=5 pause_h=5 pause_d=2
+highbar_or_90 SUI/USDT   cycles=   2 net=$   +3.12 dump_buys=4 triggers=2 pause_bars=5 pause_h=5 pause_d=2
+highbar_or_90 NEAR/USDT  cycles=   5 net=$   +9.10 dump_buys=1 triggers=2 pause_bars=5 pause_h=5 pause_d=2
+highbar_or_90 DOT/USDT   cycles=   3 net=$   +4.82 dump_buys=3 triggers=2 pause_bars=5 pause_h=5 pause_d=2
+highbar_or_60 BTC/USDT   cycles=   3 net=$   +4.58 dump_buys=4 triggers=2 pause_bars=2 pause_h=2 pause_d=2
+highbar_or_60 ETH/USDT   cycles=   5 net=$   +7.64 dump_buys=5 triggers=2 pause_bars=2 pause_h=2 pause_d=2
+highbar_or_60 SOL/USDT   cycles=  10 net=$  +15.28 dump_buys=5 triggers=2 pause_bars=2 pause_h=2 pause_d=2
+highbar_or_60 AVAX/USDT  cycles=   4 net=$   +6.23 dump_buys=2 triggers=2 pause_bars=2 pause_h=2 pause_d=2
+highbar_or_60 LINK/USDT  cycles=   5 net=$   +8.03 dump_buys=4 triggers=2 pause_bars=2 pause_h=2 pause_d=2
+highbar_or_60 SUI/USDT   cycles=   2 net=$   +3.12 dump_buys=4 triggers=2 pause_bars=2 pause_h=2 pause_d=2
+highbar_or_60 NEAR/USDT  cycles=   5 net=$   +9.10 dump_buys=1 triggers=2 pause_bars=2 pause_h=2 pause_d=2
+highbar_or_60 DOT/USDT   cycles=   3 net=$   +4.82 dump_buys=3 triggers=2 pause_bars=2 pause_h=2 pause_d=2
+flash_cont_30 BTC/USDT   cycles=   3 net=$   +4.58 dump_buys=5 triggers=1 pause_bars=1 pause_h=1 pause_d=1
+flash_cont_30 ETH/USDT   cycles=   5 net=$   +7.64 dump_buys=6 triggers=1 pause_bars=1 pause_h=1 pause_d=1
+flash_cont_30 SOL/USDT   cycles=  10 net=$  +15.28 dump_buys=6 triggers=1 pause_bars=1 pause_h=1 pause_d=1
+flash_cont_30 AVAX/USDT  cycles=   4 net=$   +6.23 dump_buys=3 triggers=1 pause_bars=1 pause_h=1 pause_d=1
+flash_cont_30 LINK/USDT  cycles=   5 net=$   +8.03 dump_buys=5 triggers=1 pause_bars=1 pause_h=1 pause_d=1
+flash_cont_30 SUI/USDT   cycles=   2 net=$   +3.12 dump_buys=5 triggers=1 pause_bars=1 pause_h=1 pause_d=1
+flash_cont_30 NEAR/USDT  cycles=   5 net=$   +9.10 dump_buys=1 triggers=1 pause_bars=1 pause_h=1 pause_d=1
+flash_cont_30 DOT/USDT   cycles=   3 net=$   +4.82 dump_buys=5 triggers=1 pause_bars=1 pause_h=1 pause_d=1
+flash_cont_60 BTC/USDT   cycles=   3 net=$   +4.58 dump_buys=5 triggers=1 pause_bars=1 pause_h=1 pause_d=1
+flash_cont_60 ETH/USDT   cycles=   5 net=$   +7.64 dump_buys=6 triggers=1 pause_bars=1 pause_h=1 pause_d=1
+flash_cont_60 SOL/USDT   cycles=  10 net=$  +15.28 dump_buys=6 triggers=1 pause_bars=1 pause_h=1 pause_d=1
+flash_cont_60 AVAX/USDT  cycles=   4 net=$   +6.23 dump_buys=3 triggers=1 pause_bars=1 pause_h=1 pause_d=1
+flash_cont_60 LINK/USDT  cycles=   5 net=$   +8.03 dump_buys=5 triggers=1 pause_bars=1 pause_h=1 pause_d=1
+flash_cont_60 SUI/USDT   cycles=   2 net=$   +3.12 dump_buys=5 triggers=1 pause_bars=1 pause_h=1 pause_d=1
+flash_cont_60 NEAR/USDT  cycles=   5 net=$   +9.10 dump_buys=1 triggers=1 pause_bars=1 pause_h=1 pause_d=1
+flash_cont_60 DOT/USDT   cycles=   3 net=$   +4.82 dump_buys=5 triggers=1 pause_bars=1 pause_h=1 pause_d=1
+DUMP baseline   BTC/USDT   cycles=   0 net=$   +0.00 dump_buys=1 triggers=0
+DUMP baseline   ETH/USDT   cycles=   1 net=$   +1.53 dump_buys=2 triggers=0
+DUMP baseline   SOL/USDT   cycles=   4 net=$   +6.11 dump_buys=2 triggers=0
+DUMP baseline   AVAX/USDT  cycles=   0 net=$   +0.00 dump_buys=1 triggers=0
+DUMP baseline   LINK/USDT  cycles=   2 net=$   +3.06 dump_buys=1 triggers=0
+DUMP baseline   SUI/USDT   cycles=   2 net=$   +3.31 dump_buys=3 triggers=0
+DUMP baseline   NEAR/USDT  cycles=   5 net=$   +8.68 dump_buys=1 triggers=0
+DUMP baseline   DOT/USDT   cycles=   1 net=$   +1.57 dump_buys=1 triggers=0
+DUMP A_tuned    BTC/USDT   cycles=   0 net=$   +0.00 dump_buys=0 triggers=1
+DUMP A_tuned    ETH/USDT   cycles=   1 net=$   +1.53 dump_buys=0 triggers=1
+DUMP A_tuned    SOL/USDT   cycles=   4 net=$   +6.11 dump_buys=0 triggers=1
+DUMP A_tuned    AVAX/USDT  cycles=   0 net=$   +0.00 dump_buys=0 triggers=1
+DUMP A_tuned    LINK/USDT  cycles=   2 net=$   +3.06 dump_buys=0 triggers=1
+DUMP A_tuned    SUI/USDT   cycles=   2 net=$   +3.31 dump_buys=0 triggers=1
+DUMP A_tuned    NEAR/USDT  cycles=   3 net=$   +4.95 dump_buys=0 triggers=1
+DUMP A_tuned    DOT/USDT   cycles=   1 net=$   +1.57 dump_buys=0 triggers=1
+DUMP dual_and_90 BTC/USDT   cycles=   0 net=$   +0.00 dump_buys=0 triggers=1
+DUMP dual_and_90 ETH/USDT   cycles=   1 net=$   +1.53 dump_buys=0 triggers=1
+DUMP dual_and_90 SOL/USDT   cycles=   4 net=$   +6.11 dump_buys=0 triggers=1
+DUMP dual_and_90 AVAX/USDT  cycles=   0 net=$   +0.00 dump_buys=0 triggers=1
+DUMP dual_and_90 LINK/USDT  cycles=   2 net=$   +3.06 dump_buys=0 triggers=1
+DUMP dual_and_90 SUI/USDT   cycles=   2 net=$   +3.31 dump_buys=0 triggers=1
+DUMP dual_and_90 NEAR/USDT  cycles=   3 net=$   +4.95 dump_buys=0 triggers=1
+DUMP dual_and_90 DOT/USDT   cycles=   1 net=$   +1.57 dump_buys=0 triggers=1
+DUMP dual_and_60 BTC/USDT   cycles=   0 net=$   +0.00 dump_buys=0 triggers=1
+DUMP dual_and_60 ETH/USDT   cycles=   1 net=$   +1.53 dump_buys=0 triggers=1
+DUMP dual_and_60 SOL/USDT   cycles=   4 net=$   +6.11 dump_buys=0 triggers=1
+DUMP dual_and_60 AVAX/USDT  cycles=   0 net=$   +0.00 dump_buys=0 triggers=1
+DUMP dual_and_60 LINK/USDT  cycles=   2 net=$   +3.06 dump_buys=0 triggers=1
+DUMP dual_and_60 SUI/USDT   cycles=   2 net=$   +3.31 dump_buys=0 triggers=1
+DUMP dual_and_60 NEAR/USDT  cycles=   3 net=$   +4.95 dump_buys=0 triggers=1
+DUMP dual_and_60 DOT/USDT   cycles=   1 net=$   +1.57 dump_buys=0 triggers=1
+DUMP dual_and_45 BTC/USDT   cycles=   0 net=$   +0.00 dump_buys=0 triggers=1
+DUMP dual_and_45 ETH/USDT   cycles=   1 net=$   +1.53 dump_buys=0 triggers=1
+DUMP dual_and_45 SOL/USDT   cycles=   4 net=$   +6.11 dump_buys=0 triggers=1
+DUMP dual_and_45 AVAX/USDT  cycles=   0 net=$   +0.00 dump_buys=0 triggers=1
+DUMP dual_and_45 LINK/USDT  cycles=   2 net=$   +3.06 dump_buys=0 triggers=1
+DUMP dual_and_45 SUI/USDT   cycles=   2 net=$   +3.31 dump_buys=0 triggers=1
+DUMP dual_and_45 NEAR/USDT  cycles=   3 net=$   +4.95 dump_buys=0 triggers=1
+DUMP dual_and_45 DOT/USDT   cycles=   1 net=$   +1.57 dump_buys=0 triggers=1
+DUMP or_short_45 BTC/USDT   cycles=   0 net=$   +0.00 dump_buys=0 triggers=1
+DUMP or_short_45 ETH/USDT   cycles=   1 net=$   +1.53 dump_buys=0 triggers=1
+DUMP or_short_45 SOL/USDT   cycles=   4 net=$   +6.11 dump_buys=0 triggers=1
+DUMP or_short_45 AVAX/USDT  cycles=   0 net=$   +0.00 dump_buys=0 triggers=1
+DUMP or_short_45 LINK/USDT  cycles=   2 net=$   +3.06 dump_buys=0 triggers=1
+DUMP or_short_45 SUI/USDT   cycles=   2 net=$   +3.31 dump_buys=0 triggers=1
+DUMP or_short_45 NEAR/USDT  cycles=   3 net=$   +4.95 dump_buys=0 triggers=1
+DUMP or_short_45 DOT/USDT   cycles=   1 net=$   +1.57 dump_buys=0 triggers=1
+DUMP or_short_30 BTC/USDT   cycles=   0 net=$   +0.00 dump_buys=0 triggers=1
+DUMP or_short_30 ETH/USDT   cycles=   1 net=$   +1.53 dump_buys=0 triggers=1
+DUMP or_short_30 SOL/USDT   cycles=   4 net=$   +6.11 dump_buys=0 triggers=1
+DUMP or_short_30 AVAX/USDT  cycles=   0 net=$   +0.00 dump_buys=0 triggers=1
+DUMP or_short_30 LINK/USDT  cycles=   2 net=$   +3.06 dump_buys=0 triggers=1
+DUMP or_short_30 SUI/USDT   cycles=   2 net=$   +3.31 dump_buys=0 triggers=1
+DUMP or_short_30 NEAR/USDT  cycles=   3 net=$   +4.95 dump_buys=0 triggers=1
+DUMP or_short_30 DOT/USDT   cycles=   1 net=$   +1.57 dump_buys=0 triggers=1
+DUMP highbar_or_90 BTC/USDT   cycles=   0 net=$   +0.00 dump_buys=1 triggers=0
+DUMP highbar_or_90 ETH/USDT   cycles=   1 net=$   +1.53 dump_buys=2 triggers=0
+DUMP highbar_or_90 SOL/USDT   cycles=   4 net=$   +6.11 dump_buys=2 triggers=0
+DUMP highbar_or_90 AVAX/USDT  cycles=   0 net=$   +0.00 dump_buys=1 triggers=0
+DUMP highbar_or_90 LINK/USDT  cycles=   2 net=$   +3.06 dump_buys=1 triggers=0
+DUMP highbar_or_90 SUI/USDT   cycles=   2 net=$   +3.31 dump_buys=3 triggers=0
+DUMP highbar_or_90 NEAR/USDT  cycles=   5 net=$   +8.68 dump_buys=1 triggers=0
+DUMP highbar_or_90 DOT/USDT   cycles=   1 net=$   +1.57 dump_buys=1 triggers=0
+DUMP highbar_or_60 BTC/USDT   cycles=   0 net=$   +0.00 dump_buys=1 triggers=0
+DUMP highbar_or_60 ETH/USDT   cycles=   1 net=$   +1.53 dump_buys=2 triggers=0
+DUMP highbar_or_60 SOL/USDT   cycles=   4 net=$   +6.11 dump_buys=2 triggers=0
+DUMP highbar_or_60 AVAX/USDT  cycles=   0 net=$   +0.00 dump_buys=1 triggers=0
+DUMP highbar_or_60 LINK/USDT  cycles=   2 net=$   +3.06 dump_buys=1 triggers=0
+DUMP highbar_or_60 SUI/USDT   cycles=   2 net=$   +3.31 dump_buys=3 triggers=0
+DUMP highbar_or_60 NEAR/USDT  cycles=   5 net=$   +8.68 dump_buys=1 triggers=0
+DUMP highbar_or_60 DOT/USDT   cycles=   1 net=$   +1.57 dump_buys=1 triggers=0
+DUMP flash_cont_30 BTC/USDT   cycles=   0 net=$   +0.00 dump_buys=1 triggers=0
+DUMP flash_cont_30 ETH/USDT   cycles=   1 net=$   +1.53 dump_buys=2 triggers=0
+DUMP flash_cont_30 SOL/USDT   cycles=   4 net=$   +6.11 dump_buys=2 triggers=0
+DUMP flash_cont_30 AVAX/USDT  cycles=   0 net=$   +0.00 dump_buys=1 triggers=0
+DUMP flash_cont_30 LINK/USDT  cycles=   2 net=$   +3.06 dump_buys=1 triggers=0
+DUMP flash_cont_30 SUI/USDT   cycles=   2 net=$   +3.31 dump_buys=3 triggers=0
+DUMP flash_cont_30 NEAR/USDT  cycles=   5 net=$   +8.68 dump_buys=1 triggers=0
+DUMP flash_cont_30 DOT/USDT   cycles=   1 net=$   +1.57 dump_buys=1 triggers=0
+DUMP flash_cont_60 BTC/USDT   cycles=   0 net=$   +0.00 dump_buys=1 triggers=0
+DUMP flash_cont_60 ETH/USDT   cycles=   1 net=$   +1.53 dump_buys=2 triggers=0
+DUMP flash_cont_60 SOL/USDT   cycles=   4 net=$   +6.11 dump_buys=2 triggers=0
+DUMP flash_cont_60 AVAX/USDT  cycles=   0 net=$   +0.00 dump_buys=1 triggers=0
+DUMP flash_cont_60 LINK/USDT  cycles=   2 net=$   +3.06 dump_buys=1 triggers=0
+DUMP flash_cont_60 SUI/USDT   cycles=   2 net=$   +3.31 dump_buys=3 triggers=0
+DUMP flash_cont_60 NEAR/USDT  cycles=   5 net=$   +8.68 dump_buys=1 triggers=0
+DUMP flash_cont_60 DOT/USDT   cycles=   1 net=$   +1.57 dump_buys=1 triggers=0
+GATES_FULL {
+  "A_tuned": {
+    "net_ge_baseline": {
+      "pass": false,
+      "baseline": 63.76632912074501,
+      "variant": 54.532849015523965
+    },
+    "cycles_ge_100pct": {
+      "pass": false,
+      "baseline": 40,
+      "variant": 35,
+      "ratio": 0.875
+    },
+    "cycles_ge_99pct": {
+      "pass": false,
+      "ratio": 0.875
+    },
+    "cycles_ge_95pct": {
+      "pass": false,
+      "ratio": 0.875
+    },
+    "cycles_ge_90pct": {
+      "pass": false,
+      "baseline": 40,
+      "variant": 35,
+      "ratio": 0.875
+    },
+    "buy_into_dump_strictly_down": {
+      "pass": true,
+      "baseline": 51,
+      "variant": 15,
+      "note": null
+    },
+    "max_underwater_le_baseline": {
+      "pass": true,
+      "baseline": 1021.2921687495876,
+      "variant": 975.7288651533682
+    },
+    "all_hard_gates": false,
+    "prefer_live_gates": false
+  },
+  "dual_and_90": {
+    "net_ge_baseline": {
+      "pass": false,
+      "baseline": 63.76632912074501,
+      "variant": 54.532849015523965
+    },
+    "cycles_ge_100pct": {
+      "pass": false,
+      "baseline": 40,
+      "variant": 35,
+      "ratio": 0.875
+    },
+    "cycles_ge_99pct": {
+      "pass": false,
+      "ratio": 0.875
+    },
+    "cycles_ge_95pct": {
+      "pass": false,
+      "ratio": 0.875
+    },
+    "cycles_ge_90pct": {
+      "pass": false,
+      "baseline": 40,
+      "variant": 35,
+      "ratio": 0.875
+    },
+    "buy_into_dump_strictly_down": {
+      "pass": true,
+      "baseline": 51,
+      "variant": 23,
+      "note": null
+    },
+    "max_underwater_le_baseline": {
+      "pass": true,
+      "baseline": 1021.2921687495876,
+      "variant": 976.7127401397842
+    },
+    "all_hard_gates": false,
+    "prefer_live_gates": false
+  },
+  "dual_and_60": {
+    "net_ge_baseline": {
+      "pass": false,
+      "baseline": 63.76632912074501,
+      "variant": 54.532849015523965
+    },
+    "cycles_ge_100pct": {
+      "pass": false,
+      "baseline": 40,
+      "variant": 35,
+      "ratio": 0.875
+    },
+    "cycles_ge_99pct": {
+      "pass": false,
+      "ratio": 0.875
+    },
+    "cycles_ge_95pct": {
+      "pass": false,
+      "ratio": 0.875
+    },
+    "cycles_ge_90pct": {
+      "pass": false,
+      "baseline": 40,
+      "variant": 35,
+      "ratio": 0.875
+    },
+    "buy_into_dump_strictly_down": {
+      "pass": true,
+      "baseline": 51,
+      "variant": 23,
+      "note": null
+    },
+    "max_underwater_le_baseline": {
+      "pass": true,
+      "baseline": 1021.2921687495876,
+      "variant": 976.7127401397842
+    },
+    "all_hard_gates": false,
+    "prefer_live_gates": false
+  },
+  "dual_and_45": {
+    "net_ge_baseline": {
+      "pass": false,
+      "baseline": 63.76632912074501,
+      "variant": 54.532849015523965
+    },
+    "cycles_ge_100pct": {
+      "pass": false,
+      "baseline": 40,
+      "variant": 35,
+      "ratio": 0.875
+    },
+    "cycles_ge_99pct": {
+      "pass": false,
+      "ratio": 0.875
+    },
+    "cycles_ge_95pct": {
+      "pass": false,
+      "ratio": 0.875
+    },
+    "cycles_ge_90pct": {
+      "pass": false,
+      "baseline": 40,
+      "variant": 35,
+      "ratio": 0.875
+    },
+    "buy_into_dump_strictly_down": {
+      "pass": true,
+      "baseline": 51,
+      "variant": 23,
+      "note": null
+    },
+    "max_underwater_le_baseline": {
+      "pass": true,
+      "baseline": 1021.2921687495876,
+      "variant": 976.7127401397842
+    },
+    "all_hard_gates": false,
+    "prefer_live_gates": false
+  },
+  "or_short_45": {
+    "net_ge_baseline": {
+      "pass": false,
+      "baseline": 63.76632912074501,
+      "variant": 54.532849015523965
+    },
+    "cycles_ge_100pct": {
+      "pass": false,
+      "baseline": 40,
+      "variant": 35,
+      "ratio": 0.875
+    },
+    "cycles_ge_99pct": {
+      "pass": false,
+      "ratio": 0.875
+    },
+    "cycles_ge_95pct": {
+      "pass": false,
+      "ratio": 0.875
+    },
+    "cycles_ge_90pct": {
+      "pass": false,
+      "baseline": 40,
+      "variant": 35,
+      "ratio": 0.875
+    },
+    "buy_into_dump_strictly_down": {
+      "pass": true,
+      "baseline": 51,
+      "variant": 15,
+      "note": null
+    },
+    "max_underwater_le_baseline": {
+      "pass": true,
+      "baseline": 1021.2921687495876,
+      "variant": 975.7288651533682
+    },
+    "all_hard_gates": false,
+    "prefer_live_gates": false
+  },
+  "or_short_30": {
+    "net_ge_baseline": {
+      "pass": false,
+      "baseline": 63.76632912074501,
+      "variant": 54.532849015523965
+    },
+    "cycles_ge_100pct": {
+      "pass": false,
+      "baseline": 40,
+      "variant": 35,
+      "ratio": 0.875
+    },
+    "cycles_ge_99pct": {
+      "pass": false,
+      "ratio": 0.875
+    },
+    "cycles_ge_95pct": {
+      "pass": false,
+      "ratio": 0.875
+    },
+    "cycles_ge_90pct": {
+      "pass": false,
+      "baseline": 40,
+      "variant": 35,
+      "ratio": 0.875
+    },
+    "buy_into_dump_strictly_down": {
+      "pass": true,
+      "baseline": 51,
+      "variant": 15,
+      "note": null
+    },
+    "max_underwater_le_baseline": {
+      "pass": true,
+      "baseline": 1021.2921687495876,
+      "variant": 975.7288651533682
+    },
+    "all_hard_gates": false,
+    "prefer_live_gates": false
+  },
+  "highbar_or_90": {
+    "net_ge_baseline": {
+      "pass": false,
+      "baseline": 63.76632912074501,
+      "variant": 58.79609101619906
+    },
+    "cycles_ge_100pct": {
+      "pass": false,
+      "baseline": 40,
+      "variant": 37,
+      "ratio": 0.925
+    },
+    "cycles_ge_99pct": {
+      "pass": false,
+      "ratio": 0.925
+    },
+    "cycles_ge_95pct": {
+      "pass": false,
+      "ratio": 0.925
+    },
+    "cycles_ge_90pct": {
+      "pass": true,
+      "baseline": 40,
+      "variant": 37,
+      "ratio": 0.925
+    },
+    "buy_into_dump_strictly_down": {
+      "pass": true,
+      "baseline": 51,
+      "variant": 28,
+      "note": null
+    },
+    "max_underwater_le_baseline": {
+      "pass": true,
+      "baseline": 1021.2921687495876,
+      "variant": 975.7288651533682
+    },
+    "all_hard_gates": false,
+    "prefer_live_gates": false
+  },
+  "highbar_or_60": {
+    "net_ge_baseline": {
+      "pass": false,
+      "baseline": 63.76632912074501,
+      "variant": 58.79609101619906
+    },
+    "cycles_ge_100pct": {
+      "pass": false,
+      "baseline": 40,
+      "variant": 37,
+      "ratio": 0.925
+    },
+    "cycles_ge_99pct": {
+      "pass": false,
+      "ratio": 0.925
+    },
+    "cycles_ge_95pct": {
+      "pass": false,
+      "ratio": 0.925
+    },
+    "cycles_ge_90pct": {
+      "pass": true,
+      "baseline": 40,
+      "variant": 37,
+      "ratio": 0.925
+    },
+    "buy_into_dump_strictly_down": {
+      "pass": true,
+      "baseline": 51,
+      "variant": 28,
+      "note": null
+    },
+    "max_underwater_le_baseline": {
+      "pass": true,
+      "baseline": 1021.2921687495876,
+      "variant": 975.7288651533682
+    },
+    "all_hard_gates": false,
+    "prefer_live_gates": false
+  },
+  "flash_cont_30": {
+    "net_ge_baseline": {
+      "pass": false,
+      "baseline": 63.76632912074501,
+      "variant": 58.79609101619906
+    },
+    "cycles_ge_100pct": {
+      "pass": false,
+      "baseline": 40,
+      "variant": 37,
+      "ratio": 0.925
+    },
+    "cycles_ge_99pct": {
+      "pass": false,
+      "ratio": 0.925
+    },
+    "cycles_ge_95pct": {
+      "pass": false,
+      "ratio": 0.925
+    },
+    "cycles_ge_90pct": {
+      "pass": true,
+      "baseline": 40,
+      "variant": 37,
+      "ratio": 0.925
+    },
+    "buy_into_dump_strictly_down": {
+      "pass": true,
+      "baseline": 51,
+      "variant": 36,
+      "note": null
+    },
+    "max_underwater_le_baseline": {
+      "pass": true,
+      "baseline": 1021.2921687495876,
+      "variant": 976.7127401397842
+    },
+    "all_hard_gates": false,
+    "prefer_live_gates": false
+  },
+  "flash_cont_60": {
+    "net_ge_baseline": {
+      "pass": false,
+      "baseline": 63.76632912074501,
+      "variant": 58.79609101619906
+    },
+    "cycles_ge_100pct": {
+      "pass": false,
+      "baseline": 40,
+      "variant": 37,
+      "ratio": 0.925
+    },
+    "cycles_ge_99pct": {
+      "pass": false,
+      "ratio": 0.925
+    },
+    "cycles_ge_95pct": {
+      "pass": false,
+      "ratio": 0.925
+    },
+    "cycles_ge_90pct": {
+      "pass": true,
+      "baseline": 40,
+      "variant": 37,
+      "ratio": 0.925
+    },
+    "buy_into_dump_strictly_down": {
+      "pass": true,
+      "baseline": 51,
+      "variant": 36,
+      "note": null
+    },
+    "max_underwater_le_baseline": {
+      "pass": true,
+      "baseline": 1021.2921687495876,
+      "variant": 976.7127401397842
+    },
+    "all_hard_gates": false,
+    "prefer_live_gates": false
+  }
+}
+GATES_DUMP {
+  "A_tuned": {
+    "net_ge_baseline": {
+      "pass": false,
+      "baseline": 24.256318353797496,
+      "variant": 20.530379261266148
+    },
+    "cycles_ge_100pct": {
+      "pass": false,
+      "baseline": 15,
+      "variant": 13,
+      "ratio": 0.8666666666666667
+    },
+    "cycles_ge_99pct": {
+      "pass": false,
+      "ratio": 0.8666666666666667
+    },
+    "cycles_ge_95pct": {
+      "pass": false,
+      "ratio": 0.8666666666666667
+    },
+    "cycles_ge_90pct": {
+      "pass": false,
+      "baseline": 15,
+      "variant": 13,
+      "ratio": 0.8666666666666667
+    },
+    "buy_into_dump_strictly_down": {
+      "pass": true,
+      "baseline": 12,
+      "variant": 0,
+      "note": null
+    },
+    "max_underwater_le_baseline": {
+      "pass": true,
+      "baseline": 212.1093292882645,
+      "variant": 195.85587970359794
+    },
+    "all_hard_gates": false,
+    "prefer_live_gates": false
+  },
+  "dual_and_90": {
+    "net_ge_baseline": {
+      "pass": false,
+      "baseline": 24.256318353797496,
+      "variant": 20.530379261266148
+    },
+    "cycles_ge_100pct": {
+      "pass": false,
+      "baseline": 15,
+      "variant": 13,
+      "ratio": 0.8666666666666667
+    },
+    "cycles_ge_99pct": {
+      "pass": false,
+      "ratio": 0.8666666666666667
+    },
+    "cycles_ge_95pct": {
+      "pass": false,
+      "ratio": 0.8666666666666667
+    },
+    "cycles_ge_90pct": {
+      "pass": false,
+      "baseline": 15,
+      "variant": 13,
+      "ratio": 0.8666666666666667
+    },
+    "buy_into_dump_strictly_down": {
+      "pass": true,
+      "baseline": 12,
+      "variant": 0,
+      "note": null
+    },
+    "max_underwater_le_baseline": {
+      "pass": true,
+      "baseline": 212.1093292882645,
+      "variant": 195.85587970359794
+    },
+    "all_hard_gates": false,
+    "prefer_live_gates": false
+  },
+  "dual_and_60": {
+    "net_ge_baseline": {
+      "pass": false,
+      "baseline": 24.256318353797496,
+      "variant": 20.530379261266148
+    },
+    "cycles_ge_100pct": {
+      "pass": false,
+      "baseline": 15,
+      "variant": 13,
+      "ratio": 0.8666666666666667
+    },
+    "cycles_ge_99pct": {
+      "pass": false,
+      "ratio": 0.8666666666666667
+    },
+    "cycles_ge_95pct": {
+      "pass": false,
+      "ratio": 0.8666666666666667
+    },
+    "cycles_ge_90pct": {
+      "pass": false,
+      "baseline": 15,
+      "variant": 13,
+      "ratio": 0.8666666666666667
+    },
+    "buy_into_dump_strictly_down": {
+      "pass": true,
+      "baseline": 12,
+      "variant": 0,
+      "note": null
+    },
+    "max_underwater_le_baseline": {
+      "pass": true,
+      "baseline": 212.1093292882645,
+      "variant": 195.85587970359794
+    },
+    "all_hard_gates": false,
+    "prefer_live_gates": false
+  },
+  "dual_and_45": {
+    "net_ge_baseline": {
+      "pass": false,
+      "baseline": 24.256318353797496,
+      "variant": 20.530379261266148
+    },
+    "cycles_ge_100pct": {
+      "pass": false,
+      "baseline": 15,
+      "variant": 13,
+      "ratio": 0.8666666666666667
+    },
+    "cycles_ge_99pct": {
+      "pass": false,
+      "ratio": 0.8666666666666667
+    },
+    "cycles_ge_95pct": {
+      "pass": false,
+      "ratio": 0.8666666666666667
+    },
+    "cycles_ge_90pct": {
+      "pass": false,
+      "baseline": 15,
+      "variant": 13,
+      "ratio": 0.8666666666666667
+    },
+    "buy_into_dump_strictly_down": {
+      "pass": true,
+      "baseline": 12,
+      "variant": 0,
+      "note": null
+    },
+    "max_underwater_le_baseline": {
+      "pass": true,
+      "baseline": 212.1093292882645,
+      "variant": 195.85587970359794
+    },
+    "all_hard_gates": false,
+    "prefer_live_gates": false
+  },
+  "or_short_45": {
+    "net_ge_baseline": {
+      "pass": false,
+      "baseline": 24.256318353797496,
+      "variant": 20.530379261266148
+    },
+    "cycles_ge_100pct": {
+      "pass": false,
+      "baseline": 15,
+      "variant": 13,
+      "ratio": 0.8666666666666667
+    },
+    "cycles_ge_99pct": {
+      "pass": false,
+      "ratio": 0.8666666666666667
+    },
+    "cycles_ge_95pct": {
+      "pass": false,
+      "ratio": 0.8666666666666667
+    },
+    "cycles_ge_90pct": {
+      "pass": false,
+      "baseline": 15,
+      "variant": 13,
+      "ratio": 0.8666666666666667
+    },
+    "buy_into_dump_strictly_down": {
+      "pass": true,
+      "baseline": 12,
+      "variant": 0,
+      "note": null
+    },
+    "max_underwater_le_baseline": {
+      "pass": true,
+      "baseline": 212.1093292882645,
+      "variant": 195.85587970359794
+    },
+    "all_hard_gates": false,
+    "prefer_live_gates": false
+  },
+  "or_short_30": {
+    "net_ge_baseline": {
+      "pass": false,
+      "baseline": 24.256318353797496,
+      "variant": 20.530379261266148
+    },
+    "cycles_ge_100pct": {
+      "pass": false,
+      "baseline": 15,
+      "variant": 13,
+      "ratio": 0.8666666666666667
+    },
+    "cycles_ge_99pct": {
+      "pass": false,
+      "ratio": 0.8666666666666667
+    },
+    "cycles_ge_95pct": {
+      "pass": false,
+      "ratio": 0.8666666666666667
+    },
+    "cycles_ge_90pct": {
+      "pass": false,
+      "baseline": 15,
+      "variant": 13,
+      "ratio": 0.8666666666666667
+    },
+    "buy_into_dump_strictly_down": {
+      "pass": true,
+      "baseline": 12,
+      "variant": 0,
+      "note": null
+    },
+    "max_underwater_le_baseline": {
+      "pass": true,
+      "baseline": 212.1093292882645,
+      "variant": 195.85587970359794
+    },
+    "all_hard_gates": false,
+    "prefer_live_gates": false
+  },
+  "highbar_or_90": {
+    "net_ge_baseline": {
+      "pass": true,
+      "baseline": 24.256318353797496,
+      "variant": 24.256318353797496
+    },
+    "cycles_ge_100pct": {
+      "pass": true,
+      "baseline": 15,
+      "variant": 15,
+      "ratio": 1.0
+    },
+    "cycles_ge_99pct": {
+      "pass": true,
+      "ratio": 1.0
+    },
+    "cycles_ge_95pct": {
+      "pass": true,
+      "ratio": 1.0
+    },
+    "cycles_ge_90pct": {
+      "pass": true,
+      "baseline": 15,
+      "variant": 15,
+      "ratio": 1.0
+    },
+    "buy_into_dump_strictly_down": {
+      "pass": false,
+      "baseline": 12,
+      "variant": 12,
+      "note": null
+    },
+    "max_underwater_le_baseline": {
+      "pass": true,
+      "baseline": 212.1093292882645,
+      "variant": 212.1093292882645
+    },
+    "all_hard_gates": false,
+    "prefer_live_gates": false
+  },
+  "highbar_or_60": {
+    "net_ge_baseline": {
+      "pass": true,
+      "baseline": 24.256318353797496,
+      "variant": 24.256318353797496
+    },
+    "cycles_ge_100pct": {
+      "pass": true,
+      "baseline": 15,
+      "variant": 15,
+      "ratio": 1.0
+    },
+    "cycles_ge_99pct": {
+      "pass": true,
+      "ratio": 1.0
+    },
+    "cycles_ge_95pct": {
+      "pass": true,
+      "ratio": 1.0
+    },
+    "cycles_ge_90pct": {
+      "pass": true,
+      "baseline": 15,
+      "variant": 15,
+      "ratio": 1.0
+    },
+    "buy_into_dump_strictly_down": {
+      "pass": false,
+      "baseline": 12,
+      "variant": 12,
+      "note": null
+    },
+    "max_underwater_le_baseline": {
+      "pass": true,
+      "baseline": 212.1093292882645,
+      "variant": 212.1093292882645
+    },
+    "all_hard_gates": false,
+    "prefer_live_gates": false
+  },
+  "flash_cont_30": {
+    "net_ge_baseline": {
+      "pass": true,
+      "baseline": 24.256318353797496,
+      "variant": 24.256318353797496
+    },
+    "cycles_ge_100pct": {
+      "pass": true,
+      "baseline": 15,
+      "variant": 15,
+      "ratio": 1.0
+    },
+    "cycles_ge_99pct": {
+      "pass": true,
+      "ratio": 1.0
+    },
+    "cycles_ge_95pct": {
+      "pass": true,
+      "ratio": 1.0
+    },
+    "cycles_ge_90pct": {
+      "pass": true,
+      "baseline": 15,
+      "variant": 15,
+      "ratio": 1.0
+    },
+    "buy_into_dump_strictly_down": {
+      "pass": false,
+      "baseline": 12,
+      "variant": 12,
+      "note": null
+    },
+    "max_underwater_le_baseline": {
+      "pass": true,
+      "baseline": 212.1093292882645,
+      "variant": 212.1093292882645
+    },
+    "all_hard_gates": false,
+    "prefer_live_gates": false
+  },
+  "flash_cont_60": {
+    "net_ge_baseline": {
+      "pass": true,
+      "baseline": 24.256318353797496,
+      "variant": 24.256318353797496
+    },
+    "cycles_ge_100pct": {
+      "pass": true,
+      "baseline": 15,
+      "variant": 15,
+      "ratio": 1.0
+    },
+    "cycles_ge_99pct": {
+      "pass": true,
+      "ratio": 1.0
+    },
+    "cycles_ge_95pct": {
+      "pass": true,
+      "ratio": 1.0
+    },
+    "cycles_ge_90pct": {
+      "pass": true,
+      "baseline": 15,
+      "variant": 15,
+      "ratio": 1.0
+    },
+    "buy_into_dump_strictly_down": {
+      "pass": false,
+      "baseline": 12,
+      "variant": 12,
+      "note": null
+    },
+    "max_underwater_le_baseline": {
+      "pass": true,
+      "baseline": 212.1093292882645,
+      "variant": 212.1093292882645
+    },
+    "all_hard_gates": false,
+    "prefer_live_gates": false
+  }
+}
+
+=== VARIANT TABLE (full window) ===
+mode              cycles        net   dump         uw  trig  p_h c100 c95 netOK dmp hard live
+A_tuned               35      54.53     15     975.73    24    7 False False False True False False
+dual_and_90           35      54.53     23     976.71    16    5 False False False True False False
+dual_and_60           35      54.53     23     976.71    16    3 False False False True False False
+dual_and_45           35      54.53     23     976.71    16    3 False False False True False False
+or_short_45           35      54.53     15     975.73    24    4 False False False True False False
+or_short_30           35      54.53     15     975.73    24    4 False False False True False False
+highbar_or_90         37      58.80     28     975.73    16    5 False False False True False False
+highbar_or_60         37      58.80     28     975.73    16    2 False False False True False False
+flash_cont_30         37      58.80     36     976.71     8    1 False False False True False False
+flash_cont_60         37      58.80     36     976.71     8    1 False False False True False False
+
+WINNER: NONE — no variant passes net>=base AND cycles>=95% AND dump-down (full + Sep23 slice)
+
+=== SUMMARY A_tuned vs baseline (full window) ===
+cycles: 40 → 35 (0.875)
+net_usd: 63.7663 → 54.5328
+buy_into_dump: 51 → 15
+max_underwater: 1021.2922 → 975.7289
+pause_hours/days (agg max): 7/3
+all_hard_gates: False prefer_live: False
+WROTE /Users/nasir.noma/claude_projects/AIOS/trading_engine/spot/backtest_results/fuller_cascade_sweep_20260923.json

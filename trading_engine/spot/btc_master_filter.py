@@ -95,6 +95,15 @@ class BTCMasterFilter:
             ret_1h = ((price - p_1h_ago) / p_1h_ago) * 100.0 if p_1h_ago > 0 else 0.0
             ret_4h = ((price - p_4h_ago) / p_4h_ago) * 100.0 if p_4h_ago > 0 else 0.0
             ret_24h = ((price - p_24h_ago) / p_24h_ago) * 100.0 if p_24h_ago > 0 else 0.0
+            # Open→low wick on latest closed-ish bar (for cascade shadow / future live latch)
+            bar_open = float(latest['open'])
+            bar_low = float(latest['low'])
+            ret_ol = ((bar_low - bar_open) / bar_open) * 100.0 if bar_open > 0 else 0.0
+            try:
+                from trading_engine.spot.cascade_guard import cascade_guard
+                cascade_guard.update_returns(ret_1h, ret_4h, ret_ol, now=now_ts)
+            except Exception as _e_casc:
+                logger.debug(f"cascade_guard update skipped: {_e_casc}")
 
             # Determine BTC macro regime
             if price > sma_50 > sma_200 and adx > 25 and plus_di > minus_di:
@@ -179,7 +188,7 @@ class BTCMasterFilter:
 
     def summary(self) -> Dict[str, Any]:
         """Returns serializable dictionary for API status endpoint."""
-        return {
+        out = {
             "btc_price": self.state.btc_price,
             "btc_1h_change_pct": self.state.btc_1h_change_pct,
             "btc_4h_change_pct": self.state.btc_4h_change_pct,
@@ -191,6 +200,12 @@ class BTCMasterFilter:
             "safety_reason": self.state.safety_reason,
             "last_updated": self.state.last_updated_iso,
         }
+        try:
+            from trading_engine.spot.cascade_guard import cascade_guard
+            out["cascade"] = cascade_guard.summary()
+        except Exception:
+            out["cascade"] = {"error": "unavailable"}
+        return out
 
 
 # Global singleton instance

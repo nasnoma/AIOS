@@ -1097,6 +1097,27 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 except Exception as _e_jev:
                     logger.debug(f"[{symbol}] jev_shadow hook skipped: {_e_jev}")
 
+                # ── Cascade SHADOW (observability only; NEVER cancels buys unless SPOT_CASCADE_LIVE=1) ──
+                # Fuller sweep 2026-09-23: no variant passed gates → live default OFF; shadow logs would-pause.
+                try:
+                    from trading_engine.spot.cascade_guard import cascade_guard, shadow_enabled, live_enabled
+                    if shadow_enabled() and symbol in _active_roster:
+                        _wp, _wr = cascade_guard.would_pause()
+                        if _wp:
+                            logger.debug(
+                                f"[{symbol}] [CASCADE SHADOW] would_pause={_wp} reason={_wr} "
+                                f"live={live_enabled()} (orders unchanged while live off)"
+                            )
+                        # Hard safety: even if someone sets LIVE, refuse cancel here unless
+                        # explicit live path is separately reviewed — place_grid does not call cancel.
+                        if live_enabled():
+                            logger.warning(
+                                f"[{symbol}] SPOT_CASCADE_LIVE=1 set but live cancel is NOT wired "
+                                f"(gates failed / shadow-only rollout). Ignoring live flag for orders."
+                            )
+                except Exception as _e_casc:
+                    logger.debug(f"[{symbol}] cascade_shadow hook skipped: {_e_casc}")
+
             except Exception as e:
                 logger.warning(f"Error in grid tick for {symbol}: {e}")
             
