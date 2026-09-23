@@ -474,6 +474,26 @@ class GridEngine:
             logger.debug(f"FIFO cost basis lookup for {self.symbol}: {e_fifo_cb}")
             fifo_basis = {}
 
+        # Sticky post-buy cost floor: a dearer fill raises _last_portfolio_avg_cost
+        # immediately, but portfolio/FIFO can lag. Fold sticky into avg_cost so
+        # rebuild cannot re-place sells under fee-proof(new buy)+$0.50.
+        # Drop sticky only when sold out, or when live bag cost has caught up.
+        _sticky = float(getattr(self, '_last_portfolio_avg_cost', 0.0) or 0.0)
+        if base_qty_held <= 1e-12:
+            self._last_portfolio_avg_cost = 0.0
+        else:
+            _live_floor = max(
+                float(avg_cost or 0.0),
+                float(fifo_max_cost or 0.0),
+                float((fifo_basis or {}).get('avg_cost') or 0.0),
+            )
+            if _sticky > 0:
+                avg_cost = max(float(avg_cost or 0.0), _sticky)
+            if _live_floor + 1e-12 >= _sticky and _live_floor > 0:
+                # Live caught up (or exceeded) — allow sticky to track live.
+                self._last_portfolio_avg_cost = _live_floor
+            # else: live still lags sticky — leave _last_portfolio_avg_cost unchanged
+
         is_aged_position = (oldest_lot_age_hours >= 12.0)  # recycle capital sooner while still fee-proof
 
         # Fail closed: inventory without FIFO max/avg must not place sells off stale hist/portfolio.
@@ -904,16 +924,32 @@ class GridEngine:
             )
             try:
                 oid = getattr(level, 'order_id', None)
+                paper_or_none = exchange is None or bool(getattr(self, 'paper_mode', False))
+                cancel_ok = False
                 if oid and exchange is not None:
                     try:
                         exchange.cancel_order(oid, self.symbol, {'category': 'spot'})
+                        cancel_ok = True
                     except Exception:
                         try:
                             exchange.cancel_order(oid, self.symbol)
+                            cancel_ok = True
                         except Exception as e_cx:
                             logger.warning(f"[{self.symbol}] cancel_order failed {oid}: {e_cx}")
-                level.status = 'cancelled'
-                cancelled += 1
+                            cancel_ok = False
+                elif not oid:
+                    # Local pending — nothing on exchange to cancel.
+                    cancel_ok = True
+                # Paper / None exchange: keep local-cancel behavior for tests.
+                # Live exchange: only flip status after a successful cancel.
+                if paper_or_none or cancel_ok:
+                    level.status = 'cancelled'
+                    cancelled += 1
+                else:
+                    logger.error(
+                        f"[{self.symbol}] Leaving unsafe sell @{px} OPEN — exchange cancel "
+                        f"failed for {oid}; will retry next tick"
+                    )
             except Exception as e:
                 logger.error(f"[{self.symbol}] cancel_unsafe_resting_sells error: {e}")
         return cancelled
@@ -935,8 +971,19 @@ class GridEngine:
                 _avg = float(getattr(_h, 'avg_cost_basis', 0) or (_h or {}).get('avg_cost_basis', 0) or 0)
             except Exception:
                 _avg = 0.0
-            self._last_portfolio_avg_cost = float(_avg or 0.0)
-            self.cancel_unsafe_resting_sells(exchange, units_held=_u, portfolio_avg_cost=_avg)
+            # Raise-only sticky floor: never overwrite downward while still holding.
+            # Lagged portfolio avg after a dearer buy must not wipe the post-buy floor.
+            _prev_sticky = float(getattr(self, '_last_portfolio_avg_cost', 0.0) or 0.0)
+            if float(_u or 0.0) <= 1e-12:
+                self._last_portfolio_avg_cost = 0.0
+            elif float(_avg or 0.0) > 0:
+                self._last_portfolio_avg_cost = max(_prev_sticky, float(_avg))
+            # else: holdings remain but live avg unknown — keep sticky untouched
+            _floor_for_cancel = max(
+                float(_avg or 0.0),
+                float(getattr(self, '_last_portfolio_avg_cost', 0.0) or 0.0),
+            )
+            self.cancel_unsafe_resting_sells(exchange, units_held=_u, portfolio_avg_cost=_floor_for_cancel)
         except Exception as e_unsafe:
             logger.warning(f"[{self.symbol}] cancel_unsafe_resting_sells: {e_unsafe}")
         for level in self.grid_levels:
