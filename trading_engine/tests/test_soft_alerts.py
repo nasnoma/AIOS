@@ -187,3 +187,19 @@ def test_advisory_hard_pause_flag_ignored_without_allowlist(monkeypatch):
         # belt-and-suspenders if caller monkeypatch does not restore
         if hasattr(monkeypatch, "undo"):
             monkeypatch.undo()
+
+
+def test_equity_wipe_to_zero_reports_full_drawdown():
+    """Equity 10000 → 0 must show ~100% DD and arm slow_bleed (not clear it)."""
+    t0 = 3_000_000.0
+    sa.update_soft_alerts(equity=10_000.0, now=t0, cascade_latch_active=True)
+    out = sa.update_soft_alerts(
+        equity=0.0,
+        btc_72h_pct=0.0,
+        cascade_latch_active=False,
+        now=t0 + 60,
+    )
+    assert out["equity_peak_72h"] >= 10_000.0
+    assert out["equity_dd_72h_pct"] >= 99.0
+    assert out["slow_bleed_watch"] is True
+

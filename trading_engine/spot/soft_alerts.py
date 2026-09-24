@@ -79,17 +79,27 @@ def _prune_equity_samples(now: float) -> None:
 
 
 def _update_equity_window(equity: float, now: float) -> Tuple[float, float]:
-    """Return (peak_72h, dd_fraction). dd = (peak - equity) / peak when peak>0."""
-    if equity > 0:
-        _state._equity_samples.append((now, float(equity)))
+    """Return (peak_72h, dd_fraction). dd = (peak - equity) / peak when peak>0.
+
+    Equity 0 (full wipe) must report ~100% DD vs peak — not 0%. Negative equity
+    is clamped to 0 for DD math; negative samples are not stored.
+    """
+    eq = float(equity) if equity is not None else 0.0
+    # Record non-negative samples so a wipe to $0 remains observable.
+    if eq >= 0:
+        _state._equity_samples.append((now, eq))
         while len(_state._equity_samples) > _EQUITY_SAMPLE_MAX:
             _state._equity_samples.popleft()
     _prune_equity_samples(now)
     if not _state._equity_samples:
         return 0.0, 0.0
     peak = max(e for _, e in _state._equity_samples)
-    dd = ((peak - equity) / peak) if (peak > 0 and equity > 0) else 0.0
+    if peak > 0:
+        dd = (peak - max(eq, 0.0)) / peak
+    else:
+        dd = 0.0
     return float(peak), float(dd)
+
 
 
 def check_reserve_near_floor(
