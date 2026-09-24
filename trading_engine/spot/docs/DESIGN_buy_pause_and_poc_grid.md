@@ -284,3 +284,12 @@ Sep23 dump-slice: variants that fire on −1.47%/−2.26% wick cut dump buys 12�
 **Ready-to-deploy shadow:** set `SPOT_CASCADE_SHADOW=1` on Railway when parent approves; set `SPOT_CASCADE_LIVE=1` (default ON) and keep `SPOT_CASCADE_SHADOW=1`. `railway up` deploys LIVE A_tuned buy-pause.
 
 *End of draft. Prefer leave this file **untracked** until Nasir accepts.*
+
+
+---
+
+## Related (2026-09-24): Unlock coverage + soft alerts
+
+- Soft alerts (log-only, no buy pause): `spot/soft_alerts.py` — `reserve_near_floor`, `slow_bleed_watch` (suppressed while cascade latch active).
+- Unlock audit / allowlist: `spot/unlock_calendar.py`, `spot/docs/UNLOCK_AUDIT.md`, `scripts/audit_unlock_coverage.py`.
+- Status surface: `/api/spot/status` → `cascade`, `reserve`, `unlock_pauses`, `soft_alerts`.

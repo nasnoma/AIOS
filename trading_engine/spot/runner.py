@@ -17,6 +17,7 @@ from typing import Dict, Any
 from trading_engine.spot.spot_portfolio import AssetHolding
 from trading_engine.spot.btc_master_filter import btc_master_filter
 from trading_engine.spot.crash_guard import update_crash_halt, is_crash_buy_halted, crash_halt_summary
+from trading_engine.spot.soft_alerts import update_soft_alerts, soft_alerts_summary
 from trading_engine.spot.asset_guards import is_never_sell_symbol, is_fee_buffer_asset
 from trading_engine.spot.entry_guards import entry_buys_allowed, exitability_score, remaining_buy_room_usd, EXPOSURE_TARGET_PCT
 
@@ -68,6 +69,36 @@ def is_arb_buy_paused(symbol: str) -> bool:
         return bool(paused)
     except Exception:
         return False
+
+
+def _maybe_update_soft_alerts_and_unlock_watch(*, usdt_free: float = 0.0, usdt_reserved: float = 0.0, equity: float = 0.0) -> None:
+    """Log-only soft alerts + unlock coverage watch. Never pauses buys."""
+    try:
+        from trading_engine.spot.cascade_guard import cascade_guard
+        latch_on, _ = cascade_guard.would_pause()
+    except Exception:
+        latch_on = False
+    try:
+        btc_72h = float(getattr(btc_master_filter.state, "btc_72h_change_pct", 0) or 0)
+    except Exception:
+        btc_72h = 0.0
+    try:
+        update_soft_alerts(
+            usdt_free=float(usdt_free or 0.0),
+            usdt_reserved=float(usdt_reserved or 0.0),
+            equity=float(equity or 0.0),
+            btc_72h_pct=btc_72h,
+            cascade_latch_active=bool(latch_on),
+        )
+    except Exception as e_sa:
+        logger.debug(f"soft_alerts update skipped: {e_sa}")
+    try:
+        from trading_engine.spot.unlock_calendar import maybe_log_unlock_watch
+        roster = set(spot_settings.asset_list) | _active_roster
+        maybe_log_unlock_watch(sorted(roster) if roster else None)
+    except Exception as e_uw:
+        logger.debug(f"unlock watch skipped: {e_uw}")
+
 
 def _get_dynamic_hot_asset_allocations(
     universe: list[str] = None,
@@ -432,6 +463,11 @@ def run_spot_regime_check():
             btc_24h_pct=float(getattr(btc_master_filter.state, 'btc_24h_change_pct', 0) or 0),
             equity=_eq_crash,
         )
+        _maybe_update_soft_alerts_and_unlock_watch(
+            usdt_free=float(getattr(_portfolio, 'usdt_available', 0) or 0),
+            usdt_reserved=float(getattr(_portfolio, 'usdt_reserved', 0) or 0),
+            equity=_eq_crash,
+        )
     except Exception as e_crash_r:
         logger.debug(f"crash halt update in regime check: {e_crash_r}")
 
@@ -629,6 +665,15 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                     )
                 except Exception as e_crash_t:
                     logger.debug(f"crash halt update in tick: {e_crash_t}")
+                try:
+                    _free_sa = float(bal.get('free', {}).get('USDT', 0) or 0)
+                    _maybe_update_soft_alerts_and_unlock_watch(
+                        usdt_free=_free_sa,
+                        usdt_reserved=float(getattr(_portfolio, 'usdt_reserved', 0) or 0),
+                        equity=float(getattr(_portfolio, 'total_unified_equity', 0) or tot_equity or 0),
+                    )
+                except Exception as e_sa_t:
+                    logger.debug(f"soft alerts in tick: {e_sa_t}")
 
                 tot = bal.get('total', {})
                 active_symbols = set(spot_settings.asset_list) | _active_roster
@@ -1820,13 +1865,51 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
     }
 
 
+    # Lightweight cascade / reserve / unlock / soft-alert surface for dashboard + digests
+    _casc_summary = {}
+    _casc_active = False
+    _casc_latch = False
+    _casc_reason = ""
+    try:
+        from trading_engine.spot.cascade_guard import cascade_guard
+        _casc_summary = cascade_guard.summary()
+        _casc_active, _casc_reason = cascade_guard.is_cascade_pause()
+        _casc_latch, _ = cascade_guard.would_pause()
+    except Exception:
+        pass
+    _usdt_free_status = float(summary_data.get("usdt_free") or getattr(_portfolio, "usdt_available", 0) or 0)
+    _usdt_reserved_status = float(getattr(_portfolio, "usdt_reserved", 0.0) or 0.0)
+    _unlock_block = {}
+    try:
+        from trading_engine.spot.unlock_calendar import unlock_status_summary
+        _vis = set(spot_settings.asset_list) | _active_roster | set(
+            (summary_data.get("holdings") or {}).keys()
+        )
+        _unlock_block = unlock_status_summary(sorted(_vis))
+    except Exception as e_unl:
+        _unlock_block = {"error": str(e_unl)}
+
     res = {
         "enabled": spot_settings.enabled,
         "paper_mode": spot_settings.paper_mode,
         "total_capital": tot_cap_val,
         "total_capital_pct": spot_settings.total_capital_pct,
         "usdt_hard_reserve_pct": spot_settings.usdt_hard_reserve_pct,
-        "usdt_reserved": float(getattr(_portfolio, 'usdt_reserved', 0.0) or 0.0),
+        "usdt_reserved": _usdt_reserved_status,
+        "reserve": {
+            "pct": spot_settings.usdt_hard_reserve_pct,
+            "floor_usd": round(_usdt_reserved_status, 2),
+            "free_usd": round(_usdt_free_status, 2),
+        },
+        "cascade": {
+            "active": bool(_casc_active),
+            "latch": bool(_casc_latch),
+            "reason": _casc_reason or _casc_summary.get("last_reason") or "",
+            "live_enabled": bool(_casc_summary.get("live_enabled")),
+            "summary": _casc_summary,
+        },
+        "unlock_pauses": _unlock_block,
+        "soft_alerts": soft_alerts_summary(),
         "portfolio": summary_data,
         "regimes": regimes,
         "grids": grids,

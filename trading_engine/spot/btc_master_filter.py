@@ -21,6 +21,7 @@ class BTCMasterState:
     btc_1h_change_pct: float = 0.0
     btc_4h_change_pct: float = 0.0
     btc_24h_change_pct: float = 0.0
+    btc_72h_change_pct: float = 0.0
     regime: str = "RANGE"  # BULL, RANGE, BEAR
     adx: float = 0.0
     plus_di: float = 0.0
@@ -95,6 +96,9 @@ class BTCMasterFilter:
             ret_1h = ((price - p_1h_ago) / p_1h_ago) * 100.0 if p_1h_ago > 0 else 0.0
             ret_4h = ((price - p_4h_ago) / p_4h_ago) * 100.0 if p_4h_ago > 0 else 0.0
             ret_24h = ((price - p_24h_ago) / p_24h_ago) * 100.0 if p_24h_ago > 0 else 0.0
+            prev_72h = df.iloc[-73] if len(df) >= 73 else df.iloc[0]
+            p_72h_ago = float(prev_72h['close'])
+            ret_72h = ((price - p_72h_ago) / p_72h_ago) * 100.0 if p_72h_ago > 0 else 0.0
             # Open→low wick on latest closed-ish bar (for cascade shadow / future live latch)
             bar_open = float(latest['open'])
             bar_low = float(latest['low'])
@@ -145,6 +149,7 @@ class BTCMasterFilter:
                 btc_1h_change_pct=round(ret_1h, 2),
                 btc_4h_change_pct=round(ret_4h, 2),
                 btc_24h_change_pct=round(ret_24h, 2),
+                btc_72h_change_pct=round(ret_72h, 2),
                 regime=regime,
                 adx=round(adx, 2),
                 plus_di=round(plus_di, 2),
@@ -193,6 +198,7 @@ class BTCMasterFilter:
             "btc_1h_change_pct": self.state.btc_1h_change_pct,
             "btc_4h_change_pct": self.state.btc_4h_change_pct,
             "btc_24h_change_pct": self.state.btc_24h_change_pct,
+            "btc_72h_change_pct": self.state.btc_72h_change_pct,
             "regime": self.state.regime,
             "adx": self.state.adx,
             "is_flash_dump": self.state.is_flash_dump,
