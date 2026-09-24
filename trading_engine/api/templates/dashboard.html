@@ -261,8 +261,12 @@ function renderSpotStatus(data) {
   set('spot-active-sub', deployedPct.toFixed(1) + '% deployed');
   set('spot-usdt-free', usd(usdtFree));
   const resShield = Number(p.usdt_reserved || data.usdt_reserved || 0);
+  const resPctFrac = Number(data.usdt_hard_reserve_pct ?? p.usdt_hard_reserve_pct);
+  const resPctLabel = Number.isFinite(resPctFrac)
+    ? (Math.round(resPctFrac * 1000) / 10).toString().replace(/\.0$/, '') + '%'
+    : null;
   if (resShield > 50) {
-    set('spot-usdt-sub', '🛡️ Shield: ' + usd(resShield) + ' (20%)');
+    set('spot-usdt-sub', '🛡️ Shield: ' + usd(resShield) + (resPctLabel ? ' (' + resPctLabel + ')' : ''));
   } else {
     set('spot-usdt-sub', '100% Active Liquidity');
   }
