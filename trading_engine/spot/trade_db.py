@@ -13,11 +13,22 @@ from datetime import datetime, timezone
 from loguru import logger
 from typing import List, Dict, Any, Optional
 
-DB_PATH = Path(__file__).parent.parent.parent / "data" / "spot_trades.db"
+_DEFAULT_DB_PATH = Path(__file__).parent.parent.parent / "data" / "spot_trades.db"
+DB_PATH = _DEFAULT_DB_PATH  # tests may monkeypatch
+
+
+def get_db_path() -> Path:
+    """Same ledger file as fifo_reconciler. Env SPOT_TRADES_DB_PATH wins."""
+    env = (os.environ.get("SPOT_TRADES_DB_PATH") or "").strip()
+    if env:
+        return Path(env)
+    return Path(DB_PATH)
+
 
 def init_db():
-    os.makedirs(DB_PATH.parent, exist_ok=True)
-    with sqlite3.connect(DB_PATH) as conn:
+    path = get_db_path()
+    os.makedirs(path.parent, exist_ok=True)
+    with sqlite3.connect(str(path)) as conn:
         cursor = conn.cursor()
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS fills (
@@ -63,7 +74,7 @@ def init_db():
 def record_fill(fill: Dict[str, Any]):
     init_db()
     try:
-        with sqlite3.connect(DB_PATH) as conn:
+        with sqlite3.connect(str(get_db_path())) as conn:
             cursor = conn.cursor()
             cursor.execute("""
                 INSERT OR IGNORE INTO fills (id, symbol, side, price, qty, cost, fee, timestamp, created_at)
@@ -86,7 +97,7 @@ def record_fill(fill: Dict[str, Any]):
 def record_completed_cycle(cycle: Dict[str, Any]):
     init_db()
     try:
-        with sqlite3.connect(DB_PATH) as conn:
+        with sqlite3.connect(str(get_db_path())) as conn:
             cursor = conn.cursor()
             cursor.execute("""
                 INSERT OR IGNORE INTO completed_cycles (symbol, buy_order_id, sell_order_id, buy_price, sell_price, qty, gross_pnl, fee, net_pnl, timestamp)
@@ -110,7 +121,7 @@ def record_completed_cycle(cycle: Dict[str, Any]):
 def get_completed_cycles(limit: int = 100) -> List[Dict[str, Any]]:
     init_db()
     try:
-        with sqlite3.connect(DB_PATH) as conn:
+        with sqlite3.connect(str(get_db_path())) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             cursor.execute("""
@@ -130,7 +141,7 @@ def get_today_metrics() -> Dict[str, Any]:
     init_db()
     today_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     try:
-        with sqlite3.connect(DB_PATH) as conn:
+        with sqlite3.connect(str(get_db_path())) as conn:
             cursor = conn.cursor()
             cursor.execute("""
                 SELECT COUNT(*), COALESCE(SUM(gross_pnl), 0.0), COALESCE(SUM(fee), 0.0), COALESCE(SUM(net_pnl), 0.0)

@@ -224,3 +224,67 @@ def test_get_daily_pnl_is_sql_sum_of_booked_nets(fifo_db):
     assert fr.run_fifo_match(fee_rate=0.001) == 0
     daily_again = fr.get_daily_pnl(day)
     assert daily_again == daily
+
+
+def test_spot_trades_db_path_env_respected(tmp_path, monkeypatch):
+    """SPOT_TRADES_DB_PATH must redirect the ledger to an absolute path."""
+    durable = tmp_path / "volume" / "spot_trades.db"
+    monkeypatch.setenv("SPOT_TRADES_DB_PATH", str(durable))
+    # Env wins over module default / monkeypatch of DB_PATH
+    monkeypatch.setattr(fr, "DB_PATH", tmp_path / "should_not_use.db")
+    assert fr.get_db_path() == durable
+    conn = fr._conn()
+    conn.close()
+    assert durable.exists()
+    assert not (tmp_path / "should_not_use.db").exists()
+
+
+def test_opening_existing_db_preserves_rows_across_restart(tmp_path, monkeypatch):
+    """Simulate container restart: same volume path, new process (re-import path)."""
+    durable = tmp_path / "data" / "spot_trades.db"
+    monkeypatch.setenv("SPOT_TRADES_DB_PATH", str(durable))
+    monkeypatch.setattr(fr, "DB_PATH", fr.get_db_path())
+
+    day = "2026-09-25"
+    conn = fr._conn()
+    _seed_fill(
+        conn,
+        fid="b_persist",
+        symbol="XRP/USDT",
+        side="buy",
+        price=0.50,
+        qty=100.0,
+        fee=0.04,
+        ts_ms=1_000,
+        ts=f"{day}T10:00:00.000Z",
+    )
+    _seed_fill(
+        conn,
+        fid="s_persist",
+        symbol="XRP/USDT",
+        side="sell",
+        price=0.52,
+        qty=100.0,
+        fee=0.04,
+        ts_ms=2_000,
+        ts=f"{day}T11:00:00.000Z",
+    )
+    conn.commit()
+    conn.close()
+
+    assert fr.run_fifo_match(fee_rate=0.001) == 1
+    before = fr.get_daily_pnl(day)
+    assert before["cycles"] == 1
+    booked = before["net_pnl"]
+
+    # "Restart": reset open-log flag, reopen same path, rematch with no new sells
+    fr._db_open_logged = False
+    conn2 = fr._conn()
+    n_cycles = conn2.execute("SELECT COUNT(*) FROM fifo_cycles").fetchone()[0]
+    conn2.close()
+    assert n_cycles == 1
+
+    assert fr.run_fifo_match(fee_rate=0.001) == 0
+    after = fr.get_daily_pnl(day)
+    assert after == before
+    assert after["net_pnl"] == booked

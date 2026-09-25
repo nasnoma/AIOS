@@ -28,7 +28,18 @@ from typing import Optional, Dict, Any, List
 
 from loguru import logger
 
-DB_PATH = Path(__file__).parent.parent.parent / "data" / "spot_trades.db"
+# Default under repo data/; override with absolute SPOT_TRADES_DB_PATH
+# (Railway volume mount, e.g. /data/spot_trades.db) so restarts keep the ledger.
+_DEFAULT_DB_PATH = Path(__file__).parent.parent.parent / "data" / "spot_trades.db"
+DB_PATH = _DEFAULT_DB_PATH  # tests may monkeypatch this attribute
+
+
+def get_db_path() -> Path:
+    """Resolve spot_trades.db path. Env wins; else module DB_PATH (monkeypatchable)."""
+    env = (os.environ.get("SPOT_TRADES_DB_PATH") or "").strip()
+    if env:
+        return Path(env)
+    return Path(DB_PATH)
 
 # Every symbol the bot has ever traded
 ALL_SYMBOLS = [
@@ -104,11 +115,34 @@ def _init_db(conn: sqlite3.Connection):
 
 
 
+_db_open_logged = False
+
+
 def _conn() -> sqlite3.Connection:
-    os.makedirs(DB_PATH.parent, exist_ok=True)
-    c = sqlite3.connect(DB_PATH, timeout=30)
+    global _db_open_logged
+    path = get_db_path()
+    existed = path.exists() and path.stat().st_size > 0
+    os.makedirs(path.parent, exist_ok=True)
+    c = sqlite3.connect(str(path), timeout=30)
     c.row_factory = sqlite3.Row
     _init_db(c)
+    if not _db_open_logged:
+        try:
+            n_fills = int(c.execute("SELECT COUNT(*) FROM fills").fetchone()[0] or 0)
+            n_cycles = int(c.execute("SELECT COUNT(*) FROM fifo_cycles").fetchone()[0] or 0)
+        except Exception:
+            n_fills, n_cycles = -1, -1
+        if existed:
+            logger.info(
+                f"[FIFO] opened existing DB at {path} "
+                f"fills={n_fills} fifo_cycles={n_cycles}"
+            )
+        else:
+            logger.info(
+                f"[FIFO] created new DB at {path} "
+                f"(empty volume/first boot — one-time match from fills is expected)"
+            )
+        _db_open_logged = True
     return c
 
 
@@ -668,10 +702,9 @@ def reconcile(exchange, fee_rate: float = None) -> Dict[str, Any]:
     new_cycles = run_fifo_match(fee_rate=fee_rate)
     daily      = get_daily_pnl()
     alltime    = get_alltime_pnl()
-    if new_fills or new_cycles:
-        logger.info(
-            f"[FIFO] +{new_fills} fills, +{new_cycles} cycles | "
-            f"Today: ${daily['net_pnl']:+.2f} net ({daily['cycles']} cycles) | "
-            f"All-time: ${alltime['net_pnl']:+.2f}"
-        )
+    logger.info(
+        f"[FIFO] db={get_db_path()} +{new_fills} fills, +{new_cycles} cycles | "
+        f"Today: ${daily['net_pnl']:+.2f} net ({daily['cycles']} cycles) | "
+        f"All-time: ${alltime['net_pnl']:+.2f} ({alltime['cycles_total']} cycles)"
+    )
     return {"daily": daily, "alltime": alltime}
