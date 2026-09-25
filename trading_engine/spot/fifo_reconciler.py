@@ -7,12 +7,16 @@ Design:
   1. Pulls ALL historical fills from Bybit per-symbol with full pagination.
      Results are persisted in `fills` table — incremental on subsequent runs.
   2. Runs strict FIFO matching: oldest unmatched buy -> each sell in time order.
-  3. Matched cycles are written to `fifo_cycles` table (idempotent insert).
-  4. Exposes get_daily_pnl() / get_alltime_pnl() for the dashboard.
+  3. Matched cycles are written to `fifo_cycles` with INSERT OR IGNORE on
+     sell_fill_id. Settled rows are NEVER deleted or rewritten — a refresh or
+     fill resync may ADD new cycles, but must not revise prior booked nets.
+  4. Exposes get_daily_pnl() / get_alltime_pnl() for the dashboard (SQL sums
+     of booked fifo_cycles rows; not an in-memory rewrite).
 
 No estimates. No fallback costs. No stale historical dict lookups.
 If a sell has no matching buy (edge case: inventory pre-dates bot), it is
 skipped and will be matched when the corresponding buy fill is synced.
+Once booked, that sell_fill_id's net_pnl is immutable.
 """
 
 import sqlite3
@@ -261,12 +265,12 @@ def run_fifo_match(fee_rate: float = 0.00075) -> int:
     """
     Match sell fills against prior buy fills in strict chronological order.
     A sell fill can ONLY match against buy inventory that was filled BEFORE that sell (ts_ms_buy <= ts_ms_sell).
+
+    Settled cycles are immutable: we never DELETE/UPDATE fifo_cycles rows.
+    Only brand-new sell_fill_ids are inserted (INSERT OR IGNORE). Replaying after
+    a fill resync therefore cannot shrink or rewrite already-booked daily/all-time nets.
     """
     db = _conn()
-
-    # Clear previous fifo_cycles table to ensure a completely clean, authoritative replay
-    db.execute("DELETE FROM fifo_cycles")
-    db.commit()
 
     # Load every fill in strict chronological order
     all_rows = db.execute(
@@ -649,7 +653,8 @@ def get_fifo_lot_cost_for_qty(
 def reconcile(exchange, fee_rate: float = None) -> Dict[str, Any]:
     """
     Sync new fills from Bybit, run FIFO match, return today's and all-time P&L.
-    Safe to call frequently — fully incremental.
+    Safe to call frequently — fills are incremental; booked fifo_cycles are
+    append-only (never rewritten on refresh).
     """
     if fee_rate is None:
         try:
