@@ -90,7 +90,7 @@ def test_resolve_sell_cost_ref_never_below_max_buy(monkeypatch=None):
 
     fake_lot = {"avg_cost": 103.05, "max_buy_price": 104.71, "units": 1.0, "min_buy_price": 102.58}
 
-    def _fake_lot(symbol, qty, qty_offset=0.0):
+    def _fake_lot(symbol, qty, qty_offset=0.0, units_held=None):
         return dict(fake_lot)
 
     def _fake_basis(symbol, units_held=None):

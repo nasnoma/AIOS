@@ -1312,10 +1312,15 @@ def run_spot_dca_check():
                     cost_ref = resolve_sell_cost_ref(
                         symbol,
                         sell_qty=qty,
+                        linked_buy_price=price,
                         current_price=price,
                     )
                     if cost_ref <= 0:
-                        cost_ref = price
+                        logger.error(
+                            f"🛑 DCA exit refused [{symbol}] — FIFO cost unknown after buy; "
+                            f"wait for FIFO sync (no portfolio-avg/price fallback)."
+                        )
+                        continue
                     exit_price = round(
                         enforce_sell_floor(max(cost_ref * 1.015, price * 1.0035), cost_ref, qty, fee_factor=fee_factor, min_net_usd=0.60),
                         6,

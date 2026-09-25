@@ -11,7 +11,7 @@ def test_linked_cheaper_than_fifo_max_still_floors(monkeypatch):
     def fake_basis(symbol, units_held=None):
         return {"avg_cost": 8.92, "max_buy_price": 8.979944}
 
-    def fake_lot(symbol, qty, qty_offset=0.0):
+    def fake_lot(symbol, qty, qty_offset=0.0, units_held=None):
         return {"avg_cost": 8.873843, "max_buy_price": 8.873843}
 
     monkeypatch.setattr(

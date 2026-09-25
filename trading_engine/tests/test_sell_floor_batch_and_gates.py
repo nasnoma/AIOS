@@ -67,7 +67,7 @@ def test_resolve_folds_linked_into_max_not_early_return(monkeypatch):
     def fake_fifo_basis(symbol, units_held=None):
         return {"avg_cost": 1.75, "max_buy_price": 1.80}
 
-    def fake_lot(symbol, qty, qty_offset=0.0):
+    def fake_lot(symbol, qty, qty_offset=0.0, units_held=None):
         return {"avg_cost": 1.70, "max_buy_price": 1.70}
 
     monkeypatch.setattr("trading_engine.spot.fifo_reconciler.get_fifo_cost_basis", fake_fifo_basis, raising=False)

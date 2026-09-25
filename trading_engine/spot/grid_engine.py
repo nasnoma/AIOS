@@ -474,8 +474,8 @@ class GridEngine:
         try:
             from trading_engine.spot.fifo_reconciler import get_fifo_cost_basis
             fifo_basis = get_fifo_cost_basis(self.symbol, units_held=base_qty_held if base_qty_held > 0 else None) or {}
-            if fifo_basis.get('avg_cost', 0) > 0:
-                fifo_max_cost = float(fifo_basis.get('max_buy_price', 0.0) or 0.0)
+            fifo_max_cost = float(fifo_basis.get('max_buy_price', 0.0) or 0.0)
+            if float(fifo_basis.get('avg_cost', 0) or 0) > 0:
                 # Bag avg is a soft portfolio floor only. Per-sell floors walk FIFO
                 # slices (qty_offset) and use max(avg_slice, max_buy_in_slice) so
                 # multi-level sells cannot fill below a dearer lot.
@@ -507,9 +507,10 @@ class GridEngine:
 
         is_aged_position = (oldest_lot_age_hours >= 12.0)  # recycle capital sooner while still fee-proof
 
-        # Fail closed: inventory without FIFO max/avg must not place sells off stale hist/portfolio.
+        # Fail closed: inventory without FIFO *max lot* must not place sells.
+        # Avg/portfolio alone is not enough (DOT 2026-09-25: CostRef≈avg undercut bag-max).
         # (SEI 2026-09-22: hist 0.0468 + missing FIFO → ~0.059 sells filled under ~0.0636 bag.)
-        _fifo_known = float(fifo_max_cost or 0.0) > 0 or float((fifo_basis or {}).get('avg_cost') or 0.0) > 0
+        _fifo_known = float(fifo_max_cost or 0.0) > 0
         _skip_sells_no_fifo = bool(base_qty_held > 0.000001 and not _fifo_known)
         if _skip_sells_no_fifo:
             logger.error(
@@ -565,7 +566,11 @@ class GridEngine:
                         current_price=current_price,
                     )
                     if cost_ref <= 0:
-                        cost_ref = current_price
+                        logger.error(
+                            f"🛑 [{self.symbol}] Refusing sell level — CostRef unknown/fail-closed "
+                            f"(holding={base_qty_held:.6f}). Wait for FIFO max lot."
+                        )
+                        continue
                     denom = qty_per_sell * (1.0 - fee_factor)
                     min_fee_proof_price = (cost_ref * qty_per_sell * (1.0 + fee_factor) + min_net_usd) / denom if denom > 0 else cost_ref * 1.005
 
@@ -750,7 +755,11 @@ class GridEngine:
                         current_price=current_price,
                     )
                     if cost_ref <= 0.0:
-                        cost_ref = current_price
+                        logger.error(
+                            f"🛑 [{self.symbol}] Refusing sell level — CostRef unknown/fail-closed "
+                            f"(holding={base_qty_held:.6f}). Wait for FIFO max lot."
+                        )
+                        continue
 
                     denom = qty_per_sell * (1.0 - fee_factor)
                     # Minimum price needed to guarantee at least min_net_usd profit after 2-sided fees:

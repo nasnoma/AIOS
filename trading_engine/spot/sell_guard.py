@@ -98,21 +98,35 @@ def resolve_sell_cost_ref(
     except Exception as e:
         logger.debug(f"sell_guard FIFO lookup failed for {symbol}: {e}")
 
-    # Lot-level never-sell-below-buy: floor includes bag-wide max buy.
-    # Safety beats cycle speed — every resting sell must clear the dearest open lot.
-    live = max(
-        float(portfolio_avg_cost or 0.0), fifo_avg, fifo_max, linked)
     hist = float(hist_cost or 0.0)
     px = float(current_price or 0.0)
+    held = float(units_held or 0.0)
+    fifo_max_f = float(fifo_max or 0.0)
+
+    # Fail-closed: wallet holds the coin but bag-max FIFO lot is unknown/not ready.
+    # Do NOT fall back to portfolio avg alone as CostRef (DOT 2026-09-25: avg ~1.176
+    # undercut true lot ~1.21 on Aged-Compress Quick-Exit). Caller must refuse sells.
+    if held > 1e-12 and fifo_max_f <= 0:
+        logger.error(
+            f"[sell_guard] {symbol}: holding {held} but FIFO cost unknown "
+            f"(no fifo max/lot) — fail-closed "
+            f"(portfolio_avg={float(portfolio_avg_cost or 0.0)}, hist={hist}, px={px}); "
+            f"caller must skip/refuse sells"
+        )
+        return 0.0
+
+    # Lot-level never-sell-below-buy: floor includes bag-wide max buy.
+    # Portfolio avg may RAISE the floor only when FIFO max is known.
+    live = max(
+        float(portfolio_avg_cost or 0.0), fifo_avg, fifo_max_f, linked)
 
     # Hist is RAISE-ONLY. Stale ALL_23 hist (e.g. SEI 0.0468) must never undercut
     # a live bag (~0.0636) or become the sole floor while inventory exists.
     if live > 0:
         return max(live, hist) if hist > live else live
 
-    held = float(units_held or 0.0)
     if held > 1e-12:
-        # Inventory but no live FIFO/portfolio/linked — refuse cheap hist floor.
+        # Inventory but still no live cost (should be rare after fifo_max check).
         logger.error(
             f"[sell_guard] {symbol}: holding {held} but no live FIFO/portfolio cost — "
             f"fail-closed (hist={hist}, px={px}); caller must skip sells"
