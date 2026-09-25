@@ -115,7 +115,14 @@ def get_trading_status() -> dict:
 @app.get("/", response_class=HTMLResponse)
 async def dashboard():
     html_file = TEMPLATES_DIR / "dashboard.html"
-    return HTMLResponse(content=html_file.read_text())
+    return HTMLResponse(
+        content=html_file.read_text(),
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
+    )
 
 
 @app.get("/api/status")

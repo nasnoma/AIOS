@@ -481,6 +481,7 @@ class SpotPortfolio:
         return {
             'usdt_available': float(max(0.0, self.usdt_available or 0.0)),
             'usdt_reserved': float(self.usdt_reserved or 0.0),
+            'usdt_hard_reserve_pct': 0.10,
             'total_realised_pnl': float(self.total_realised_pnl or 0.0),
             'daily_realised_pnl': daily_pnl_val,
             'daily_gross_pnl': daily_gross_val,
