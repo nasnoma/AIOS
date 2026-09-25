@@ -991,28 +991,41 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                 # Cost basis safety & high-velocity audit: detect if resting sells are below cost or excessively wide
                 h_obj = _portfolio.get_holding(symbol) if hasattr(_portfolio, 'get_holding') else None
                 h_cost = float(getattr(h_obj, 'avg_cost_basis', 0) or 0) if h_obj else 0.0
+                hist_c = float(ALL_23_HISTORICAL_COSTS.get(symbol, 0.0) or 0.0)
+                aim_cref = 0.0
                 try:
                     from trading_engine.spot.sell_guard import resolve_sell_cost_ref, resting_sell_is_safe
-                    # Safety: bag-wide FIFO max must floor resting-sell audits (avg alone undercuts dear lots)
-                    h_cost = max(
-                        h_cost,
+                    # Same CostRef as build_grid / sell_guard (bag-max FIFO + hist raise-only).
+                    # Portfolio avg alone undercuts dear lots and caused ATOM cancel/rebuild thrash.
+                    aim_cref = float(
                         resolve_sell_cost_ref(
                             symbol,
                             portfolio_avg_cost=h_cost,
                             units_held=holding_qty if holding_qty > 0 else None,
                             sell_qty=holding_qty if holding_qty > 0 else None,
-                        ),
+                            hist_cost=hist_c,
+                            current_price=price,
+                        ) or 0.0
                     )
+                    if aim_cref > 0:
+                        h_cost = max(h_cost, aim_cref)
                 except Exception:
-                    pass
+                    aim_cref = 0.0
                 invalid_sells = False
-                if h_cost > 0 and open_sells:
+                # Holding + FIFO CostRef unknown: fail-closed — do not thrash cancel/replace on avg.
+                _skip_avg_realign = bool(holding_qty and holding_qty > 0 and float(aim_cref or 0) <= 0)
+                if _skip_avg_realign and open_sells:
+                    logger.debug(
+                        f"[{symbol}] skip sell re-align aim — CostRef fail-closed "
+                        f"(holding={holding_qty:.4f}, portfolio_avg={float(getattr(h_obj, 'avg_cost_basis', 0) or 0):.4f})"
+                    )
+                if (not _skip_avg_realign) and h_cost > 0 and open_sells:
                     from trading_engine.spot.sell_guard import get_fee_factor, resting_sell_is_safe
                     fee_factor = get_fee_factor()
                     # 🛡️ STRICT ZERO-LOSS RULE ACROSS ALL ASSETS:
                     # Every sell must clear bag-wide FIFO max lot (+ fees). Silent prevent — cancel/rebuild, no user ping.
                     bag_max = 0.0
-                    cost_floor = h_cost
+                    cost_floor = float(aim_cref or h_cost)
                     try:
                         from trading_engine.spot.fifo_reconciler import get_fifo_cost_basis
                         from trading_engine.spot.sell_guard import resolve_sell_cost_ref
@@ -1023,10 +1036,11 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                             portfolio_avg_cost=h_cost,
                             units_held=holding_qty if holding_qty > 0 else None,
                             current_price=price,
+                            hist_cost=hist_c,
                         )
                     except Exception:
                         pass
-                    floor = max(float(h_cost or 0), float(bag_max or 0), float(cost_floor or 0))
+                    floor = max(float(h_cost or 0), float(bag_max or 0), float(cost_floor or 0), float(aim_cref or 0))
                     # CRITICAL: never use linked_buy alone — it can be a cheap fill while FIFO
                     # matches a dearer lot (AVAX 9.747 lots sold at 9.762 → fee loss).
                     has_loss_sells = False
@@ -1075,21 +1089,30 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                                 else:
                                     logger.debug(f"[{symbol}] skip tighten — near-market would be unsafe: {why_tight}")
                     elif symbol not in (set(spot_settings.asset_list) | _active_roster):
-                        # Legacy quick-exit: rebuild when sells drift above fee-proof / market target.
-                        # Previous 3.5% slack left ALGO-style bags uncompresssed for days.
-                        from trading_engine.spot.sell_guard import enforce_sell_floor
+                        # Legacy quick-exit: rebuild when sells drift above bag-max fee-proof target.
+                        # MUST aim from bag-max CostRef (same as place) — never portfolio avg alone
+                        # (ATOM 2026-09-25: avg~1.79 aim vs place@1.825 → cancel_all loop ~40s).
+                        from trading_engine.spot.sell_guard import should_cancel_for_legacy_compress
                         min_sell_p = min((l.price for l in open_sells), default=0.0)
                         test_qty = open_sells[0].qty if open_sells else 0.0
-                        fee_proof = enforce_sell_floor(
-                            0.0, h_cost, test_qty, fee_factor=fee_factor, min_net_usd=0.60
-                        ) if test_qty > 0 else (h_cost * 1.01)
-                        target_quick_exit = max(fee_proof, h_cost * 1.0035, price * 1.0035)
-                        if min_sell_p > (target_quick_exit * 1.005):
+                        do_cancel, target_quick_exit, why_leg = should_cancel_for_legacy_compress(
+                            min_resting_sell_px=float(min_sell_p),
+                            cost_ref=float(floor or aim_cref or 0.0),
+                            qty=float(test_qty),
+                            live_price=float(price),
+                            fee_factor=fee_factor,
+                        )
+                        if do_cancel:
                             invalid_sells = True
                             logger.info(
                                 f"🚪 Re-aligning legacy holding {symbol} to Quick-Exit/aged target "
                                 f"(Current sell: ${min_sell_p:.4f} -> Target ~${target_quick_exit:.4f}, "
-                                f"Live: ${price:.4f}, Cost: ${h_cost:.4f})..."
+                                f"Live: ${price:.4f}, CostRef: ${float(floor or aim_cref):.4f})..."
+                            )
+                        else:
+                            logger.debug(
+                                f"[{symbol}] skip legacy re-align — {why_leg} "
+                                f"(sell ${min_sell_p:.4f}, target ${target_quick_exit:.4f})"
                             )
 
                 if not engine.grid_levels or is_stale or force_reset or missing_sells or invalid_sells:

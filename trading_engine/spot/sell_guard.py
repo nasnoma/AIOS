@@ -205,6 +205,40 @@ def enforce_sell_floor(
     return max(float(sell_price or 0.0), floor)
 
 
+def should_cancel_for_legacy_compress(
+    *,
+    min_resting_sell_px: float,
+    cost_ref: float,
+    qty: float,
+    live_price: float,
+    fee_factor: Optional[float] = None,
+    slack: float = 1.005,
+    min_net_usd: float = 0.60,
+) -> tuple[bool, float, str]:
+    """
+    Decide cancel/rebuild for legacy Quick-Exit / aged-compress re-align.
+
+    ATOM thrash 2026-09-25: aiming from portfolio avg (~1.7900 → ~1.7981) while
+    place used bag-max/hist CostRef (~1.8158 → ~1.825) caused cancel_all every
+    ~40s. Aim ONLY from bag-max CostRef (same as sell_guard / build_grid).
+    If CostRef unknown (fail-closed 0) → do not thrash on avg.
+    If resting sell already at/above bag-max fee-proof target → skip cancel.
+    """
+    cref = float(cost_ref or 0.0)
+    if cref <= 0:
+        return False, 0.0, "fail-closed CostRef — skip avg-based re-align"
+    q = float(qty or 0.0)
+    min_px = float(min_resting_sell_px or 0.0)
+    if q <= 0 or min_px <= 0:
+        return False, 0.0, "no qty/sell"
+    f = float(fee_factor if fee_factor is not None else get_fee_factor())
+    fee_proof = enforce_sell_floor(
+        0.0, cref, q, fee_factor=f, min_net_usd=float(min_net_usd or 0.60)
+    )
+    target = max(fee_proof, cref * 1.0035, float(live_price or 0.0) * 1.0035)
+    if min_px > target * float(slack):
+        return True, float(target), "compress to bag-max quick-exit"
+    return False, float(target), "resting already at/above bag-max target"
 
 
 def resting_sell_is_safe(
