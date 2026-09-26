@@ -223,6 +223,9 @@ def should_cancel_for_legacy_compress(
     ~40s. Aim ONLY from bag-max CostRef (same as sell_guard / build_grid).
     If CostRef unknown (fail-closed 0) → do not thrash on avg.
     If resting sell already at/above bag-max fee-proof target → skip cancel.
+
+    Also used for stuck-bag recycle (0 open buys / aged): step fat resting sells
+    down toward bag-max fee-proof floor — never under it, never market orders.
     """
     cref = float(cost_ref or 0.0)
     if cref <= 0:
@@ -240,6 +243,13 @@ def should_cancel_for_legacy_compress(
         return True, float(target), "compress to bag-max quick-exit"
     return False, float(target), "resting already at/above bag-max target"
 
+
+
+
+
+
+# Alias: stuck-bag recycle — same fee-proof bag-max compress decision.
+should_step_down_stuck_sell = should_cancel_for_legacy_compress
 
 def resting_sell_is_safe(
     symbol: str,

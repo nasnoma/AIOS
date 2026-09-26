@@ -159,4 +159,76 @@ def get_today_metrics() -> Dict[str, Any]:
         logger.debug(f"get_today_metrics error: {e}")
         return {'cycles_today': 0, 'gross_today': 0.0, 'fees_today': 0.0, 'pnl_today': 0.0}
 
+
+
+def upsert_daily_snapshot(
+    *,
+    date: str,
+    net_pnl: float = 0.0,
+    gross_pnl: float = 0.0,
+    fees: float = 0.0,
+    cycles: int = 0,
+    ending_equity: float | None = None,
+    starting_equity: float | None = None,
+) -> None:
+    """Observability-only UTC day snapshot. Never touches the trade path."""
+    init_db()
+    try:
+        with sqlite3.connect(str(get_db_path())) as conn:
+            cur = conn.cursor()
+            # Preserve starting_equity if row already exists and caller omitted it
+            existing = cur.execute(
+                "SELECT starting_equity FROM daily_snapshots WHERE date = ?", (date,)
+            ).fetchone()
+            start = float(starting_equity) if starting_equity is not None else (
+                float(existing[0]) if existing else float(ending_equity or 0.0)
+            )
+            cur.execute(
+                """
+                INSERT INTO daily_snapshots (date, starting_equity, ending_equity, total_realised_pnl, cycles_count, fees_paid)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(date) DO UPDATE SET
+                    ending_equity = excluded.ending_equity,
+                    total_realised_pnl = excluded.total_realised_pnl,
+                    cycles_count = excluded.cycles_count,
+                    fees_paid = excluded.fees_paid
+                """,
+                (
+                    str(date),
+                    float(start or 0.0),
+                    float(ending_equity) if ending_equity is not None else None,
+                    float(net_pnl or 0.0),
+                    int(cycles or 0),
+                    float(fees or 0.0),
+                ),
+            )
+            conn.commit()
+    except Exception as e:
+        logger.debug(f"upsert_daily_snapshot skipped: {e}")
+
+
+_last_snapshot_date: str | None = None
+
+
+def maybe_persist_daily_snapshot(*, equity: float = 0.0) -> None:
+    """When UTC day rolls, persist (date, net, gross, fees, cycles). Fail-open."""
+    global _last_snapshot_date
+    try:
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        if _last_snapshot_date == today:
+            return
+        m = get_today_metrics()
+        upsert_daily_snapshot(
+            date=today,
+            net_pnl=float(m.get("pnl_today") or 0.0),
+            gross_pnl=float(m.get("gross_today") or 0.0),
+            fees=float(m.get("fees_today") or 0.0),
+            cycles=int(m.get("cycles_today") or 0),
+            ending_equity=float(equity or 0.0) or None,
+        )
+        _last_snapshot_date = today
+    except Exception as e:
+        logger.debug(f"maybe_persist_daily_snapshot: {e}")
+
+
 init_db()

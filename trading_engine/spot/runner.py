@@ -1071,6 +1071,19 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                     elif symbol in (set(spot_settings.asset_list) | _active_roster) and price > (h_cost * 1.01):
                         # In profit: rebuild if resting sells are >1.5% above market (was 3% — too loose)
                         min_sell_p = min((l.price for l in open_sells), default=0.0)
+                        # Prefer live Bybit min sell when engine memory understates fat orphans
+                        try:
+                            _live_sell_px = [
+                                float(o.get("price") or 0)
+                                for o in (open_orders_by_id or {}).values()
+                                if str(o.get("symbol") or "") == symbol
+                                and str(o.get("side") or "").lower() == "sell"
+                                and float(o.get("price") or 0) > 0
+                            ]
+                            if _live_sell_px:
+                                min_sell_p = max(min_sell_p, min(_live_sell_px))
+                        except Exception:
+                            pass
                         if min_sell_p > (price * 1.015):
                             test_qty = open_sells[0].qty if open_sells else 0.0
                             if test_qty > 0:
@@ -1088,14 +1101,32 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                                     )
                                 else:
                                     logger.debug(f"[{symbol}] skip tighten — near-market would be unsafe: {why_tight}")
-                    elif symbol not in (set(spot_settings.asset_list) | _active_roster):
-                        # Legacy quick-exit: rebuild when sells drift above bag-max fee-proof target.
+                    elif (
+                        symbol not in (set(spot_settings.asset_list) | _active_roster)
+                        or len(open_buys) == 0
+                    ):
+                        # Stuck-bag / legacy recycle: rebuild when sells sit far above bag-max
+                        # fee-proof floor. Covers legacy holdings AND sell-only (0 buys) bags on
+                        # the active roster so USDT is not parked in unfillable fat asks.
                         # MUST aim from bag-max CostRef (same as place) — never portfolio avg alone
                         # (ATOM 2026-09-25: avg~1.79 aim vs place@1.825 → cancel_all loop ~40s).
-                        from trading_engine.spot.sell_guard import should_cancel_for_legacy_compress
+                        # Never steps under fee-proof(bag-max); skips when already at floor (no thrash).
+                        from trading_engine.spot.sell_guard import should_step_down_stuck_sell
                         min_sell_p = min((l.price for l in open_sells), default=0.0)
+                        try:
+                            _live_sell_px = [
+                                float(o.get("price") or 0)
+                                for o in (open_orders_by_id or {}).values()
+                                if str(o.get("symbol") or "") == symbol
+                                and str(o.get("side") or "").lower() == "sell"
+                                and float(o.get("price") or 0) > 0
+                            ]
+                            if _live_sell_px:
+                                min_sell_p = max(min_sell_p, min(_live_sell_px))
+                        except Exception:
+                            pass
                         test_qty = open_sells[0].qty if open_sells else 0.0
-                        do_cancel, target_quick_exit, why_leg = should_cancel_for_legacy_compress(
+                        do_cancel, target_quick_exit, why_leg = should_step_down_stuck_sell(
                             min_resting_sell_px=float(min_sell_p),
                             cost_ref=float(floor or aim_cref or 0.0),
                             qty=float(test_qty),
@@ -1104,14 +1135,15 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                         )
                         if do_cancel:
                             invalid_sells = True
+                            _tag = "stuck-bag" if len(open_buys) == 0 else "legacy"
                             logger.info(
-                                f"🚪 Re-aligning legacy holding {symbol} to Quick-Exit/aged target "
+                                f"🚪 Re-aligning {_tag} holding {symbol} to Quick-Exit/aged target "
                                 f"(Current sell: ${min_sell_p:.4f} -> Target ~${target_quick_exit:.4f}, "
                                 f"Live: ${price:.4f}, CostRef: ${float(floor or aim_cref):.4f})..."
                             )
                         else:
                             logger.debug(
-                                f"[{symbol}] skip legacy re-align — {why_leg} "
+                                f"[{symbol}] skip stuck-bag/legacy re-align — {why_leg} "
                                 f"(sell ${min_sell_p:.4f}, target ${target_quick_exit:.4f})"
                             )
 
@@ -1948,6 +1980,14 @@ def get_spot_status(force: bool = False) -> Dict[str, Any]:
 
     _cached_spot_status = res
     _last_spot_status_time = now
+    # Observability-only: persist UTC daily snapshot row (never affects orders)
+    try:
+        from trading_engine.spot.trade_db import maybe_persist_daily_snapshot
+        _eq = float(summary_data.get("total_unified_equity") or summary_data.get("total_capital") or 0.0)
+        maybe_persist_daily_snapshot(equity=_eq)
+    except Exception:
+        pass
+
     return res
 
 

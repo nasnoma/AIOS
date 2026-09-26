@@ -602,6 +602,8 @@ class GridEngine:
                                 sell_qty=float(qty_per_sell or 0.0),
                                 current_price=float(current_price or 0.0),
                                 min_net_usd=0.50,
+                                hist_cost=float(hist_cost or 0.0),
+                                cost_ref=float(cost_ref or 0.0),
                             )
                             if _ap > 0:
                                 if target_p > _ap * 1.001:
@@ -679,6 +681,8 @@ class GridEngine:
                             portfolio_avg_cost=float(avg_cost or 0.0),
                             units_held=float(base_qty_held or 0.0) or None,
                             sell_qty=float(qty_per_sell or 0.0),
+                            hist_cost=float(hist_cost or 0.0),
+                            current_price=float(current_price or 0.0),
                         )
                         floor_p = min_fee_proof_sell_price(
                             max(float(cost_ref or 0.0), float(bag_cref or 0.0)),
@@ -791,6 +795,8 @@ class GridEngine:
                                 sell_qty=float(qty_per_sell or 0.0),
                                 current_price=float(current_price or 0.0),
                                 min_net_usd=0.50,
+                                hist_cost=float(hist_cost or 0.0),
+                                cost_ref=float(cost_ref or 0.0),
                             )
                             if _ap > 0:
                                 if target_p > _ap * 1.001:
@@ -868,6 +874,8 @@ class GridEngine:
                             portfolio_avg_cost=float(avg_cost or 0.0),
                             units_held=float(base_qty_held or 0.0) or None,
                             sell_qty=float(qty_per_sell or 0.0),
+                            hist_cost=float(hist_cost or 0.0),
+                            current_price=float(current_price or 0.0),
                         )
                         floor_p = min_fee_proof_sell_price(
                             max(float(cost_ref or 0.0), float(bag_cref or 0.0)),

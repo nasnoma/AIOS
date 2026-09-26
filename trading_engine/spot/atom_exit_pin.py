@@ -3,6 +3,10 @@ ATOM sell-only exit pin: fee-proof bag floor + HARD $0.50 net.
 
 User 2026-09-22: tighten ATOM closer to fee-proof+$0.50 for a smaller bounce,
 never sell at a loss. Pin is recomputed from live FIFO (wallet-trimmed) each build.
+
+CostRef must match place path: bag-max FIFO + hist raise-only (never portfolio
+avg alone). Cosmetic ATOM 2026-09-25: pin logged cost_ref=$1.7900 avg while
+place @1.825 from bag-max/hist 1.8158.
 """
 from __future__ import annotations
 
@@ -34,20 +38,32 @@ def atom_fee_proof_pin(
     sell_qty: Optional[float] = None,
     current_price: float = 0.0,
     min_net_usd: float = 0.50,
+    hist_cost: float = 0.0,
+    cost_ref: float = 0.0,
 ) -> float:
-    """Minimum limit sell price for ATOM: fee-proof(FIFO bag max) + min_net (default $0.50)."""
+    """Minimum limit sell price for ATOM: fee-proof(FIFO bag max / hist) + min_net.
+
+    Prefer caller-supplied cost_ref (already bag-max resolved with hist) so pin
+    log/aim matches place. Otherwise resolve with hist_cost raise-only.
+    """
     if not atom_pin_enabled():
         return 0.0
     qty = float(sell_qty or 0.0) or max(float(units_held or 0.0), 0.0)
     if qty <= 1e-12 or float(units_held or 0.0) <= 1e-12:
         return 0.0
-    cost = resolve_sell_cost_ref(
-        ATOM_SYMBOL,
-        portfolio_avg_cost=float(portfolio_avg_cost or 0.0),
-        units_held=float(units_held or 0.0),
-        sell_qty=qty,
-        current_price=float(current_price or 0.0),
-    )
+    cost = float(cost_ref or 0.0)
+    if cost <= 0:
+        cost = float(
+            resolve_sell_cost_ref(
+                ATOM_SYMBOL,
+                portfolio_avg_cost=float(portfolio_avg_cost or 0.0),
+                units_held=float(units_held or 0.0),
+                sell_qty=qty,
+                current_price=float(current_price or 0.0),
+                hist_cost=float(hist_cost or 0.0),
+            )
+            or 0.0
+        )
     if cost <= 0:
         logger.error("[ATOM pin] no live cost_ref — fail-closed (no pin)")
         return 0.0
