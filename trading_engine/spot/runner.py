@@ -1073,12 +1073,14 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                         min_sell_p = min((l.price for l in open_sells), default=0.0)
                         # Prefer live Bybit min sell when engine memory understates fat orphans
                         try:
+                            _sym_n = str(symbol).replace("/", "").replace(":USDT", "").upper()
                             _live_sell_px = [
                                 float(o.get("price") or 0)
                                 for o in (open_orders_by_id or {}).values()
-                                if str(o.get("symbol") or "") == symbol
-                                and str(o.get("side") or "").lower() == "sell"
+                                if str(o.get("side") or "").lower() == "sell"
                                 and float(o.get("price") or 0) > 0
+                                and str(o.get("symbol") or "").replace("/", "").replace(":USDT", "").upper()
+                                   in (_sym_n, _sym_n + "USDT", symbol.upper())
                             ]
                             if _live_sell_px:
                                 min_sell_p = max(min_sell_p, min(_live_sell_px))
@@ -1101,9 +1103,14 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                                     )
                                 else:
                                     logger.debug(f"[{symbol}] skip tighten — near-market would be unsafe: {why_tight}")
-                    elif (
-                        symbol not in (set(spot_settings.asset_list) | _active_roster)
-                        or len(open_buys) == 0
+                    # Stuck-bag / legacy recycle runs even when in-profit tighten skipped
+                    # (e.g. near-market unsafe vs bag-max) — still step fat asks toward floor.
+                    if (
+                        (not invalid_sells)
+                        and (
+                            symbol not in (set(spot_settings.asset_list) | _active_roster)
+                            or len(open_buys) == 0
+                        )
                     ):
                         # Stuck-bag / legacy recycle: rebuild when sells sit far above bag-max
                         # fee-proof floor. Covers legacy holdings AND sell-only (0 buys) bags on
@@ -1114,12 +1121,14 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                         from trading_engine.spot.sell_guard import should_step_down_stuck_sell
                         min_sell_p = min((l.price for l in open_sells), default=0.0)
                         try:
+                            _sym_n = str(symbol).replace("/", "").replace(":USDT", "").upper()
                             _live_sell_px = [
                                 float(o.get("price") or 0)
                                 for o in (open_orders_by_id or {}).values()
-                                if str(o.get("symbol") or "") == symbol
-                                and str(o.get("side") or "").lower() == "sell"
+                                if str(o.get("side") or "").lower() == "sell"
                                 and float(o.get("price") or 0) > 0
+                                and str(o.get("symbol") or "").replace("/", "").replace(":USDT", "").upper()
+                                   in (_sym_n, _sym_n + "USDT", symbol.upper())
                             ]
                             if _live_sell_px:
                                 min_sell_p = max(min_sell_p, min(_live_sell_px))
