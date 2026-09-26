@@ -270,8 +270,12 @@ def resting_sell_is_safe(
             units_held=units_held or None,
             sell_qty=qty,
         )
-        if float(cref or 0.0) <= 0 or float(qty or 0.0) <= 0:
-            return False, f"missing cost/qty (cost_ref={cref}, qty={qty})", 0.0
+        if float(qty or 0.0) <= 0:
+            return False, f"missing qty (cost_ref={cref}, qty={qty})", 0.0
+        if float(cref or 0.0) <= 0:
+            # Fail-closed CostRef: refuse NEW places, but callers must NOT treat
+            # unknown as proven-under-floor (cancel_unsafe would wipe exits).
+            return False, f"fail-closed cost unknown (cost_ref={cref}, qty={qty})", 0.0
         floor = min_fee_proof_sell_price(cref, qty, fee_factor=None, min_net_usd=min_net)
         if float(floor or 0.0) <= 0:
             return False, f"invalid floor {floor}", 0.0

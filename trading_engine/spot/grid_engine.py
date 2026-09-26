@@ -946,6 +946,18 @@ class GridEngine:
             ok, why, floor = resting_sell_is_safe(self.symbol, px, qty, units_held=u, portfolio_avg_cost=float(portfolio_avg_cost or 0.0))
             if ok:
                 continue
+            # FIFO/CostRef unknown: leave resting sells alone. Unknown ≠ under-floor;
+            # wiping them + missing_sells rebuild caused cancel_all every tick on restart.
+            if float(floor or 0.0) <= 0 and (
+                "fail-closed" in str(why)
+                or "cost unknown" in str(why)
+                or "missing cost" in str(why)
+            ):
+                logger.debug(
+                    f"[{self.symbol}] skip cancel_unsafe @{px} — CostRef fail-closed "
+                    f"(leave resting until FIFO ready): {why}"
+                )
+                continue
             logger.error(
                 f"🛑 [{self.symbol}] CANCEL unsafe resting sell @{px} qty={qty} "
                 f"(floor={floor:.6f}) — {why}"
@@ -1148,8 +1160,8 @@ class GridEngine:
                         # Placement-time never-sell-below-buy gate (after exchange precision rounding)
                         # ALWAYS refresh bag-wide FIFO max floor — do not trust a stale linked_buy_price alone.
                         if level.side == 'sell':
+                            _u_held = float(getattr(self, '_last_base_qty_held', 0) or 0)
                             try:
-                                _u_held = 0.0
                                 if portfolio is not None and hasattr(portfolio, 'holdings'):
                                     _h = portfolio.holdings.get(self.symbol) if isinstance(portfolio.holdings, dict) else None
                                     if _h is not None:
@@ -1163,7 +1175,14 @@ class GridEngine:
                                     current_price=price_val,
                                 )
                             except Exception:
-                                cost_floor = float(getattr(level, 'linked_buy_price', 0.0) or 0.0)
+                                cost_floor = 0.0
+                            if float(cost_floor or 0.0) <= 0 and float(_u_held or 0.0) > 1e-12:
+                                logger.error(
+                                    f"🛑 [{self.symbol}] Aborting sell place — CostRef fail-closed "
+                                    f"(holding={_u_held:.6f}). Wait for FIFO max lot."
+                                )
+                                level.status = 'cancelled'
+                                continue
                             if cost_floor > 0 and not sell_is_fee_proof(price_val, cost_floor, qty_val, fee_factor=get_fee_factor(), min_net_usd=0.50):
                                 safe_p = enforce_sell_floor(price_val, cost_floor, qty_val, fee_factor=get_fee_factor(), min_net_usd=0.60)
                                 logger.warning(
@@ -1317,50 +1336,73 @@ class GridEngine:
                     min_net_usd = 0.60
                     fee_factor = get_fee_factor()
                     # Linked to THIS buy fill — never inflate with unrelated higher lots
+                    _pre_held = float(getattr(self, '_last_base_qty_held', 0) or 0) + float(level.qty or 0)
                     cost_ref = resolve_sell_cost_ref(
                         self.symbol,
                         linked_buy_price=level.price,
                         sell_qty=level.qty,
                         current_price=level.price,
+                        units_held=_pre_held if _pre_held > 0 else None,
+                        portfolio_avg_cost=max(
+                            float(getattr(self, '_last_portfolio_avg_cost', 0) or 0),
+                            float(level.price or 0),
+                        ),
                     )
+                    _skip_post_buy_sell = False
                     if cost_ref <= 0:
-                        cost_ref = level.price
-                    sell_price = enforce_sell_floor(
-                        max(cost_ref * 1.0090, level.price * 1.0090),
-                        cost_ref,
-                        level.qty,
-                        fee_factor=fee_factor,
-                        min_net_usd=min_net_usd,
-                    )
-
-                    new_sell = GridLevel(
-                        price=sell_price,
-                        side='sell',
-                        qty=level.qty,
-                        size_usd=sell_price * level.qty,
-                        linked_buy_price=cost_ref
-                    )
-                    self.grid_levels.append(new_sell)
-                    if self.paper_mode:
-                        new_sell.status = 'open'
-                        new_sell.order_id = f'PAPER_{uuid4().hex[:8]}'
-                    fills.append({'side': 'buy', 'price': level.price, 'qty': level.qty})
-                    try:
-                        from trading_engine.spot.mission_tia_recovery import (
-                            mission_active, record_buy_fill, recovery_sell_price,
+                        logger.error(
+                            f"🛑 [{self.symbol}] Refusing post-buy sell — CostRef fail-closed "
+                            f"after buy @{level.price}; wait for FIFO max lot (no price fallback)."
                         )
-                        record_buy_fill(self.symbol, float(level.price) * float(level.qty))
-                        if mission_active(self.symbol):
-                            rec = recovery_sell_price(cost_ref, level.qty, fee_rate=fee_factor)
-                            fee_floor = cost_ref * (1.0 + fee_factor) / max(1e-12, (1.0 - fee_factor))
-                            if rec > 0:
-                                sell_price = max(fee_floor, min(sell_price, rec))
-                                if self.grid_levels and self.grid_levels[-1].side == 'sell':
-                                    self.grid_levels[-1].price = sell_price
-                                    self.grid_levels[-1].size_usd = sell_price * level.qty
-                    except Exception as _e_m:
-                        logger.debug(f"tia mission buy-fill hook: {_e_m}")
-                    logger.info(f"BUY filled at {level.price}. Created new SELL level at {sell_price:.4f} (CostRef: ${cost_ref:.4f}, Guaranteed Net: +${min_net_usd:.2f})")
+                        _skip_post_buy_sell = True
+                        sell_price = 0.0
+                    else:
+                        sell_price = enforce_sell_floor(
+                            max(cost_ref * 1.0090, level.price * 1.0090),
+                            cost_ref,
+                            level.qty,
+                            fee_factor=fee_factor,
+                            min_net_usd=min_net_usd,
+                        )
+                        new_sell = GridLevel(
+                            price=sell_price,
+                            side='sell',
+                            qty=level.qty,
+                            size_usd=sell_price * level.qty,
+                            linked_buy_price=cost_ref
+                        )
+                        self.grid_levels.append(new_sell)
+                        if self.paper_mode:
+                            new_sell.status = 'open'
+                            new_sell.order_id = f'PAPER_{uuid4().hex[:8]}'
+                    fills.append({'side': 'buy', 'price': level.price, 'qty': level.qty})
+                    if not _skip_post_buy_sell:
+                        try:
+                            from trading_engine.spot.mission_tia_recovery import (
+                                mission_active, record_buy_fill, recovery_sell_price,
+                            )
+                            record_buy_fill(self.symbol, float(level.price) * float(level.qty))
+                            if mission_active(self.symbol):
+                                rec = recovery_sell_price(cost_ref, level.qty, fee_rate=fee_factor)
+                                fee_floor = cost_ref * (1.0 + fee_factor) / max(1e-12, (1.0 - fee_factor))
+                                if rec > 0:
+                                    sell_price = max(fee_floor, min(sell_price, rec))
+                                    if self.grid_levels and self.grid_levels[-1].side == 'sell':
+                                        self.grid_levels[-1].price = sell_price
+                                        self.grid_levels[-1].size_usd = sell_price * level.qty
+                        except Exception as _e_m:
+                            logger.debug(f"tia mission buy-fill hook: {_e_m}")
+                        logger.info(f"BUY filled at {level.price}. Created new SELL level at {sell_price:.4f} (CostRef: ${cost_ref:.4f}, Guaranteed Net: +${min_net_usd:.2f})")
+                    else:
+                        try:
+                            from trading_engine.spot.mission_tia_recovery import record_buy_fill
+                            record_buy_fill(self.symbol, float(level.price) * float(level.qty))
+                        except Exception as _e_m:
+                            logger.debug(f"tia mission buy-fill hook: {_e_m}")
+                        logger.info(
+                            f"BUY filled at {level.price}. No SELL yet — FIFO CostRef fail-closed "
+                            f"(held~{_pre_held:.4f})."
+                        )
 
                     # CRITICAL: a dearer buy raises bag FIFO max. Pre-existing resting sells
                     # pinned below the new lot (fee-proof + $0.50) must be cancelled NOW —

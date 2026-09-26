@@ -1019,6 +1019,14 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                         f"[{symbol}] skip sell re-align aim — CostRef fail-closed "
                         f"(holding={holding_qty:.4f}, portfolio_avg={float(getattr(h_obj, 'avg_cost_basis', 0) or 0):.4f})"
                     )
+                # Holding + FIFO unknown: do not cancel_all/rebuild for "missing sells"
+                # (build_grid refuses sells anyway → thrash loop on every tick).
+                if _skip_avg_realign and missing_sells:
+                    logger.debug(
+                        f"[{symbol}] skip missing_sells rebuild — CostRef fail-closed "
+                        f"(holding={holding_qty:.4f}); wait for FIFO max lot"
+                    )
+                    missing_sells = False
                 if (not _skip_avg_realign) and h_cost > 0 and open_sells:
                     from trading_engine.spot.sell_guard import get_fee_factor, resting_sell_is_safe
                     fee_factor = get_fee_factor()
@@ -1083,7 +1091,11 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                                    in (_sym_n, _sym_n + "USDT", symbol.upper())
                             ]
                             if _live_sell_px:
-                                min_sell_p = max(min_sell_p, min(_live_sell_px))
+                                # Live Bybit book is source of truth (avoid stale engine min
+                                # that is lower OR higher than reality).
+                                min_sell_p = min(_live_sell_px)
+                            elif min_sell_p <= 0 and open_sells:
+                                min_sell_p = min((l.price for l in open_sells), default=0.0)
                         except Exception:
                             pass
                         if min_sell_p > (price * 1.015):
@@ -1131,7 +1143,11 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                                    in (_sym_n, _sym_n + "USDT", symbol.upper())
                             ]
                             if _live_sell_px:
-                                min_sell_p = max(min_sell_p, min(_live_sell_px))
+                                # Live Bybit book is source of truth (avoid stale engine min
+                                # that is lower OR higher than reality).
+                                min_sell_p = min(_live_sell_px)
+                            elif min_sell_p <= 0 and open_sells:
+                                min_sell_p = min((l.price for l in open_sells), default=0.0)
                         except Exception:
                             pass
                         test_qty = open_sells[0].qty if open_sells else 0.0
