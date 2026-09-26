@@ -1120,8 +1120,8 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                         # Never steps under fee-proof(bag-max); skips when already at floor (no thrash).
                         from trading_engine.spot.sell_guard import should_step_down_stuck_sell
                         min_sell_p = min((l.price for l in open_sells), default=0.0)
+                        _sym_n = str(symbol).replace("/", "").replace(":USDT", "").upper()
                         try:
-                            _sym_n = str(symbol).replace("/", "").replace(":USDT", "").upper()
                             _live_sell_px = [
                                 float(o.get("price") or 0)
                                 for o in (open_orders_by_id or {}).values()
@@ -1135,6 +1135,24 @@ def run_spot_grid_tick() -> Dict[str, Any]:
                         except Exception:
                             pass
                         test_qty = open_sells[0].qty if open_sells else 0.0
+                        # Engine memory can be empty while Bybit still holds fat orphan sells —
+                        # fall back to live sell amount or wallet units so recycle still fires.
+                        if test_qty <= 0:
+                            try:
+                                _live_amts = [
+                                    float(o.get("amount") or o.get("remaining") or 0)
+                                    for o in (open_orders_by_id or {}).values()
+                                    if str(o.get("side") or "").lower() == "sell"
+                                    and float(o.get("price") or 0) > 0
+                                    and str(o.get("symbol") or "").replace("/", "").replace(":USDT", "").upper()
+                                       in (_sym_n, _sym_n + "USDT", symbol.upper())
+                                ]
+                                if _live_amts:
+                                    test_qty = max(_live_amts)
+                            except Exception:
+                                pass
+                        if test_qty <= 0:
+                            test_qty = float(holding_qty or 0.0)
                         do_cancel, target_quick_exit, why_leg = should_step_down_stuck_sell(
                             min_resting_sell_px=float(min_sell_p),
                             cost_ref=float(floor or aim_cref or 0.0),
